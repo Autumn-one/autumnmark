@@ -6,6 +6,7 @@ on:
     branches:
       - 'build/*'
       - '!build/macos-arm64'
+      - '!build/macos-arm64-intel'
 
 permissions:
   contents: read
