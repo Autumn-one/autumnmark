@@ -6,7 +6,6 @@ import { getCursorReference } from '../selection';
 import { changeAtxHeadingLevel } from '../state/headings';
 import { isParagraphState } from '../state/types';
 import { deepClone } from '../utils';
-import { contentTabHeading } from '../utils/contentTabs';
 import { toListDelimiter } from '../utils/listMarker';
 import logger from '../utils/logger';
 import { canConvertGithubAlert, convertGithubAlert } from './githubAlerts';
@@ -253,8 +252,7 @@ function insertContentTabs(block: Parent, muya: Muya, text: string): void {
         { name: 'paragraph', text: '' },
         { name: 'html-block', text: '<!-- /tabs -->' },
     ]);
-    const content = replacements[1].firstContentInDescendant()!;
-    content.setCursor(contentTabHeading(content.text)!.prefixLength, content.text.length, true);
+    muya.editor.contentTabs.editTitle(replacements[1]);
 }
 
 // A thematic break needs a trailing paragraph so the user can continue typing.

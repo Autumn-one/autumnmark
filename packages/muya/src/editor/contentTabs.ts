@@ -8,6 +8,7 @@ import { isHiddenByFold } from '../block/folding';
 import { ScrollPage } from '../block/scrollPage';
 import { parseInline } from '../inline/parser/lexer';
 import { tokensToPlainText } from '../inline/projection';
+import { getCursorCoords } from '../selection/cursorCoords';
 import { SelectionType } from '../selection/types';
 import { contentTabHeading, contentTabsMarker, findContentTabGroups } from '../utils/contentTabs';
 
@@ -32,6 +33,22 @@ interface IMembership {
     heading?: Parent;
 }
 
+interface IBodyCaret {
+    block: Content;
+    offset: number;
+}
+
+interface ITitleEditor {
+    group: IGroupView;
+    heading: Parent;
+    button: HTMLButtonElement;
+    input: HTMLInputElement;
+    prefix: string;
+    suffix: string;
+    source: string;
+    returnCaret?: IBodyCaret;
+}
+
 const CONTAINERS = new Set(['scrollpage', 'block-quote', 'github-alert', 'list-item', 'task-list-item', 'footnote']);
 const HIDDEN_CLASS = 'mu-content-tabs-hidden';
 const VIEW_CLASSES = [HIDDEN_CLASS, 'mu-content-tab-title', 'mu-content-tabs-boundary', 'mu-content-tabs-expanded'];
@@ -42,6 +59,7 @@ export class ContentTabs {
     private _memberships = new Map<TreeNode, IMembership[]>();
     private _decorated = new Set<TreeNode>();
     private _hidden = new Set<TreeNode>();
+    private _titleEditor?: ITitleEditor;
     private _buttonTargets = new WeakMap<Element, { group: IGroupView; action: 'tab' | 'add' | 'source'; heading?: Parent }>();
 
     constructor(private _muya: Muya) {
@@ -50,6 +68,7 @@ export class ContentTabs {
         eventCenter.attachDOMEvent(domNode, 'dblclick', event => this._editTitle(event));
         eventCenter.attachDOMEvent(domNode, 'keydown', event => this._keydown(event));
         eventCenter.on('selection-change', ({ selection }) => this._closeInactiveTitles(selection));
+        eventCenter.on('read-only-changed', () => this._closeTitleInput());
         eventCenter.attachDOMEvent(domNode, 'focusout', (event) => {
             const next = event instanceof FocusEvent ? event.relatedTarget : null;
             if (!(next instanceof Node) || !domNode.contains(next))
@@ -143,29 +162,46 @@ export class ContentTabs {
             group.active = headings[0];
         if (group.editingTitle && !headings.includes(group.editingTitle))
             group.editingTitle = undefined;
-        start.domNode!.before(group.bar);
-        end.domNode!.before(group.footer);
+        // Re-inserting a connected control blurs its input, even at the same position.
+        if (start.domNode!.previousElementSibling !== group.bar)
+            start.domNode!.before(group.bar);
+        if (end.domNode!.previousElementSibling !== group.footer)
+            end.domNode!.before(group.footer);
         for (const [heading, button] of group.buttons) {
             if (!headings.includes(heading)) {
-                button.remove();
+                button.parentElement!.remove();
                 group.buttons.delete(heading);
             }
         }
-        for (const heading of headings) {
+        for (const [index, heading] of headings.entries()) {
             let button = group.buttons.get(heading);
             if (!button) {
                 button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'mu-content-tab';
                 button.setAttribute('role', 'tab');
+                const slot = document.createElement('span');
+                slot.append(button);
                 group.buttons.set(heading, button);
                 this._buttonTargets.set(button, { group, heading, action: 'tab' });
             }
-            const label = contentTabHeading(heading.firstContentInDescendant()!.text)!.label;
+            const text = heading.firstContentInDescendant()!.text;
+            const { label, prefixLength } = contentTabHeading(text)!;
+            const editor = this._titleEditor;
+            if (editor?.heading === heading && text !== editor.source) {
+                // Undo and external edits can update the heading while the native input retains focus.
+                editor.prefix = text.slice(0, prefixLength);
+                editor.suffix = text.slice(prefixLength + label.length);
+                editor.input.value = label;
+                editor.source = text;
+            }
             const labels = this._muya.editor.inlineEngine.collectReferenceDefinitions();
             button.textContent = tokensToPlainText(parseInline(label, { options: this._muya.options, labels })) || this._muya.i18n.t('Untitled tab');
             button.title = this._muya.i18n.t('Double-click to edit tab title');
-            group.list.append(button);
+            const slot = button.parentElement!;
+            const current = group.list.children.item(index);
+            if (current !== slot)
+                group.list.insertBefore(slot, current);
         }
         let heading: Parent | undefined;
         for (const block of group.blocks) {
@@ -224,6 +260,9 @@ export class ContentTabs {
             );
             group.footer.hidden = group.bar.hidden;
         }
+        const editor = this._titleEditor;
+        if (editor && (!editor.input.isConnected || editor.group.bar.hidden || editor.group.expanded || editor.group.active !== editor.heading))
+            this._closeTitleInput();
     }
 
     isHidden(block: TreeNode): boolean {
@@ -313,6 +352,8 @@ export class ContentTabs {
     }
 
     private _closeInactiveTitles(selection: TSelection | null): void {
+        if (selection && this._titleEditor)
+            this._closeTitleInput();
         const endpoints = selection?.kind === SelectionType.TEXT
             ? [selection.context.anchorBlock.parent, selection.context.focusBlock.parent]
             : [];
@@ -351,8 +392,7 @@ export class ContentTabs {
             parent.insertBefore(heading, group.end);
             parent.insertBefore(ScrollPage.loadBlock('paragraph').create(this._muya, { name: 'paragraph', text: '' }), group.end);
         });
-        this._activate(group, heading);
-        this._focusTitle(heading, true);
+        this.editTitle(heading);
     }
 
     private _activate(group: IGroupView, heading: Parent): void {
@@ -390,13 +430,154 @@ export class ContentTabs {
         if (!target?.heading || this._muya.isReadOnly)
             return;
         event.stopPropagation();
-        this._focusTitle(target.heading);
+        this.editTitle(target.heading);
     }
 
-    private _focusTitle(heading: Parent, selectTitle = false): void {
+    private _panelBody(group: IGroupView, heading: Parent): Content | undefined {
+        const next = heading.firstContentInDescendant()!.nextContentInContext(true);
+        return next && this._containing(next).some(item => item.group === group && item.heading === heading) ? next : undefined;
+    }
+
+    focusTabFor(block: Content): void {
+        const panel = this._containing(block).find(({ group }) => !group.bar.hidden);
+        if (panel)
+            panel.group.buttons.get(panel.group.active)?.focus();
+    }
+
+    titleAbove(block: Content, event: KeyboardEvent): Parent | undefined {
+        if (event.key !== 'ArrowUp' || !this._groups.size || this._muya.isReadOnly || event.isComposing || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
+            return;
+        const cursor = block.getCursor();
+        if (!cursor?.isCollapsed)
+            return;
+        for (let ancestor = block.parent; ancestor && !ancestor.isScrollPage; ancestor = ancestor.parent) {
+            // Same-container memberships are recorded outermost first. The closest tab bar owns Up.
+            const memberships = this._memberships.get(ancestor);
+            const panel = memberships?.slice().reverse().find(({ group, heading }) => {
+                if (group.expanded || group.bar.hidden || heading !== group.active || ancestor === heading)
+                    return false;
+                const first = this._panelBody(group, heading);
+                return this._isFirstBodyLineBlock(block, first);
+            });
+            if (panel)
+                return panel.heading;
+        }
+    }
+
+    private _isFirstBodyLineBlock(block: Content, first?: Content): boolean {
+        return first === block || (first?.blockName === 'table.cell.content' && block.blockName === 'table.cell.content'
+            && first.parent?.parent === block.parent?.parent);
+    }
+
+    editTitle(heading: Parent, returnCaret?: IBodyCaret): void {
+        if (this._muya.isReadOnly)
+            return;
+        if (!this._memberships.has(heading))
+            this.refresh();
+        const group = this._memberships.get(heading)?.find(item => item.heading === heading)?.group;
+        if (!group)
+            return;
+        const x = returnCaret ? getCursorCoords()?.x : undefined;
+        this._closeTitleInput();
+        this._activate(group, heading);
+        const button = group.buttons.get(heading)!;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'mu-content-tab-input';
+        input.setAttribute('aria-label', this._muya.i18n.t('Tab'));
         const content = heading.firstContentInDescendant()!;
-        const start = contentTabHeading(content.text)!.prefixLength;
-        content.setCursor(start, selectTitle ? content.text.length : start, true);
+        const { label, prefixLength } = contentTabHeading(content.text)!;
+        const editor: ITitleEditor = {
+            group,
+            heading,
+            button,
+            input,
+            returnCaret,
+            source: content.text,
+            prefix: content.text.slice(0, prefixLength),
+            suffix: content.text.slice(prefixLength + label.length),
+        };
+        this._titleEditor = editor;
+        input.value = label;
+        button.hidden = true;
+        button.after(input);
+        input.addEventListener('blur', () => {
+            if (this._titleEditor === editor)
+                this._closeTitleInput();
+        });
+        input.addEventListener('keydown', event => this._titleInputKeydown(editor, event));
+        for (const type of ['copy', 'cut', 'paste', 'beforeinput', 'keyup', 'compositionstart'])
+            input.addEventListener(type, event => event.stopPropagation());
+        const writeTitle = (event: Event) => {
+            event.stopPropagation();
+            if (this._titleEditor !== editor || !this._muya.canMutate || (event instanceof InputEvent && event.isComposing))
+                return;
+            editor.source = editor.prefix + input.value + editor.suffix;
+            this._muya.editor.transact(() => {
+                content.text = editor.source;
+                content.update();
+            });
+        };
+        input.addEventListener('input', writeTitle);
+        input.addEventListener('compositionend', writeTitle);
+        this._muya.editor.history.cutoff();
+        input.focus();
+        if (returnCaret) {
+            const rect = input.getBoundingClientRect();
+            const point = x === undefined
+                ? null
+                : document.caretPositionFromPoint?.(
+                        Math.max(rect.left + 1, Math.min(rect.right - 1, x)),
+                        rect.top + rect.height / 2,
+                    );
+            const offset = point?.offsetNode === input ? point.offset : returnCaret.offset;
+            input.setSelectionRange(offset, offset);
+        }
+        else {
+            input.select();
+        }
+    }
+
+    private _closeTitleInput(): void {
+        const editor = this._titleEditor;
+        if (!editor)
+            return;
+        this._titleEditor = undefined;
+        editor.button.hidden = false;
+        editor.input.remove();
+        this._muya.editor.history.cutoff();
+    }
+
+    private _titleInputKeydown(editor: ITitleEditor, event: KeyboardEvent): void {
+        event.stopPropagation();
+        if (event.isComposing || event.keyCode === 229 || event.altKey)
+            return;
+        if (event.metaKey || event.ctrlKey) {
+            const key = event.key.toLowerCase();
+            if (key === 'z' || key === 'y') {
+                event.preventDefault();
+                if (key === 'y' || event.shiftKey)
+                    this._muya.redo();
+                else
+                    this._muya.undo();
+            }
+            return;
+        }
+        if (event.shiftKey || !['Escape', 'Enter', 'ArrowDown'].includes(event.key))
+            return;
+        event.preventDefault();
+        const { group, heading, returnCaret } = editor;
+        this._closeTitleInput();
+        if (event.key === 'Escape') {
+            this._activate(group, heading);
+            return;
+        }
+        const first = this._panelBody(group, heading);
+        if (event.key === 'ArrowDown' && returnCaret && this._isFirstBodyLineBlock(returnCaret.block, first)) {
+            returnCaret.block.setCursor(returnCaret.offset, returnCaret.offset, true);
+            return;
+        }
+        this._enterBody(group, heading);
     }
 
     private _titleCompletionGroup(event: KeyboardEvent): IGroupView | undefined {
@@ -422,8 +603,11 @@ export class ContentTabs {
             this._activate(group, heading);
             return;
         }
-        const next = heading.firstContentInDescendant()!.nextContentInContext(true);
-        let body = next && this._containing(next).some(item => item.group === group && item.heading === heading) ? next : undefined;
+        this._enterBody(group, heading);
+    }
+
+    private _enterBody(group: IGroupView, heading: Parent): void {
+        let body = this._panelBody(group, heading);
         if (!body) {
             const paragraph = ScrollPage.loadBlock('paragraph').create(this._muya, { name: 'paragraph', text: '' }) as Parent;
             this._muya.transact(() => heading.parent!.insertAfter(paragraph, heading));
@@ -462,14 +646,14 @@ export class ContentTabs {
             event.preventDefault();
             event.stopPropagation();
             if (event.key === 'F2') {
-                this._focusTitle(heading);
+                this.editTitle(heading);
             }
             else {
-                const body = heading.firstContentInDescendant()!.nextContentInContext(true);
-                if (body && this._containing(body).some(item => item.group === group && item.heading === heading))
+                const body = this._panelBody(group, heading);
+                if (body)
                     body.setCursor(0, 0, true);
                 else
-                    this._focusTitle(heading);
+                    this.editTitle(heading);
             }
         }
     }
@@ -481,6 +665,7 @@ export class ContentTabs {
     }
 
     dispose(): void {
+        this._closeTitleInput();
         for (const group of this._groups.values()) {
             group.bar.remove();
             group.footer.remove();

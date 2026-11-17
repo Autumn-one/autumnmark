@@ -11,7 +11,7 @@ interface SourceView {
   container: HTMLElement
 }
 interface RenderedView {
-  engine: Pick<Muya, 'getMarkdown' | 'getSelectionState' | 'setSelection' | 'setCursorByOffset'>
+  engine: Pick<Muya, 'getMarkdown' | 'getSelectionState' | 'setSelection' | 'focus'>
   container: HTMLElement
   refreshToc?(): void
 }
@@ -95,8 +95,11 @@ export class DocumentViewAdapter {
           restored = false
         }
       }
-      if (!ports.preserveCaret && !restored)
-        engine.setCursorByOffset({ anchor: { line: 0, ch: 0 }, focus: { line: 0, ch: 0 } })
+      if (!ports.preserveCaret && !restored) {
+        // The first source line can be a hidden tab delimiter. Start in visible content.
+        engine.setSelection(null)
+        engine.focus()
+      }
       ports.rendered.refreshToc?.()
       container.scrollTop = enabled ? nonnegative(state?.renderedScrollTopPx ?? 0) : 0
     }

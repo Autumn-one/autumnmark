@@ -89,6 +89,8 @@ export class ScrollPage extends Parent {
         muya.editor.contentTabs.dispose();
         muya.ui.hideAllFloatTools();
         this.empty();
+        // Native editing can leave DOM nodes between blocks that the block tree does not own.
+        this.domNode!.replaceChildren();
         this.append(
             ...state.map((block) => {
                 return ScrollPage.loadBlock(block.name).create(muya, block);

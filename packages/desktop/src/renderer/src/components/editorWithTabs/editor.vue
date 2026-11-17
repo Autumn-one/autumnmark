@@ -999,17 +999,11 @@ const handleSelectAll = () => {
     return
   }
 
-  if (editor.value && editor.value.hasFocus()) {
+  const focused = document.activeElement
+  if (focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement) {
+    focused.select()
+  } else if (editor.value?.hasFocus()) {
     editor.value.selectAll()
-  } else {
-    const activeElement = document.activeElement as HTMLElement | null
-    const nodeName = activeElement?.nodeName
-    if (nodeName === 'INPUT' || nodeName === 'TEXTAREA') {
-      const selectable = activeElement as HTMLInputElement | HTMLTextAreaElement | null
-      if (selectable && typeof selectable.select === 'function') {
-        selectable.select()
-      }
-    }
   }
 }
 

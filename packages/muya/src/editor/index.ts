@@ -359,6 +359,8 @@ export class Editor {
 
         // Native input moves the DOM caret before the input handler runs (#5258).
         this._muya.eventCenter.attachDOMEvent(domNode, 'beforeinput', (event) => {
+            if (!this._isContentEvent(event))
+                return;
             // Browser rich-text commands must not mutate DOM outside the document model.
             if (event instanceof InputEvent && event.inputType.startsWith('format')) {
                 event.preventDefault();
@@ -513,8 +515,15 @@ export class Editor {
 
         // TODO: the cursor maybe passed by muya options.cursor, and no need to find the first leaf block.
         let firstLeafBlock = scrollPage?.firstContentInDescendant();
-        if (firstLeafBlock && this.contentTabs.isHidden(firstLeafBlock))
-            firstLeafBlock = firstLeafBlock.nextContentInContext(true) ?? firstLeafBlock;
+        if (firstLeafBlock && this.contentTabs.isHidden(firstLeafBlock)) {
+            const visible = firstLeafBlock.nextContentInContext(true);
+            if (!visible) {
+                // An empty panel has no body block after a Markdown round-trip.
+                this.contentTabs.focusTabFor(firstLeafBlock);
+                return;
+            }
+            firstLeafBlock = visible;
+        }
 
         if (firstLeafBlock == null)
             return;

@@ -904,7 +904,7 @@ class Content extends TreeNode {
 
             case EVENT_KEYS.ArrowRight: // fallthrough
                 if (!this.isComposed)
-                    this.arrowHandler(event);
+                    this._navigateArrow(event);
 
                 break;
 
@@ -917,6 +917,22 @@ class Content extends TreeNode {
                 break;
         }
     };
+
+    private _navigateArrow(event: KeyboardEvent): void {
+        const tabs = this.muya.editor.contentTabs;
+        const title = tabs.titleAbove(this, event);
+        if (!title) {
+            this.arrowHandler(event);
+            return;
+        }
+        const offset = this.getCursor()!.start.offset;
+        const withinBlock = this._deferArrowToBrowser(event, offset, offset);
+        if (withinBlock)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        tabs.editTitle(title, { block: this, offset });
+    }
 
     private _wrapSelectionWithAutoPair(event: KeyboardEvent) {
         if (

@@ -4,6 +4,7 @@ import { lineEndKey, lineStartKey, loadMarkdown, metaKey } from '../helpers/keyb
 import { editor, toolbar } from '../helpers/selectors';
 
 const source = '<!-- tabs -->\n\n#### | Alpha\n\nFirst body.\n\n#### \\| Beta\n\nSecond body.\n\n#### Ordinary\n\nStill in Beta.\n\n<!-- /tabs -->\n\nOutside.\n';
+const titleInput = '.mu-content-tabs-list input';
 
 test('switches tabs, edits content, and keeps edits through undo and source reload', async ({ page }) => {
     await loadMarkdown(page, source);
@@ -31,14 +32,20 @@ test('switches tabs, edits content, and keeps edits through undo and source relo
 test('edits labels with a double click and navigates tabs using the keyboard', async ({ page }) => {
     await loadMarkdown(page, source);
     await page.getByRole('tab', { name: 'Alpha' }).dblclick();
-    const heading = page.locator(editor.atxHeading).filter({ hasText: 'Alpha' });
-    await expect(heading).toBeVisible();
+    await expect(page.locator(titleInput)).toBeFocused();
+    await expect(page.locator(editor.atxHeading).filter({ hasText: 'Alpha' })).toBeHidden();
     await page.keyboard.press(lineEndKey());
     await page.keyboard.type(' renamed');
-    await expect(page.getByRole('tab', { name: 'Alpha renamed' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Alpha renamed' }).click();
+    await expect(page.locator(titleInput)).toHaveValue('Alpha renamed');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Alpha renamed' })).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('F2');
+    await page.keyboard.type('Linux');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Linux' })).toBeFocused();
+    await expect.poll(() => getMarkdown(page)).toContain('#### \\| Linux');
     await page.keyboard.press('Home');
     await expect(page.getByRole('tab', { name: 'Alpha renamed' })).toHaveAttribute('aria-selected', 'true');
 });
@@ -70,9 +77,9 @@ test('quick insert creates a complete group in one undo step', async ({ page }) 
     await page.keyboard.type('/tabs', { delay: 40 });
     await expect(page.locator('.mu-quick-insert [data-label="content-tabs"]')).toBeVisible();
     await page.locator('.mu-quick-insert [data-label="content-tabs"]').click();
-    await expect(page.getByRole('tab')).toHaveCount(2);
-    await expect(page.locator('.mu-content-tab-title').first()).toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.muya!.editor.activeContentBlock?.blockName)).toBe('atxheading.content');
+    await expect(page.locator('[role="tab"]')).toHaveCount(2);
+    await expect(page.locator(titleInput)).toBeFocused();
+    await expect(page.locator('.mu-content-tab-title').first()).toBeHidden();
     await expect.poll(() => getMarkdown(page)).toContain('<!-- /tabs -->');
     await page.locator(toolbar.undo).click();
     await expect(page.getByRole('tab')).toHaveCount(0);
@@ -83,9 +90,10 @@ test('quick insert selects the first title and Enter finishes editing in the exi
     await loadMarkdown(page, '');
     await page.locator(editor.paragraph).click();
     await page.keyboard.type('/tabs', { delay: 40 });
-    await page.locator('.mu-quick-insert [data-label="content-tabs"]').click();
+    await expect(page.locator('.mu-quick-insert [data-label="content-tabs"]')).toBeVisible();
+    await page.keyboard.press('Enter');
     await page.keyboard.type('First title');
-    await expect(page.getByRole('tab', { name: 'First title' })).toBeVisible();
+    await expect(page.locator(titleInput)).toHaveValue('First title');
     const before = await getMarkdown(page);
     await page.keyboard.press('Enter');
     await expect(page.locator('.mu-content-tab-title').first()).toBeHidden();
@@ -95,9 +103,110 @@ test('quick insert selects the first title and Enter finishes editing in the exi
     await expect(page.getByRole('tab', { name: 'First title' })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('Up places a caret in the active title and Down returns to the same position in the body', async ({ page }) => {
+    await loadMarkdown(page, source);
+    const beta = page.getByRole('tab', { name: 'Beta' });
+    await beta.click();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowUp');
+    const input = page.locator(titleInput);
+    await expect(input).toBeFocused();
+    expect(await input.evaluate((el: HTMLInputElement) => el.selectionStart === el.selectionEnd)).toBe(true);
+    expect(await getMarkdown(page)).toBe(source);
+    await page.keyboard.press(lineEndKey());
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.type('X');
+    await expect(input).toHaveValue('BetXa');
+    await page.keyboard.press('ArrowDown');
+    await expect(input).toHaveCount(0);
+    await page.keyboard.type('!');
+    await expect.poll(() => getMarkdown(page)).toBe(source.replace('Beta', 'BetXa').replace('Second body.', 'Se!cond body.'));
+});
+
+test('Up moves through wrapped lines and paragraphs before entering the title', async ({ page }) => {
+    await loadMarkdown(page, source.replace('First body.', `${'wrapped body '.repeat(18)}end\n\nSecond paragraph.`));
+    const first = page.locator(editor.paragraph).filter({ hasText: 'wrapped body' });
+    await first.evaluate(el => el.style.width = '230px');
+    await page.locator(editor.paragraph).filter({ hasText: 'Second paragraph.' }).click();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator(titleInput)).toHaveCount(0);
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator(titleInput)).toHaveCount(0);
+    for (let i = 0; i < 20 && await page.locator(titleInput).count() === 0; i++)
+        await page.keyboard.press('ArrowUp');
+    await expect(page.locator(titleInput)).toBeFocused();
+    await expect(page.locator(titleInput)).toHaveValue('Alpha');
+});
+
+test('chooses the innermost active title and preserves its Markdown through undo and redo', async ({ page }) => {
+    const nested = source.replace('First body.', '<!-- tabs -->\n\n### \\| **Inner** ###\n\nInside\n\n<!-- /tabs -->');
+    await loadMarkdown(page, nested);
+    await page.locator(editor.paragraph).filter({ hasText: 'Inside' }).click();
+    await page.keyboard.press('ArrowUp');
+    const input = page.locator(titleInput);
+    await expect(input).toHaveValue('**Inner**');
+    await page.keyboard.press(`${metaKey()}+a`);
+    await page.keyboard.type('Name');
+    await expect.poll(() => getMarkdown(page)).toBe(nested.replace('**Inner**', 'Name'));
+    await page.keyboard.press(`${metaKey()}+z`);
+    await expect(input).toHaveValue('**Inner**');
+    await page.keyboard.press(`${metaKey()}+Shift+z`);
+    await expect(input).toHaveValue('Name');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Name' })).toBeFocused();
+    await expect(page.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('lets the IME own candidate keys and finishes the title after composition', async ({ page }) => {
+    await loadMarkdown(page, source);
+    await page.getByRole('tab', { name: 'Alpha' }).dblclick();
+    const input = page.locator(titleInput);
+    await input.evaluate((el: HTMLInputElement) => {
+        el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+        el.value = '标题';
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: true }));
+        for (const key of ['Enter', 'ArrowDown', 'Escape'])
+            el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, isComposing: true }));
+    });
+    await expect(input).toBeFocused();
+    expect(await getMarkdown(page)).toBe(source);
+    await input.dispatchEvent('compositionend', { data: '标题' });
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('tab', { name: '标题' })).toBeVisible();
+    await expect.poll(() => getMarkdown(page)).toBe(source.replace('Alpha', '标题'));
+});
+
+test('returns to an empty panel without adding a paragraph', async ({ page }) => {
+    await loadMarkdown(page, source);
+    await page.getByRole('button', { name: 'Add tab' }).click();
+    const before = await getMarkdown(page);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator(titleInput)).toHaveValue('Tab 3');
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator(titleInput)).toHaveCount(0);
+    expect(await getMarkdown(page)).toBe(before);
+    await page.keyboard.insertText('正文');
+    await expect.poll(() => getMarkdown(page)).toContain('#### | Tab 3\n\n正文');
+});
+
+test('returns from the inline title to the same table header cell', async ({ page }) => {
+    await loadMarkdown(page, source.replace('First body.', '| First | Second |\n| --- | --- |\n| a | b |'));
+    const header = page.locator(editor.tableCell).filter({ hasText: 'Second' });
+    await header.click();
+    await page.keyboard.press(lineEndKey());
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator(titleInput)).toHaveValue('Alpha');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.type('!');
+    await expect(header).toHaveText('Second!');
+});
+
 test('finishes title editing when clicking body or pressing Escape', async ({ page }) => {
     await loadMarkdown(page, source);
-    const heading = page.locator('.mu-content-tab-title').first();
+    const heading = page.locator(titleInput);
     await page.getByRole('tab', { name: 'Alpha' }).dblclick();
     await page.keyboard.press(lineEndKey());
     await page.keyboard.type(' renamed');
@@ -116,8 +225,8 @@ test('finishes title editing when clicking body or pressing Escape', async ({ pa
 test('adds a tab from the bar and edits its title and body', async ({ page }) => {
     await loadMarkdown(page, source);
     await page.getByRole('button', { name: 'Add tab' }).click();
-    await expect(page.getByRole('tab')).toHaveCount(3);
-    await expect(page.getByRole('tab', { name: 'Tab 3' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[role="tab"]')).toHaveCount(3);
+    await expect(page.locator(titleInput)).toHaveValue('Tab 3');
     await page.keyboard.type('Linux');
     await page.keyboard.press('Enter');
     await expect(page.locator('.mu-content-tab-title').last()).toBeHidden();
@@ -128,10 +237,14 @@ test('adds a tab from the bar and edits its title and body', async ({ page }) =>
 
 test('hides the add button in read-only mode', async ({ page }) => {
     await loadMarkdown(page, source);
+    await page.getByRole('tab', { name: 'Alpha' }).dblclick();
     await page.evaluate(() => window.muya!.setReadOnly(true));
+    await expect(page.locator(titleInput)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Add tab' })).toBeHidden();
     await page.getByRole('tab', { name: 'Beta' }).click();
     await expect(page.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('F2');
+    await expect(page.locator(titleInput)).toHaveCount(0);
     await page.evaluate(() => window.muya!.setReadOnly(false));
     await expect(page.getByRole('button', { name: 'Add tab' })).toBeVisible();
 });

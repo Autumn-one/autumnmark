@@ -21,6 +21,7 @@
 }
 
 .mu-content-tab,
+.mu-content-tab-input,
 .mu-content-tabs-add,
 .mu-content-tabs-source {
     flex-shrink: 0;
@@ -60,6 +61,20 @@
     color: var(--theme-color);
 
     background: var(--float-hover-color);
+}
+
+.mu-content-tab-input {
+    box-sizing: content-box;
+
+    color: var(--editor-color);
+
+    background: var(--float-hover-color);
+    border-bottom-color: var(--theme-color);
+    outline: 0;
+    cursor: text;
+    field-sizing: content;
+    max-inline-size: min(48ch, 60vw);
+    min-inline-size: 2ch;
 }
 
 .mu-content-tab:focus-visible,

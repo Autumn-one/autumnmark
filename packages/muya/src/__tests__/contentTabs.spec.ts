@@ -57,6 +57,14 @@ describe('content tabs editing', () => {
         expect(muya.getMarkdown()).toBe(source);
     });
 
+    it('focuses the tab bar when an imported group has no body blocks', () => {
+        const muya = boot('<!-- tabs -->\n\n## | First\n\n## | Second\n\n<!-- /tabs -->');
+        muya.focus();
+        expect(document.activeElement).toBe(buttons(muya)[0]);
+        expect(muya.domNode.querySelector('.mu-content-tabs-source')?.getAttribute('aria-pressed')).toBe('false');
+        expect(muya.getHistory().stack.undo).toHaveLength(0);
+    });
+
     it('reveals a hidden target for search and outline navigation', () => {
         const muya = boot();
         const target = blocks(muya)[6].firstContentInDescendant()!;
@@ -70,7 +78,8 @@ describe('content tabs editing', () => {
         const muya = boot();
         buttons(muya)[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         const title = blocks(muya)[1].firstContentInDescendant()!;
-        expect(muya.editor.contentTabs.isHidden(title)).toBe(false);
+        expect(muya.editor.contentTabs.isHidden(title)).toBe(true);
+        expect(document.activeElement).toBe(muya.domNode.querySelector('.mu-content-tab-input'));
         muya.transact(() => {
             title.text = '#### | Renamed';
             title.update();
@@ -82,12 +91,14 @@ describe('content tabs editing', () => {
         expect(buttons(muya)[0].textContent).toBe('Renamed');
     });
 
-    it('closes the title editor when the selection moves into its body', () => {
+    it('closes the inline title editor when the selection moves into its body', () => {
         const muya = boot();
         buttons(muya)[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         const heading = blocks(muya)[1];
-        expect(muya.editor.contentTabs.isHidden(heading)).toBe(false);
+        expect(muya.domNode.querySelector('.mu-content-tab-input')).not.toBeNull();
+        expect(muya.editor.contentTabs.isHidden(heading)).toBe(true);
         blocks(muya)[2].firstContentInDescendant()!.setCursor(0, 0, true);
+        expect(muya.domNode.querySelector('.mu-content-tab-input')).toBeNull();
         expect(muya.editor.contentTabs.isHidden(heading)).toBe(true);
         expect(muya.getMarkdown()).toBe(source);
     });

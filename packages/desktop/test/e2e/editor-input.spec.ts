@@ -169,17 +169,31 @@ test.describe('Title-bar word counter (item 24)', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Coverage backfill (checklist item 169). Edit > Select All flows through
-// `mt::editor-edit-action` ('selectAll') -> store/listenForMain.ts
-// EDITOR_EDIT_ACTION -> bus 'selectAll' -> editor.vue handleSelectAll, which
-// calls editor.value.selectAll() ONLY when editor.value.hasFocus(); when focus
-// is in an INPUT/TEXTAREA it does a field .select() and skips the editor.
-// No prior unit/e2e covers the menu-driven selectAll (issue-4346 uses a DOM
-// range, not the menu action). The engine escalation rules are unit-covered in
-// packages/muya/src/selection/__tests__/selectAll.spec.ts; this spec locks the
-// desktop IPC + focus-branch wiring against the real engine.
-// ---------------------------------------------------------------------------
+// A title input inside Muya also satisfies hasFocus(), so the menu must resolve the field first.
+test('Edit > Select All replaces just the inline content tab title', async() => {
+  const source = '<!-- tabs -->\n\n## | Windows\n\nPanel body.\n\n<!-- /tabs -->\n'
+  const { app, page } = await launchWithMarkdown(source)
+  try {
+    await expect(page.locator('.mu-content-tabs-source')).toHaveAttribute('aria-pressed', 'false')
+    await page.locator('.mu-paragraph-content', { hasText: 'Panel body.' }).click()
+    await page.keyboard.press('ArrowUp')
+    const input = page.locator('.mu-content-tabs-list input')
+    await expect(input).toBeFocused()
+    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'selectAll')
+    await expect.poll(() => input.evaluate((el: HTMLInputElement) =>
+      el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0)
+    )).toBe('Windows')
+    await page.keyboard.insertText('桌面端')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('tab', { name: '桌面端' })).toBeVisible()
+    await page.keyboard.insertText('新')
+    expect((await getMarkdownContent(page, app)).trim()).toBe(
+      source.replace('Windows', '桌面端').replace('Panel body.', '新Panel body.').trim()
+    )
+  } finally {
+    await app.close()
+  }
+})
 
 test.describe('Edit > Select All (item 169)', () => {
   let app: ElectronApplication
@@ -232,9 +246,7 @@ test.describe('Edit > Select All (item 169)', () => {
       }, { timeout: 5000 })
       .toContain('Last paragraph gamma.')
 
-    // Open the find bar and move focus into its search input. handleSelectAll
-    // takes the !hasFocus() branch and does a field select on the input, so the
-    // editor's DOM selection must NOT be re-expanded by this action.
+    // The menu targets the search field even when the document still has a selection.
     await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
     const findInput = page.locator('.search-bar .search input')
     await expect(findInput).toBeVisible({ timeout: 5000 })
