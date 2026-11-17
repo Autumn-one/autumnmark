@@ -259,11 +259,12 @@ onBeforeUnmount(() => {
   inset: auto;
   flex: 0 0 var(--outline-width);
   width: var(--outline-width);
-  border-right: 1px solid var(--itemBgColor);
+  background: var(--sideBarBgColor);
+  border-right: 1px solid var(--sideBarBorderColor);
 }
 .document-outline.is-expanded.is-right {
   border-right: 0;
-  border-left: 1px solid var(--itemBgColor);
+  border-left: 1px solid var(--sideBarBorderColor);
 }
 .outline-toggle-anchor {
   display: block;
@@ -387,6 +388,7 @@ onBeforeUnmount(() => {
 }
 .is-expanded .outline-body {
   width: 100%;
+  background: transparent;
   border-radius: 0;
 }
 .is-right .outline-body {

@@ -10,7 +10,7 @@ import type {
   SaveDialogRequest,
   ClipboardImageWriteOptions
 } from '@shared/types/ipc'
-import type { MenuTemplate, MenuPopupPosition } from '@shared/types/menu'
+import type { MenuTemplate, MenuPopupPosition, ApplicationMenuCategory } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
 
 declare global {
@@ -80,6 +80,8 @@ declare global {
     isFullScreen(): Promise<boolean>
     popupMenu(template: MenuTemplate, position?: MenuPopupPosition): void
     popupApplicationMenu(position?: MenuPopupPosition): void
+    getApplicationMenuCategories(): Promise<ApplicationMenuCategory[]>
+    popupApplicationMenuCategory(index: number, position: MenuPopupPosition): Promise<void>
   }
 
   interface ElectronAPI {

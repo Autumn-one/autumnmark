@@ -446,7 +446,7 @@ const revealPath = async (
 }
 
 const handleRevealPath = (pathname: unknown): void => {
-  revealPath(typeof pathname === 'string' ? pathname : null, { force: true })
+  void revealPath(typeof pathname === 'string' ? pathname : null, { force: true, select: true })
 }
 
 const { busy: movingTreeItem } = useTreeDragDrop(treeWrapper, pathname => {

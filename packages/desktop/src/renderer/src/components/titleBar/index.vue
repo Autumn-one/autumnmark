@@ -10,15 +10,17 @@
         { active: active },
         { 'tabs-visible': showTabBar },
         { frameless: titleBarStyle === 'custom' },
+        { 'has-menubar': showCustomTitleBar },
         { isOsx: isOsx }
       ]"
     >
+      <application-menu v-if="showCustomTitleBar" />
       <div
         v-if="titleBarStyle !== 'native' || isOsx"
         class="title"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
-        <span v-if="!filename">MarkText</span>
+        <span v-if="!filename">{{ APP_NAME }}</span>
         <span v-else>
           <span
             class="save-dot"
@@ -49,17 +51,7 @@
           </span>
         </span>
       </div>
-      <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
-        <button
-          v-if="showCustomTitleBar"
-          type="button"
-          class="plain-button frameless-titlebar-menu title-no-drag"
-          aria-haspopup="menu"
-          :aria-label="t('titleBar.applicationMenu')"
-          @click.stop="handleMenuClick"
-        >
-          <span class="text-center-vertical">&#9776;</span>
-        </button>
+      <div :class="showCustomTitleBar ? 'statistics-toolbar title-no-drag' : 'right-toolbar'">
         <document-statistics
           v-if="wordCount"
           :pathname="pathname"
@@ -157,7 +149,9 @@ import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import DocumentStatistics from './documentStatistics.vue'
+import ApplicationMenu from './applicationMenu.vue'
 import type { FileWordCount } from '@shared/types/files'
+import { APP_NAME } from '@shared/brand'
 
 interface ProjectInfo {
   name?: string
@@ -247,10 +241,6 @@ const toggleMaxmizeOnMacOS = () => {
 
 const handleMinimizeClick = () => {
   window.electron.windowControl.minimize()
-}
-
-const handleMenuClick = () => {
-  window.electron.windowControl.popupApplicationMenu({ x: 23, y: 20 })
 }
 
 const rename = () => {
@@ -389,16 +379,42 @@ div.title > span > .path > bdi > span {
   color: var(sideBarTitleColor);
 }
 
-.left-toolbar {
-  padding: 0 10px;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 190px;
+.has-menubar {
   display: flex;
-  flex-direction: row;
-  gap: 8px;
+  align-items: center;
+}
+.has-menubar .title {
+  flex: 1;
+  min-width: 32px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+.has-menubar .title::after {
+  display: none;
+}
+.statistics-toolbar {
+  flex: none;
+  padding: 0 8px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.has-menubar .window-controls {
+  position: static;
+  flex: none;
+}
+@media (max-width: 900px) {
+  .statistics-toolbar :deep(.document-statistics-trigger__label) {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .has-menubar .title {
+    padding: 0;
+  }
+  .has-menubar .title > span {
+    visibility: hidden;
+  }
 }
 .right-toolbar {
   height: 100%;
@@ -436,9 +452,6 @@ div.title > span > .path > bdi > span {
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
 }
-.frameless-titlebar-menu {
-  color: var(--sideBarColor);
-}
 .frameless-titlebar-close:hover {
   background-color: rgb(228, 79, 79);
 }
@@ -451,11 +464,5 @@ div.title > span > .path > bdi > span {
 }
 .frameless-titlebar-close:hover svg {
   fill: #ffffff;
-}
-
-.text-center-vertical {
-  display: inline-block;
-  vertical-align: middle;
-  line-height: normal;
 }
 </style>

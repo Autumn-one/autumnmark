@@ -7,7 +7,8 @@ import {
   getRENAME,
   getCopyPath,
   getShowInFolder,
-  getShowInSideBar
+  getShowInSideBar,
+  getOpenContainingFolder
 } from './menuItems'
 import { useEditorStore } from '@/store/editor'
 import { t } from '../../i18n'
@@ -51,8 +52,9 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
   const copyPath = getCopyPath()
   const showInFolder = getShowInFolder()
   const showInSideBar = getShowInSideBar()
+  const openContainingFolder = getOpenContainingFolder()
 
-  ;([rename, copyPath, showInFolder, showInSideBar] as MenuItemShape[]).forEach((item) => {
+  ;([rename, copyPath, showInFolder, showInSideBar, openContainingFolder] as MenuItemShape[]).forEach((item) => {
     item.enabled = !!pathname
   })
 
@@ -73,7 +75,8 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
     rename,
     copyPath,
     showInFolder,
-    showInSideBar
+    showInSideBar,
+    openContainingFolder
   ].map((item) => wrapClick(item as MenuItemShape, tab.id, pathname))
 
   popupContextMenu(items, { x: event.clientX, y: event.clientY })

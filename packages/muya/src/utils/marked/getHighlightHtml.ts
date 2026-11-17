@@ -3,6 +3,7 @@ import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import Prism from 'prismjs';
 import compactNestedLists from './compactNestedLists';
+import contentTabsExtension from './extensions/contentTabs';
 import emojiExtension from './extensions/emoji';
 import fancyListsHtmlExtension from './extensions/fancyListsHtml';
 import footnoteExtension from './extensions/footnote';
@@ -104,6 +105,7 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
 
     marked.use(multilineBlockquoteExtension(multilineBlockquote === true));
     marked.use(githubAlertsExtension(options.githubAlerts === true));
+    marked.use(contentTabsExtension());
 
     if (footnote)
         marked.use(footnoteExtension());

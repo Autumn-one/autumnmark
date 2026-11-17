@@ -408,6 +408,39 @@ export const useProjectStore = defineStore('project', () => {
     nextTick(() => bus.emit('SIDEBAR::reveal-path', target))
   }
 
+  let openContainingFolderRequest = 0
+
+  async function OPEN_CONTAINING_FOLDER(documentId?: string | null): Promise<void> {
+    const editorStore = useEditorStore()
+    const tab = documentId
+      ? editorStore.tabs.find(item => item.id === documentId)
+      : editorStore.currentFile
+    if (!tab?.pathname) return
+    const request = ++openContainingFolderRequest
+    const activeDocumentId = editorStore.currentFile?.id
+    try {
+      const pathname = await window.electron.ipcRenderer.invoke(
+        'mt::project-open-containing-folder',
+        tab.id
+      )
+      if (
+        !pathname ||
+        request !== openContainingFolderRequest ||
+        editorStore.currentFile?.id !== activeDocumentId
+      ) return
+      SHOW_FILES()
+      // The explicit reveal retries as the directory watcher delivers the file tree.
+      await nextTick()
+      bus.emit('SIDEBAR::reveal-path', pathname)
+    } catch (error) {
+      notice.notify({
+        title: t('contextMenu.tabs.openContainingFolder'),
+        type: 'error',
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
+  }
+
   function CHANGE_CLIPBOARD(data: ClipboardEntry | null): void {
     clipboard.value = data
   }
@@ -471,6 +504,9 @@ export const useProjectStore = defineStore('project', () => {
     })
     on('SIDEBAR::reveal-file', (pathname: unknown) => {
       REVEAL_FILE_IN_SIDE_BAR(typeof pathname === 'string' ? pathname : null)
+    })
+    on('SIDEBAR::open-containing-folder', (documentId: unknown) => {
+      void OPEN_CONTAINING_FOLDER(typeof documentId === 'string' ? documentId : null)
     })
     on('SIDEBAR::new', (type: unknown) => {
       const { pathname, isDirectory } = activeItem.value
@@ -670,6 +706,7 @@ export const useProjectStore = defineStore('project', () => {
     CHANGE_ACTIVE_ITEM,
     REVEAL_PATH,
     REVEAL_FILE_IN_SIDE_BAR,
+    OPEN_CONTAINING_FOLDER,
     CHANGE_CLIPBOARD,
     CLEAR_NAME_INPUT_STATE,
     COMMIT_NAME_INPUT,

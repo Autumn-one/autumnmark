@@ -224,7 +224,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
             menu.children = menu.children.filter(({ label }) => {
                 if (!canInsertLabel(label, muya))
                     return false;
-                return !label.startsWith('github-alert ') || block?.parent?.parent?.isScrollPage;
+                return !(label.startsWith('github-alert ') || label === 'content-tabs') || block?.parent?.parent?.isScrollPage;
             });
         }
         const availableMenus = menuConfig.filter(menu => menu.children.length);

@@ -228,6 +228,12 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 icon: htmlIcon,
             },
             {
+                title: 'Content tabs',
+                subTitle: '<!-- tabs -->',
+                label: 'content-tabs',
+                icon: newTableIcon,
+            },
+            {
                 title: 'Code Block',
                 subTitle: '```java Lorem Ipsum ```',
                 label: 'code-block',

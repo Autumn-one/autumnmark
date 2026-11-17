@@ -1,6 +1,12 @@
 export const ko = {
     name: 'ko',
     resource: {
+        'Add tab': '탭 추가',
+        'Content tabs': '콘텐츠 탭',
+        'Edit tabs source': '탭 소스 편집',
+        'Untitled tab': '제목 없는 탭',
+        'Double-click to edit tab title': '두 번 클릭하여 탭 제목 편집',
+        'Tab': '탭',
         'Copied': '복사됨',
         'Copy failed': '복사하지 못했습니다. 다시 시도하세요.',
         'Read-only document': '읽기 전용 문서',

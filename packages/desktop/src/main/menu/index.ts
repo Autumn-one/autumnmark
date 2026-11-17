@@ -15,6 +15,7 @@ import type Keybindings from '../keyboard/shortcutHandler'
 import type { UserPreferencesPatch } from '@shared/types/preferences'
 import { RecentDocumentsStore, type RecentDocument } from './recentDocuments'
 import type { ResourceMove } from 'common/filesystem/resourceMove'
+import type { ApplicationMenuCategory, MenuPopupPosition } from '@shared/types/menu'
 
 const RECENTLY_USED_DOCUMENTS_FILE_NAME = 'recently-used-documents.json'
 
@@ -403,12 +404,42 @@ class AppMenu {
   }
 
   _listenForIpcMain(): void {
+    ipcMain.handle('mt::menu::application-categories', (event): ApplicationMenuCategory[] => {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      const menu = window && this.windowMenus.get(window.id)?.menu
+      return menu?.items.flatMap((item, index) =>
+        item.visible && item.submenu ? [{ index, label: item.label, enabled: item.enabled }] : []
+      ) ?? []
+    })
+    ipcMain.handle(
+      'mt::menu::popup-application-category',
+      async(event, index: number, position: MenuPopupPosition): Promise<void> => {
+        const window = BrowserWindow.fromWebContents(event.sender)
+        if (!window || !Number.isInteger(index)) return
+        const item = this.windowMenus.get(window.id)?.menu?.items[index]
+        if (!item?.visible || !item.enabled || !item.submenu) return
+        if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return
+
+        // Renderer bounds are CSS pixels; native menus use device-independent pixels.
+        const zoom = event.sender.getZoomFactor()
+        const submenu = item.submenu
+        await new Promise<void>((resolve) => {
+          submenu.popup({
+            window,
+            x: Math.round(position.x * zoom),
+            y: Math.round(position.y * zoom),
+            callback: resolve
+          })
+        })
+      }
+    )
     ipcMain.on('mt::update-document-mode', (event, readOnly: boolean, hasDocument = true) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return
       this._documentModes.set(win.id, readOnly)
       this._documentPresence.set(win.id, hasDocument)
       this._applyDocumentMode(win.id)
+      event.sender.send('mt::menu::application-categories-changed')
     })
     ipcMain.on('mt::add-recently-used-document', (_e, pathname: string) => {
       this.addRecentlyUsedDocument(pathname)

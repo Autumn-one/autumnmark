@@ -1,6 +1,15 @@
-<p align="center"><img src="docs/assets/logo-small.png" alt="MarkText" width="100" height="100"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
 
-<h1 align="center">MarkText</h1>
+<h1 align="center">AutumnMark · 秋笺</h1>
+
+AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的 Markdown 编辑器分支。本项目保留上游 MIT 许可证与作者署名，并持续改进日常编辑体验。
+
+- 仓库：[Autumn-one/autumnmark](https://github.com/Autumn-one/autumnmark)
+- 安装与更新：[Releases](https://github.com/Autumn-one/autumnmark/releases)
+- 新增：在文件标签页右键选择“在侧边栏中打开所在文件夹”，快速添加并定位当前文件。
+- 开发：`pnpm install`、`pnpm dev`；打包：`pnpm build:win:x64`。
+
+下面保留上游项目介绍与致谢；其中的官方网站、社区、赞助链接属于 MarkText 上游。
 
 <div align="center">
   <a href="https://twitter.com/intent/tweet?via=marktextme&url=https://github.com/marktext/marktext/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkText">

@@ -48,7 +48,7 @@ export function getTOC(muya: Muya): ITocItem[] {
 
         const block = node as IHeadingBlock;
         const head = block.children.head as Content | null;
-        const text = head?.text ?? '';
+        const text = muya.editor.contentTabs.headingSource(block, head?.text ?? '');
 
         // One token pass feeds both serializations so the outline's shown text
         // and its slug stay in step; `githubSlug` has to match the anchor id the

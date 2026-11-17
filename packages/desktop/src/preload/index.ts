@@ -115,7 +115,10 @@ const windowControlAPI = {
   popupMenu: (template: unknown, position?: { x: number; y: number }) =>
     send('mt::menu::popup', template as never, position),
   popupApplicationMenu: (position?: { x: number; y: number }) =>
-    send('mt::menu::popup-application', position)
+    send('mt::menu::popup-application', position),
+  getApplicationMenuCategories: () => invoke('mt::menu::application-categories'),
+  popupApplicationMenuCategory: (index: number, position: { x: number; y: number }) =>
+    invoke('mt::menu::popup-application-category', index, position)
 }
 
 // Keep pure path predicates synchronous for tab matching without filesystem IPC.

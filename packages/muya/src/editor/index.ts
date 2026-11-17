@@ -26,6 +26,7 @@ import { deepClone, hasPick, isHTMLElement } from '../utils';
 import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { isIndentShortcut, isTabKey } from '../utils/tab';
+import { ContentTabs } from './contentTabs';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
 import { attachLinkMouseHandlers } from './linkMouseEvents';
@@ -283,6 +284,7 @@ export class Editor {
     history: History;
     scrollPage: Nullable<ScrollPage> = null;
     textDrag: TextDrag | null = null;
+    contentTabs: ContentTabs;
 
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
@@ -310,6 +312,7 @@ export class Editor {
         this.searchModule = new Search(_muya);
         this.clipboard = Clipboard.create(_muya);
         this.history = new History(_muya);
+        this.contentTabs = new ContentTabs(_muya);
     }
 
     get activeContentBlock() {
@@ -335,6 +338,7 @@ export class Editor {
         const state = this.jsonState.getState();
 
         this.scrollPage = ScrollPage.create(muya, state);
+        this.contentTabs.refresh();
 
         this._dispatchEvents();
         // Hovering a rendered link wrapper dispatches `muya-link-tools` so the
@@ -448,6 +452,11 @@ export class Editor {
     }
 
     private _dispatchContentEvent(block: Content, event: Event): void {
+        const tabBoundary = event.type === 'keydown' ? this.contentTabs.deletionTarget(block, event) : undefined;
+        if (tabBoundary && event instanceof KeyboardEvent) {
+            this.contentTabs.revealDeletionTarget(tabBoundary, event);
+            return;
+        }
         switch (event.type) {
             case 'click':
                 block.clickHandler(event);
@@ -503,7 +512,9 @@ export class Editor {
         }
 
         // TODO: the cursor maybe passed by muya options.cursor, and no need to find the first leaf block.
-        const firstLeafBlock = scrollPage?.firstContentInDescendant();
+        let firstLeafBlock = scrollPage?.firstContentInDescendant();
+        if (firstLeafBlock && this.contentTabs.isHidden(firstLeafBlock))
+            firstLeafBlock = firstLeafBlock.nextContentInContext(true) ?? firstLeafBlock;
 
         if (firstLeafBlock == null)
             return;
@@ -620,12 +631,15 @@ export class Editor {
             this._restoreSelection(selection);
             return;
         }
-        if (operation === null)
+        if (operation === null) {
+            this.contentTabs.refresh();
             return;
+        }
         try {
             let completed: TState[] | undefined;
             const snapshot = pick(this.scrollPage as BlockNode, operation);
             drop(snapshot, operation, this._muya, () => completed ??= recover());
+            this.contentTabs.refresh();
             this._restoreSelection(selection);
         }
         catch (error) {

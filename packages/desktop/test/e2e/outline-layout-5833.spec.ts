@@ -93,7 +93,7 @@ for (const position of ['left', 'right']) {
 
     const appPath = await app.evaluate(({ app }) => app.getAppPath())
     const userData = await app.evaluate(({ app }) => app.getPath('userData'))
-    await expect.poll(() => JSON.parse(readFileSync(join(userData, 'state', 'application-state.json'), 'utf8')).session.windows[0].layout.outline.preferredWidthPx).toBe(340)
+    await expect.poll(() => JSON.parse(readFileSync(join(userData, 'state', 'application-state.json'), 'utf8')).session.windows[0].layout.outline.preferredWidthPx).toBeCloseTo(340, 3)
     await expect.poll(() => JSON.parse(readFileSync(join(userData, 'state', 'application-state.json'), 'utf8')).session.windows[0].layout.modes.sourceCode).toBe(true)
     await app.close()
     app = await _electron.launch({

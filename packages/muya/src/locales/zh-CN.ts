@@ -1,10 +1,16 @@
 export const zhCN = {
     name: 'zh-CN',
     resource: {
+        'Add tab': '添加选项卡',
         'Copied': '已复制',
         'Copy failed': '复制失败，请重试。',
         'Read-only document': '只读文档',
         'Document': '文档',
+        'Content tabs': '内容选项卡',
+        'Edit tabs source': '编辑选项卡源码',
+        'Untitled tab': '未命名选项卡',
+        'Double-click to edit tab title': '双击编辑选项卡标题',
+        'Tab': '选项卡',
         'GitHub Alerts': 'GitHub 提示块',
         'GitHub Alert: NOTE': 'GitHub 提示: NOTE',
         'GitHub Alert: TIP': 'GitHub 提示: TIP',

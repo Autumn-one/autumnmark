@@ -1,0 +1,81 @@
+name: Package AutumnMark Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'codex/build-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Check code and types
+        run: pnpm check
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+  windows-x64:
+    needs: verify
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Enable long paths
+        run: git config --global core.longpaths true
+
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Prepare Electron and native modules
+        run: pnpm tsx scripts/postinstall.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: 'pnpm'
+
+      - name: Build Windows installer and portable archive
+        run: pnpm build:win:x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create download checksums
+        run: |
+          $packages = Get-ChildItem -LiteralPath dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | Sort-Object Name
+          if (-not $packages) { throw 'No Windows packages were produced.' }
+          $checksums = foreach ($package in $packages) {
+            $hash = Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256
+            '{0}  {1}' -f $hash.Hash.ToLowerInvariant(), $package.Name
+          }
+          $checksums | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding utf8
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: autumnmark-windows-x64-preview
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/SHA256SUMS.txt

@@ -1,6 +1,12 @@
 export const ja = {
     name: 'ja',
     resource: {
+        'Add tab': 'タブを追加',
+        'Content tabs': 'コンテンツタブ',
+        'Edit tabs source': 'タブのソースを編集',
+        'Untitled tab': '無題のタブ',
+        'Double-click to edit tab title': 'ダブルクリックでタブ名を編集',
+        'Tab': 'タブ',
         'Copied': 'コピーしました',
         'Copy failed': 'コピーに失敗しました。もう一度お試しください。',
         'Read-only document': '読み取り専用ドキュメント',

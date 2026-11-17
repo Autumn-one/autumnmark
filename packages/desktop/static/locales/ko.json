@@ -108,15 +108,15 @@
       "checkUpdates": "업데이트 확인"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "MarkText 정보",
+      "title": "AutumnMark",
+      "about": "AutumnMark 정보",
       "checkUpdates": "업데이트 확인...",
       "preferences": "환경설정",
       "services": "서비스",
-      "hide": "MarkText 숨기기",
+      "hide": "AutumnMark 숨기기",
       "hideOthers": "다른 앱 숨기기",
       "showAll": "모두 보기",
-      "quit": "MarkText 종료"
+      "quit": "AutumnMark 종료"
     },
     "view": {
       "view": "보기",
@@ -220,7 +220,8 @@
       "rename": "이름 바꾸기",
       "copyPath": "경로 복사",
       "showInFolder": "폴더에서 보기",
-      "showInSideBar": "사이드바에서 보기"
+      "showInSideBar": "사이드바에서 보기",
+      "openContainingFolder": "사이드바에서 파일이 있는 폴더 열기"
     }
   },
   "search": {
@@ -271,6 +272,7 @@
       "expand": "목차 펼치기",
       "collapse": "목차 접기",
       "empty": "제목 없음",
+      "emptyHint": "제목을 추가하면 여기에 표시됩니다",
       "resize": "목차 너비 조절",
       "title": "목차",
       "expandAll": "모두 펼치기",
@@ -293,7 +295,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -410,7 +412,7 @@
   },
   "import": {
     "title": "가져오기 또는 열기",
-    "description": "여기에 드롭하여 MarkText로 가져오세요"
+    "description": "여기에 드롭하여 AutumnMark로 가져오세요"
   },
   "preferences": {
     "title": "환경설정",
@@ -633,7 +635,7 @@
         "lastSuccessTime": "마지막 성공 시간",
         "invalidScript": "실행 가능한 기존 스크립트의 경로를 입력하세요."
       },
-      "defaultBehavior": "이미지를 MarkText에 붙여넣거나 드래그한 후의 기본 동작"
+      "defaultBehavior": "이미지를 AutumnMark에 붙여넣거나 드래그한 후의 기본 동작"
     },
     "markdown": {
       "title": "마크다운",
@@ -664,10 +666,10 @@
           "simple": "간단"
         },
         "mermaidLightTheme": {
-          "title": "MarkText 라이트 테마용 Mermaid 테마"
+          "title": "AutumnMark 라이트 테마용 Mermaid 테마"
         },
         "mermaidDarkTheme": {
-          "title": "MarkText 다크 테마용 Mermaid 테마"
+          "title": "AutumnMark 다크 테마용 Mermaid 테마"
         },
         "plantumlServer": {
           "title": "PlantUML 서버 URL"
@@ -782,7 +784,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "MarkText 숨기기",
+      "hide": "AutumnMark 숨기기",
       "hideOthers": "다른 앱 숨기기"
     },
     "file": {
@@ -939,7 +941,7 @@
     "fileExists": "파일이 이미 존재합니다: {filename}",
     "files": "파일",
     "importWarning": "가져오기 경고",
-    "installPandoc": "Pandoc를 찾을 수 없습니다. 설치하거나 환경 변수 MARKTEXT_PANDOC에 pandoc 실행 파일 경로를 설정한 뒤 MarkText를 다시 시작하세요.",
+    "installPandoc": "Pandoc를 찾을 수 없습니다. 설치하거나 환경 변수 MARKTEXT_PANDOC에 pandoc 실행 파일 경로를 설정한 뒤 AutumnMark를 다시 시작하세요.",
     "exportWarning": "내보내기 경고",
     "exportWarningMore": "…외 {count}건",
     "keepOpen": "열어두기",
@@ -956,7 +958,7 @@
     "configSchemaViolation": "구성 스키마 위반",
     "copyError": "복사 오류",
     "initializationFailed": "초기화 실패 {hint}",
-    "otherInstanceDetected": "MarkText의 다른 인스턴스가 이미 실행 중입니다",
+    "otherInstanceDetected": "AutumnMark의 다른 인스턴스가 이미 실행 중입니다",
     "report": "신고",
     "startupError": "시작 오류",
     "terminatedDueToError": "오류로 인해 종료됨",

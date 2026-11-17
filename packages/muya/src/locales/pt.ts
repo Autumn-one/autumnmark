@@ -1,6 +1,12 @@
 export const pt = {
     name: 'pt',
     resource: {
+        'Add tab': 'Adicionar aba',
+        'Content tabs': 'Abas de conteúdo',
+        'Edit tabs source': 'Editar código das abas',
+        'Untitled tab': 'Aba sem título',
+        'Double-click to edit tab title': 'Clique duas vezes para editar o título',
+        'Tab': 'Aba',
         'Copied': 'Copiado',
         'Copy failed': 'Falha ao copiar. Tente novamente.',
         'Read-only document': 'Documento somente leitura',

@@ -39,7 +39,8 @@
       class="outline-empty"
       role="status"
     >
-      {{ t('sideBar.toc.empty') }}
+      <span>{{ t('sideBar.toc.empty') }}</span>
+      <span class="outline-empty-hint">{{ t('sideBar.toc.emptyHint') }}</span>
     </p>
   </div>
 </template>
@@ -260,11 +261,19 @@ const handleClick = (data: { slug?: unknown }): void => {
 }
 
 .outline-empty {
-  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 48px 0 0;
   padding: 24px 12px;
   font-size: 13px;
   text-align: center;
   color: var(--sideBarColor);
+}
+
+.outline-empty-hint {
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .side-bar-toc .el-tree-node {

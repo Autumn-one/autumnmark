@@ -815,6 +815,40 @@ export class SessionHost {
     })
   }
 
+  private async _openContainingFolder(
+    editor: EditorWindow,
+    documentId: string
+  ): Promise<string | null> {
+    await editor.sessionReady
+    const id = editor.sessionStateId
+    return this._enqueueWindowOperation(id, async() => {
+      await this._requestCheckpoint(id)
+      // Resolve the document after the checkpoint so a queued rename cannot leave a stale path.
+      const document = this._owner().getWindow(id)?.documents.find(item => item.id === documentId)
+      if (document?.resource.kind !== 'file') return null
+      const pathname = document.resource.location.path
+      const directory = createFileLocation(path.dirname(pathname))
+      let root = editor.projectRoots.roots.find(item => containsPath(item.key, directory.canonicalPath))
+      if (!root) {
+        if (editor.projectRoots.roots.some(item => containsPath(directory.canonicalPath, item.key))) {
+          throw new Error(t('sideBar.tree.overlappingFolder'))
+        }
+        editor.projectRoots.add(directory.path)
+        await this._synchronizeRoots(editor)
+        root = editor.projectRoots.roots.find(item => containsPath(item.key, directory.canonicalPath))
+      } else if (root.status === 'unavailable') {
+        editor.projectRoots.retry(root.key)
+      }
+      if (!root) return null
+      // A root may have been opened through a different directory alias than the document.
+      return path.join(
+        root.pathname,
+        path.relative(root.key, directory.canonicalPath),
+        path.basename(pathname)
+      )
+    })
+  }
+
   private async _synchronizeRoots(editor: EditorWindow): Promise<void> {
     const id = editor.sessionStateId!
     const workspace = createWorkspaceDescriptor(
@@ -1369,6 +1403,9 @@ export class SessionHost {
         editor.projectRoots.restore(editor.projectRoots.roots.map(({ pathname }) => ({ pathname })))
       }
       return this._initialization(editor)
+    })
+    ipcMain.handle('mt::project-open-containing-folder', (event, documentId: string) => {
+      return this._openContainingFolder(editorFor(event.sender), documentId)
     })
     ipcMain.handle('mt::preferences::get', () => this._accessor.preferences.getAll())
     ipcMain.handle('mt::preferences::update', (_event, patch) => {

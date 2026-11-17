@@ -1,10 +1,16 @@
 export const en = {
     name: 'en',
     resource: {
+        'Add tab': 'Add tab',
         'Copied': 'Copied',
         'Copy failed': 'Copy failed. Please try again.',
         'Read-only document': 'Read-only document',
         'Document': 'Document',
+        'Content tabs': 'Content tabs',
+        'Edit tabs source': 'Edit tabs source',
+        'Untitled tab': 'Untitled tab',
+        'Double-click to edit tab title': 'Double-click to edit tab title',
+        'Tab': 'Tab',
         'GitHub Alerts': 'GitHub Alerts',
         'GitHub Alert: NOTE': 'GitHub Alert: NOTE',
         'GitHub Alert: TIP': 'GitHub Alert: TIP',

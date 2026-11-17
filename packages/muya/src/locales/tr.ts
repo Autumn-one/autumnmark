@@ -1,6 +1,12 @@
 export const tr = {
     name: 'tr',
     resource: {
+        'Add tab': 'Sekme ekle',
+        'Content tabs': 'İçerik sekmeleri',
+        'Edit tabs source': 'Sekme kaynağını düzenle',
+        'Untitled tab': 'Başlıksız sekme',
+        'Double-click to edit tab title': 'Başlığı düzenlemek için çift tıklayın',
+        'Tab': 'Sekme',
         'Copied': 'Kopyalandı',
         'Copy failed': 'Kopyalama başarısız oldu. Lütfen tekrar deneyin.',
         'Read-only document': 'Salt okunur belge',

@@ -41,3 +41,7 @@ export const showInSideBar = (pathname?: string | null): void => {
   if (!pathname) return
   bus.emit('SIDEBAR::reveal-file', pathname)
 }
+
+export const openContainingFolder = (tabId: string): void => {
+  bus.emit('SIDEBAR::open-containing-folder', tabId)
+}

@@ -1,6 +1,12 @@
 export const zhTW = {
     name: 'zh-TW',
     resource: {
+        'Add tab': '新增分頁',
+        'Content tabs': '內容分頁',
+        'Edit tabs source': '編輯分頁原始碼',
+        'Untitled tab': '未命名分頁',
+        'Double-click to edit tab title': '按兩下編輯分頁標題',
+        'Tab': '分頁',
         'Copied': '已複製',
         'Copy failed': '複製失敗，請重試。',
         'Read-only document': '唯讀文件',

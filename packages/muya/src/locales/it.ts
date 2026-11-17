@@ -1,6 +1,12 @@
 export const it = {
     name: 'it',
     resource: {
+        'Add tab': 'Aggiungi scheda',
+        'Content tabs': 'Schede di contenuto',
+        'Edit tabs source': 'Modifica sorgente delle schede',
+        'Untitled tab': 'Scheda senza titolo',
+        'Double-click to edit tab title': 'Fai doppio clic per modificare il titolo',
+        'Tab': 'Scheda',
         'GitHub Alerts': 'GitHub Alerts',
         'GitHub Alert: NOTE': 'GitHub Alert: NOTE',
         'GitHub Alert: TIP': 'GitHub Alert: TIP',

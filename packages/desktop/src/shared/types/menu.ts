@@ -23,3 +23,9 @@ export interface MenuPopupPosition {
   x: number
   y: number
 }
+
+export interface ApplicationMenuCategory {
+  index: number
+  label: string
+  enabled: boolean
+}

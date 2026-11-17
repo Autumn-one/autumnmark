@@ -1,6 +1,12 @@
 export const es = {
     name: 'es',
     resource: {
+        'Add tab': 'Añadir pestaña',
+        'Content tabs': 'Pestañas de contenido',
+        'Edit tabs source': 'Editar código de las pestañas',
+        'Untitled tab': 'Pestaña sin título',
+        'Double-click to edit tab title': 'Haz doble clic para editar el título',
+        'Tab': 'Pestaña',
         'Copied': 'Copiado',
         'Copy failed': 'Error al copiar. Inténtelo de nuevo.',
         'Read-only document': 'Documento de solo lectura',

@@ -1,4 +1,4 @@
-name: Release MarkText
+name: Release AutumnMark
 
 on:
   push:
@@ -19,6 +19,8 @@ jobs:
     name: Validate tag
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7.0.1
+
       - name: Validate semver tag
         run: |
           tag="${GITHUB_REF_NAME}"
@@ -28,6 +30,16 @@ jobs:
             exit 1
           fi
           echo "Tag '$tag' is valid."
+
+      - name: Match tag to application version
+        run: |
+          node <<'NODE'
+          const expected = process.env.GITHUB_REF_NAME.slice(1)
+          for (const filename of ['./package.json', './packages/desktop/package.json']) {
+            const { version } = require(filename)
+            if (version !== expected) throw new Error(`${filename}: ${version} does not match ${expected}`)
+          }
+          NODE
 
   build:
     name: Build (${{ matrix.name }})
@@ -139,7 +151,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: marktext-${{ matrix.name }}
+          name: autumnmark-${{ matrix.name }}
           retention-days: 7
           if-no-files-found: error
           path: |
@@ -204,9 +216,9 @@ jobs:
               echo ""
             fi
             echo "## ⚠️ Note for macOS users"
-            echo "Builds are unsigned (no Apple Developer ID). After dragging MarkText into Applications, clear the quarantine flag once:"
+            echo "Builds are unsigned (no Apple Developer ID). After dragging AutumnMark into Applications, clear the quarantine flag once:"
             echo '```'
-            echo 'xattr -d com.apple.quarantine /Applications/MarkText.app'
+            echo 'xattr -d com.apple.quarantine /Applications/AutumnMark.app'
             echo '```'
             echo ""
             echo "## Verifying downloads"
@@ -222,7 +234,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > releases.json
-          previous_tag=$(python scripts/select-release-base.py "${GITHUB_REF_NAME}" < releases.json)
+          previous_tag=$(python scripts/select-release-base.py "${GITHUB_REF_NAME}" --allow-first-release < releases.json)
           echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
           echo "Release notes range: ${previous_tag}...${GITHUB_REF_NAME}"
 

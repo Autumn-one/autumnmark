@@ -13,6 +13,7 @@ import type { TabOptions } from '@shared/types/files'
 import { ProjectRoots, resolveExistingPath } from './projectRoots'
 import { randomUUID } from 'node:crypto'
 import type { PreparedSessionWindow } from '@shared/types/applicationState'
+import { APP_NAME } from '@shared/brand'
 
 export interface FileOpenOptions extends TabOptions {
   allowMissing?: boolean
@@ -67,7 +68,12 @@ class EditorWindow extends BaseWindow {
       options,
       { show: false }
     )
-    if (isLinux) winOptions.icon = path.join(process.cwd(), 'static', 'logo-96px.png')
+    if (isLinux) {
+      winOptions.icon = path.join(
+        (global as unknown as { __static: string }).__static,
+        'logo-96px.png'
+      )
+    }
     const { titleBarStyle, theme, spellcheckerEnabled, spellcheckerLanguage, sourceCodeModeEnabled } = preferences.getAll()
 
     if (!isOsx) {
@@ -150,7 +156,7 @@ class EditorWindow extends BaseWindow {
       const { response } = await dialog.showMessageBox(win, {
         type: 'warning',
         buttons: ['Close', 'Reload', 'Keep It Open'],
-        message: 'MarkText has crashed',
+        message: `${APP_NAME} has crashed`,
         detail: msg
       })
 

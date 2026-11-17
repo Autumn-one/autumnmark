@@ -14,6 +14,7 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'file.quick-open-recent': 'commands.file.quickOpenRecent',
   'file.import-file': 'commands.file.importFile',
   'file.reveal-in-sidebar': 'commands.file.revealInSideBar',
+  'file.open-containing-folder': 'contextMenu.tabs.openContainingFolder',
 
   'file.save': 'commands.file.save',
   'file.save-as': 'commands.file.saveAs',

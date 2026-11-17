@@ -407,6 +407,10 @@ export class Search {
             this._muya.editor.selection.setSelection(selection);
         }
 
+        const activeMatch = matches[index];
+        if (query && this._visible && activeMatch)
+            this._muya.editor.contentTabs.reveal(activeMatch.block);
+
         return this;
     }
 

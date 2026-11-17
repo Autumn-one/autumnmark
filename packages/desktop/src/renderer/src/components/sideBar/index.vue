@@ -162,7 +162,7 @@ const returnToFiles = (restoreFocus = true): void => {
   color: var(--sideBarColor);
   user-select: none;
   background: var(--sideBarBgColor);
-  border-right: 1px solid var(--itemBgColor);
+  border-right: 1px solid var(--sideBarBorderColor);
 }
 
 .sidebar-header,

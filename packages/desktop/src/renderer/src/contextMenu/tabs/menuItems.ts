@@ -74,6 +74,14 @@ export const getShowInSideBar = () => ({
   }
 })
 
+export const getOpenContainingFolder = () => ({
+  label: t('contextMenu.tabs.openContainingFolder'),
+  id: 'openContainingFolder',
+  click(menuItem: TabMenuItem, _browserWindow?: unknown) {
+    contextMenu.openContainingFolder(menuItem._tabId)
+  }
+})
+
 // Retained for backward compatibility
 export const CLOSE_THIS = getCloseThis()
 export const CLOSE_OTHERS = getCloseOthers()

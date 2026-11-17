@@ -108,15 +108,15 @@
       "checkUpdates": "Verificar Atualizações"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "Sobre MarkText",
+      "title": "AutumnMark",
+      "about": "Sobre AutumnMark",
       "checkUpdates": "Verificar Atualizações...",
       "preferences": "Preferências",
       "services": "Serviços",
-      "hide": "Ocultar MarkText",
+      "hide": "Ocultar AutumnMark",
       "hideOthers": "Ocultar Outros",
       "showAll": "Mostrar Todos",
-      "quit": "Sair do MarkText"
+      "quit": "Sair do AutumnMark"
     },
     "view": {
       "view": "Visualizar",
@@ -220,7 +220,8 @@
       "rename": "Renomear",
       "copyPath": "Copiar caminho",
       "showInFolder": "Mostrar na pasta",
-      "showInSideBar": "Mostrar na barra lateral"
+      "showInSideBar": "Mostrar na barra lateral",
+      "openContainingFolder": "Abrir pasta do arquivo na barra lateral"
     }
   },
   "search": {
@@ -271,6 +272,7 @@
       "expand": "Expandir sumário",
       "collapse": "Recolher sumário",
       "empty": "Sem títulos",
+      "emptyHint": "Os títulos aparecerão aqui quando forem adicionados",
       "resize": "Redimensionar índice",
       "title": "Índice",
       "expandAll": "Expandir tudo",
@@ -293,7 +295,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -410,7 +412,7 @@
   },
   "import": {
     "title": "Importar ou Abrir",
-    "description": "Solte aqui para colocar suas coisas no MarkText"
+    "description": "Solte aqui para colocar suas coisas no AutumnMark"
   },
   "preferences": {
     "title": "Preferências",
@@ -633,7 +635,7 @@
         "lastSuccessTime": "Última vez bem-sucedida",
         "invalidScript": "Introduza o caminho de um script existente e executável."
       },
-      "defaultBehavior": "O comportamento padrão após colar ou arrastar a imagem para o MarkText"
+      "defaultBehavior": "O comportamento padrão após colar ou arrastar a imagem para o AutumnMark"
     },
     "markdown": {
       "title": "Markdown",
@@ -664,10 +666,10 @@
           "simple": "Simples"
         },
         "mermaidLightTheme": {
-          "title": "Tema do Mermaid para temas claros do MarkText"
+          "title": "Tema do Mermaid para temas claros do AutumnMark"
         },
         "mermaidDarkTheme": {
-          "title": "Tema do Mermaid para temas escuros do MarkText"
+          "title": "Tema do Mermaid para temas escuros do AutumnMark"
         },
         "plantumlServer": {
           "title": "URL do servidor PlantUML"
@@ -782,7 +784,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "Ocultar MarkText",
+      "hide": "Ocultar AutumnMark",
       "hideOthers": "Ocultar Outros"
     },
     "file": {
@@ -939,7 +941,7 @@
     "fileExists": "O arquivo já existe: {filename}",
     "files": "Arquivos",
     "importWarning": "Aviso de importação",
-    "installPandoc": "Pandoc não foi encontrado. Instale-o, ou defina a variável de ambiente MARKTEXT_PANDOC com o caminho do executável do pandoc e reinicie o MarkText.",
+    "installPandoc": "Pandoc não foi encontrado. Instale-o, ou defina a variável de ambiente MARKTEXT_PANDOC com o caminho do executável do pandoc e reinicie o AutumnMark.",
     "exportWarning": "Aviso de exportação",
     "exportWarningMore": "…e mais {count}",
     "keepOpen": "Manter aberto",
@@ -956,7 +958,7 @@
     "configSchemaViolation": "Violação do esquema de configuração",
     "copyError": "Erro de cópia",
     "initializationFailed": "Falha na inicialização {hint}",
-    "otherInstanceDetected": "Outra instância do MarkText já está em execução",
+    "otherInstanceDetected": "Outra instância do AutumnMark já está em execução",
     "report": "Reportar",
     "startupError": "Erro de inicialização",
     "terminatedDueToError": "Terminado devido a erro",

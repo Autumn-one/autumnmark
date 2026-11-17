@@ -1,6 +1,12 @@
 export const ru = {
     name: 'ru',
     resource: {
+        'Add tab': 'Добавить вкладку',
+        'Content tabs': 'Вкладки содержимого',
+        'Edit tabs source': 'Изменить исходный код вкладок',
+        'Untitled tab': 'Вкладка без названия',
+        'Double-click to edit tab title': 'Дважды щёлкните для изменения заголовка',
+        'Tab': 'Вкладка',
         'Copied': 'Скопировано',
         'Copy failed': 'Не удалось скопировать. Повторите попытку.',
         'Read-only document': 'Документ только для чтения',

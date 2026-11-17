@@ -8,8 +8,11 @@ let runningUpdate = false
 let win: BrowserWindow | null = null
 
 autoUpdater.autoDownload = false
+// Fork builds follow published stable releases, including builds installed from a dev version.
+autoUpdater.allowPrerelease = false
 
 autoUpdater.on('error', (error: Error) => {
+  runningUpdate = false
   if (win) {
     // Preserve the JS behavior: it tolerated `null` here; the typed event
     // shape doesn't, but the same defensive code below stays in place.
@@ -53,7 +56,7 @@ autoUpdater.on('update-downloaded', (_event) => {
 
 ipcMain.on('mt::NEED_UPDATE', (_e, { needUpdate }: { needUpdate: boolean }) => {
   if (needUpdate) {
-    autoUpdater.downloadUpdate()
+    void autoUpdater.downloadUpdate().catch(() => { runningUpdate = false })
   } else {
     runningUpdate = false
   }
@@ -73,7 +76,7 @@ export const checkUpdates = (browserWindow: BrowserWindow | null): void => {
   if (!runningUpdate) {
     runningUpdate = true
     win = browserWindow
-    autoUpdater.checkForUpdates()
+    void autoUpdater.checkForUpdates().catch(() => { runningUpdate = false })
   }
 }
 

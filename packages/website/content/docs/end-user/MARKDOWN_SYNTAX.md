@@ -28,6 +28,7 @@ This guide introduces Markdown syntax supported by MarkText and the optional ext
   - [Superscript and subscript](#superscript-and-subscript)
   - [Math Formulas](#math-formulas)
 - [Others](#others)
+  - [Content tabs](#content-tabs)
   - [GitHub Alerts](#github-alerts)
   - [Highlight](#highlight)
   - [Inline diff](#inline-diff)
@@ -714,6 +715,56 @@ alone.
 ## Others
 
 Additional supported conventions and editor rendering features are grouped here. GitHub Alerts and emoji shortcodes are separate from the formal GFM extensions listed above; inline diff and multiline blockquotes follow GitLab conventions.
+
+### Content tabs
+
+Wrap ordinary Markdown in standalone `<!-- tabs -->` and `<!-- /tabs -->`
+comments. Inside the group, an ATX heading whose text starts with `|` followed
+by a space or tab starts a content tab:
+
+```markdown
+<!-- tabs -->
+
+#### | Windows
+
+Windows installation instructions.
+
+#### | macOS
+
+macOS installation instructions.
+
+#### Troubleshooting
+
+This ordinary heading and its body still belong to the macOS tab.
+
+<!-- /tabs -->
+
+This paragraph is outside the group.
+```
+
+The next marked heading or closing comment ends the current tab. Heading
+levels do not determine tab boundaries. `#### \\| Windows` is equivalent to
+`#### | Windows`; `#### |Windows` and `#### || Windows` remain ordinary headings.
+Headings in code, quotes, and lists do not split an enclosing group. Complete
+groups can be nested, and each group uses only its own direct headings.
+Content before the first tab heading stays visible above the panels. An
+unclosed group or a group without tab headings keeps its ordinary Markdown
+appearance. Markers are case-sensitive and must occupy their own lines.
+
+Type `/tabs` in a top-level paragraph to insert a group and edit its first
+title. Click `+` on the tab bar to append a tab and edit its name; adding a tab
+is one undo step. Click labels to switch tabs, or double-click a label (or press
+F2 while it is focused) to edit its heading. Press Enter to finish the title and
+enter its body, press Escape to return to the label, or click elsewhere to hide
+the title editor. Use the `</>` button to edit the group's source blocks. Focused
+labels support Left/Right, Home/End, and Down to enter the active panel. Search
+and outline navigation reveal the target tab automatically. Switching tabs
+does not modify the document or its undo history.
+
+Saving preserves the comments and heading markers. Other Markdown readers
+display ordinary headings and all content, including the visible `|` prefix.
+HTML/PDF exports and printing expand all panels in source order. HTML exports
+remove the tab prefix from recognized tab headings and need no scripts.
 
 ### GitHub Alerts
 

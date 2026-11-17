@@ -30,6 +30,12 @@
 !macroend
 
 !macro customInstall
+  Push $0
+  FileOpen $0 "$INSTDIR\resources\nsis-installed" w
+  FileWrite $0 "NSIS"
+  FileClose $0
+  Pop $0
+
   !insertmacro mtAssociateExtension ".md"
   !insertmacro mtAssociateExtension ".markdown"
   !insertmacro mtAssociateExtension ".mmd"
@@ -39,18 +45,18 @@
   !insertmacro mtAssociateExtension ".mdx"
 
   WriteRegStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}" \
-    "" "MarkText Markdown Document"
+    "" "AutumnMark Markdown Document"
   WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\DefaultIcon" \
     "" "$INSTDIR\resources\icons\md.ico,0"
   WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\shell\open\command" \
-    "" '"$INSTDIR\marktext.exe" "%1"'
+    "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
 
   ; electron-builder writes the command for its own ProgId — `Markdown`, the
   ; `fileAssociations[].name` in electron-builder.yml — with the executable
   ; path unquoted, which runs `C:\Program` when the directory the user picked
   ; during setup contains a space.
   WriteRegStr SHELL_CONTEXT "Software\Classes\Markdown\shell\open\command" \
-    "" '"$INSTDIR\marktext.exe" "%1"'
+    "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
 
   ; Explorer serves file types from a cache that a fresh install otherwise
   ; keeps until the next sign-in.

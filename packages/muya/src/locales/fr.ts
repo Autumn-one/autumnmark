@@ -1,6 +1,12 @@
 export const fr = {
     name: 'fr',
     resource: {
+        'Add tab': 'Ajouter un onglet',
+        'Content tabs': 'Onglets de contenu',
+        'Edit tabs source': 'Modifier le code des onglets',
+        'Untitled tab': 'Onglet sans titre',
+        'Double-click to edit tab title': 'Double-cliquez pour modifier le titre',
+        'Tab': 'Onglet',
         'Copied': 'Copié',
         'Copy failed': 'Échec de la copie. Veuillez réessayer.',
         'Read-only document': 'Document en lecture seule',

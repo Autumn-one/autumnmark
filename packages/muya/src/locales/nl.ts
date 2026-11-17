@@ -1,6 +1,12 @@
 export const nl = {
     name: 'nl',
     resource: {
+        'Add tab': 'Tabblad toevoegen',
+        'Content tabs': 'Inhoudstabbladen',
+        'Edit tabs source': 'Broncode van tabbladen bewerken',
+        'Untitled tab': 'Naamloos tabblad',
+        'Double-click to edit tab title': 'Dubbelklik om de titel te bewerken',
+        'Tab': 'Tabblad',
         'Copied': 'Gekopieerd',
         'Copy failed': 'Kopiëren mislukt. Probeer het opnieuw.',
         'Read-only document': 'Alleen-lezen document',

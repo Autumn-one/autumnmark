@@ -160,6 +160,12 @@ const commands: CommandDescriptor[] = [
     }
   },
   {
+    id: 'file.open-containing-folder',
+    execute: () => {
+      bus.emit('SIDEBAR::open-containing-folder', null)
+    }
+  },
+  {
     id: 'file.export-file',
     subcommands: [
       {

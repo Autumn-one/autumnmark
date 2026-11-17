@@ -108,15 +108,15 @@
       "checkUpdates": "Updates prüfen"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "Über MarkText",
+      "title": "AutumnMark",
+      "about": "Über AutumnMark",
       "checkUpdates": "Nach Updates suchen...",
       "preferences": "Einstellungen",
       "services": "Dienste",
-      "hide": "MarkText ausblenden",
+      "hide": "AutumnMark ausblenden",
       "hideOthers": "Andere ausblenden",
       "showAll": "Alle anzeigen",
-      "quit": "MarkText beenden"
+      "quit": "AutumnMark beenden"
     },
     "view": {
       "view": "Ansicht",
@@ -220,7 +220,8 @@
       "rename": "Umbenennen",
       "copyPath": "Pfad kopieren",
       "showInFolder": "Im Ordner anzeigen",
-      "showInSideBar": "In Seitenleiste anzeigen"
+      "showInSideBar": "In Seitenleiste anzeigen",
+      "openContainingFolder": "Übergeordneten Ordner in der Seitenleiste öffnen"
     }
   },
   "search": {
@@ -271,6 +272,7 @@
       "expand": "Inhaltsverzeichnis aufklappen",
       "collapse": "Inhaltsverzeichnis zuklappen",
       "empty": "Keine Überschriften",
+      "emptyHint": "Hinzugefügte Überschriften erscheinen hier",
       "resize": "Breite des Inhaltsverzeichnisses ändern",
       "title": "Inhaltsverzeichnis",
       "expandAll": "Alle ausklappen",
@@ -293,7 +295,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -410,7 +412,7 @@
   },
   "import": {
     "title": "Importieren oder öffnen",
-    "description": "Hier hineinziehen, um Ihren Inhalt in MarkText zu importieren"
+    "description": "Hier hineinziehen, um Ihren Inhalt in AutumnMark zu importieren"
   },
   "preferences": {
     "title": "Einstellungen",
@@ -633,7 +635,7 @@
         "lastSuccessTime": "Letzte erfolgreiche Zeit",
         "invalidScript": "Gib den Pfad zu einem vorhandenen ausführbaren Skript ein."
       },
-      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in MarkText"
+      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in AutumnMark"
     },
     "markdown": {
       "title": "Markdown",
@@ -664,10 +666,10 @@
           "simple": "Einfach"
         },
         "mermaidLightTheme": {
-          "title": "Mermaid-Theme für helle MarkText-Themes"
+          "title": "Mermaid-Theme für helle AutumnMark-Themes"
         },
         "mermaidDarkTheme": {
-          "title": "Mermaid-Theme für dunkle MarkText-Themes"
+          "title": "Mermaid-Theme für dunkle AutumnMark-Themes"
         },
         "plantumlServer": {
           "title": "PlantUML-Server-URL"
@@ -782,7 +784,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "MarkText ausblenden",
+      "hide": "AutumnMark ausblenden",
       "hideOthers": "Andere ausblenden"
     },
     "file": {
@@ -939,7 +941,7 @@
     "fileExists": "Datei existiert bereits: {filename}",
     "files": "Dateien",
     "importWarning": "Import-Warnung",
-    "installPandoc": "Pandoc wurde nicht gefunden. Installieren Sie es, oder setzen Sie die Umgebungsvariable MARKTEXT_PANDOC auf den Pfad zur pandoc-Binary und starten Sie MarkText neu.",
+    "installPandoc": "Pandoc wurde nicht gefunden. Installieren Sie es, oder setzen Sie die Umgebungsvariable MARKTEXT_PANDOC auf den Pfad zur pandoc-Binary und starten Sie AutumnMark neu.",
     "exportWarning": "Export-Warnung",
     "exportWarningMore": "…und {count} weitere",
     "keepOpen": "Offen halten",
@@ -956,7 +958,7 @@
     "configSchemaViolation": "Konfigurationsschema-Verletzung",
     "copyError": "Kopierfehler",
     "initializationFailed": "Initialisierung fehlgeschlagen {hint}",
-    "otherInstanceDetected": "Eine andere Instanz von MarkText läuft bereits",
+    "otherInstanceDetected": "Eine andere Instanz von AutumnMark läuft bereits",
     "report": "Melden",
     "startupError": "Startfehler",
     "terminatedDueToError": "Aufgrund eines Fehlers beendet",

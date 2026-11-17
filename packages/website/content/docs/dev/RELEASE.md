@@ -1,14 +1,16 @@
-# Releasing MarkText
+# Releasing AutumnMark
 
-The release pipeline is triggered by pushing a `v*` tag. The `Release MarkText` workflow (`.github/workflows/release.yml`) then runs **validate → build (6-platform matrix) → publish** and creates a GitHub Release with installers and `SHA256SUMS.txt`.
+The release pipeline is triggered by pushing a `v*` tag. The `Release AutumnMark` workflow (`.github/workflows/release.yml`) then runs **validate → build (6-platform matrix) → publish** and creates a GitHub Release with installers and `SHA256SUMS.txt`.
 
-Release notes explicitly compare against the highest published stable `vX.Y.Z` version below the new version, selected from all release pages by `scripts/select-release-base.py`. Drafts, prereleases, and the current version are excluded. RCs compare against the previous stable cycle; hotfixes exclude newer versions. For example, `v0.22.0` compares against `v0.21.2` even if that tag is on a separate release branch. The workflow fails if no earlier stable release exists instead of falling back to GitHub's automatic comparison base. Verify the `Full Changelog` link during release review.
+Release notes explicitly compare against the highest published stable `vX.Y.Z` version below the new version, selected from all release pages by `scripts/select-release-base.py`. Drafts, prereleases, and the current version are excluded. RCs compare against the previous stable cycle; hotfixes exclude newer versions. For example, `v0.22.0` compares against `v0.21.2` even if that tag is on a separate release branch. A repository with no published stable releases may publish its first release cycle without a comparison base. Otherwise, the workflow fails if no earlier stable release exists. Verify the `Full Changelog` link during release review.
+
+This fork publishes updates through `Autumn-one/autumnmark`. The GitHub provider is pinned in `packages/desktop/electron-builder.yml`; the app checks published stable releases only. Upload the generated installers, blockmaps, and `latest*.yml` files together. A local build does not publish a release. Keep both package versions equal to the pushed tag (without `v`), and increase the version for each update. Install the fork's Windows setup once to switch an existing upstream installation to this update source; ZIP builds do not offer in-app installation of updates.
 
 The flow below covers both release candidates and stable releases — same steps, only the version string differs.
 
 ## Prerequisites
 
-- Push access to `marktext/marktext`
+- Push access to `Autumn-one/autumnmark`
 - `gh` CLI authenticated (`gh auth status`)
 - A clean checkout of the latest `develop`
 

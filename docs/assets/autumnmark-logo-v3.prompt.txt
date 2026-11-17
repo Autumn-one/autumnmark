@@ -1,0 +1,39 @@
+AutumnMark · 秋笺 — violet bookmark identity proposal
+
+Mode: built-in image_gen
+Primary symbol: autumnmark-logo-v3.png
+Identity presentation: autumnmark-identity-v3.png
+
+Identity generation prompt
+
+Use case: logo-brand
+Asset type: professional brand identity proposal for a commercial desktop Markdown editor called AutumnMark.
+This is a fresh design, NOT a modification of earlier images. The previous plain cursive lowercase a was rejected as generic and amateur. Create a genuinely designed, distinctive symbol with disciplined geometry, optical balance, and an ownable silhouette. The brand should feel calm, precise, creative, mature, and premium.
+
+DESIGN DIRECTION:
+A compact abstract capital-A / bookmark monogram. The A should be a secondary discovery inside the negative space of a beautifully proportioned folded-bookmark symbol. Use a small number of substantial geometric masses with a controlled contrast of subtly rounded exterior corners and sharp deliberate interior cuts. Incorporate one unexpected asymmetric cut or junction as the identifying detail. It must work as ONE solid silhouette without color, readable at 24px. Avoid a standard font A, handwritten a, infinity loop, generic orbit, lotus, quill, leaf, page curl, M, or the blue MarkText identity. This should look like an original identity drawn by a skilled brand designer, not a font character with a decorative swoosh.
+
+COLOR:
+Primary: refined medium violet #7754C8.
+Secondary: soft muted lavender #B9A4E4.
+Surfaces: porcelain #F9F8FC and deep plum #251C3B.
+Use mostly solid color. If two purple tones articulate a fold, make it subtle and structural. No shiny gradients, neon, 3D, glow, glass, noise or unnecessary ornament.
+
+DELIVER ONE coherent identity board, landscape approximately 1536x1024:
+- Generous porcelain background, precise editorial grid and restrained high-end art direction.
+- Upper two-thirds: large primary violet symbol next to a refined custom-spaced wordmark reading EXACTLY "AutumnMark". Modern humanist sans-serif typography, medium weight, beautifully kerned. The emblem should be the focal point and have strong visual weight.
+- Lower third: three compact applications of THE EXACT SAME emblem, separated by generous whitespace: white one-color symbol on a deep-plum square; lavender/violet desktop app icon on a soft-lavender rounded-square tile; black one-color symbol on porcelain at a few clearly smaller sizes.
+- The logo geometry must be identical everywhere, and the silhouette must remain recognizable without the two-tone treatment.
+- One very small understated caption at top left reading exactly "AutumnMark". No slogans, explanatory paragraphs, random labels, fake UI, stock mockups, photography, decorative strokes, or watermarks.
+Presentation should feel like a finished identity from an independent premium software studio. The icon itself must carry the quality; layout must not conceal a weak generic shape.
+
+Standalone symbol prompt
+
+Use case: precise-object-edit
+Input image: AutumnMark identity board, used as the edit target and exact design reference.
+Extract and professionally finish ONLY the large primary purple symbol at the upper left of this board (the large emblem beside the big wordmark).
+Preserve its distinctive exact silhouette and the internal A-shaped negative-space cut, proportions, softened exterior corners, lower pointed bookmark ends, short inner crossbar, and diagonal lavender upper-right plane.
+Deliver one standalone symbol centered on a clean opaque porcelain-white #FAF9FC square canvas with equal generous margins, occupying about 68 percent of width and height. No wordmark, text, mockup, repeated symbols or surrounding board.
+Refine its rendering into pristine vector-style geometry: perfectly smooth contours, uniform solid primary violet #7754C8, uniform solid soft lavender #B9A4E4 upper-right plane, no gradients or texture, no shadow, no stray pixels, no blue or magenta fringing. The negative space should match the porcelain background exactly.
+The logo must retain the same designed shape from the primary symbol, not introduce new cuts from the smaller variants.
+

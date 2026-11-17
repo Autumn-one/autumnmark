@@ -10,6 +10,7 @@ import { app, clipboard, crashReporter, dialog, ipcMain } from 'electron'
 import os from 'os'
 import log from 'electron-log'
 import { t } from './i18n'
+import { APP_NAME } from '@shared/brand'
 
 type ErrorType = 'main' | 'renderer'
 type Logger = (s: string) => void
@@ -101,8 +102,8 @@ const setupExceptionHandler = (): void => {
   })
 
   crashReporter.start({
-    companyName: 'MarkText',
-    productName: 'MarkText',
+    companyName: APP_NAME,
+    productName: APP_NAME,
     submitURL: 'http://0.0.0.0/',
     uploadToServer: false,
     compress: true

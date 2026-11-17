@@ -1,6 +1,12 @@
 export const de = {
     name: 'de',
     resource: {
+        'Add tab': 'Registerkarte hinzufügen',
+        'Content tabs': 'Inhaltsregisterkarten',
+        'Edit tabs source': 'Registerkarten-Quelltext bearbeiten',
+        'Untitled tab': 'Unbenannte Registerkarte',
+        'Double-click to edit tab title': 'Doppelklicken, um den Titel zu bearbeiten',
+        'Tab': 'Registerkarte',
         'Copied': 'Kopiert',
         'Copy failed': 'Kopieren fehlgeschlagen. Bitte versuchen Sie es erneut.',
         'Read-only document': 'Schreibgeschütztes Dokument',

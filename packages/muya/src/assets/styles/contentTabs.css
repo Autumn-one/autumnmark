@@ -1,0 +1,110 @@
+.mu-content-tabs-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    border-bottom: 1px solid var(--editor-color-10);
+    margin-block: 1em 0.75em;
+}
+
+.mu-content-tabs-list {
+    display: flex;
+    flex: 0 1 auto;
+    gap: 4px;
+    min-width: 0;
+    overflow: auto hidden;
+}
+
+.mu-content-tabs-end {
+    border-bottom: 1px solid var(--editor-color-10);
+    margin-block: 1em;
+}
+
+.mu-content-tab,
+.mu-content-tabs-add,
+.mu-content-tabs-source {
+    flex-shrink: 0;
+    height: auto;
+    padding: 7px 12px;
+
+    color: var(--editor-color-50);
+    font: inherit;
+    white-space: nowrap;
+
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+}
+
+.mu-content-tabs-source {
+    margin-inline-start: auto;
+}
+
+.mu-content-tab:hover,
+.mu-content-tabs-add:hover,
+.mu-content-tabs-source:hover {
+    color: var(--editor-color);
+
+    background: var(--float-hover-color);
+}
+
+.mu-content-tab[aria-selected='true'] {
+    color: var(--theme-color);
+
+    border-bottom-color: currentcolor;
+}
+
+.mu-content-tabs-source[aria-pressed='true'] {
+    color: var(--theme-color);
+
+    background: var(--float-hover-color);
+}
+
+.mu-content-tab:focus-visible,
+.mu-content-tabs-add:focus-visible,
+.mu-content-tabs-source:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: -2px;
+}
+
+.mu-read-only .mu-content-tabs-add {
+    display: none;
+}
+
+.mu-container .mu-content-tabs-hidden,
+.mu-content-tabs-bar[hidden],
+.mu-content-tabs-end[hidden] {
+    display: none !important;
+}
+
+.mu-container .mu-content-tabs-expanded.mu-html-block > .mu-html-container {
+    position: relative;
+    z-index: 1;
+
+    width: 100%;
+    height: auto;
+    overflow: visible;
+
+    opacity: 1;
+}
+
+.mu-container .mu-content-tabs-expanded > .mu-html-preview {
+    display: none;
+}
+
+@media print {
+    .mu-content-tabs-bar,
+    .mu-content-tabs-end {
+        display: none !important;
+    }
+
+    .mu-container .mu-content-tabs-hidden {
+        display: revert !important;
+    }
+
+    .mu-container .mu-content-tabs-boundary {
+        display: none !important;
+    }
+}

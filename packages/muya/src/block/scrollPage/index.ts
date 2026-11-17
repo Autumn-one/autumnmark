@@ -86,6 +86,7 @@ export class ScrollPage extends Parent {
 
     updateState(state: TState[]) {
         const { muya } = this;
+        muya.editor.contentTabs.dispose();
         muya.ui.hideAllFloatTools();
         this.empty();
         this.append(
@@ -93,6 +94,7 @@ export class ScrollPage extends Parent {
                 return ScrollPage.loadBlock(block.name).create(muya, block);
             }),
         );
+        muya.editor.contentTabs.refresh();
     }
 
     /** One undo step, preserving adjacent block instances; the caller restores the replacement's selection. */

@@ -6,7 +6,7 @@ import type { ProjectRootsSnapshot, ProjectTreeEvent, SidebarMoveRequest, Sideba
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type { TabOptions, SidebarOpenOptions, PageOptions, ExportType, SerializedStat, LineEnding, FileChangeDetail, PandocExportPayload } from './files'
-import type { MenuTemplate, MenuPopupPosition } from './menu'
+import type { MenuTemplate, MenuPopupPosition, ApplicationMenuCategory } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 
 export interface SaveDialogRequest {
@@ -36,9 +36,15 @@ export type SaveDocumentResult =
 import type { StateIpcInvokeChannels, StateIpcMainEvents } from './applicationState'
 
 export interface IpcInvokeChannels extends StateIpcInvokeChannels {
+  'mt::menu::application-categories': { args: []; ret: ApplicationMenuCategory[] }
+  'mt::menu::popup-application-category': {
+    args: [index: number, position: MenuPopupPosition]
+    ret: void
+  }
   'mt::get-recently-used-documents': { args: []; ret: RecentDocument[] }
   'mt::project-remove-root': { args: [key: string]; ret: boolean }
   'mt::project-retry-root': { args: [key: string]; ret: boolean }
+  'mt::project-open-containing-folder': { args: [documentId: string]; ret: string | null }
   'mt::clipboard::write-text': { args: [text: string]; ret: boolean }
   'mt::set-document-read-only': { args: [tabId: string, readOnly: boolean]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
@@ -209,6 +215,7 @@ export interface IpcSyncChannels {
 }
 
 export interface IpcMainEventChannels extends StateIpcMainEvents {
+  'mt::menu::application-categories-changed': []
   'mt::toggle-read-only': []
   'language-changed': [language: string]
   'mt::UPDATE_AVAILABLE': [info?: unknown]

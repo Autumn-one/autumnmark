@@ -6,6 +6,7 @@ import { getCursorReference } from '../selection';
 import { changeAtxHeadingLevel } from '../state/headings';
 import { isParagraphState } from '../state/types';
 import { deepClone } from '../utils';
+import { contentTabHeading } from '../utils/contentTabs';
 import { toListDelimiter } from '../utils/listMarker';
 import logger from '../utils/logger';
 import { canConvertGithubAlert, convertGithubAlert } from './githubAlerts';
@@ -202,6 +203,10 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
     label: string;
     text?: string;
 }) {
+    if (label === 'content-tabs') {
+        insertContentTabs(block, muya, text);
+        return;
+    }
     if (label.startsWith('github-alert ') || (['block-quote', 'github-alert'].includes(block.blockName) && muya.options.githubAlerts && (label === 'paragraph' || label === 'block-quote'))) {
         convertGithubAlert(block, label, text);
         return;
@@ -234,6 +239,22 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
 
     block.replaceWith(newBlock);
     finishInsertedBlock(newBlock, muya, label);
+}
+
+function insertContentTabs(block: Parent, muya: Muya, text: string): void {
+    if (!block.parent?.isScrollPage)
+        return;
+    const title = muya.i18n.t('Tab');
+    const replacements = muya.editor.scrollPage!.replaceBlock(block, [
+        { name: 'html-block', text: '<!-- tabs -->' },
+        { name: 'atx-heading', meta: { level: 4 }, text: `#### | ${title} 1` },
+        { name: 'paragraph', text },
+        { name: 'atx-heading', meta: { level: 4 }, text: `#### | ${title} 2` },
+        { name: 'paragraph', text: '' },
+        { name: 'html-block', text: '<!-- /tabs -->' },
+    ]);
+    const content = replacements[1].firstContentInDescendant()!;
+    content.setCursor(contentTabHeading(content.text)!.prefixLength, content.text.length, true);
 }
 
 // A thematic break needs a trailing paragraph so the user can continue typing.
