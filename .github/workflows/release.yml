@@ -6,6 +6,8 @@ on:
     # (e.g. `vbad.tag`) instead of them silently not triggering anything.
     tags:
       - 'v*'
+      # Preview releases reuse verified build artifacts instead of rebuilding every platform.
+      - '!v*-preview.*'
 
 concurrency:
   group: release-${{ github.ref }}
