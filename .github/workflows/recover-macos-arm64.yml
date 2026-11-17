@@ -180,7 +180,7 @@ jobs:
           const { execFileSync } = require('node:child_process')
           const contents = 'dist/mac-arm64/AutumnMark.app/Contents'
           const verify = path => {
-            execFileSync('lipo', ['-verify_arch', 'arm64', path], { stdio: 'inherit' })
+            execFileSync('lipo', [path, '-verify_arch', 'arm64'], { stdio: 'inherit' })
             console.log('Verified ARM64: ' + path)
           }
           verify(join(contents, 'MacOS/AutumnMark'))
