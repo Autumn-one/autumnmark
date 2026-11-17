@@ -632,30 +632,51 @@ export class ContentTabs {
             return;
         }
         const target = this._target(event);
-        if (!target?.heading)
+        if (!target || target.action === 'source' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
             return;
         const { group, heading } = target;
-        const index = group.headings.indexOf(heading);
-        const keys: Record<string, number> = { ArrowLeft: (index + group.headings.length - 1) % group.headings.length, ArrowRight: (index + 1) % group.headings.length, Home: 0, End: group.headings.length - 1 };
-        if (event.key in keys) {
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
             event.preventDefault();
-            event.stopPropagation();
-            this._activate(group, group.headings[keys[event.key]]);
+            event.stopImmediatePropagation();
+            this._navigateBar(group, heading, event.key);
+            return;
         }
-        else if ((event.key === 'F2' || event.key === 'ArrowDown') && !this._muya.isReadOnly) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (event.key === 'F2') {
-                this.editTitle(heading);
+        if (this._muya.isReadOnly)
+            return;
+        if (!heading) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                this._addTab(group);
             }
-            else {
-                const body = this._panelBody(group, heading);
-                if (body)
-                    body.setCursor(0, 0, true);
-                else
-                    this.editTitle(heading);
-            }
+            return;
         }
+        if (!['Enter', 'F2', 'ArrowDown'].includes(event.key))
+            return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const body = event.key === 'ArrowDown' ? this._panelBody(group, heading) : undefined;
+        if (body)
+            body.setCursor(0, 0, true);
+        else
+            this.editTitle(heading);
+    }
+
+    private _navigateBar(group: IGroupView, heading: Parent | undefined, key: string): void {
+        const { headings } = group;
+        const count = headings.length + (this._muya.isReadOnly ? 0 : 1);
+        const index = heading ? headings.indexOf(heading) : headings.length;
+        const positions: Record<string, number> = {
+            ArrowLeft: (index + count - 1) % count,
+            ArrowRight: (index + 1) % count,
+            Home: 0,
+            End: headings.length - 1,
+        };
+        const next = positions[key];
+        if (next === headings.length)
+            group.addButton.focus();
+        else
+            this._activate(group, headings[next]);
     }
 
     private _isSelectAll(event: KeyboardEvent): boolean {

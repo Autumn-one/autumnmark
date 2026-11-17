@@ -753,12 +753,14 @@ appearance. Markers are case-sensitive and must occupy their own lines.
 
 Type `/tabs` in a top-level paragraph to insert a group and edit its first
 title. Click `+` on the tab bar to append a tab and edit its name; adding a tab
-is one undo step. Double-click a label or press F2 on a focused tab to select
+is one undo step. Double-click a label or press Enter or F2 on a focused tab to select
 its name for editing in the tab bar. From the first visible line of the panel,
 press Up to place the caret in its title. Down returns to the position you left,
 and Enter takes you to the start of the panel. Press Escape to keep your edit
 and focus the tab, then use Left/Right or Home/End to switch tabs. Click a tab
-to switch with the mouse. Press Down on a focused tab to enter its panel.
+to switch with the mouse. Right from the last tab or Left from the first focuses
+the `+` button. Press Enter or Space there to add a tab and name it.
+Press Down on a focused tab to enter its panel.
 Use the `</>` button to edit the group's source blocks. Search
 and outline navigation reveal the target tab automatically. Switching tabs
 does not modify the document or its undo history.

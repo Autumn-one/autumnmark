@@ -6,6 +6,47 @@ import { editor, toolbar } from '../helpers/selectors';
 const source = '<!-- tabs -->\n\n#### | Alpha\n\nFirst body.\n\n#### \\| Beta\n\nSecond body.\n\n#### Ordinary\n\nStill in Beta.\n\n<!-- /tabs -->\n\nOutside.\n';
 const titleInput = '.mu-content-tabs-list input';
 
+test('arrows reach Add without changing the panel and Enter renames a focused tab', async ({ page }) => {
+    await loadMarkdown(page, source);
+    const alpha = page.getByRole('tab', { name: 'Alpha' });
+    const beta = page.getByRole('tab', { name: 'Beta' });
+    const add = page.getByRole('button', { name: 'Add tab' });
+    await beta.click();
+    await page.keyboard.press('ArrowRight');
+    await expect(add).toBeFocused();
+    await expect(beta).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('Second body.', { exact: true })).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await expect(alpha).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(beta).toBeFocused();
+    expect(await getMarkdown(page)).toBe(source);
+    await page.keyboard.press('Enter');
+    await expect(page.locator(titleInput)).toBeFocused();
+    await page.keyboard.type('Windows');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Windows' })).toBeFocused();
+    expect(await getMarkdown(page)).toBe(source.replace('Beta', 'Windows'));
+});
+
+for (const key of ['Enter', 'Space']) {
+    test(`activates Add with ${key} and selects the new title`, async ({ page }) => {
+        await loadMarkdown(page, source);
+        await page.getByRole('tab', { name: 'Beta' }).click();
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press(key);
+        await expect(page.locator(titleInput)).toBeFocused();
+        await page.keyboard.type('Linux');
+        await page.keyboard.press('Enter');
+        await expect(page.getByRole('tab')).toHaveCount(3);
+        await expect(page.getByRole('tab', { name: 'Linux' })).toHaveAttribute('aria-selected', 'true');
+        await page.keyboard.type('New body.');
+        await expect.poll(() => getMarkdown(page)).toContain('#### | Linux\n\nNew body.');
+    });
+}
+
 test('switches tabs, edits content, and keeps edits through undo and source reload', async ({ page }) => {
     await loadMarkdown(page, source);
     await expect(page.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
@@ -244,6 +285,10 @@ test('hides the add button in read-only mode', async ({ page }) => {
     await page.getByRole('tab', { name: 'Beta' }).click();
     await expect(page.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('F2');
+    await expect(page.locator(titleInput)).toHaveCount(0);
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Alpha' })).toBeFocused();
+    await page.keyboard.press('Enter');
     await expect(page.locator(titleInput)).toHaveCount(0);
     await page.evaluate(() => window.muya!.setReadOnly(false));
     await expect(page.getByRole('button', { name: 'Add tab' })).toBeVisible();

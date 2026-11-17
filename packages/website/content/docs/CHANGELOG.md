@@ -1,3 +1,8 @@
+## AutumnMark 0.24.1
+
+- Use Left and Right on the content tab bar to focus the add button, then press Enter or Space to add and name a tab.
+- Press Enter on a focused content tab to select its title for renaming.
+
 ## AutumnMark 0.24.0
 
 - Published the first stable AutumnMark release with update manifests and installers for Windows, macOS, and Linux.
