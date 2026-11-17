@@ -293,6 +293,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
 
 ## Contribution
 
+- Keep `develop` as the default branch. Branch names must never start with `codex`; use descriptive prefixes such as `build/`, `release/`, `feature/`, or `fix/`.
 - Submit PRs to the **`develop`** branch (not `main`).
 - Do not commit screenshots or recordings created as PR evidence to the repository. Keep these artifacts outside the checkout and upload them directly to the PR when needed; do not add them under `docs/assets/` or other tracked directories.
 - Reference the related issue in the PR description.
