@@ -72,14 +72,20 @@ jobs:
 
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y clang icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /usr/share/keyrings/llvm.asc > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/llvm.asc] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm18.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y clang-18 libstdc++-12-dev icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
 
       - name: Use Clang for Electron 45 headers
         if: matrix.platform == 'linux'
         run: |
-          echo "CC=clang" >> "$GITHUB_ENV"
-          echo "CXX=clang++" >> "$GITHUB_ENV"
+          echo "CC=clang-18" >> "$GITHUB_ENV"
+          echo "CXX=clang++-18" >> "$GITHUB_ENV"
           echo "CXXFLAGS=-std=c++20" >> "$GITHUB_ENV"
+          clang++-18 --version
+          printf '#include <source_location>\nint main() { return std::source_location::current().line() == 0; }\n' | clang++-18 -std=c++20 -x c++ - -fsyntax-only
 
       - uses: actions/setup-python@v7.0.0
         with:
