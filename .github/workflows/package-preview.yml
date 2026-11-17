@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'build/*'
+      - '!build/macos-arm64'
 
 permissions:
   contents: read

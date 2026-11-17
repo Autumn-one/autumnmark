@@ -46,9 +46,15 @@ jobs:
               'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml',
               'packages/desktop', 'packages/muya', 'scripts'
             ];
-            const { data: workflow } = await github.rest.actions.getWorkflow({
-              ...repo, workflow_id: 'package-preview.yml'
-            });
+            const workflowIds = [];
+            for (const path of ['package-preview.yml', 'recover-macos-arm64.yml']) {
+              try {
+                const { data } = await github.rest.actions.getWorkflow({ ...repo, workflow_id: path });
+                workflowIds.push(data.id);
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
             const requested = process.env.SOURCE_RUN_ID.trim();
             let candidates;
             if (requested) {
@@ -58,14 +64,15 @@ jobs:
               });
               candidates = [data];
             } else {
-              const { data } = await github.rest.actions.listWorkflowRuns({
-                ...repo, workflow_id: workflow.id, status: 'success', per_page: 100
-              });
-              candidates = data.workflow_runs;
+              const results = await Promise.all(workflowIds.map(workflow_id =>
+                github.rest.actions.listWorkflowRuns({ ...repo, workflow_id, status: 'success', per_page: 100 })
+              ));
+              candidates = results.flatMap(result => result.data.workflow_runs)
+                .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
             }
             let selected;
             for (const run of candidates) {
-              if (run.conclusion !== 'success' || run.workflow_id !== workflow.id) continue;
+              if (run.conclusion !== 'success' || !workflowIds.includes(run.workflow_id)) continue;
               const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', run.head_sha, context.sha]);
               if (ancestor.status !== 0) continue;
               const changes = execFileSync('git', [
