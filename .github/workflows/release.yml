@@ -43,6 +43,16 @@ jobs:
           }
           NODE
 
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Verify desktop code and unit tests
+        run: pnpm check && pnpm test:unit
+
+      - name: Test Muya content tabs and document switching
+        run: pnpm -C packages/muya test src/__tests__/contentTabs.spec.ts src/__tests__/setContent.spec.ts src/state/__tests__/contentTabs.spec.ts src/utils/__tests__/contentTabs.spec.ts
+
   build:
     name: Build (${{ matrix.name }})
     needs: validate
@@ -73,7 +83,7 @@ jobs:
             platform: macos
             arch: x64
           - name: macos-arm64
-            os: macos-15
+            os: macos-15-intel
             platform: macos
             arch: arm64
 
@@ -125,7 +135,21 @@ jobs:
           restore-keys: |
             electron-${{ matrix.os }}-
 
-      # Must be set before postinstall runs electron-rebuild
+      - name: Install optional binaries for both host and target architectures
+        if: matrix.name == 'macos-arm64'
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python <<'PY'
+          from pathlib import Path
+          import yaml
+          path = Path('pnpm-workspace.yaml')
+          config = yaml.safe_load(path.read_text())
+          config['supportedArchitectures'] = {'os': ['current'], 'cpu': ['x64', 'arm64']}
+          path.write_text(yaml.safe_dump(config, sort_keys=False))
+          PY
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      # Electron's V8 headers require C++20 for native modules on macOS.
       - name: Set C++20 for MacOS
         if: matrix.platform == 'macos'
         run: |
@@ -152,10 +176,45 @@ jobs:
       # electron-builder.yml must not pin mac.target arches for the flag to
       # actually restrict the build to a single arch.
       - name: build-mac
-        if: matrix.platform == 'macos'
+        if: matrix.name == 'macos-x64'
         run: pnpm run build:mac:${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cross-compile Apple Silicon native modules and packages
+        if: matrix.name == 'macos-arm64'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_arch: arm64
+        run: |
+          pnpm -C packages/desktop exec electron-rebuild -f --arch=arm64
+          pnpm -C packages/desktop exec electron-vite build
+          pnpm -C packages/desktop exec electron-builder --mac --arm64 --publish never
+
+      - name: Verify Apple Silicon binary architectures
+        if: matrix.name == 'macos-arm64'
+        run: |
+          node <<'NODE'
+          const { existsSync } = require('node:fs')
+          const { join } = require('node:path')
+          const { execFileSync } = require('node:child_process')
+          const contents = 'dist/mac-arm64/AutumnMark.app/Contents'
+          const verify = path => {
+            execFileSync('lipo', [path, '-verify_arch', 'arm64'], { stdio: 'inherit' })
+            console.log('Verified ARM64: ' + path)
+          }
+          verify(join(contents, 'MacOS/AutumnMark'))
+          const modules = join(contents, 'Resources/app.asar.unpacked/node_modules')
+          for (const path of [
+            'ced/build/Release/ced.node',
+            'keytar/build/Release/keytar.node',
+            'native-keymap/build/Release/keymapping.node'
+          ]) verify(join(modules, path))
+          const ripgrep = join(modules, '@vscode/ripgrep-darwin-arm64/bin/rg')
+          const hasRipgrep = existsSync(ripgrep)
+          if (!hasRipgrep) throw new Error('The ARM64 search binary is missing')
+          verify(ripgrep)
+          NODE
 
       - name: build-win
         if: matrix.platform == 'windows'

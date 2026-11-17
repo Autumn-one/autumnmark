@@ -1,3 +1,10 @@
+## AutumnMark 0.24.0
+
+- Published the first stable AutumnMark release with update manifests and installers for Windows, macOS, and Linux.
+- Added Markdown content tabs with inline title editing, keyboard navigation, and Markdown round trips.
+- Improved caret restoration when switching documents and made Select All respect the focused text input.
+- Introduced the purple AutumnMark logo and added a tab action to open its containing folder in the sidebar.
+
 ## 0.23.0
 
 ### Features

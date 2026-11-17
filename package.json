@@ -1,6 +1,6 @@
 {
   "name": "autumnmark-monorepo",
-  "version": "0.24.0-preview.20261118.2",
+  "version": "0.24.0",
   "description": "AutumnMark monorepo root",
   "private": true,
   "homepage": "https://github.com/Autumn-one/autumnmark",
