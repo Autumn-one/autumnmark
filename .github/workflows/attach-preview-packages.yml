@@ -107,13 +107,18 @@ jobs:
             const release = releases.find(item => item.tag_name === tag);
             if (!release) throw new Error('Create a release draft for ' + tag + ' before attaching packages');
             if (release.immutable) throw new Error('This release is immutable; use a new version');
-            if (!release.draft) {
-              const released = execFileSync('git', ['rev-parse', 'refs/tags/' + tag + '^{}'], { encoding: 'utf8' }).trim();
-              const changes = execFileSync('git', [
-                'diff', '--name-only', released, selected.head_sha, '--', ...applicationPaths
-              ], { encoding: 'utf8' }).trim();
-              if (changes) throw new Error('The existing release contains different application sources');
+            const tagged = spawnSync('git', ['rev-parse', '--verify', 'refs/tags/' + tag + '^{commit}'], { encoding: 'utf8' });
+            let releaseCommit = tagged.stdout.trim();
+            if (tagged.status !== 0) {
+              if (!release.draft) throw new Error('Published release tag is missing: ' + tag);
+              const target = release.target_commitish;
+              const ref = /^[0-9a-f]{40}$/.test(target) ? target : 'refs/remotes/origin/' + target;
+              releaseCommit = execFileSync('git', ['rev-parse', '--verify', ref + '^{commit}'], { encoding: 'utf8' }).trim();
             }
+            const changes = execFileSync('git', [
+              'diff', '--name-only', releaseCommit, selected.head_sha, '--', ...applicationPaths
+            ], { encoding: 'utf8' }).trim();
+            if (changes) throw new Error('The release target contains different application sources');
             writeFileSync('release-assets.json', JSON.stringify(release.assets));
             core.setOutput('run-id', String(selected.id));
             core.setOutput('version', version);
