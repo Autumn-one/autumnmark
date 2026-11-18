@@ -792,7 +792,14 @@
     "refreshFailed": "새로 고치지 못했습니다. 마지막으로 가져온 내용을 표시합니다.",
     "unverified": "GitHub에 연결할 수 없어 최신 공지인지 확인하지 못했습니다.",
     "refresh": "새로 고침",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "donation": {
+      "title": "AutumnMark 후원하기",
+      "description": "해당 앱으로 QR 코드를 스캔하여 AutumnMark 개발을 후원할 수 있습니다.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "{method} 후원용 QR 코드"
+    }
   },
   "commands": {
     "mt": {

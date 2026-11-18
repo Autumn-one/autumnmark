@@ -1,5 +1,8 @@
 <template>
-  <section :aria-label="t(`remoteContent.${kind}`)">
+  <section
+    :aria-label="t(`remoteContent.${kind}`)"
+    :class="{ 'remote-content--announcement': kind === 'announcement' }"
+  >
     <!-- eslint-disable vue/no-v-html -- Markdown is sanitized with a feed-specific allowlist before insertion. -->
     <div
       v-if="html"
@@ -20,6 +23,12 @@
       >
         {{ t(failed ? 'remoteContent.retry' : 'remoteContent.refresh') }}
       </el-button>
+    </div>
+    <div
+      v-if="$slots.default"
+      class="remote-content-footer"
+    >
+      <slot />
     </div>
   </section>
 </template>
@@ -126,5 +135,114 @@ watchPostEffect(() => {
   justify-content: space-between;
   gap: 8px;
   margin-top: 12px;
+}
+
+.remote-content--announcement {
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.remote-content--announcement,
+.remote-content--announcement .remote-markdown {
+  scrollbar-width: thin;
+  scrollbar-color: var(--editorColor30) transparent;
+}
+
+.remote-content--announcement .remote-markdown {
+  max-height: none;
+  overflow: visible;
+  border: 1px solid var(--editorColor10);
+  border-radius: 10px;
+  padding: clamp(14px, 4vw, 24px);
+  background: var(--editorColor04);
+  color: var(--editorColor80);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(h1, h2, h3, h4, h5, h6)) {
+  margin: 1.1em 0 0.5em;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.remote-content--announcement .remote-markdown :deep(h1) {
+  font-size: 1.55em;
+}
+
+.remote-content--announcement .remote-markdown :deep(h2) {
+  font-size: 1.25em;
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(h3, h4, h5, h6)) {
+  font-size: 1.08em;
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(p, ul, ol, pre, table, blockquote)) {
+  margin: 0.75em 0;
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(ul, ol)) {
+  padding-inline-start: 1.5em;
+}
+
+.remote-content--announcement .remote-markdown :deep(li + li) {
+  margin-top: 0.35em;
+}
+
+.remote-content--announcement .remote-markdown :deep(blockquote) {
+  border-inline-start: 3px solid #ca7848;
+  padding: 2px 12px;
+  background: var(--floatBgColor);
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(pre, td, th)) {
+  border: 1px solid var(--editorColor10);
+  padding: 6px 10px;
+}
+
+.remote-content--announcement .remote-markdown :deep(:is(pre, th)) {
+  background: var(--floatBgColor);
+}
+
+.remote-content--announcement .remote-markdown :deep(table) {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.remote-content--announcement .remote-markdown :deep(> :first-child) {
+  margin-top: 0;
+}
+
+.remote-content--announcement .remote-markdown :deep(> :last-child) {
+  margin-bottom: 0;
+}
+
+.remote-content--announcement .remote-content-status {
+  margin: 6px 0 12px;
+  color: var(--floatFontColor);
+  font-size: 12px;
+}
+
+.remote-content--announcement .remote-content-status :deep(.el-button) {
+  flex-shrink: 0;
+}
+
+@media (min-width: 480px) and (min-height: 680px) {
+  .remote-content--announcement {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .remote-content--announcement .remote-markdown {
+    min-height: 120px;
+    overflow: auto;
+  }
+
+  .remote-content--announcement :is(.remote-content-status, .remote-content-footer) {
+    flex: none;
+  }
 }
 </style>

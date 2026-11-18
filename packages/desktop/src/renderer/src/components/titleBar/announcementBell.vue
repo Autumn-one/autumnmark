@@ -97,15 +97,28 @@
 
   <el-dialog
     v-model="visible"
+    class="announcement-dialog"
     :title="title"
-    width="min(640px, calc(100vw - 32px))"
+    width="min(680px, calc(100vw - 32px))"
+    align-center
     append-to-body
   >
+    <template #header="{ titleId, titleClass }">
+      <h2
+        :id="titleId"
+        :class="titleClass"
+        class="announcement-title"
+      >
+        {{ title }}
+      </h2>
+    </template>
     <remote-content
       kind="announcement"
       :active="visible"
       @displayed="displayedRevision = $event"
-    />
+    >
+      <announcement-donation />
+    </remote-content>
   </el-dialog>
 </template>
 
@@ -114,6 +127,7 @@ import { computed, onBeforeUnmount, ref, useId, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import bus from '@/bus'
 import RemoteContent from '@/components/remoteContent/index.vue'
+import AnnouncementDonation from '@/components/remoteContent/announcementDonation.vue'
 import { usePreferencesStore } from '@/store/preferences'
 import { useRemoteContentStore } from '@/store/remoteContent'
 
@@ -154,6 +168,30 @@ const open = (): void => {
 </script>
 
 <style scoped>
+:global(.el-dialog.announcement-dialog) {
+  --el-dialog-padding-primary: 22px;
+  border-radius: 16px;
+}
+
+.announcement-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--editorColor80);
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.announcement-title::before {
+  width: 4px;
+  height: 20px;
+  border-radius: 4px;
+  background: #ca7848;
+  content: '';
+}
+
 .announcement-trigger {
   -webkit-app-region: no-drag;
   display: grid;

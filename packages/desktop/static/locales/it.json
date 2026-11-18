@@ -792,7 +792,14 @@
     "refreshFailed": "Aggiornamento non riuscito. È visualizzato l’ultimo contenuto ricevuto.",
     "unverified": "GitHub non è disponibile. Impossibile verificare che l’annuncio sia aggiornato.",
     "refresh": "Aggiorna",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "donation": {
+      "title": "Sostieni AutumnMark",
+      "description": "Scansiona il codice con l’app corrispondente per sostenere lo sviluppo di AutumnMark.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "Codice QR per donare con {method}"
+    }
   },
   "commands": {
     "mt": {

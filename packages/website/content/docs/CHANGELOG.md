@@ -1,3 +1,8 @@
+## AutumnMark 0.24.6
+
+- Improved the layout and scrolling of announcements opened from the title bar.
+- Added Alipay and WeChat Pay donation QR codes beneath the announcement.
+
 ## AutumnMark 0.24.5
 
 - Read announcements from the title bar and view project information in the About dialog.

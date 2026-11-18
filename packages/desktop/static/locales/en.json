@@ -792,7 +792,14 @@
     "refreshFailed": "Refresh failed. Showing the last fetched content.",
     "unverified": "GitHub is unavailable. The latest announcement could not be verified.",
     "refresh": "Refresh",
-    "retry": "Retry"
+    "retry": "Retry",
+    "donation": {
+      "title": "Support AutumnMark",
+      "description": "Scan with the matching app to support AutumnMark’s development.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "{method} donation QR code"
+    }
   },
   "commands": {
     "mt": {

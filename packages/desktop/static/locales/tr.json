@@ -792,7 +792,14 @@
     "refreshFailed": "Yenileme başarısız. Son alınan içerik gösteriliyor.",
     "unverified": "GitHub’a ulaşılamıyor. Duyurunun güncel olup olmadığı doğrulanamadı.",
     "refresh": "Yenile",
-    "retry": "Tekrar dene"
+    "retry": "Tekrar dene",
+    "donation": {
+      "title": "AutumnMark’ı destekleyin",
+      "description": "AutumnMark’ın geliştirilmesini desteklemek için QR kodunu ilgili uygulamayla tarayın.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "Bağış için {method} QR kodu"
+    }
   },
   "commands": {
     "mt": {

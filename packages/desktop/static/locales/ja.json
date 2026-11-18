@@ -792,7 +792,14 @@
     "refreshFailed": "更新に失敗したため、前回取得した内容を表示しています。",
     "unverified": "GitHub に接続できないため、お知らせが最新かどうかを確認できませんでした。",
     "refresh": "更新",
-    "retry": "再試行"
+    "retry": "再試行",
+    "donation": {
+      "title": "AutumnMark を支援する",
+      "description": "対応するアプリで QR コードを読み取って、AutumnMark の開発を支援できます。",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "{method} の寄付用 QR コード"
+    }
   },
   "commands": {
     "mt": {

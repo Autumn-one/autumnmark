@@ -792,7 +792,14 @@
     "refreshFailed": "Vernieuwen is mislukt. De laatst opgehaalde inhoud wordt getoond.",
     "unverified": "GitHub is niet bereikbaar. Er kon niet worden gecontroleerd of de aankondiging actueel is.",
     "refresh": "Vernieuwen",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "donation": {
+      "title": "Steun AutumnMark",
+      "description": "Scan de code met de bijbehorende app om de ontwikkeling van AutumnMark te steunen.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "QR-code voor donaties via {method}"
+    }
   },
   "commands": {
     "mt": {
