@@ -6,7 +6,7 @@ AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext)
 
 [下载 AutumnMark 正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布说明](https://github.com/Autumn-one/autumnmark/releases) · [MIT 许可证](LICENSE)
 
-## 下一版新增的三项语法
+## v0.24.4 新增的三项语法
 
 ### 折叠块
 
