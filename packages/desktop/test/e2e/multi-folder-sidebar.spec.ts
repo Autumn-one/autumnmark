@@ -123,8 +123,10 @@ test('multi-folder sidebar completes add, search, remove and restore (#2222)', a
       }))
     }).toBe(true)
     await expect.poll(() => JSON.parse(fs.readFileSync(path.join(userData, 'state', 'application-state.json'), 'utf8')).session.windows[0].projectView.roots.some((root: { collapsedPaths: string[] }) => root.collapsedPaths.includes(''))).toBe(true)
+    // The Windows launcher can wrap Electron in a .cmd process.
+    const electronPid = await app.evaluate(() => process.pid)
     const closed = app.waitForEvent('close')
-    app.process().kill('SIGKILL')
+    process.kill(electronPid, 'SIGKILL')
     await closed
     app = await _electron.launch({
       executablePath: getElectronPath(),

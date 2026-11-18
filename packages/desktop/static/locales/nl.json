@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Geopende bestanden",
+      "folders": "Mappen",
       "saveAll": "Alles opslaan",
       "closeAll": "Alles sluiten",
       "emptyProject": "Leeg project",

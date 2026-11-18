@@ -1,7 +1,7 @@
 <template>
   <div
     class="editor-with-tabs"
-    :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)`, '--editor-min-width': `${MIN_EDITOR_WIDTH}px` }"
+    :style="{ '--editor-min-width': `${MIN_EDITOR_WIDTH}px` }"
   >
     <tabs v-show="showTabBar" />
     <div class="container">
@@ -26,9 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { useLayoutStore } from '@/store/layout'
 import { MIN_EDITOR_WIDTH } from '@/util/editorLayout'
-import { storeToRefs } from 'pinia'
 import DocumentOutline from './outline.vue'
 import Tabs from './tabs.vue'
 import Editor from './editor.vue'
@@ -45,16 +43,14 @@ defineProps<{
   textDirection: string
   platform: string
 }>()
-
-const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 </script>
 
 <style scoped>
 .editor-with-tabs {
   position: relative;
-  height: 100%;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   container-type: inline-size;
   display: flex;
   flex-direction: column;

@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Открытые файлы",
+      "folders": "Папки",
       "saveAll": "Сохранить всё",
       "closeAll": "Закрыть всё",
       "emptyProject": "Пустой проект",

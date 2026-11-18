@@ -3,6 +3,7 @@
     class="opened-file"
     :title="file.pathname"
     :aria-label="file.isPreview ? t('editor.tabs.preview', { name: file.filename }) : file.filename"
+    :aria-current="currentFile?.id === file.id || undefined"
     :class="[
       {
         active: currentFile?.id === file.id,
@@ -59,16 +60,16 @@ const removeFileInTab = (file: TabDescriptor): void => {
 
 <style scoped>
 .opened-file {
-  /* The section chevron is inset 15px and 12px wide; both row indicators
-     share its center line. */
-  --indicator-center: 21px;
+  /* The close control and save dot share the section chevron's center line. */
+  --indicator-center: 13px;
   display: flex;
   box-sizing: border-box;
   min-width: 0;
   user-select: none;
   height: 28px;
   line-height: 28px;
-  padding: 0 15px 0 35px;
+  padding: 0 7px 0 26px;
+  border-radius: 4px;
   position: relative;
   color: var(--sideBarColor);
   /* Clipped rather than `display: none` while the row is not hovered, so the
@@ -103,7 +104,10 @@ const removeFileInTab = (file: TabDescriptor): void => {
   }
 }
 .opened-file.active {
-  color: var(--highlightThemeColor);
+  background: var(--themeColor10);
+  box-shadow: inset 2px 0 var(--highlightThemeColor);
+  color: var(--sideBarTitleColor);
+  font-weight: 500;
 }
 .opened-file.preview > .name {
   font-style: italic;

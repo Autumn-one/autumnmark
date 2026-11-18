@@ -6,7 +6,6 @@
       :data-tree-path="folder.pathname"
       data-tree-directory="true"
       :draggable="!renameCache && !createCache.dirname"
-      :style="{ 'padding-left': `${depth * 6 + 15}px` }"
       :class="[{ active: folder.id === activeItem.id }]"
       :title="folder.pathname"
       @click="folderNameClick"
@@ -15,8 +14,16 @@
         class="icon-arrow"
         :class="{ fold: isCollapsed }"
         :size="12"
+        aria-hidden="true"
       >
         <ArrowRight />
+      </el-icon>
+      <el-icon
+        class="folder-icon"
+        :size="16"
+        aria-hidden="true"
+      >
+        <Folder />
       </el-icon>
       <input
         v-if="renameCache === folder.pathname"
@@ -40,7 +47,6 @@
         v-for="childFolder of folder.folders"
         :key="childFolder.id"
         :folder="childFolder"
-        :depth="depth + 1"
       />
       <input
         v-if="createCache.dirname === folder.pathname"
@@ -48,14 +54,12 @@
         v-model="nameInputValue"
         type="text"
         class="new-input"
-        :style="{ 'margin-left': `${depth * 5 + 15}px` }"
         @keypress.enter="handleInputEnter"
       >
       <File
         v-for="file of folder.files"
         :key="file.id"
         :file="file"
-        :depth="depth + 1"
       />
     </div>
   </div>
@@ -68,13 +72,12 @@ import { useProjectStore } from '@/store/project'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
 import File from './treeFile.vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Folder } from '@element-plus/icons-vue'
 import type { TreeFolderNode } from './types'
 import { useTreeRow } from './rowRegistry'
 
 const props = defineProps<{
   folder: TreeFolderNode
-  depth: number
 }>()
 
 const projectStore = useProjectStore()
@@ -154,12 +157,17 @@ onMounted(() => {
     user-select: none;
     display: flex;
     align-items: center;
-    height: 30px;
-    padding-right: 15px;
-    & > .icon-arrow {
-      flex-shrink: 0;
+    height: var(--tree-node-height);
+    min-width: var(--tree-node-min-width);
+    box-sizing: border-box;
+    padding-inline-end: 7px;
+    & > .icon-arrow,
+    & > .folder-icon {
+      flex: none;
       color: var(--sideBarIconColor);
       margin-right: 5px;
+    }
+    & > .icon-arrow {
       transition: transform 0.25s ease-out;
       transform: rotate(90deg);
     }
@@ -175,7 +183,6 @@ onMounted(() => {
     }
   }
 }
-.new-input,
 input.rename {
   outline: none;
   height: 22px;
@@ -185,6 +192,7 @@ input.rename {
   border: 1px solid var(--focusColor);
   background: var(--floatBorderColor);
   width: 70%;
+  min-width: 0;
   border-radius: 3px;
 }
 </style>

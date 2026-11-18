@@ -1,9 +1,8 @@
 <template>
-  <div>
-    <div
-      class="title-bar-editor-bg"
-      :class="{ 'tabs-visible': showTabBar }"
-    />
+  <header
+    class="title-bar-editor-bg"
+    :class="{ 'tabs-visible': showTabBar }"
+  >
     <div
       class="title-bar"
       :class="[
@@ -131,7 +130,7 @@
         </icon-tooltip>
       </div>
     </div>
-  </div>
+  </header>
 </template>
 
 <script setup lang="ts">
@@ -283,12 +282,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .title-bar-editor-bg {
-  height: var(--titleBarHeight);
+  flex: none;
   background: var(--editorBgColor);
-  position: relative;
-  left: 0;
-  top: 0;
-  right: 0;
 }
 .title-bar {
   -webkit-app-region: drag;
@@ -297,10 +292,7 @@ onBeforeUnmount(() => {
   height: var(--titleBarHeight);
   box-sizing: border-box;
   color: var(--editorColor50);
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
+  position: relative;
   z-index: 2;
   transition: color 0.4s ease-in-out;
   cursor: default;
@@ -380,8 +372,11 @@ div.title > span > .path > bdi > span {
 }
 
 .has-menubar {
+  --menu-bar-background: color-mix(in srgb, var(--editorBgColor), var(--editorColor) 3%);
   display: flex;
   align-items: center;
+  background: var(--menu-bar-background);
+  box-shadow: inset 0 -1px color-mix(in srgb, var(--menu-bar-background), var(--editorColor) 14%);
 }
 .has-menubar .title {
   flex: 1;
@@ -438,6 +433,7 @@ div.title > span > .path > bdi > span {
   display: block;
   width: 46px;
   height: var(--titleBarHeight);
+  color: var(--editorColor);
 }
 /* `.right-toolbar` lays its items out in reverse. The window controls are
    listed minimize → close and laid out forwards, so Tab moves left to right. */
@@ -457,10 +453,10 @@ div.title > span > .path > bdi > span {
 }
 .frameless-titlebar-minimize:hover,
 .frameless-titlebar-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--editorColor10);
 }
 .frameless-titlebar-button svg {
-  fill: #000000;
+  fill: currentColor;
 }
 .frameless-titlebar-close:hover svg {
   fill: #ffffff;

@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "已打开的文件",
+      "folders": "文件夹",
       "saveAll": "保存全部",
       "closeAll": "关闭全部",
       "emptyProject": "空项目",

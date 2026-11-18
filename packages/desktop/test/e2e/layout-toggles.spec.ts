@@ -33,6 +33,32 @@ test.describe('Layout panel toggles', () => {
     if (app) await app.close()
   })
 
+  test('the sidebar and editor tabs start below the full-width title bar', async() => {
+    await sendIpcToRenderer(app, 'mt::set-view-layout', { showSideBar: true, showTabBar: true })
+
+    const sideBar = page.locator('.side-bar')
+    const fileToolbar = sideBar.locator('.sidebar-header')
+    const tabBar = page.locator('.editor-tabs')
+    await expect(fileToolbar).toBeVisible()
+    await expect(tabBar).toBeVisible()
+
+    const [title, side, files, tabs] = await Promise.all(
+      [page.locator('.title-bar'), sideBar, fileToolbar, tabBar].map((locator) =>
+        locator.evaluate((element) => {
+          const { top, bottom, left, right } = element.getBoundingClientRect()
+          return { top, bottom, left, right }
+        })
+      )
+    )
+    expect(title.left).toBe(0)
+    const viewportWidth = await page.evaluate(() => window.innerWidth)
+    expect(Math.abs(title.right - viewportWidth)).toBeLessThanOrEqual(1)
+    expect(side.top).toBe(title.bottom)
+    expect(files.top).toBe(tabs.top)
+    expect(files.bottom).toBe(tabs.bottom)
+    expect(side.right).toBe(tabs.left)
+  })
+
   test('Sidebar toggle changes .side-bar visibility', async() => {
     const sideBar = page.locator('.side-bar')
     const initial = await sideBar.isVisible()

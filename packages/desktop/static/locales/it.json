@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "File aperti",
+      "folders": "Cartelle",
       "resizeOpenedFiles": "Ridimensiona l’elenco dei file aperti",
       "saveAll": "Salva tutti",
       "closeAll": "Chiudi tutti",

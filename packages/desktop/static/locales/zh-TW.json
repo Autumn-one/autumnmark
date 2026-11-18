@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "已開啟的檔案",
+      "folders": "資料夾",
       "saveAll": "全部儲存",
       "closeAll": "全部關閉",
       "emptyProject": "空專案",

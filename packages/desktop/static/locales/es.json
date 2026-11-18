@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Archivos abiertos",
+      "folders": "Carpetas",
       "saveAll": "Guardar",
       "closeAll": "Cerrar",
       "emptyProject": "Proyecto vacío",

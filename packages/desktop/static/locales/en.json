@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Opened files",
+      "folders": "Folders",
       "resizeOpenedFiles": "Resize opened files list",
       "saveAll": "Save All",
       "closeAll": "Close All",

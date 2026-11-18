@@ -175,9 +175,10 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: row;
-  height: 28px;
+  height: var(--editorToolbarHeight);
+  flex-shrink: 0;
   user-select: none;
-  box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 -1px var(--sideBarBorderColor);
   overflow: hidden;
   &:hover > .new-file {
     opacity: 1 !important;
@@ -185,7 +186,7 @@ onBeforeUnmount(() => {
 }
 .scrollable-tabs {
   flex: 0 1 auto;
-  height: 28px;
+  height: 100%;
   overflow: hidden;
 }
 .tabs-container {
@@ -193,7 +194,7 @@ onBeforeUnmount(() => {
   list-style: none;
   margin: 0;
   padding: 0;
-  height: 28px;
+  height: 100%;
   position: relative;
   display: flex;
   flex-direction: row;
@@ -209,8 +210,7 @@ onBeforeUnmount(() => {
     cursor: pointer;
     color: var(--editorColor50);
     font-size: 12px;
-    line-height: 28px;
-    height: 28px;
+    height: 100%;
     max-width: 280px;
     display: flex;
     align-items: center;
@@ -219,8 +219,9 @@ onBeforeUnmount(() => {
     }
     & > .close-icon {
       position: absolute;
-      top: 4px;
+      top: 50%;
       right: 4px;
+      transform: translateY(-50%);
       width: 20px;
       height: 20px;
       margin: 0;
@@ -245,8 +246,9 @@ onBeforeUnmount(() => {
     & > .unsaved-dot {
       display: none;
       position: absolute;
-      top: 11px;
+      top: 50%;
       right: 11px;
+      transform: translateY(-50%);
       width: 6px;
       height: 6px;
       border-radius: 50%;
@@ -290,7 +292,7 @@ onBeforeUnmount(() => {
 .editor-tabs > .new-file {
   flex: 0 0 28px;
   width: 28px;
-  height: 28px;
+  height: 100%;
   border-right: none;
   background: transparent;
   display: flex;

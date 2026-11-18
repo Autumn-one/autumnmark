@@ -6,14 +6,17 @@
     :data-tree-path="file.pathname"
     data-tree-directory="false"
     :draggable="!renameCache && !projectStore.createCache.dirname"
-    :style="{ 'padding-left': `${depth * 6 + 15}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
+    :style="{ opacity: file.isMarkdown ? 1 : 0.75 }"
     :class="[
       { current: currentFile?.pathname === file.pathname, active: file.id === activeItem.id }
     ]"
     @click="handleFileClick"
     @dblclick="handleFileDblClick"
   >
-    <file-icon :name="file.name" />
+    <file-icon
+      :name="file.name"
+      aria-hidden="true"
+    />
     <input
       v-if="renameCache === file.pathname"
       ref="renameInput"
@@ -42,7 +45,6 @@ import type { TreeFileNode } from './types'
 
 const props = defineProps<{
   file: TreeFileNode
-  depth: number
 }>()
 
 const projectStore = useProjectStore()
@@ -125,9 +127,10 @@ onMounted(() => {
   align-items: center;
   cursor: default;
   user-select: none;
-  height: 30px;
+  height: var(--tree-node-height);
+  min-width: var(--tree-node-min-width);
   box-sizing: border-box;
-  padding-right: 15px;
+  padding-inline: var(--tree-chevron-width) 7px;
   &:hover {
     background: var(--sideBarItemHoverBgColor);
   }
@@ -135,6 +138,9 @@ onMounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  & > .file-icon {
+    width: 16px;
   }
   &::before {
     content: '';
@@ -171,6 +177,7 @@ input.rename {
   border: 1px solid var(--focusColor);
   background: var(--floatBorderColor);
   width: 100%;
+  min-width: 0;
   border-radius: 3px;
 }
 </style>

@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Açık dosyalar",
+      "folders": "Klasörler",
       "saveAll": "Tümünü Kaydet",
       "closeAll": "Tümünü Kapat",
       "emptyProject": "Boş proje",

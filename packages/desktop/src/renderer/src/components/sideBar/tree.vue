@@ -5,27 +5,31 @@
   >
     <div
       v-if="openedFilesInSidebar"
+      ref="openedFilesSection"
       class="opened-files"
     >
       <div class="title">
-        <el-icon
-          class="icon-arrow"
-          :class="{ fold: !showOpenedFiles }"
-          :size="12"
+        <button
+          type="button"
+          class="plain-button opened-files-toggle"
+          :aria-expanded="showOpenedFiles"
+          aria-controls="sidebar-opened-files-list"
           @click.stop="toggleOpenedFiles()"
         >
-          <ArrowRight />
-        </el-icon>
-        <span
-          class="default-cursor text-overflow"
-          @click.stop="toggleOpenedFiles()"
-        >{{
-          t('sideBar.tree.openedFiles')
-        }}</span>
+          <el-icon
+            class="icon-arrow"
+            :class="{ fold: !showOpenedFiles }"
+            :size="12"
+            aria-hidden="true"
+          >
+            <ArrowRight />
+          </el-icon>
+          <span class="text-overflow">{{ t('sideBar.tree.openedFiles') }}</span>
+        </button>
         <icon-tooltip :content="t('sideBar.tree.saveAll')">
           <button
             type="button"
-            class="plain-button"
+            class="plain-button section-action"
             :aria-label="t('sideBar.tree.saveAll')"
             @click.stop="saveAll(false)"
           >
@@ -40,7 +44,7 @@
         <icon-tooltip :content="t('sideBar.tree.closeAll')">
           <button
             type="button"
-            class="plain-button"
+            class="plain-button section-action"
             :aria-label="t('sideBar.tree.closeAll')"
             @click.stop="saveAll(true)"
           >
@@ -55,6 +59,7 @@
       </div>
       <div
         v-show="showOpenedFiles"
+        id="sidebar-opened-files-list"
         ref="openedFilesList"
         class="opened-files-list"
         :style="{ maxHeight: `${openedFilesMaxHeight}px` }"
@@ -98,6 +103,12 @@
       @focusout="handleTreeFocusOut"
       @keydown="handleTreeKeydown"
     >
+      <h2
+        v-if="roots.length"
+        class="folder-section-title"
+      >
+        {{ t('sideBar.tree.folders') }}
+      </h2>
       <div
         v-for="root in roots"
         :key="root.key"
@@ -106,7 +117,7 @@
       >
         <div
           :ref="el => registerRootRow(root, el as HTMLElement | null)"
-          class="title project-root"
+          class="project-root"
           :data-tree-path="root.tree.pathname"
           data-tree-directory="true"
           role="button"
@@ -121,8 +132,17 @@
             class="icon-arrow"
             :class="{ fold: root.tree.isCollapsed }"
             :size="12"
+            aria-hidden="true"
           >
             <ArrowRight />
+          </el-icon>
+          <el-icon
+            class="root-folder-icon"
+            :size="16"
+            aria-hidden="true"
+          >
+            <FolderIcon class="root-folder-icon-back" />
+            <FolderIcon class="root-folder-icon-front" />
           </el-icon>
           <span class="text-overflow">{{ projectStore.ROOT_LABEL(root) }}</span>
         </div>
@@ -147,7 +167,6 @@
             v-for="folder of root.tree.folders"
             :key="folder.id"
             :folder="folder"
-            :depth="depth"
           />
           <input
             v-if="createCacheDirname === root.pathname"
@@ -159,14 +178,12 @@
             v-model="nameInputValue"
             type="text"
             class="new-input"
-            :style="{ 'margin-left': `${depth * 5 + 15}px` }"
             @keypress.enter="handleInputEnter"
           >
           <file
             v-for="file of root.tree.files"
             :key="file.id"
             :file="file"
-            :depth="depth"
           />
           <div
             v-if="
@@ -226,7 +243,7 @@ import bus from '../../bus'
 import { showRootContextMenu } from '../../contextMenu/sideBar'
 import type { RootView } from '@/store/project'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Folder as FolderIcon } from '@element-plus/icons-vue'
 import { PATH_SEPARATOR } from '@/config'
 import { isMac } from '@/util'
 import { computeRevealScrollTop } from '@/util/revealTreeRow'
@@ -244,8 +261,6 @@ import type { TabDescriptor } from './types'
 const { t } = useI18n()
 
 const props = defineProps<{ tabs?: TabDescriptor[] }>()
-
-const depth = 0
 
 const input = ref<HTMLInputElement | null>(null)
 const treeWrapper = ref<HTMLDivElement | null>(null)
@@ -280,6 +295,7 @@ const tabCount = computed(() => props.tabs?.length ?? 0)
 
 const {
   treeView,
+  openedFilesSection,
   openedFilesList,
   resizeHandle,
   openedFilesMaxHeight,
@@ -299,11 +315,11 @@ const {
       layoutStore.rightColumn === 'files'
   ),
   {
-        preferredHeight: computed({
-          get: () => layoutStore.openedFilesHeight,
-          set: (preferredHeightPx) => layoutStore.SET_OPENED_FILES({ preferredHeightPx })
-        }),
-        persist: (preferredHeightPx) => layoutStore.SET_OPENED_FILES({ preferredHeightPx })
+    preferredHeight: computed({
+      get: () => layoutStore.openedFilesHeight,
+      set: (preferredHeightPx) => layoutStore.SET_OPENED_FILES({ preferredHeightPx })
+    }),
+    persist: (preferredHeightPx) => layoutStore.SET_OPENED_FILES({ preferredHeightPx })
   }
 )
 
@@ -626,72 +642,79 @@ onUnmounted(() => {
   transform: translateX(-50px);
 }
 .tree-view {
-  font-size: 14px;
+  --tree-chevron-width: 17px;
+  --tree-node-min-width: 104px;
+  --tree-node-height: 26px;
+  font-size: 13px;
   color: var(--sideBarColor);
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-sizing: border-box;
+  padding-top: 6px;
 }
 
 .icon-arrow {
+  flex: none;
   margin-right: 5px;
   transition: transform 0.25s ease-out;
   transform: rotate(90deg);
-  color: var(--sideBarTextColor);
-  cursor: pointer;
+  color: var(--sideBarIconColor);
 }
 
 .icon-arrow.fold {
   transform: rotate(0);
 }
 
-.opened-files > .title,
-.project-tree > .title {
-  height: 30px;
-  line-height: 30px;
-  font-size: 14px;
-}
-
-.opened-files .title {
-  padding: 0 15px;
-  display: flex;
-  align-items: center;
-}
-
-.opened-files .title > span {
-  flex: 1;
-}
-
-/* Clipped rather than `display: none` until the header is hovered or holds
-   focus, so Tab can still reach the buttons and reveal them. */
-.opened-files .title > button {
-  color: var(--sideBarColor);
-  margin-left: 8px;
-  clip-path: inset(50%);
-}
-.opened-files div.title:hover > button,
-.opened-files div.title:focus-within > button {
-  clip-path: none;
-}
-
-.opened-files div.title > button:hover {
-  color: var(--highlightThemeColor);
-}
 .opened-files {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  margin-inline: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sideBarBorderColor);
 }
-.default-cursor {
-  cursor: pointer;
+
+.opened-files > .title {
+  height: 26px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
 }
-.opened-files .opened-files-list {
+
+.opened-files-toggle,
+.folder-section-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.opened-files-toggle {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+/* The action buttons stay in the tab order so focus can reveal them. */
+.section-action {
+  margin-left: 8px;
+  clip-path: inset(50%);
+}
+.opened-files > .title:hover > .section-action,
+.opened-files > .title:focus-within > .section-action {
+  clip-path: none;
+}
+
+.section-action:hover {
+  color: var(--highlightThemeColor);
+}
+.opened-files-list {
   overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
 }
 
-.opened-files .opened-files-list::-webkit-scrollbar:vertical {
+.opened-files-list::-webkit-scrollbar:vertical {
   width: 8px;
 }
 
@@ -717,65 +740,87 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding: 4px 8px 8px;
 }
 .project-trees.no-project {
   display: flex;
   flex-direction: column;
 }
-.project-tree {
-  display: flex;
-  flex-direction: column;
+
+.folder-section-title {
+  margin: 0;
+  padding: 0 7px;
+  line-height: 26px;
 }
+
+.project-tree + .project-tree {
+  margin-top: 8px;
+}
+
 .project-root {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 6%);
+  color: var(--sideBarTitleColor);
+  font-weight: 600;
   cursor: pointer;
 }
+
+.project-root:hover {
+  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 10%);
+}
+
 .project-root:focus-visible {
   outline: 1px solid var(--focusColor);
   outline-offset: -1px;
 }
-.root-status {
-  padding: 8px 15px;
-  color: var(--sideBarTextColor);
+
+.project-root > .text-overflow {
+  min-width: 0;
 }
 
-.project-tree > .title {
-  padding: 0 15px;
-  display: flex;
-  align-items: center;
-}
-
-.project-tree > .title > span {
-  flex: 1;
-  user-select: none;
-}
-
-.project-tree > .title > a {
-  pointer-events: auto;
-  cursor: pointer;
-  margin-left: 8px;
+.root-folder-icon {
+  flex: none;
+  margin-right: 5px;
   color: var(--sideBarIconColor);
-  opacity: 0;
+  background: inherit;
+  & > svg {
+    position: absolute;
+    width: 13px;
+    height: 13px;
+  }
 }
 
-.project-tree > .title > a:hover {
-  color: var(--highlightThemeColor);
+.root-folder-icon-back {
+  top: 0;
+  right: 0;
 }
 
-.project-tree > .title > a.active {
-  color: var(--highlightThemeColor);
+.root-folder-icon-front {
+  bottom: 0;
+  left: 0;
+  background: inherit;
 }
 
-.project-tree > .tree-wrapper {
-  overflow: auto;
-  flex: 1;
+.tree-contents,
+.tree-view :deep(.folder-contents) {
+  margin-inline-start: 11px;
+  padding-inline-start: 4px;
+  border-inline-start: 1px solid var(--sideBarBorderColor);
 }
 
-.project-tree > .tree-wrapper::-webkit-scrollbar:vertical {
-  width: 8px;
+.tree-contents {
+  margin-top: 3px;
+  margin-inline-start: 18px;
 }
-.project-tree div.title:hover > a {
-  opacity: 1;
+
+.root-status {
+  padding: 8px 0;
 }
+
 .open-project {
   flex: 1;
   display: flex;
@@ -807,15 +852,17 @@ onUnmounted(() => {
   background-color: var(--buttonPrimaryBgColorHover);
   color: var(--buttonPrimaryFontColorHover);
 }
-.new-input {
+.tree-view :deep(.new-input) {
   outline: none;
   height: 22px;
-  margin: 5px 0;
+  box-sizing: border-box;
+  margin: 5px 0 5px var(--tree-chevron-width);
   padding: 0 6px;
   color: var(--sideBarColor);
   border: 1px solid var(--focusColor);
   background: var(--inputBgColor);
-  width: calc(100% - 45px);
+  width: calc(100% - var(--tree-chevron-width) - 7px);
+  min-width: calc(var(--tree-node-min-width) - var(--tree-chevron-width) - 7px);
   border-radius: 3px;
 }
 .tree-wrapper {

@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "開いているファイル",
+      "folders": "フォルダー",
       "saveAll": "すべて保存",
       "closeAll": "すべて閉じる",
       "emptyProject": "空のプロジェクト",

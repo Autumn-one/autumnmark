@@ -252,6 +252,7 @@
     },
     "tree": {
       "openedFiles": "Arquivos abertos",
+      "folders": "Pastas",
       "saveAll": "Salvar Todos",
       "closeAll": "Fechar Todos",
       "emptyProject": "Projeto vazio",
