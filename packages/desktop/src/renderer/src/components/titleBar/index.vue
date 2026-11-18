@@ -33,37 +33,59 @@
               'path-hovered': pathHover === true,
               'path-dom-hover': pathHover === null
             }"
-            :style="{
-              '--path-overflow': `${pathOverflow}px`,
-              '--path-scroll-duration': `${Math.max(0.8, pathOverflow / 40)}s`
-            }"
+            :style="{ '--path-scroll-duration': pathScrollDuration }"
+            :title="pathname || filename"
           >
             <span class="path-viewport">
-              <bdi
+              <span
                 ref="pathContent"
                 class="path-content"
-                dir="ltr"
               >
-                <span
-                  v-for="(path, index) of paths"
-                  :key="index"
+                <bdi
+                  v-for="copy in (pathOverflows ? 2 : 1)"
+                  :key="copy"
+                  class="path-segments"
+                  :class="{ 'path-copy': copy === 2 }"
+                  :aria-hidden="copy === 2 || undefined"
+                  dir="ltr"
                 >
-                  {{ path }}
-                  <el-icon
-                    class="path-arrow"
-                    :size="12"
+                  <span
+                    v-for="(path, index) in paths"
+                    :key="index"
+                    class="path-segment"
                   >
-                    <ArrowRight />
-                  </el-icon>
-                </span>
-                <span
-                  class="filename"
-                  :class="{ isOsx: platform === 'darwin' }"
-                  @click="rename"
-                >
-                  {{ filename }}
-                </span>
-              </bdi>
+                    {{ path }}
+                    <el-icon :size="12"><ArrowRight /></el-icon>
+                  </span>
+                  <span
+                    class="filename"
+                    :class="{ isOsx }"
+                    @click="rename"
+                  >{{ filename }}</span>
+                </bdi>
+              </span>
+            </span>
+            <span class="path-tail">
+              <span
+                ref="omission"
+                class="path-omission"
+                :class="{ 'filename-only': filenameOnly }"
+              >…</span>
+              <span
+                v-for="(path, index) in paths.slice(firstVisiblePath)"
+                :key="index"
+                class="path-segment"
+              >
+                {{ path }}
+                <el-icon :size="12"><ArrowRight /></el-icon>
+              </span>
+              <span
+                class="path-tail-file"
+                :class="{ isOsx }"
+                @click="rename"
+              >
+                <bdi dir="auto">{{ compactFilename }}</bdi>
+              </span>
             </span>
           </span>
         </span>
@@ -79,6 +101,22 @@
           :mode-changing="!!currentFile?.modeChanging"
           @toggle-reading="setReadingMode"
         />
+        <button
+          v-if="updates.showProgressButton"
+          type="button"
+          class="plain-button update-trigger title-no-drag"
+          :aria-label="t('updates.title')"
+          :title="updates.status"
+          aria-haspopup="dialog"
+          @click="updates.visible = true"
+        >
+          <el-icon :size="16">
+            <Warning v-if="updates.state.phase === 'error'" />
+            <CircleCheck v-else-if="updates.state.phase === 'ready'" />
+            <Download v-else />
+          </el-icon>
+          <span>{{ updates.percent === null ? t('updates.title') : `${updates.percent}%` }}</span>
+        </button>
         <announcement-bell />
       </div>
       <div
@@ -164,7 +202,8 @@ import { pathBreadcrumb } from './pathBreadcrumb'
 import { buildWindowTitle } from './windowTitle'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { useAutoUpdatesStore } from '@/store/autoUpdates'
+import { ArrowRight, CircleCheck, Download, Warning } from '@element-plus/icons-vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import DocumentStatistics from './documentStatistics.vue'
 import ApplicationMenu from './applicationMenu.vue'
@@ -190,6 +229,7 @@ const props = defineProps<{
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
 const editorStore = useEditorStore()
+const updates = useAutoUpdatesStore()
 const { currentFile } = storeToRefs(editorStore)
 const setReadingMode = (readOnly: boolean): void => {
   if (currentFile.value) void editorStore.SET_READ_ONLY(currentFile.value.id, readOnly)
@@ -224,28 +264,46 @@ const { showTabBar } = storeToRefs(layoutStore)
 const paths = computed(() => pathBreadcrumb(props.pathname ?? '', PATH_SEPARATOR))
 const pathContainer = ref<HTMLElement | null>(null)
 const pathContent = ref<HTMLElement | null>(null)
-const pathOverflow = ref(0)
-const pathOverflows = computed(() => pathOverflow.value > 0)
+const omission = ref<HTMLElement | null>(null)
+const pathOverflows = ref(false)
+const pathScrollDuration = ref('1s')
+const firstVisiblePath = ref(0)
+const filenameOnly = ref(false)
+const compactFilename = computed(() => filenameOnly.value && paths.value.length
+  ? `${paths.value.at(-1)} › ${props.filename}`
+  : props.filename)
 const pathHover = ref<boolean | null>(false)
 
-watchPostEffect((onCleanup) => {
-  const container = pathContainer.value
-  const content = pathContent.value
-  if (!container || !content) {
-    pathOverflow.value = 0
-    return
-  }
+watch([pathContainer, pathContent, omission, paths, () => props.filename], ([container, content, marker], _, onCleanup) => {
+  const segments = content?.firstElementChild
+  if (!container || !content || !segments || !marker) return
 
-  const observer = new ResizeObserver(() => {
-    pathOverflow.value = Math.max(
-      0,
-      content.getBoundingClientRect().width - container.getBoundingClientRect().width
-    )
-  })
+  const measure = (): void => {
+    const available = container.getBoundingClientRect().width
+    const width = content.getBoundingClientRect().width
+    pathOverflows.value = width > available + 0.5
+    pathScrollDuration.value = `${(width + 32) / 40}s`
+
+    const items = Array.from(segments.children)
+    const file = items.pop()
+    if (!file) return
+    let space = available - marker.getBoundingClientRect().width - file.getBoundingClientRect().width
+    filenameOnly.value = space < 0
+    let first = items.length
+    for (const segment of items.reverse()) {
+      const segmentWidth = segment.getBoundingClientRect().width
+      if (segmentWidth > space) break
+      space -= segmentWidth
+      first--
+    }
+    firstVisiblePath.value = first
+  }
+  // The full breadcrumb remains measurable while its compact counterpart is visible.
+  const observer = new ResizeObserver(measure)
   observer.observe(container)
   observer.observe(content)
   onCleanup(() => observer.disconnect())
-})
+}, { flush: 'post', immediate: true })
 
 watchPostEffect((onCleanup) => {
   const container = pathContainer.value
@@ -402,26 +460,66 @@ div.title > span {
 }
 
 .path {
+  position: relative;
   direction: ltr;
-  display: flex;
-  white-space: nowrap;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .path-viewport {
-  display: flex;
-  justify-content: flex-end;
-  min-width: 0;
+  display: block;
   overflow: clip;
 }
 
-.path-content {
-  flex: none;
+.path-content, .path-segments, .path-segment {
+  display: flex;
+  align-items: center;
+  width: max-content;
 }
 
-/* Keep bidirectional folder names and their separators in path order. */
-.path-content > span {
+.path-content {
+  position: relative;
+}
+
+.path-copy {
+  position: absolute;
+  left: calc(100% + 32px);
+  top: 0;
+}
+
+.path-segment {
+  flex: none;
   unicode-bidi: isolate;
+}
+
+.path-segment .el-icon {
+  margin-inline: 3px;
+}
+
+.path-tail {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  visibility: hidden;
+}
+
+.path-omission {
+  flex: none;
+  padding-inline-end: 4px;
+}
+
+.path-omission.filename-only {
+  position: absolute;
+  visibility: hidden;
+}
+
+.path-tail-file {
+  min-width: 0;
+  overflow: hidden;
+  direction: rtl;
+  text-overflow: ellipsis;
 }
 
 /* On Wayland, keep native drag space above and below the text's hover target. */
@@ -436,38 +534,32 @@ div.title > span {
 }
 
 .path-overflowing:is(.path-hovered, .path-dom-hover:hover) .path-content {
+  visibility: hidden;
   animation: none;
 }
 
-.path-overflowing:is(.path-hovered, .path-dom-hover:hover)::before {
-  content: '...';
-  margin-right: 2px;
+.path-overflowing:is(.path-hovered, .path-dom-hover:hover) .path-tail {
+  visibility: visible;
 }
 
-.path-hovered .filename.isOsx {
+.path-tail-file.isOsx {
   -webkit-app-region: no-drag;
 }
 
 @keyframes scroll-title-path {
-  from {
-    transform: translateX(var(--path-overflow));
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - 32px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .path-overflowing .path-content {
+    visibility: hidden;
     animation: none;
   }
-  .path-overflowing::before {
-    content: '...';
-    margin-right: 2px;
-  }
+  .path-overflowing .path-tail { visibility: visible; }
 }
 
-.title-bar .title .filename.isOsx:hover {
+.title-bar .title .isOsx:is(.filename, .path-tail-file):hover {
   color: var(--themeColor);
 }
 
@@ -507,6 +599,23 @@ div.title > span {
 .has-menubar .title::after {
   display: none;
 }
+.update-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline: 2px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  color: var(--themeColor);
+  background: var(--themeColor10);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.right-toolbar .update-trigger > span {
+  display: none;
+}
+
 .statistics-toolbar {
   flex: none;
   padding-left: 8px;
@@ -519,6 +628,7 @@ div.title > span {
   flex: none;
 }
 @media (max-width: 900px) {
+  .update-trigger > span { display: none; }
   .statistics-toolbar :deep(.document-statistics-trigger__label) {
     display: none;
   }
@@ -526,9 +636,6 @@ div.title > span {
 @media (max-width: 700px) {
   .has-menubar .title {
     padding: 0;
-  }
-  .has-menubar .title > span {
-    visibility: hidden;
   }
 }
 .right-toolbar {

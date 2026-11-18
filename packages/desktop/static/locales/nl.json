@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Software-update",
-    "available": "Versie {version} is beschikbaar.",
-    "installDetail": "De app wordt afgesloten zodra de update klaar is om te worden geïnstalleerd.",
-    "install": "Downloaden en installeren",
+    "install": "Opnieuw starten en installeren",
     "later": "Later",
     "upToDate": "Je gebruikt de nieuwste versie.",
     "downloaded": "De update is gedownload. De app wordt afgesloten om de update te installeren.",
     "checkFailed": "Controleren op updates is mislukt. Probeer het later opnieuw.",
-    "installFailed": "De update kon niet worden geïnstalleerd. Probeer het later opnieuw."
+    "installFailed": "De update kon niet worden geïnstalleerd. Probeer het later opnieuw.",
+    "checking": "Zoeken naar updates…",
+    "preparing": "Installatie van versie {version} wordt voorbereid…",
+    "downloading": "Versie {version} wordt gedownload…",
+    "ready": "Versie {version} staat klaar voor installatie.",
+    "background": "Doorgaan op de achtergrond",
+    "retry": "Opnieuw proberen",
+    "downloadFailed": "Downloaden is mislukt. Controleer de verbinding en probeer het opnieuw.",
+    "waiting": "Nog steeds aan het wachten op een antwoord…"
   },
   "notifications": {
     "defaultMessage": "Standaardbericht",

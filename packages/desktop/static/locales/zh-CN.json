@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "软件更新",
-    "available": "发现新版本 {version}。",
-    "installDetail": "下载完成后，应用将退出并安装更新。",
-    "install": "下载并安装",
+    "install": "重启并安装",
     "later": "稍后",
     "upToDate": "当前已是最新版本。",
     "downloaded": "更新已下载，应用即将退出并安装。",
     "checkFailed": "无法检查更新，请稍后重试。",
-    "installFailed": "无法安装更新，请稍后重试。"
+    "installFailed": "无法安装更新，请稍后重试。",
+    "checking": "正在检查更新…",
+    "preparing": "正在准备 {version} 版本的安装包…",
+    "downloading": "正在下载 {version} 版本…",
+    "ready": "{version} 版本已下载，可以重启安装。",
+    "background": "在后台继续",
+    "retry": "重试",
+    "downloadFailed": "下载失败，请检查网络连接后重试。",
+    "waiting": "仍在等待响应…"
   },
   "notifications": {
     "defaultMessage": "默认消息",

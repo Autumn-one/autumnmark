@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Software-Update",
-    "available": "Version {version} ist verfügbar.",
-    "installDetail": "Die Anwendung wird geschlossen, sobald das Update zur Installation bereit ist.",
-    "install": "Herunterladen und installieren",
+    "install": "Neu starten und installieren",
     "later": "Später",
     "upToDate": "Sie verwenden die neueste Version.",
     "downloaded": "Das Update wurde heruntergeladen. Die Anwendung wird zur Installation geschlossen.",
     "checkFailed": "Die Suche nach Updates ist fehlgeschlagen. Versuchen Sie es später erneut.",
-    "installFailed": "Das Update konnte nicht installiert werden. Versuchen Sie es später erneut."
+    "installFailed": "Das Update konnte nicht installiert werden. Versuchen Sie es später erneut.",
+    "checking": "Updates werden gesucht…",
+    "preparing": "Installation von Version {version} wird vorbereitet…",
+    "downloading": "Version {version} wird heruntergeladen…",
+    "ready": "Version {version} ist zur Installation bereit.",
+    "background": "Im Hintergrund fortfahren",
+    "retry": "Erneut versuchen",
+    "downloadFailed": "Download fehlgeschlagen. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+    "waiting": "Es wird noch auf eine Antwort gewartet…"
   },
   "notifications": {
     "defaultMessage": "Standardnachricht",

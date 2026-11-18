@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Yazılım güncellemesi",
-    "available": "{version} sürümü kullanılabilir.",
-    "installDetail": "Güncelleme yüklenmeye hazır olduğunda uygulama kapanacak.",
-    "install": "İndir ve yükle",
+    "install": "Yeniden başlat ve yükle",
     "later": "Daha sonra",
     "upToDate": "En güncel sürümü kullanıyorsunuz.",
     "downloaded": "Güncelleme indirildi. Yükleme için uygulama kapanacak.",
     "checkFailed": "Güncellemeler denetlenemedi. Daha sonra yeniden deneyin.",
-    "installFailed": "Güncelleme yüklenemedi. Daha sonra yeniden deneyin."
+    "installFailed": "Güncelleme yüklenemedi. Daha sonra yeniden deneyin.",
+    "checking": "Güncellemeler denetleniyor…",
+    "preparing": "{version} sürümü yükleme için hazırlanıyor…",
+    "downloading": "{version} sürümü indiriliyor…",
+    "ready": "{version} sürümü yüklemeye hazır.",
+    "background": "Arka planda devam et",
+    "retry": "Yeniden dene",
+    "downloadFailed": "İndirme başarısız oldu. Bağlantınızı kontrol edip yeniden deneyin.",
+    "waiting": "Yanıt bekleniyor…"
   },
   "notifications": {
     "defaultMessage": "Varsayılan mesaj",

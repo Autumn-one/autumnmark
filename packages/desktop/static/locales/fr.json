@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Mise à jour du logiciel",
-    "available": "La version {version} est disponible.",
-    "installDetail": "L’application se fermera lorsque la mise à jour sera prête à être installée.",
-    "install": "Télécharger et installer",
+    "install": "Redémarrer et installer",
     "later": "Plus tard",
     "upToDate": "Vous utilisez la dernière version.",
     "downloaded": "La mise à jour a été téléchargée. L’application va se fermer pour l’installer.",
     "checkFailed": "Impossible de rechercher les mises à jour. Réessayez plus tard.",
-    "installFailed": "Impossible d’installer la mise à jour. Réessayez plus tard."
+    "installFailed": "Impossible d’installer la mise à jour. Réessayez plus tard.",
+    "checking": "Recherche de mises à jour…",
+    "preparing": "Préparation de l’installation de la version {version}…",
+    "downloading": "Téléchargement de la version {version}…",
+    "ready": "La version {version} est prête à être installée.",
+    "background": "Continuer en arrière-plan",
+    "retry": "Réessayer",
+    "downloadFailed": "Le téléchargement a échoué. Vérifiez votre connexion et réessayez.",
+    "waiting": "Toujours en attente d’une réponse…"
   },
   "notifications": {
     "defaultMessage": "Message par défaut",

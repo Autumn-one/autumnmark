@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Software Update",
-    "available": "Version {version} is available.",
-    "installDetail": "The application will close when the update is ready to install.",
-    "install": "Download and Install",
+    "install": "Restart and install",
     "later": "Later",
     "upToDate": "You’re using the latest version.",
     "downloaded": "The update has been downloaded. The application will close to install it.",
     "checkFailed": "Could not check for updates. Try again later.",
-    "installFailed": "Could not install the update. Try again later."
+    "installFailed": "Could not install the update. Try again later.",
+    "checking": "Checking for updates…",
+    "preparing": "Preparing version {version} for installation…",
+    "downloading": "Downloading version {version}…",
+    "ready": "Version {version} is ready to install.",
+    "background": "Continue in background",
+    "retry": "Retry",
+    "downloadFailed": "The download failed. Check your connection and try again.",
+    "waiting": "Still waiting for a response…"
   },
   "notifications": {
     "defaultMessage": "Default message",

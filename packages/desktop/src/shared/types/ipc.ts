@@ -37,6 +37,18 @@ export interface RemoteContentSnapshot {
   announcementRevision?: string
 }
 
+export interface UpdateProgress {
+  transferred: number
+  total: number
+  bytesPerSecond: number
+}
+
+export type UpdateState =
+  | { phase: 'idle' | 'checking' | 'current' }
+  | { phase: 'downloading'; version: string; progress: UpdateProgress | null }
+  | { phase: 'ready' | 'installing'; version: string }
+  | { phase: 'error'; stage: 'check' | 'download' | 'install'; version?: string }
+
 export interface RecentDocument {
   pathname: string
   isDirectory: boolean
@@ -154,6 +166,9 @@ export interface IpcSendChannels {
   'mt::ask-for-user-data': []
   'mt::ask-for-user-preference': []
   'mt::check-for-update': []
+  'mt::update-listen': []
+  'mt::update-background': []
+  'mt::update-install': [version: string]
   'mt::cancel-pending-preview': [requestId: number]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
@@ -239,9 +254,7 @@ export interface IpcMainEventChannels extends StateIpcMainEvents {
   'mt::menu::application-categories-changed': []
   'mt::toggle-read-only': []
   'language-changed': [language: string]
-  'mt::UPDATE_DOWNLOADED': []
-  'mt::UPDATE_ERROR': [stage: 'check' | 'install']
-  'mt::UPDATE_NOT_AVAILABLE': []
+  'mt::update-state': [state: UpdateState, showDialog?: boolean]
   'mt::about-dialog': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []

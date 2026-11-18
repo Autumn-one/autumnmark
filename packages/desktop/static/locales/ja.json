@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "ソフトウェアアップデート",
-    "available": "バージョン {version} が利用できます。",
-    "installDetail": "アップデートのインストール準備ができると、アプリが終了します。",
-    "install": "ダウンロードしてインストール",
+    "install": "再起動してインストール",
     "later": "後で",
     "upToDate": "最新版を使用しています。",
     "downloaded": "アップデートをダウンロードしました。インストールのためアプリが終了します。",
     "checkFailed": "アップデートを確認できませんでした。後でもう一度お試しください。",
-    "installFailed": "アップデートをインストールできませんでした。後でもう一度お試しください。"
+    "installFailed": "アップデートをインストールできませんでした。後でもう一度お試しください。",
+    "checking": "アップデートを確認中…",
+    "preparing": "バージョン {version} のインストールを準備中…",
+    "downloading": "バージョン {version} をダウンロード中…",
+    "ready": "バージョン {version} をインストールできます。",
+    "background": "バックグラウンドで続行",
+    "retry": "再試行",
+    "downloadFailed": "ダウンロードに失敗しました。接続を確認して再試行してください。",
+    "waiting": "応答を待っています…"
   },
   "notifications": {
     "defaultMessage": "デフォルトメッセージ",

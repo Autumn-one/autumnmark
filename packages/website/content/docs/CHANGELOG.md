@@ -1,3 +1,8 @@
+## AutumnMark 0.24.7
+
+- See download progress and speed in the software update dialog, continue the download in the background, and restart to install when ready.
+- Keep the unsaved indicator visible while long paths scroll in the title bar. Hover to see the end of the path, or use reduced motion to keep that view in place.
+
 ## AutumnMark 0.24.6
 
 - Improved the layout and scrolling of announcements opened from the title bar.

@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "Aggiornamento software",
-    "available": "È disponibile la versione {version}.",
-    "installDetail": "L’applicazione si chiuderà quando l’aggiornamento sarà pronto per l’installazione.",
-    "install": "Scarica e installa",
+    "install": "Riavvia e installa",
     "later": "Più tardi",
     "upToDate": "Stai usando la versione più recente.",
     "downloaded": "L’aggiornamento è stato scaricato. L’applicazione si chiuderà per installarlo.",
     "checkFailed": "Impossibile verificare la disponibilità di aggiornamenti. Riprova più tardi.",
-    "installFailed": "Impossibile installare l’aggiornamento. Riprova più tardi."
+    "installFailed": "Impossibile installare l’aggiornamento. Riprova più tardi.",
+    "checking": "Ricerca di aggiornamenti…",
+    "preparing": "Preparazione dell’installazione della versione {version}…",
+    "downloading": "Download della versione {version}…",
+    "ready": "La versione {version} è pronta per l’installazione.",
+    "background": "Continua in background",
+    "retry": "Riprova",
+    "downloadFailed": "Download non riuscito. Controlla la connessione e riprova.",
+    "waiting": "In attesa di una risposta…"
   },
   "notifications": {
     "defaultMessage": "Messaggio predefinito",

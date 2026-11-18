@@ -23,13 +23,14 @@ test.afterAll(() => {
 
 const openIn = async(
   folders: string[],
-  width = 1280
+  width = 1280,
+  filename = FILENAME
 ): Promise<{ app: ElectronApplication; page: Page }> => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'marktext-e2etest-5467-'))
   roots.push(root)
   const dir = path.join(root, ...folders)
   fs.mkdirSync(dir, { recursive: true })
-  const filePath = path.join(dir, FILENAME)
+  const filePath = path.join(dir, filename)
   fs.writeFileSync(filePath, 'Alpha\n', 'utf8')
 
   const { app, page } = await launchElectron([filePath], {
@@ -38,7 +39,7 @@ const openIn = async(
   await waitForEditor(page)
   await waitForMenuReady(app)
   await page.setViewportSize({ width, height: 600 })
-  await expect(page.locator('.title-bar .filename')).toHaveText(FILENAME)
+  await expect(page.locator('.title-bar .filename').first()).toHaveText(filename)
   return { app, page }
 }
 
@@ -102,6 +103,20 @@ test('scrolls a long path and keeps the dot visible when hovering over its tail'
     await expect(content).toHaveCSS('animation-iteration-count', 'infinite')
     const initialTransform = await content.evaluate((element) => getComputedStyle(element).transform)
     await expect(content).not.toHaveCSS('transform', initialTransform)
+    const loop = await content.evaluate(element => {
+      const animation = element.getAnimations()[0]
+      const duration = Number(animation.effect?.getTiming().duration)
+      const [first, copy] = element.children
+      animation.pause()
+      animation.currentTime = duration - 1
+      const before = copy.getBoundingClientRect().left
+      animation.currentTime = duration + 1
+      const after = first.getBoundingClientRect().left
+      animation.play()
+      return Math.abs(before - after)
+    })
+    expect(loop).toBeLessThan(1)
+
 
     await markDirty(page)
     // Geometry checks must be independent of which window owns desktop focus.
@@ -112,18 +127,23 @@ test('scrolls a long path and keeps the dot visible when hovering over its tail'
       y: pathBox.y + pathBox.height / 2
     })
     await expect(content).toHaveCSS('animation-name', 'none')
-    expect(
-      await breadcrumb.evaluate((element) => getComputedStyle(element, '::before').content)
-    ).toBe('"..."')
+    const marker = breadcrumb.locator('.path-omission')
+    await expect(marker).toBeVisible()
+    await expect(marker).toHaveText('…')
 
     await expect(page.locator('.title-bar .save-dot')).toBeVisible()
     const clip = await boxOf(page, '.title-bar .path-viewport')
     const dot = await boxOf(page, '.title-bar .title .save-dot')
-    const filename = await boxOf(page, '.title-bar .title .filename')
+    const filename = await boxOf(page, '.title-bar .path-tail-file')
 
     expect(dot.width).toBeGreaterThan(0)
     expect(dot.x + dot.width).toBeLessThanOrEqual(clip.x)
     expect(filename.x).toBeGreaterThanOrEqual(clip.x)
+    for (const segment of await breadcrumb.locator('.path-tail .path-segment').all()) {
+      const box = await segment.boundingBox()
+      expect(box?.x).toBeGreaterThanOrEqual(clip.x)
+      expect(box && box.x + box.width).toBeLessThanOrEqual(filename.x + 0.5)
+    }
     expect(filename.x + filename.width).toBeCloseTo(clip.x + clip.width, 1)
 
     await setCursorPosition(app, { x: -25, y: -25 })
@@ -131,9 +151,24 @@ test('scrolls a long path and keeps the dot visible when hovering over its tail'
 
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await expect(content).toHaveCSS('animation-name', 'none')
-    expect(
-      await breadcrumb.evaluate((element) => getComputedStyle(element, '::before').content)
-    ).toBe('"..."')
+    await expect(marker).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('truncates an oversized filename with a single native leading ellipsis', async() => {
+  const filename = '工作记录和每周总结'.repeat(10) + '.md'
+  const { app, page } = await openIn(['notes'], 940, filename)
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const tail = page.locator('.title-bar .path-tail-file')
+    await expect(tail).toBeVisible()
+    await expect(tail).toHaveCSS('text-overflow', 'ellipsis')
+    await expect(tail).toHaveCSS('direction', 'rtl')
+    await expect(tail).toContainText(filename)
+    expect(await tail.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+    await expect(page.locator('.path-omission')).toBeHidden()
   } finally {
     await app.close()
   }

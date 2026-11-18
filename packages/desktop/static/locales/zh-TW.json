@@ -987,14 +987,20 @@
   },
   "updates": {
     "title": "軟體更新",
-    "available": "發現新版本 {version}。",
-    "installDetail": "下載完成後，應用程式將結束並安裝更新。",
-    "install": "下載並安裝",
+    "install": "重新啟動並安裝",
     "later": "稍後",
     "upToDate": "目前已是最新版本。",
     "downloaded": "更新已下載，應用程式即將結束並安裝。",
     "checkFailed": "無法檢查更新，請稍後再試。",
-    "installFailed": "無法安裝更新，請稍後再試。"
+    "installFailed": "無法安裝更新，請稍後再試。",
+    "checking": "正在檢查更新…",
+    "preparing": "正在準備 {version} 版本的安裝檔…",
+    "downloading": "正在下載 {version} 版本…",
+    "ready": "{version} 版本已下載，可以重新啟動並安裝。",
+    "background": "在背景繼續",
+    "retry": "重試",
+    "downloadFailed": "下載失敗，請檢查網路連線後重試。",
+    "waiting": "仍在等待回應…"
   },
   "notifications": {
     "defaultMessage": "預設訊息",
