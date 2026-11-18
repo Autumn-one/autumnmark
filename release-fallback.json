@@ -1,0 +1,29 @@
+{
+  "tag_name": "v0.24.5",
+  "assets": [
+    {
+      "name": "autumnmark-linux-0.24.5.AppImage",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-linux-0.24.5.AppImage"
+    },
+    {
+      "name": "autumnmark-linux-arm64-0.24.5.AppImage",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-linux-arm64-0.24.5.AppImage"
+    },
+    {
+      "name": "autumnmark-mac-arm64-0.24.5.dmg",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-mac-arm64-0.24.5.dmg"
+    },
+    {
+      "name": "autumnmark-mac-x64-0.24.5.dmg",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-mac-x64-0.24.5.dmg"
+    },
+    {
+      "name": "autumnmark-win-arm64-0.24.5-setup.exe",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-win-arm64-0.24.5-setup.exe"
+    },
+    {
+      "name": "autumnmark-win-x64-0.24.5-setup.exe",
+      "browser_download_url": "https://github.com/Autumn-one/autumnmark/releases/download/v0.24.5/autumnmark-win-x64-0.24.5-setup.exe"
+    }
+  ]
+}

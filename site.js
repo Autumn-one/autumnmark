@@ -87,23 +87,26 @@ function enhanceDownload(card, assets) {
   updateLink()
 }
 
-async function showLatestRelease() {
+async function readRelease(url) {
   try {
-    const response = await fetch(releaseApi, { signal: AbortSignal.timeout(5000) })
-    if (!response.ok) return
+    const response = await fetch(url, { signal: AbortSignal.timeout(4000) })
+    if (!response.ok) return undefined
 
     const release = await response.json()
-    if (Array.isArray(release.assets)) {
-      document.querySelectorAll('[data-platform]').forEach((card) => enhanceDownload(card, release.assets))
-    }
-
-    if (typeof release.tag_name === 'string') {
-      document.querySelector('[data-release-version]').textContent = `${release.tag_name} · 发布记录`
-    }
+    if (typeof release.tag_name === 'string' && Array.isArray(release.assets) && release.assets.length > 0) return release
   } catch {
-    // The static links still lead to the latest release when the API is unavailable.
+    return undefined
   }
 }
 
+async function showInstallers() {
+  let release = await readRelease(releaseApi)
+  if (!release) release = await readRelease('./release-fallback.json')
+  if (!release) return
+
+  document.querySelectorAll('[data-platform]').forEach((card) => enhanceDownload(card, release.assets))
+  document.querySelector('[data-release-version]').textContent = `${release.tag_name} · 发布记录`
+}
+
 document.querySelectorAll('[data-tabs]').forEach(enhanceTabs)
-void showLatestRelease()
+void showInstallers()
