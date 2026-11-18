@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Made with <3 by Github Contributors"
   },
+  "remoteContent": {
+    "announcement": "Announcements",
+    "unreadAnnouncement": "Unread announcement",
+    "about": "Live information",
+    "loading": "Fetching the latest content…",
+    "loadFailed": "Could not load the content.",
+    "refreshFailed": "Refresh failed. Showing the last fetched content.",
+    "unverified": "GitHub is unavailable. The latest announcement could not be verified.",
+    "refresh": "Refresh",
+    "retry": "Retry"
+  },
   "commands": {
     "mt": {
       "hide": "Hide AutumnMark",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Unexpected error with message {message}",
     "unexpectedMainProcess": "Unexpected main process error",
     "unexpectedRendererProcess": "Unexpected renderer process error"
+  },
+  "updates": {
+    "title": "Software Update",
+    "available": "Version {version} is available.",
+    "installDetail": "The application will close when the update is ready to install.",
+    "install": "Download and Install",
+    "later": "Later",
+    "upToDate": "You’re using the latest version.",
+    "downloaded": "The update has been downloaded. The application will close to install it.",
+    "checkFailed": "Could not check for updates. Try again later.",
+    "installFailed": "Could not install the update. Try again later."
   },
   "notifications": {
     "defaultMessage": "Default message",

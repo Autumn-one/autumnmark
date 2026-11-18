@@ -783,6 +783,17 @@
     "copyright": "Telif Hakkı © Luo Ran 2017-{year}",
     "copyrightContributors": "Github Katkıda Bulunanlar tarafından <3 ile yapıldı"
   },
+  "remoteContent": {
+    "announcement": "Duyurular",
+    "unreadAnnouncement": "Okunmamış duyuru",
+    "about": "Güncel bilgiler",
+    "loading": "En yeni içerik getiriliyor…",
+    "loadFailed": "İçerik yüklenemedi.",
+    "refreshFailed": "Yenileme başarısız. Son alınan içerik gösteriliyor.",
+    "unverified": "GitHub’a ulaşılamıyor. Duyurunun güncel olup olmadığı doğrulanamadı.",
+    "refresh": "Yenile",
+    "retry": "Tekrar dene"
+  },
   "commands": {
     "mt": {
       "hide": "AutumnMark'i Gizle",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Beklenmeyen hata: {message}",
     "unexpectedMainProcess": "Beklenmeyen ana işlem hatası",
     "unexpectedRendererProcess": "Beklenmeyen işleyici işlem hatası"
+  },
+  "updates": {
+    "title": "Yazılım güncellemesi",
+    "available": "{version} sürümü kullanılabilir.",
+    "installDetail": "Güncelleme yüklenmeye hazır olduğunda uygulama kapanacak.",
+    "install": "İndir ve yükle",
+    "later": "Daha sonra",
+    "upToDate": "En güncel sürümü kullanıyorsunuz.",
+    "downloaded": "Güncelleme indirildi. Yükleme için uygulama kapanacak.",
+    "checkFailed": "Güncellemeler denetlenemedi. Daha sonra yeniden deneyin.",
+    "installFailed": "Güncelleme yüklenemedi. Daha sonra yeniden deneyin."
   },
   "notifications": {
     "defaultMessage": "Varsayılan mesaj",

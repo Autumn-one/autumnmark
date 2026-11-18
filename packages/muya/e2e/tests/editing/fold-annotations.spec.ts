@@ -18,6 +18,15 @@ test('renders code annotations inside a fold with an independent saved default',
     await expect(caption).toHaveText('request.js');
     await expect(caption).toBeVisible();
     await expect(code).toHaveCSS('background-image', /linear-gradient/);
+    await expect.poll(() => page.locator('.mu-fold-block-header').evaluate((header) => {
+        const panel = header.getBoundingClientRect();
+        const body = header.parentElement!.querySelector('.mu-code-block')!.getBoundingClientRect();
+        const surfaceBottom = panel.top + Number.parseFloat(getComputedStyle(header, '::before').height);
+        return {
+            bodyInset: panel.left < body.left && body.right < panel.right,
+            bodyCovered: body.bottom < surfaceBottom,
+        };
+    })).toEqual({ bodyInset: true, bodyCovered: true });
     expect(await getMarkdown(page)).toBe(source);
 
     await toggle.click();
@@ -51,6 +60,38 @@ test('search reveals a match within a collapsed fold', async ({ page }) => {
     await page.locator(toolbar.search).fill('configure');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.mu-code-block')).toBeVisible();
+});
+
+test('Up and Down reach a bold fold title and allow edits inside its markers', async ({ page }) => {
+    const markdown = ['Before the fold.', '', '<!-- fold open -->', '', '__Retry steps__', '',
+        'Read the response.', '', '<!-- /fold -->', '', 'After the fold.', ''].join('\n');
+    await loadMarkdown(page, markdown);
+    const toggle = page.locator('.mu-fold-block-toggle');
+    const activeText = () => page.evaluate(() => window.muya!.editor.activeContentBlock?.text);
+
+    await page.getByText('Before the fold.', { exact: true }).click();
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(activeText).toBe('__Retry steps__');
+    await expect(toggle).toBeHidden();
+    await page.keyboard.insertText('X');
+    await expect.poll(() => getMarkdown(page)).toMatch(/\n__[^_\n]*X[^_\n]*__\n/);
+    const editedTitle = await activeText();
+
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(activeText).toBe('Read the response.');
+    await expect(toggle).toBeVisible();
+    await page.keyboard.press('ArrowUp');
+    await expect.poll(activeText).toBe(editedTitle);
+    await page.keyboard.press('ArrowUp');
+    await expect.poll(activeText).toBe('Before the fold.');
+
+    await toggle.click();
+    await page.getByText('After the fold.', { exact: true }).click();
+    await page.keyboard.press('ArrowUp');
+    await expect.poll(activeText).toBe(editedTitle);
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(activeText).toBe('After the fold.');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('retains title and range metadata when creating a fence with a keyboard', async ({ page }) => {

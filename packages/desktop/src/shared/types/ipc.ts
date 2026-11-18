@@ -24,6 +24,19 @@ export interface ClipboardImageWriteOptions {
 export type PlantumlFetchResult =
   { ok: true; mime: string; data: Uint8Array } | { ok: false; error: string }
 
+export type RemoteContentKind = 'announcement' | 'about'
+
+export interface RemoteContent {
+  markdown: string
+  verified: boolean
+}
+
+export interface RemoteContentSnapshot {
+  content: RemoteContent | null
+  status: 'ready' | 'unverified' | 'failed'
+  announcementRevision?: string
+}
+
 export interface RecentDocument {
   pathname: string
   isDirectory: boolean
@@ -52,6 +65,10 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
   'mt::link::fetch-html': { args: [url: string]; ret: string }
+  'mt::remote-content::fetch': {
+    args: [kind: RemoteContentKind, refresh: boolean]
+    ret: RemoteContentSnapshot
+  }
   'mt::clipboard::write-image': {
     args: [png: Uint8Array, options?: ClipboardImageWriteOptions]
     ret: boolean
@@ -103,6 +120,10 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   'mt::spellchecker-set-enabled': { args: [enabled: boolean]; ret: void }
   'mt::spellchecker-switch-language': { args: [language: string]; ret: void }
   'mt::uploader::upload': { args: [req: unknown]; ret: unknown }
+  'mt::win::is-cursor-over': {
+    args: [bounds: { left: number; top: number; right: number; bottom: number }]
+    ret: boolean | null
+  }
   'mt::win::is-fullscreen': { args: []; ret: boolean }
   'mt::win::is-maximized': { args: []; ret: boolean }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
@@ -125,7 +146,6 @@ export interface IpcSendChannels {
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
   'mt::remove-recently-used-document': [pathname: string]
-  'mt::NEED_UPDATE': [payload?: unknown]
   'mt::add-recently-used-document': [filePath: string]
   'mt::app-try-quit': []
   'mt::ask-for-image-auto-path': [payload: unknown]
@@ -215,13 +235,13 @@ export interface IpcSyncChannels {
 }
 
 export interface IpcMainEventChannels extends StateIpcMainEvents {
+  'mt::announcement-changed': [snapshot: RemoteContentSnapshot]
   'mt::menu::application-categories-changed': []
   'mt::toggle-read-only': []
   'language-changed': [language: string]
-  'mt::UPDATE_AVAILABLE': [info?: unknown]
-  'mt::UPDATE_DOWNLOADED': [info?: unknown]
-  'mt::UPDATE_ERROR': [error: unknown]
-  'mt::UPDATE_NOT_AVAILABLE': [info?: unknown]
+  'mt::UPDATE_DOWNLOADED': []
+  'mt::UPDATE_ERROR': [stage: 'check' | 'install']
+  'mt::UPDATE_NOT_AVAILABLE': []
   'mt::about-dialog': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
@@ -270,7 +290,7 @@ export interface IpcMainEventChannels extends StateIpcMainEvents {
   'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
   'mt::update-object-tree': [payload: ProjectTreeEvent]
   'mt::user-preference': [partial: unknown]
-  'mt::window-active-status': [active: boolean]
+  'mt::window-active-status': [state: { status: boolean }]
   'mt::window-enter-full-screen': []
   'mt::window-leave-full-screen': []
   'mt::window-maximize': []

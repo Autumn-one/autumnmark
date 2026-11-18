@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Creato con <3 dai Collaboratori di GitHub"
   },
+  "remoteContent": {
+    "announcement": "Annunci",
+    "unreadAnnouncement": "Annuncio da leggere",
+    "about": "Informazioni aggiornate",
+    "loading": "Caricamento dei contenuti più recenti…",
+    "loadFailed": "Impossibile caricare il contenuto.",
+    "refreshFailed": "Aggiornamento non riuscito. È visualizzato l’ultimo contenuto ricevuto.",
+    "unverified": "GitHub non è disponibile. Impossibile verificare che l’annuncio sia aggiornato.",
+    "refresh": "Aggiorna",
+    "retry": "Riprova"
+  },
   "commands": {
     "mt": {
       "hide": "Nascondi AutumnMark",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Errore imprevisto con questo messaggio: {message}",
     "unexpectedMainProcess": "Errore imprevisto del processo principale",
     "unexpectedRendererProcess": "Errore imprevisto del processo di rendering"
+  },
+  "updates": {
+    "title": "Aggiornamento software",
+    "available": "È disponibile la versione {version}.",
+    "installDetail": "L’applicazione si chiuderà quando l’aggiornamento sarà pronto per l’installazione.",
+    "install": "Scarica e installa",
+    "later": "Più tardi",
+    "upToDate": "Stai usando la versione più recente.",
+    "downloaded": "L’aggiornamento è stato scaricato. L’applicazione si chiuderà per installarlo.",
+    "checkFailed": "Impossibile verificare la disponibilità di aggiornamenti. Riprova più tardi.",
+    "installFailed": "Impossibile installare l’aggiornamento. Riprova più tardi."
   },
   "notifications": {
     "defaultMessage": "Messaggio predefinito",

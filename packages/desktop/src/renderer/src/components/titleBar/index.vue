@@ -25,28 +25,46 @@
             class="save-dot"
             :class="{ show: !isSaved }"
           />
-          <span class="path">
-            <bdi dir="ltr">
-              <span
-                v-for="(path, index) of paths"
-                :key="index"
+          <span
+            ref="pathContainer"
+            class="path"
+            :class="{
+              'path-overflowing': pathOverflows,
+              'path-hovered': pathHover === true,
+              'path-dom-hover': pathHover === null
+            }"
+            :style="{
+              '--path-overflow': `${pathOverflow}px`,
+              '--path-scroll-duration': `${Math.max(0.8, pathOverflow / 40)}s`
+            }"
+          >
+            <span class="path-viewport">
+              <bdi
+                ref="pathContent"
+                class="path-content"
+                dir="ltr"
               >
-                {{ path }}
-                <el-icon
-                  class="path-arrow"
-                  :size="12"
+                <span
+                  v-for="(path, index) of paths"
+                  :key="index"
                 >
-                  <ArrowRight />
-                </el-icon>
-              </span>
-              <span
-                class="filename"
-                :class="{ isOsx: platform === 'darwin' }"
-                @click="rename"
-              >
-                {{ filename }}
-              </span>
-            </bdi>
+                  {{ path }}
+                  <el-icon
+                    class="path-arrow"
+                    :size="12"
+                  >
+                    <ArrowRight />
+                  </el-icon>
+                </span>
+                <span
+                  class="filename"
+                  :class="{ isOsx: platform === 'darwin' }"
+                  @click="rename"
+                >
+                  {{ filename }}
+                </span>
+              </bdi>
+            </span>
           </span>
         </span>
       </div>
@@ -61,6 +79,7 @@
           :mode-changing="!!currentFile?.modeChanging"
           @toggle-reading="setReadingMode"
         />
+        <announcement-bell />
       </div>
       <div
         v-if="titleBarStyle === 'custom' && !isFullScreen && !isOsx"
@@ -136,7 +155,7 @@
 <script setup lang="ts">
 import { usePreferencesStore } from '@/store/preferences.js'
 import { useLayoutStore } from '@/store/layout.js'
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, watchPostEffect, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
 import { PATH_SEPARATOR } from '../../config'
@@ -149,6 +168,7 @@ import { ArrowRight } from '@element-plus/icons-vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import DocumentStatistics from './documentStatistics.vue'
 import ApplicationMenu from './applicationMenu.vue'
+import AnnouncementBell from './announcementBell.vue'
 import type { FileWordCount } from '@shared/types/files'
 import { APP_NAME } from '@shared/brand'
 
@@ -202,6 +222,56 @@ const { titleBarStyle } = storeToRefs(preferencesStore)
 const { showTabBar } = storeToRefs(layoutStore)
 
 const paths = computed(() => pathBreadcrumb(props.pathname ?? '', PATH_SEPARATOR))
+const pathContainer = ref<HTMLElement | null>(null)
+const pathContent = ref<HTMLElement | null>(null)
+const pathOverflow = ref(0)
+const pathOverflows = computed(() => pathOverflow.value > 0)
+const pathHover = ref<boolean | null>(false)
+
+watchPostEffect((onCleanup) => {
+  const container = pathContainer.value
+  const content = pathContent.value
+  if (!container || !content) {
+    pathOverflow.value = 0
+    return
+  }
+
+  const observer = new ResizeObserver(() => {
+    pathOverflow.value = Math.max(
+      0,
+      content.getBoundingClientRect().width - container.getBoundingClientRect().width
+    )
+  })
+  observer.observe(container)
+  observer.observe(content)
+  onCleanup(() => observer.disconnect())
+})
+
+watchPostEffect((onCleanup) => {
+  const container = pathContainer.value
+  if (!container || !pathOverflows.value || !props.active) return
+
+  let stopped = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // Native dragging regions do not send pointer events to the renderer.
+  const checkCursor = async () => {
+    const { left, top, right, bottom } = container.getBoundingClientRect()
+    const hovered = await window.electron.ipcRenderer
+      .invoke('mt::win::is-cursor-over', { left, top, right, bottom })
+      .catch(() => false)
+    if (stopped) return
+
+    pathHover.value = hovered
+    timer = setTimeout(checkCursor, hovered === null ? 250 : 50)
+  }
+
+  onCleanup(() => {
+    stopped = true
+    clearTimeout(timer)
+    pathHover.value = false
+  })
+  void checkCursor()
+})
 
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx
@@ -331,22 +401,70 @@ div.title > span {
   justify-content: center;
 }
 
-/* Workaround for GH#339: the RTL context clips an over-long path from the left
-   so the filename stays visible. The save dot is a sibling rather than a child
-   so that clipping can never swallow it. */
-div.title > span > .path {
-  direction: rtl;
-  overflow: hidden;
-  text-overflow: clip;
+.path {
+  direction: ltr;
+  display: flex;
   white-space: nowrap;
   min-width: 0;
 }
 
-/* The RTL context above only exists to clip long paths from the left. Isolating
-   each segment keeps an RTL folder name from dragging its separator — or the
-   segments around it — out of order. */
-div.title > span > .path > bdi > span {
+.path-viewport {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: clip;
+}
+
+.path-content {
+  flex: none;
+}
+
+/* Keep bidirectional folder names and their separators in path order. */
+.path-content > span {
   unicode-bidi: isolate;
+}
+
+/* On Wayland, keep native drag space above and below the text's hover target. */
+.path-overflowing.path-dom-hover {
+  margin-block: 6px;
+  line-height: calc(var(--titleBarHeight) - 12px);
+  -webkit-app-region: no-drag;
+}
+
+.path-overflowing .path-content {
+  animation: scroll-title-path var(--path-scroll-duration) linear infinite;
+}
+
+.path-overflowing:is(.path-hovered, .path-dom-hover:hover) .path-content {
+  animation: none;
+}
+
+.path-overflowing:is(.path-hovered, .path-dom-hover:hover)::before {
+  content: '...';
+  margin-right: 2px;
+}
+
+.path-hovered .filename.isOsx {
+  -webkit-app-region: no-drag;
+}
+
+@keyframes scroll-title-path {
+  from {
+    transform: translateX(var(--path-overflow));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .path-overflowing .path-content {
+    animation: none;
+  }
+  .path-overflowing::before {
+    content: '...';
+    margin-right: 2px;
+  }
 }
 
 .title-bar .title .filename.isOsx:hover {
@@ -391,7 +509,7 @@ div.title > span > .path > bdi > span {
 }
 .statistics-toolbar {
   flex: none;
-  padding: 0 8px;
+  padding-left: 8px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -421,7 +539,7 @@ div.title > span > .path > bdi > span {
   width: 190px;
   display: flex;
   align-items: center;
-  flex-direction: row-reverse;
+  justify-content: flex-end;
   & .item {
     margin-right: 10px;
   }
@@ -437,11 +555,8 @@ div.title > span > .path > bdi > span {
   height: var(--titleBarHeight);
   color: var(--editorColor);
 }
-/* `.right-toolbar` lays its items out in reverse. The window controls are
-   listed minimize → close and laid out forwards, so Tab moves left to right. */
 .window-controls {
   width: 138px;
-  flex-direction: row;
 }
 .frameless-titlebar-button > span {
   position: absolute;

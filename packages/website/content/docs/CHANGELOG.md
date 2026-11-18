@@ -1,3 +1,12 @@
+## AutumnMark 0.24.5
+
+- Read announcements from the title bar and view project information in the About dialog.
+- Check for stable updates at launch and periodically on supported installations. Approve an update before it downloads.
+- Add content tabs without entering rename mode, and use the arrow keys to move between tab titles and the document.
+- Use a standalone bold paragraph as a fold block title, and move the caret into the title with the arrow keys.
+- Hover over a long breadcrumb to reveal the full path, and keep the unsaved indicator visible.
+- Refresh the AutumnMark application icon and link the in-app documentation to the installed release.
+
 ## AutumnMark 0.24.4
 
 - Add collapsible Markdown blocks with a saved default open or closed state. Other Markdown readers can show the heading and full content.

@@ -109,6 +109,7 @@ class CodeBlock extends Parent {
         const previous = this.annotations;
         const next = parseCodeFenceAnnotations(info);
         this.annotations = next;
+        this.domNode!.classList.toggle('mu-code-block-annotated', !!next.title || next.ranges.length > 0);
         if (next.title) {
             if (!this._titleNode) {
                 this._titleNode = this.domNode!.ownerDocument.createElement('span');

@@ -1,10 +1,32 @@
-<p align="center"><img src="https://raw.githubusercontent.com/Autumn-one/autumnmark/v0.24.3/docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
 
 <h1 align="center">AutumnMark · 秋笺</h1>
 
 AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的桌面 Markdown 编辑器，支持 Windows、macOS 和 Linux。可以在可视化编辑与源码编辑之间切换，适合写技术笔记、教程和项目文档。
 
 [下载 AutumnMark 正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布说明](https://github.com/Autumn-one/autumnmark/releases) · [MIT 许可证](LICENSE)
+
+## 内容选项卡
+
+把不同平台的安装步骤或不同语言的代码示例放进同一组选项卡。读者点击标签就能切换内容。在编辑器里输入 `/tabs` 插入选项卡组，点击 `+` 添加标签。
+
+```markdown
+<!-- tabs -->
+
+#### | Windows
+
+双击安装包，按向导完成安装。
+
+#### | macOS
+
+打开 DMG，将应用拖到「应用程序」。
+
+<!-- /tabs -->
+```
+
+开头和结尾的注释各占一行。组内标题的文字以 `| ` 开头时，会创建一个新选项卡。
+
+普通 Markdown 阅读器会按顺序显示所有标题和正文，标题保留 `|`。HTML、PDF 导出和打印会展开全部选项卡。 [完整语法与键盘操作](https://github.com/Autumn-one/autumnmark/blob/v0.24.4/packages/website/content/docs/end-user/MARKDOWN_SYNTAX.md#content-tabs)
 
 ## v0.24.4 新增的三项语法
 

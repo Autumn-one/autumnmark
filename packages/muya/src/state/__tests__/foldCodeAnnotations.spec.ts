@@ -60,9 +60,21 @@ describe('fold block syntax', () => {
         expect([...details].map(element => element.open)).toEqual([true, true]);
     });
 
+    it.each(['**Retry**', '__Retry__', '***Retry***'])('uses a standalone bold paragraph as the title (%s)', (title) => {
+        const markdown = `<!-- fold open -->\n\n${title}\n\nRetry body.\n\n<!-- /fold -->\n`;
+        const state = new MarkdownToState().generate(markdown);
+        expect(new ExportMarkdown().generate(state)).toBe(markdown);
+        const details = render(markdown).querySelector<HTMLDetailsElement>('details.mu-export-fold');
+        expect(details?.open).toBe(true);
+        expect(details?.querySelector('summary strong')?.textContent).toBe('Retry');
+        expect(details?.querySelector(':scope > p')?.textContent).toBe('Retry body.');
+    });
+
     it.each([
         '<!-- fold -->\n\n### Missing closing marker\n\nBody.',
         '<!-- fold -->\n\nMissing heading.\n\n<!-- /fold -->',
+        '<!-- fold -->\n\n**Bold text** in an ordinary paragraph.\n\n<!-- /fold -->',
+        '<!-- fold -->\n\n`**Literal**`\n\n<!-- /fold -->',
     ])('renders incomplete markup as ordinary Markdown', (markdown) => {
         expect(render(markdown).querySelector('details')).toBeNull();
         expect(render(markdown).querySelector('p')).not.toBeNull();

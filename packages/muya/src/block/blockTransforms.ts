@@ -256,7 +256,7 @@ function insertContentTabs(block: Parent, muya: Muya, text: string): void {
         { name: 'paragraph', text: '' },
         { name: 'html-block', text: '<!-- /tabs -->' },
     ]);
-    muya.editor.contentTabs.editTitle(replacements[1]);
+    muya.editor.contentTabs.selectTitle(replacements[1]);
 }
 
 function insertFoldBlock(block: Parent, muya: Muya, text: string): void {

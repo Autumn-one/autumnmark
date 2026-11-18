@@ -276,26 +276,37 @@
 }
 
 .mu-code-block {
-    --mu-code-line-highlight: rgb(33 181 111 / 16%);
+    --mu-code-caption-inset: 1em;
+    --mu-code-line-highlight: rgb(33 181 111 / 9%);
     font-size: var(--mu-code-font-size, 90%);
     font-family: var(--mu-code-font-family, var(--mu-default-code-font-family));
 }
 
 @supports (color: color-mix(in srgb, white, black)) {
     .mu-code-block {
-        --mu-code-line-highlight: color-mix(in srgb, var(--theme-color) 18%, transparent);
+        --mu-code-line-highlight: color-mix(in srgb, var(--theme-color) 10%, transparent);
     }
+}
+
+.mu-code-block.mu-code-block-annotated {
+    border: 0;
+    border-radius: 8px;
 }
 
 .mu-code-block-title {
     display: block;
-    margin-bottom: 0.5em;
-    padding-right: 32px;
+    margin: -1em -1em 0.65em calc(-1 * var(--mu-code-caption-inset));
+    padding: 0.45em 36px 0.45em 1em;
 
-    color: var(--editor-color-50);
+    color: var(--editor-color-80);
     font-weight: 600;
+    font-family: var(--mu-font-family, 'Open Sans', 'Clear Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif);
+    line-height: 1.4;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+
+    background-color: var(--float-hover-color);
+    border-radius: 8px 8px 0 0;
 }
 
 .mu-code-block .mu-code {
@@ -392,6 +403,7 @@ code.mu-code .mu-code-copy:hover {
 
 /* code block line numbers (option: codeBlockLineNumbers) */
 .mu-code-block:has(.mu-line-numbers-rows) {
+    --mu-code-caption-inset: 2.5em;
     padding-left: 2.5em;
 }
 

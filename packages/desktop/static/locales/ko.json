@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "저작권 기여자"
   },
+  "remoteContent": {
+    "announcement": "공지 사항",
+    "unreadAnnouncement": "읽지 않은 공지 사항",
+    "about": "최신 정보",
+    "loading": "최신 내용을 가져오는 중…",
+    "loadFailed": "내용을 불러오지 못했습니다.",
+    "refreshFailed": "새로 고치지 못했습니다. 마지막으로 가져온 내용을 표시합니다.",
+    "unverified": "GitHub에 연결할 수 없어 최신 공지인지 확인하지 못했습니다.",
+    "refresh": "새로 고침",
+    "retry": "다시 시도"
+  },
   "commands": {
     "mt": {
       "hide": "AutumnMark 숨기기",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "예기치 않은 오류: {message}",
     "unexpectedMainProcess": "예상치 못한 메인 프로세스 오류",
     "unexpectedRendererProcess": "예상치 못한 렌더러 프로세스 오류"
+  },
+  "updates": {
+    "title": "소프트웨어 업데이트",
+    "available": "버전 {version}을 사용할 수 있습니다.",
+    "installDetail": "업데이트 설치 준비가 완료되면 앱이 종료됩니다.",
+    "install": "다운로드 및 설치",
+    "later": "나중에",
+    "upToDate": "최신 버전을 사용 중입니다.",
+    "downloaded": "업데이트를 다운로드했습니다. 설치를 위해 앱이 종료됩니다.",
+    "checkFailed": "업데이트를 확인할 수 없습니다. 나중에 다시 시도해 주세요.",
+    "installFailed": "업데이트를 설치할 수 없습니다. 나중에 다시 시도해 주세요."
   },
   "notifications": {
     "defaultMessage": "기본 메시지",

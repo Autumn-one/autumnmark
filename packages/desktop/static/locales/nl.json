@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Gemaakt met <3 door GitHub-bijdragers"
   },
+  "remoteContent": {
+    "announcement": "Aankondigingen",
+    "unreadAnnouncement": "Ongelezen aankondiging",
+    "about": "Actuele informatie",
+    "loading": "Nieuwste inhoud wordt opgehaald…",
+    "loadFailed": "De inhoud kon niet worden geladen.",
+    "refreshFailed": "Vernieuwen is mislukt. De laatst opgehaalde inhoud wordt getoond.",
+    "unverified": "GitHub is niet bereikbaar. Er kon niet worden gecontroleerd of de aankondiging actueel is.",
+    "refresh": "Vernieuwen",
+    "retry": "Opnieuw proberen"
+  },
   "commands": {
     "mt": {
       "hide": "AutumnMark verbergen",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Onverwachte fout: {message}",
     "unexpectedMainProcess": "Onverwachte fout in hoofdproces",
     "unexpectedRendererProcess": "Onverwachte fout in rendererproces"
+  },
+  "updates": {
+    "title": "Software-update",
+    "available": "Versie {version} is beschikbaar.",
+    "installDetail": "De app wordt afgesloten zodra de update klaar is om te worden geïnstalleerd.",
+    "install": "Downloaden en installeren",
+    "later": "Later",
+    "upToDate": "Je gebruikt de nieuwste versie.",
+    "downloaded": "De update is gedownload. De app wordt afgesloten om de update te installeren.",
+    "checkFailed": "Controleren op updates is mislukt. Probeer het later opnieuw.",
+    "installFailed": "De update kon niet worden geïnstalleerd. Probeer het later opnieuw."
   },
   "notifications": {
     "defaultMessage": "Standaardbericht",

@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "版權貢獻者"
   },
+  "remoteContent": {
+    "announcement": "公告",
+    "unreadAnnouncement": "公告有更新",
+    "about": "動態資訊",
+    "loading": "正在取得最新內容…",
+    "loadFailed": "無法取得內容。",
+    "refreshFailed": "重新整理失敗，正在顯示上次取得的內容。",
+    "unverified": "暫時無法連線至 GitHub，無法確認公告是否為最新版本。",
+    "refresh": "重新整理",
+    "retry": "重試"
+  },
   "commands": {
     "mt": {
       "hide": "隱藏 AutumnMark",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "意外錯誤：{message}",
     "unexpectedMainProcess": "意外的主程序錯誤",
     "unexpectedRendererProcess": "意外的渲染程序錯誤"
+  },
+  "updates": {
+    "title": "軟體更新",
+    "available": "發現新版本 {version}。",
+    "installDetail": "下載完成後，應用程式將結束並安裝更新。",
+    "install": "下載並安裝",
+    "later": "稍後",
+    "upToDate": "目前已是最新版本。",
+    "downloaded": "更新已下載，應用程式即將結束並安裝。",
+    "checkFailed": "無法檢查更新，請稍後再試。",
+    "installFailed": "無法安裝更新，請稍後再試。"
   },
   "notifications": {
     "defaultMessage": "預設訊息",

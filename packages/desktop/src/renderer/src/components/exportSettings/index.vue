@@ -155,7 +155,7 @@
           </div>
           <cur-select
             :description="t('exportSettings.theme.theme')"
-            more="https://marktext.me/docs/export-themes"
+            :more="`${END_USER_DOCS_URL}/EXPORT_THEMES.md`"
             :value="theme"
             :options="themeList"
             :on-change="(value: unknown) => onSelectChange('theme', value)"
@@ -293,6 +293,7 @@ import Range from '@/prefComponents/common/range/index.vue'
 import TextBox from '@/prefComponents/common/textBox/index.vue'
 import { getPageSizeList, getHeaderFooterTypes, getExportThemeList } from './exportOptions'
 import { useI18n } from 'vue-i18n'
+import { END_USER_DOCS_URL } from '@shared/brand'
 
 const { t } = useI18n()
 

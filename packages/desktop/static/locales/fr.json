@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Contributeurs aux droits d'auteur"
   },
+  "remoteContent": {
+    "announcement": "Annonces",
+    "unreadAnnouncement": "Annonce non lue",
+    "about": "Informations actualisées",
+    "loading": "Chargement du contenu le plus récent…",
+    "loadFailed": "Impossible de charger le contenu.",
+    "refreshFailed": "Échec de l’actualisation. Le dernier contenu reçu est affiché.",
+    "unverified": "GitHub est indisponible. Impossible de vérifier si l’annonce est à jour.",
+    "refresh": "Actualiser",
+    "retry": "Réessayer"
+  },
   "commands": {
     "mt": {
       "hide": "Masquer AutumnMark",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Erreur inattendue : {message}",
     "unexpectedMainProcess": "Erreur inattendue du processus principal",
     "unexpectedRendererProcess": "Erreur inattendue du processus de rendu"
+  },
+  "updates": {
+    "title": "Mise à jour du logiciel",
+    "available": "La version {version} est disponible.",
+    "installDetail": "L’application se fermera lorsque la mise à jour sera prête à être installée.",
+    "install": "Télécharger et installer",
+    "later": "Plus tard",
+    "upToDate": "Vous utilisez la dernière version.",
+    "downloaded": "La mise à jour a été téléchargée. L’application va se fermer pour l’installer.",
+    "checkFailed": "Impossible de rechercher les mises à jour. Réessayez plus tard.",
+    "installFailed": "Impossible d’installer la mise à jour. Réessayez plus tard."
   },
   "notifications": {
     "defaultMessage": "Message par défaut",

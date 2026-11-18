@@ -3,6 +3,7 @@ import { delay, isMac } from '@/util'
 import { isUpdatable } from './utils'
 import getCommandDescriptionById from './descriptions'
 import { t } from '../i18n'
+import { END_USER_DOCS_URL } from '@shared/brand'
 
 export { default as FileEncodingCommand } from './fileEncoding'
 export { default as LineEndingCommand } from './lineEnding'
@@ -649,13 +650,13 @@ const commands: CommandDescriptor[] = [
   {
     id: 'docs.user-guide',
     execute: async() => {
-      window.electron.shell.openExternal('https://marktext.me/docs/basics')
+      window.electron.shell.openExternal(`${END_USER_DOCS_URL}/BASICS.md`)
     }
   },
   {
     id: 'docs.markdown-syntax',
     execute: async() => {
-      window.electron.shell.openExternal('https://marktext.me/docs/markdown-syntax')
+      window.electron.shell.openExternal(`${END_USER_DOCS_URL}/MARKDOWN_SYNTAX.md`)
     }
   },
 

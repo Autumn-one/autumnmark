@@ -919,9 +919,10 @@ class Content extends TreeNode {
     };
 
     private _navigateArrow(event: KeyboardEvent): void {
-        const tabs = this.muya.editor.contentTabs;
-        const title = tabs.titleAbove(this, event);
-        if (!title) {
+        const { contentTabs, foldBlocks } = this.muya.editor;
+        const tab = contentTabs.titleAtArrowBoundary(this, event);
+        const fold = foldBlocks.titleAtArrowBoundary(this, event, tab?.boundary);
+        if (!tab && !fold) {
             this.arrowHandler(event);
             return;
         }
@@ -931,7 +932,16 @@ class Content extends TreeNode {
             return;
         event.preventDefault();
         event.stopPropagation();
-        tabs.editTitle(title, { block: this, offset });
+        if (fold) {
+            foldBlocks.editTitle(fold, {
+                edge: event.key === EVENT_KEYS.ArrowUp ? 'bottom' : 'top',
+                x: Selection.getCursorCoords()?.x,
+            });
+        }
+        else if (tab) {
+            const returnCaret = event.key === EVENT_KEYS.ArrowUp ? { block: this, offset } : undefined;
+            contentTabs.selectTitle(tab.heading, returnCaret);
+        }
     }
 
     private _wrapSelectionWithAutoPair(event: KeyboardEvent) {

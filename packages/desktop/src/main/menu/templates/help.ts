@@ -3,21 +3,20 @@ import * as actions from '../actions/help'
 import { checkUpdates } from '../actions/marktext'
 import { t } from '../../i18n'
 import { isUpdatable } from '../../utils/isUpdatable'
+import { END_USER_DOCS_URL, GITHUB_REPO_URL } from '@shared/brand'
 
 export default function(): MenuItemConstructorOptions {
   const submenu: MenuItemConstructorOptions[] = [
     {
       label: t('menu.help.markdownReference'),
       click() {
-        shell.openExternal(
-          'https://marktext.me/docs/markdown-syntax'
-        )
+        shell.openExternal(`${END_USER_DOCS_URL}/MARKDOWN_SYNTAX.md`)
       }
     },
     {
       label: t('menu.help.changelog'),
       click() {
-        shell.openExternal('https://github.com/Autumn-one/autumnmark/releases')
+        shell.openExternal(`${GITHUB_REPO_URL}/releases`)
       }
     },
     {
@@ -26,34 +25,13 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.followUs'),
       click() {
-        shell.openExternal('https://twitter.com/marktextapp')
-      }
-    },
-    {
-      label: t('menu.help.support'),
-      click() {
-        shell.openExternal('https://github.com/sponsors/marktext')
-      }
-    },
-    {
-      type: 'separator'
-    },
-    {
-      label: t('menu.help.askQuestion'),
-      click() {
-        shell.openExternal('https://github.com/marktext/marktext/discussions')
-      }
-    },
-    {
-      label: t('menu.help.reportBug'),
-      click() {
-        shell.openExternal('https://github.com/marktext/marktext/issues')
+        shell.openExternal('https://github.com/Autumn-one/notify/blob/main/info.md')
       }
     },
     {
       label: t('menu.help.viewSource'),
       click() {
-        shell.openExternal('https://github.com/Autumn-one/autumnmark')
+        shell.openExternal(GITHUB_REPO_URL)
       }
     },
     {
@@ -62,7 +40,7 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.license'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext/blob/develop/LICENSE')
+        shell.openExternal(`${GITHUB_REPO_URL}/blob/develop/LICENSE`)
       }
     }
   ]

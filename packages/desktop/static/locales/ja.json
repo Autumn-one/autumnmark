@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "著作権貢献者"
   },
+  "remoteContent": {
+    "announcement": "お知らせ",
+    "unreadAnnouncement": "未読のお知らせ",
+    "about": "最新情報",
+    "loading": "最新の内容を取得しています…",
+    "loadFailed": "内容を取得できませんでした。",
+    "refreshFailed": "更新に失敗したため、前回取得した内容を表示しています。",
+    "unverified": "GitHub に接続できないため、お知らせが最新かどうかを確認できませんでした。",
+    "refresh": "更新",
+    "retry": "再試行"
+  },
   "commands": {
     "mt": {
       "hide": "AutumnMark を隠す",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "予期しないエラー : {message}",
     "unexpectedMainProcess": "予期しないメインプロセスエラー",
     "unexpectedRendererProcess": "予期しないレンダラープロセスエラー"
+  },
+  "updates": {
+    "title": "ソフトウェアアップデート",
+    "available": "バージョン {version} が利用できます。",
+    "installDetail": "アップデートのインストール準備ができると、アプリが終了します。",
+    "install": "ダウンロードしてインストール",
+    "later": "後で",
+    "upToDate": "最新版を使用しています。",
+    "downloaded": "アップデートをダウンロードしました。インストールのためアプリが終了します。",
+    "checkFailed": "アップデートを確認できませんでした。後でもう一度お試しください。",
+    "installFailed": "アップデートをインストールできませんでした。後でもう一度お試しください。"
   },
   "notifications": {
     "defaultMessage": "デフォルトメッセージ",

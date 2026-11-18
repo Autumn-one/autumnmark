@@ -783,6 +783,17 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Copyright Contribuidores"
   },
+  "remoteContent": {
+    "announcement": "Avisos",
+    "unreadAnnouncement": "Aviso não lido",
+    "about": "Informações atualizadas",
+    "loading": "Carregando o conteúdo mais recente…",
+    "loadFailed": "Não foi possível carregar o conteúdo.",
+    "refreshFailed": "A atualização falhou. O último conteúdo recebido está sendo exibido.",
+    "unverified": "O GitHub está indisponível. Não foi possível confirmar se o aviso é o mais recente.",
+    "refresh": "Atualizar",
+    "retry": "Tentar novamente"
+  },
   "commands": {
     "mt": {
       "hide": "Ocultar AutumnMark",
@@ -966,6 +977,17 @@
     "unexpectedErrorWithMessage": "Erro inesperado: {message}",
     "unexpectedMainProcess": "Erro inesperado do processo principal",
     "unexpectedRendererProcess": "Erro inesperado do processo de renderização"
+  },
+  "updates": {
+    "title": "Atualização de software",
+    "available": "A versão {version} está disponível.",
+    "installDetail": "A aplicação será encerrada quando a atualização estiver pronta para ser instalada.",
+    "install": "Baixar e instalar",
+    "later": "Mais tarde",
+    "upToDate": "Você está usando a versão mais recente.",
+    "downloaded": "A atualização foi baixada. A aplicação será encerrada para instalá-la.",
+    "checkFailed": "Não foi possível verificar se há atualizações. Tente novamente mais tarde.",
+    "installFailed": "Não foi possível instalar a atualização. Tente novamente mais tarde."
   },
   "notifications": {
     "defaultMessage": "Mensagem padrão",

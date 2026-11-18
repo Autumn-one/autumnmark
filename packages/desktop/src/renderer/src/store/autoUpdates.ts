@@ -1,46 +1,29 @@
 import { defineStore } from 'pinia'
+import { t } from '../i18n'
 import notice from '../services/notification'
 
 export const useAutoUpdatesStore = defineStore('autoUpdates', () => {
   function LISTEN_FOR_UPDATE(): void {
-    window.electron.ipcRenderer.on('mt::UPDATE_ERROR', (_e, message) => {
-      notice.notify({
-        title: 'Update',
+    window.electron.ipcRenderer.on('mt::UPDATE_ERROR', (_event, stage) => {
+      void notice.notify({
+        title: t('updates.title'),
         type: 'error',
-        time: 10000,
-        message: String(message ?? '')
+        message: t(stage === 'install' ? 'updates.installFailed' : 'updates.checkFailed')
       })
     })
-    window.electron.ipcRenderer.on('mt::UPDATE_NOT_AVAILABLE', (_e, message) => {
-      notice.notify({
-        title: 'Update not Available',
+    window.electron.ipcRenderer.on('mt::UPDATE_NOT_AVAILABLE', () => {
+      void notice.notify({
+        title: t('updates.title'),
         type: 'primary',
-        message: String(message ?? '')
+        message: t('updates.upToDate')
       })
     })
-    window.electron.ipcRenderer.on('mt::UPDATE_DOWNLOADED', (_e, message) => {
-      notice.notify({
-        title: 'Update Downloaded',
+    window.electron.ipcRenderer.on('mt::UPDATE_DOWNLOADED', () => {
+      void notice.notify({
+        title: t('updates.title'),
         type: 'info',
-        message: String(message ?? '')
+        message: t('updates.downloaded')
       })
-    })
-    window.electron.ipcRenderer.on('mt::UPDATE_AVAILABLE', (_e, message) => {
-      notice
-        .notify({
-          title: 'Update Available',
-          type: 'primary',
-          message: String(message ?? ''),
-          showConfirm: true
-        })
-        .then(() => {
-          const needUpdate = true
-          window.electron.ipcRenderer.send('mt::NEED_UPDATE', { needUpdate })
-        })
-        .catch(() => {
-          const needUpdate = false
-          window.electron.ipcRenderer.send('mt::NEED_UPDATE', { needUpdate })
-        })
     })
   }
 

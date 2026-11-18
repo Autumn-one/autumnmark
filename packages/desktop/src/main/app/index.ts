@@ -13,6 +13,7 @@ import { normalizeAndResolvePath } from '../filesystem'
 import { normalizeCliMarkdownPath, normalizeMarkdownPath } from '../filesystem/markdown'
 import { confirmAndTrashItem } from '../filesystem/trash'
 import { registerKeyboardListeners } from '../keyboard'
+import { startAutomaticUpdateChecks } from '../menu/actions/marktext'
 import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
@@ -332,6 +333,8 @@ class App {
     } else {
       createWindow()
     }
+
+    startAutomaticUpdateChecks(() => this._windowManager.getActiveEditor()?.browserWindow ?? null)
 
     //   try {
     //     // write screenshot image into screenshot folder.

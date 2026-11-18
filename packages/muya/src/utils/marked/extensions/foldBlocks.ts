@@ -1,5 +1,5 @@
 import type { MarkedExtension, Token, Tokens } from 'marked';
-import { findFoldBlockGroups, foldBlockMarker } from '../../foldBlocks';
+import { findFoldBlockGroups, foldBlockMarker, foldTitleStrong } from '../../foldBlocks';
 
 interface IFoldToken {
     type: 'foldBlock';
@@ -11,9 +11,12 @@ interface IFoldToken {
 function groupFoldTokens(tokens: Token[]): void {
     const groups = findFoldBlockGroups(tokens.map(token => ({
         marker: token.type === 'html' ? foldBlockMarker(token.raw) : undefined,
-        heading: token.type === 'heading',
         space: token.type === 'space',
-    })));
+    })), (index) => {
+        const token = tokens[index];
+        return token.type === 'heading' || (token.type === 'paragraph'
+            && Boolean(foldTitleStrong(token.tokens ?? [], token => token.type === 'em' ? token.tokens : undefined)));
+    });
     if (!groups.length)
         return;
     const starts = new Map(groups.map(group => [group.start, group]));
@@ -55,8 +58,8 @@ export default function foldBlocksExtension(expand = false): MarkedExtension {
             childTokens: ['tokens'],
             renderer(token) {
                 const { tokens, defaultOpen } = token as IFoldToken;
-                const heading = tokens[0] as Tokens.Heading;
-                const title = this.parser.parse([heading]);
+                const titleToken = tokens[0] as Tokens.Heading | Tokens.Paragraph;
+                const title = titleToken.type === 'paragraph' ? this.parser.parseInline(titleToken.tokens) : this.parser.parse([titleToken]);
                 const body = this.parser.parse(tokens.slice(1));
                 return `<details class="mu-export-fold"${expand || defaultOpen ? ' open' : ''}>\n<summary>${title}</summary>\n${body}</details>\n`;
             },

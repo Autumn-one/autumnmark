@@ -753,16 +753,16 @@ Content before the first tab heading stays visible above the panels. An
 unclosed group or a group without tab headings keeps its ordinary Markdown
 appearance. Markers are case-sensitive and must occupy their own lines.
 
-Type `/tabs` in a top-level paragraph to insert a group and edit its first
-title. Click `+` on the tab bar to append a tab and edit its name; adding a tab
-is one undo step. Double-click a label or press Enter or F2 on a focused tab to select
-its name for editing in the tab bar. From the first visible line of the panel,
-press Up to place the caret in its title. Down returns to the position you left,
-and Enter takes you to the start of the panel. Press Escape to keep your edit
-and focus the tab, then use Left/Right or Home/End to switch tabs. Click a tab
-to switch with the mouse. Right from the last tab or Left from the first focuses
-the `+` button. Press Enter or Space there to add a tab and name it.
-Press Down on a focused tab to enter its panel.
+Type `/tabs` in a top-level paragraph to insert a group and select its first tab.
+Click `+` to append and select a tab in one undo step. Click a tab to switch with
+the mouse. Press Up from the first line of a panel or Down from the block above
+the tab bar to focus the active tab. Double-click a title or press Enter on a
+focused tab to edit it. Press Enter or Escape while editing to keep the changes
+and return focus to the title. From a focused title, press Up to move above the
+tab bar or Down to enter the panel. If you came from the panel, Down returns to
+the previous caret position. Use Left/Right or Home/End to switch tabs. Right
+from the last tab or Left from the first focuses `+`. Press Enter or Space there
+to add and select a tab.
 Use the `</>` button to edit the group's source blocks. Search
 and outline navigation reveal the target tab automatically. Switching tabs
 does not modify the document or its undo history.
@@ -774,7 +774,9 @@ remove the tab prefix from recognized tab headings and need no scripts.
 
 ### Fold blocks
 
-Put a heading and ordinary Markdown between two standalone comments at the document level.
+Start with a Markdown heading or a standalone bold paragraph such as
+`**View retry steps**` or `__View retry steps__`. Put it before the body,
+between two standalone comments at the document level.
 
 ```markdown
 <!-- fold -->
@@ -788,8 +790,9 @@ After a `429` response, wait as indicated by `Retry-After` before retrying.
 
 `<!-- fold -->` starts collapsed. Use `<!-- fold open -->` to start expanded.
 Type `/fold` in the editor to insert a block and edit its title. Click the title
-to toggle the current view. The block menu's **Open by default** action changes
-the opening comment. Other Markdown readers can display the heading and all
+to toggle the current view. Use ↑ or ↓ from a neighboring line to move the
+caret into the title and edit it. The block menu's **Open by default** action
+changes the opening comment. Other Markdown readers display the title and all
 its content as ordinary Markdown. HTML exports have an interactive disclosure.
 PDF exports and printing show the complete contents.
 

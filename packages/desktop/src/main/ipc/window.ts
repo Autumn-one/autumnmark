@@ -3,14 +3,15 @@ import {
   Menu,
   MenuItem,
   ipcMain,
-  type IpcMainEvent,
+  screen,
   type WebContents
 } from 'electron'
 import log from 'electron-log'
+import type { IpcInvokeChannels } from '@shared/types/ipc'
 import type { MenuTemplate, MenuTemplateItem, MenuPopupPosition } from '@shared/types/menu'
 
-const windowFromEvent = (event: IpcMainEvent): BrowserWindow | null =>
-  BrowserWindow.fromWebContents(event.sender)
+const windowFromEvent = ({ sender }: { sender: WebContents }): BrowserWindow | null =>
+  BrowserWindow.fromWebContents(sender)
 
 interface PopupEntry {
   sender: WebContents
@@ -79,13 +80,30 @@ export const registerWindowHandlers = (): void => {
     if (win) win.setFullScreen(!win.isFullScreen())
   })
   ipcMain.handle('mt::win::is-maximized', (event) => {
-    const win = windowFromEvent(event as unknown as IpcMainEvent)
+    const win = windowFromEvent(event)
     return !!win && win.isMaximized()
   })
   ipcMain.handle('mt::win::is-fullscreen', (event) => {
-    const win = windowFromEvent(event as unknown as IpcMainEvent)
+    const win = windowFromEvent(event)
     return !!win && win.isFullScreen()
   })
+  ipcMain.handle(
+    'mt::win::is-cursor-over',
+    (event, bounds: IpcInvokeChannels['mt::win::is-cursor-over']['args'][0]) => {
+      const win = windowFromEvent(event)
+      if (!win?.isFocused()) return false
+
+      const cursor = screen.getCursorScreenPoint()
+      // Electron returns the origin when Wayland cannot supply screen coordinates.
+      if (process.platform === 'linux' && cursor.x === 0 && cursor.y === 0) return null
+
+      const content = win.getContentBounds()
+      const zoom = event.sender.getZoomFactor()
+      const x = (cursor.x - content.x) / zoom
+      const y = (cursor.y - content.y) / zoom
+      return x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom
+    }
+  )
 
   ipcMain.on('mt::menu::popup', (event, template: MenuTemplate, position?: MenuPopupPosition) => {
     const win = windowFromEvent(event)
