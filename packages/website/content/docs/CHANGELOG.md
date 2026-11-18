@@ -1,3 +1,8 @@
+## AutumnMark 0.24.3
+
+- Use theme-aware surfaces and spacing to distinguish the application menu, document tab bar, and file sidebar.
+- Mark the current document with a rounded highlight, and use folder icons and indentation to show the file tree hierarchy.
+
 ## AutumnMark 0.24.2
 
 - The application menu spans the full window, with a theme-aware background and a divider above the file sidebar and document tabs.
