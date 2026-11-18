@@ -123,13 +123,13 @@ onMounted(() => {
 <style scoped>
 .side-bar-file {
   display: flex;
-  position: relative;
   align-items: center;
   cursor: default;
   user-select: none;
   height: var(--tree-node-height);
   min-width: var(--tree-node-min-width);
   box-sizing: border-box;
+  border-radius: 5px;
   padding-inline: var(--tree-chevron-width) 7px;
   &:hover {
     background: var(--sideBarItemHoverBgColor);
@@ -142,24 +142,10 @@ onMounted(() => {
   & > .file-icon {
     width: 16px;
   }
-  &::before {
-    content: '';
-    position: absolute;
-    display: block;
-    left: 0;
-    background: var(--themeColor);
-    width: 2px;
-    height: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: all 0.2s ease;
-  }
-}
-.side-bar-file.current::before {
-  height: 100%;
 }
 .side-bar-file.current > span {
-  color: var(--themeColor);
+  color: var(--editorColor80);
+  font-weight: 600;
 }
 /* After :hover so the selection stays visible while the pointer is over it. */
 .side-bar-file.active {

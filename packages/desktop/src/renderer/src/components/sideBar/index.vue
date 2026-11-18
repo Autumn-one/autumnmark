@@ -156,7 +156,6 @@ const returnToFiles = (restoreFocus = true): void => {
   color: var(--sideBarColor);
   user-select: none;
   background: var(--sideBarBgColor);
-  border-right: 1px solid var(--sideBarBorderColor);
 }
 
 .sidebar-header,
@@ -171,7 +170,6 @@ const returnToFiles = (restoreFocus = true): void => {
 .sidebar-header {
   height: var(--editorToolbarHeight);
   padding-block: 0;
-  box-shadow: inset 0 -1px var(--sideBarBorderColor);
 }
 
 .add-folder-button {
@@ -183,7 +181,7 @@ const returnToFiles = (restoreFocus = true): void => {
   padding-left: 7px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--sideBarTitleColor);
+  color: var(--editorColor80);
 }
 
 .sidebar-header button,
@@ -220,12 +218,12 @@ const returnToFiles = (restoreFocus = true): void => {
   right: 0;
   bottom: 0;
   height: 100%;
-  width: 3px;
+  width: 5px;
   cursor: col-resize;
   -webkit-app-region: no-drag;
 }
 
 .drag-bar:hover {
-  border-right: 2px solid var(--iconColor);
+  box-shadow: inset -2px 0 var(--iconColor);
 }
 </style>

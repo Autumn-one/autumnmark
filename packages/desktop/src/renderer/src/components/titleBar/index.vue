@@ -372,11 +372,13 @@ div.title > span > .path > bdi > span {
 }
 
 .has-menubar {
-  --menu-bar-background: color-mix(in srgb, var(--editorBgColor), var(--editorColor) 3%);
   display: flex;
   align-items: center;
-  background: var(--menu-bar-background);
-  box-shadow: inset 0 -1px color-mix(in srgb, var(--menu-bar-background), var(--editorColor) 14%);
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--sideBarBgColor), var(--editorBgColor)),
+    var(--editorColor) 7%
+  );
 }
 .has-menubar .title {
   flex: 1;

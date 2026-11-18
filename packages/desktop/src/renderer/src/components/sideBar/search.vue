@@ -392,7 +392,6 @@ onUnmounted(() => {
   height: var(--editorToolbarHeight);
   margin-bottom: 10px;
   padding: 0 8px;
-  box-shadow: inset 0 -1px var(--sideBarBorderColor);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }

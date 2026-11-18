@@ -141,8 +141,7 @@
             :size="16"
             aria-hidden="true"
           >
-            <FolderIcon class="root-folder-icon-back" />
-            <FolderIcon class="root-folder-icon-front" />
+            <FolderOpened />
           </el-icon>
           <span class="text-overflow">{{ projectStore.ROOT_LABEL(root) }}</span>
         </div>
@@ -243,7 +242,7 @@ import bus from '../../bus'
 import { showRootContextMenu } from '../../contextMenu/sideBar'
 import type { RootView } from '@/store/project'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Folder as FolderIcon } from '@element-plus/icons-vue'
+import { ArrowRight, FolderOpened } from '@element-plus/icons-vue'
 import { PATH_SEPARATOR } from '@/config'
 import { isMac } from '@/util'
 import { computeRevealScrollTop } from '@/util/revealTreeRow'
@@ -671,8 +670,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   margin-inline: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--sideBarBorderColor);
+  padding-bottom: 12px;
 }
 
 .opened-files > .title {
@@ -762,15 +760,15 @@ onUnmounted(() => {
   align-items: center;
   height: 30px;
   padding: 0 7px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 6%);
-  color: var(--sideBarTitleColor);
+  border-radius: 6px;
+  background: var(--sideBarItemHoverBgColor);
+  color: var(--editorColor80);
   font-weight: 600;
   cursor: pointer;
 }
 
 .project-root:hover {
-  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 10%);
+  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 8%);
 }
 
 .project-root:focus-visible {
@@ -786,35 +784,15 @@ onUnmounted(() => {
   flex: none;
   margin-right: 5px;
   color: var(--sideBarIconColor);
-  background: inherit;
-  & > svg {
-    position: absolute;
-    width: 13px;
-    height: 13px;
-  }
 }
 
-.root-folder-icon-back {
-  top: 0;
-  right: 0;
-}
-
-.root-folder-icon-front {
-  bottom: 0;
-  left: 0;
-  background: inherit;
-}
-
-.tree-contents,
 .tree-view :deep(.folder-contents) {
-  margin-inline-start: 11px;
-  padding-inline-start: 4px;
-  border-inline-start: 1px solid var(--sideBarBorderColor);
+  margin-inline-start: 16px;
 }
 
 .tree-contents {
   margin-top: 3px;
-  margin-inline-start: 18px;
+  margin-inline-start: 23px;
 }
 
 .root-status {

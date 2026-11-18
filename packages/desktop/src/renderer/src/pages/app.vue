@@ -249,7 +249,7 @@ onMounted(async () => {
 
 <style scoped>
 .editor-container {
-  --editorToolbarHeight: 32px;
+  --editorToolbarHeight: 36px;
   display: flex;
   flex-direction: column;
   position: absolute;

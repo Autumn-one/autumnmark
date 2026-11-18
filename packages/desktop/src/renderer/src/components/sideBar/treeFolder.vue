@@ -160,6 +160,7 @@ onMounted(() => {
     height: var(--tree-node-height);
     min-width: var(--tree-node-min-width);
     box-sizing: border-box;
+    border-radius: 5px;
     padding-inline-end: 7px;
     & > .icon-arrow,
     & > .folder-icon {

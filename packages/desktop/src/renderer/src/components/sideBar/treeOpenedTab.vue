@@ -69,7 +69,7 @@ const removeFileInTab = (file: TabDescriptor): void => {
   height: 28px;
   line-height: 28px;
   padding: 0 7px 0 26px;
-  border-radius: 4px;
+  border-radius: 6px;
   position: relative;
   color: var(--sideBarColor);
   /* Clipped rather than `display: none` while the row is not hovered, so the
@@ -105,9 +105,8 @@ const removeFileInTab = (file: TabDescriptor): void => {
 }
 .opened-file.active {
   background: var(--themeColor10);
-  box-shadow: inset 2px 0 var(--highlightThemeColor);
-  color: var(--sideBarTitleColor);
-  font-weight: 500;
+  color: var(--editorColor80);
+  font-weight: 600;
 }
 .opened-file.preview > .name {
   font-style: italic;
