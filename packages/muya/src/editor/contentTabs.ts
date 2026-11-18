@@ -255,7 +255,7 @@ export class ContentTabs {
 
     refreshBarVisibility(): void {
         for (const group of this._groups.values()) {
-            group.bar.hidden = isHiddenByFold(group.start) || (this._memberships.get(group.start) ?? []).some(({ group: outer, heading }) =>
+            group.bar.hidden = isHiddenByFold(group.start) || this._muya.editor.foldBlocks.isHidden(group.start) || (this._memberships.get(group.start) ?? []).some(({ group: outer, heading }) =>
                 outer !== group && !outer.expanded && heading !== undefined && heading !== outer.active,
             );
             group.footer.hidden = group.bar.hidden;
@@ -263,6 +263,7 @@ export class ContentTabs {
         const editor = this._titleEditor;
         if (editor && (!editor.input.isConnected || editor.group.bar.hidden || editor.group.expanded || editor.group.active !== editor.heading))
             this._closeTitleInput();
+        this._muya.editor.foldBlocks.refreshHeaderVisibility();
     }
 
     isHidden(block: TreeNode): boolean {
@@ -325,7 +326,8 @@ export class ContentTabs {
     }
 
     deletionTarget(block: Content, event: Event): Content | undefined {
-        if (!this._groups.size || !(event instanceof KeyboardEvent) || !['Backspace', 'Delete'].includes(event.key))
+        const { foldBlocks } = this._muya.editor;
+        if ((!this._groups.size && !foldBlocks.hasGroups) || !(event instanceof KeyboardEvent) || !['Backspace', 'Delete'].includes(event.key))
             return;
         const cursor = block.getCursor();
         if (!cursor || cursor.start.offset !== cursor.end.offset)
@@ -334,11 +336,11 @@ export class ContentTabs {
         if (cursor.start.offset !== (backward ? 0 : block.text.length))
             return;
         const target = backward ? block.previousContentInContext() : block.nextContentInContext();
-        return target && this.isHidden(target) ? target : undefined;
+        return target && (this.isHidden(target) || foldBlocks.isHidden(target)) ? target : undefined;
     }
 
     revealDeletionTarget(target: Content, event: KeyboardEvent): void {
-        // A single destructive key must not merge an unseen tab title or boundary into the current panel.
+        // Reveal the hidden target before a destructive key can merge its source into the visible text.
         event.preventDefault();
         event.stopPropagation();
         const offset = event.key === 'Backspace' ? target.text.length : contentTabHeading(target.text)?.prefixLength ?? 0;
@@ -680,7 +682,7 @@ export class ContentTabs {
     }
 
     private _isSelectAll(event: KeyboardEvent): boolean {
-        return this._groups.size > 0 && !event.defaultPrevented
+        return (this._groups.size > 0 || this._muya.editor.foldBlocks.hasGroups) && !event.defaultPrevented
             && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
             && event.key.toLowerCase() === 'a' && !this._muya.isReadOnly;
     }

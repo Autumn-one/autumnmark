@@ -29,6 +29,8 @@ This guide introduces Markdown syntax supported by MarkText and the optional ext
   - [Math Formulas](#math-formulas)
 - [Others](#others)
   - [Content tabs](#content-tabs)
+  - [Fold blocks](#fold-blocks)
+  - [Code block titles and highlighted lines](#code-block-titles-and-highlighted-lines)
   - [GitHub Alerts](#github-alerts)
   - [Highlight](#highlight)
   - [Inline diff](#inline-diff)
@@ -769,6 +771,48 @@ Saving preserves the comments and heading markers. Other Markdown readers
 display ordinary headings and all content, including the visible `|` prefix.
 HTML/PDF exports and printing expand all panels in source order. HTML exports
 remove the tab prefix from recognized tab headings and need no scripts.
+
+### Fold blocks
+
+Put a heading and ordinary Markdown between two standalone comments at the document level.
+
+```markdown
+<!-- fold -->
+
+### View retry steps
+
+After a `429` response, wait as indicated by `Retry-After` before retrying.
+
+<!-- /fold -->
+```
+
+`<!-- fold -->` starts collapsed. Use `<!-- fold open -->` to start expanded.
+Type `/fold` in the editor to insert a block and edit its title. Click the title
+to toggle the current view. The block menu's **Open by default** action changes
+the opening comment. Other Markdown readers can display the heading and all
+its content as ordinary Markdown. HTML exports have an interactive disclosure.
+PDF exports and printing show the complete contents.
+
+### Code block titles and highlighted lines
+
+Add a quoted `title` and a brace-delimited line selection to the opening fence.
+
+````markdown
+```ts title="request.ts" {2-3,6}
+const response = await fetch('/api/items', {
+  headers: { Accept: 'application/json' },
+  signal: AbortSignal.timeout(5000)
+})
+if (response.status === 429) {
+  console.log(response.headers.get('Retry-After'))
+}
+```
+````
+
+The title and line selection can be used independently. Line numbers start at
+1 in the source, including empty lines. Ranges include both endpoints, and
+commas can combine ranges and individual lines. The code block keeps its usual
+syntax highlighting and the extra fence metadata is saved with the Markdown.
 
 ### GitHub Alerts
 

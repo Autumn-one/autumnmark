@@ -109,7 +109,7 @@ class TreeNode implements ILinkedNode {
 
         if (skipFolded) {
             let content = this.previousContentInContext();
-            while (content && (isHiddenByFold(content) || this.muya.editor.contentTabs.isHidden(content)))
+            while (content && (isHiddenByFold(content) || this.muya.editor.contentTabs.isHidden(content) || this.muya.editor.foldBlocks.isHidden(content)))
                 content = content.previousContentInContext();
             return content;
         }
@@ -143,7 +143,7 @@ class TreeNode implements ILinkedNode {
 
         if (skipFolded) {
             let content = this.nextContentInContext();
-            while (content && (isHiddenByFold(content) || this.muya.editor.contentTabs.isHidden(content)))
+            while (content && (isHiddenByFold(content) || this.muya.editor.contentTabs.isHidden(content) || this.muya.editor.foldBlocks.isHidden(content)))
                 content = content.nextContentInContext();
             return content;
         }

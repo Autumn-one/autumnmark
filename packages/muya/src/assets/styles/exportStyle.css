@@ -46,6 +46,48 @@
     );
 }
 
+.markdown-body .mu-export-code {
+    margin: 0 0 16px;
+}
+
+.markdown-body .mu-export-code figcaption {
+    margin-bottom: 6px;
+
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.markdown-body .mu-export-code-line {
+    display: block;
+    min-height: 1.45em;
+}
+
+.markdown-body .mu-export-code-highlight {
+    background-color: #e1efe6;
+}
+
+.markdown-body .mu-export-fold {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+
+    background-color: #eef6f1;
+    border-radius: 6px;
+}
+
+.markdown-body .mu-export-fold > summary {
+    cursor: pointer;
+}
+
+.markdown-body .mu-export-fold > summary > :is(h1, h2, h3, h4, h5, h6) {
+    display: inline;
+    margin: 0;
+    padding: 0;
+
+    font-size: inherit;
+
+    border: 0;
+}
+
 /* GitLab inline diff washes, matching GitLab's `.idiff` rendering. */
 .markdown-body .idiff.addition {
     color: #1f1f1f;
@@ -142,6 +184,10 @@
 
 .markdown-body pre {
     white-space: pre-wrap;
+}
+
+.markdown-body .mu-export-code pre {
+    margin: 0;
 }
 
 /* Render soft line breaks (Shift+Enter → a bare `\n` inside a block) the way

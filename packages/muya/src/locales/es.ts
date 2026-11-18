@@ -2,6 +2,10 @@ export const es = {
     name: 'es',
     resource: {
         'Add tab': 'Añadir pestaña',
+        'Fold block': 'Bloque plegable',
+        'Fold options': 'Opciones del bloque',
+        'Edit fold title': 'Editar título del bloque',
+        'Open by default': 'Abierto por defecto',
         'Content tabs': 'Pestañas de contenido',
         'Edit tabs source': 'Editar código de las pestañas',
         'Untitled tab': 'Pestaña sin título',

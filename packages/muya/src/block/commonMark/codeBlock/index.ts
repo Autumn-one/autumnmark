@@ -1,8 +1,10 @@
 import type { Muya } from '../../../muya';
 import type { ICodeBlockState } from '../../../state/types';
+import type { ICodeFenceAnnotations } from '../../../utils/codeFenceAnnotations';
 import type { TBlockPath } from '../../types';
 import diff from 'fast-diff';
-import { diffToTextOp, firstWordOfInfo } from '../../../utils';
+import { diffToTextOp } from '../../../utils';
+import { codeFenceLanguage, parseCodeFenceAnnotations } from '../../../utils/codeFenceAnnotations';
 import { operateClassName } from '../../../utils/dom';
 import logger from '../../../utils/logger';
 import { loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
@@ -13,7 +15,7 @@ const debug = logger('codeblock:');
 
 // Must match CodeBlockContent.update() so grammar-change detection agrees with rendering.
 function renderedGrammarFor(infoString: string): string {
-    const language = firstWordOfInfo(infoString);
+    const language = codeFenceLanguage(infoString);
     if (!language)
         return '';
     const resolved = transformAliasToOrigin([language])[0];
@@ -29,6 +31,9 @@ class CodeBlock extends Parent {
     // does not change the rendering skips the rebuild. Undefined until the
     // first render, which therefore always happens.
     private _renderedGrammar: string | undefined;
+    private _annotationInfo: string | undefined;
+    private _titleNode: HTMLSpanElement | null = null;
+    public annotations: ICodeFenceAnnotations = { ranges: [] };
 
     static create(muya: Muya, state: ICodeBlockState) {
         const codeBlock = new CodeBlock(muya, state);
@@ -56,6 +61,7 @@ class CodeBlock extends Parent {
             });
         }
 
+        codeBlock.refreshAnnotations();
         if (lang) {
             requestAnimationFrame(() => {
                 codeBlock._renderLanguage();
@@ -91,7 +97,33 @@ class CodeBlock extends Parent {
             operateClassName(this.domNode!, 'add', 'mu-fenced-code');
         }
 
+        this.refreshAnnotations();
         this._renderLanguage();
+    }
+
+    refreshAnnotations(): void {
+        const info = this.meta.lang ?? '';
+        if (info === this._annotationInfo)
+            return;
+        this._annotationInfo = info;
+        const previous = this.annotations;
+        const next = parseCodeFenceAnnotations(info);
+        this.annotations = next;
+        if (next.title) {
+            if (!this._titleNode) {
+                this._titleNode = this.domNode!.ownerDocument.createElement('span');
+                this._titleNode.className = 'mu-code-block-title';
+                this._titleNode.contentEditable = 'false';
+                this.domNode!.prepend(this._titleNode);
+            }
+            this._titleNode.textContent = next.title;
+        }
+        else if (this._titleNode) {
+            this._titleNode.remove();
+            this._titleNode = null;
+        }
+        if (previous.title || next.title || previous.ranges.length || next.ranges.length)
+            this.lastContentInDescendant()?.update();
     }
 
     private _renderLanguage() {
@@ -107,7 +139,7 @@ class CodeBlock extends Parent {
         };
 
         // The full info string may include attributes; Prism uses only its first word.
-        const language = firstWordOfInfo(this.meta.lang ?? '');
+        const language = codeFenceLanguage(this.meta.lang ?? '');
         if (!language) {
             rerenderIfGrammarChanged();
 

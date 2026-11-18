@@ -10,7 +10,8 @@ import type {
     ITaskListState,
     TState,
 } from './types';
-import { firstWordOfInfo, parseFenceLine } from '../utils';
+import { parseFenceLine } from '../utils';
+import { codeFenceLanguage, parseCodeFenceAnnotations } from '../utils/codeFenceAnnotations';
 import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
 import { toListDelimiter } from '../utils/listMarker';
 import logger from '../utils/logger';
@@ -475,13 +476,14 @@ export class MarkdownToState {
         const { fenceLength, fenceChar } = fence ?? {};
         // Preserve info-string attributes; diagram detection uses only the first word.
         const info = (infoString || '').trim();
-        const lang = firstWordOfInfo(info);
+        const lang = codeFenceLanguage(info);
 
         let value = codeText;
         // Fix: #1265.
         if (
             trimUnnecessaryCodeBlockEmptyLines
             && (value.endsWith('\n') || value.startsWith('\n'))
+            && !parseCodeFenceAnnotations(info).ranges.length
         ) {
             value = value.replace(/\n+$/, '').replace(/^\n+/, '');
         }

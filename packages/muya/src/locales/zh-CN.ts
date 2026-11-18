@@ -2,6 +2,10 @@ export const zhCN = {
     name: 'zh-CN',
     resource: {
         'Add tab': '添加选项卡',
+        'Fold block': '折叠块',
+        'Fold options': '折叠块选项',
+        'Edit fold title': '编辑折叠块标题',
+        'Open by default': '默认展开',
         'Copied': '已复制',
         'Copy failed': '复制失败，请重试。',
         'Read-only document': '只读文档',

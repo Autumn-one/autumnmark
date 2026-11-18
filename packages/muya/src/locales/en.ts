@@ -2,6 +2,10 @@ export const en = {
     name: 'en',
     resource: {
         'Add tab': 'Add tab',
+        'Fold block': 'Fold block',
+        'Fold options': 'Fold options',
+        'Edit fold title': 'Edit fold title',
+        'Open by default': 'Open by default',
         'Copied': 'Copied',
         'Copy failed': 'Copy failed. Please try again.',
         'Read-only document': 'Read-only document',

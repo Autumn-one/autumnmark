@@ -276,8 +276,26 @@
 }
 
 .mu-code-block {
+    --mu-code-line-highlight: rgb(33 181 111 / 16%);
     font-size: var(--mu-code-font-size, 90%);
     font-family: var(--mu-code-font-family, var(--mu-default-code-font-family));
+}
+
+@supports (color: color-mix(in srgb, white, black)) {
+    .mu-code-block {
+        --mu-code-line-highlight: color-mix(in srgb, var(--theme-color) 18%, transparent);
+    }
+}
+
+.mu-code-block-title {
+    display: block;
+    margin-bottom: 0.5em;
+    padding-right: 32px;
+
+    color: var(--editor-color-50);
+    font-weight: 600;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .mu-code-block .mu-code {

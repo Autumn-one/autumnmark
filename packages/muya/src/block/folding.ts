@@ -134,6 +134,7 @@ export function isHiddenByFold(block: TreeNode): boolean {
 /** Reveal a target without unfolding unrelated sections or the target heading itself. */
 export function revealBlock(block: TreeNode): void {
     block.muya.editor.contentTabs.reveal(block);
+    block.muya.editor.foldBlocks.reveal(block);
     if (!isHiddenByFold(block))
         return;
     for (const heading of getContainingFoldedHeadings(block))

@@ -2,6 +2,10 @@ export const it = {
     name: 'it',
     resource: {
         'Add tab': 'Aggiungi scheda',
+        'Fold block': 'Blocco comprimibile',
+        'Fold options': 'Opzioni del blocco',
+        'Edit fold title': 'Modifica titolo del blocco',
+        'Open by default': 'Espanso per impostazione predefinita',
         'Content tabs': 'Schede di contenuto',
         'Edit tabs source': 'Modifica sorgente delle schede',
         'Untitled tab': 'Scheda senza titolo',

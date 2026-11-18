@@ -1,0 +1,121 @@
+.mu-fold-block-header {
+    position: relative;
+
+    display: flex;
+    gap: 4px;
+    align-items: flex-start;
+
+    background: var(--float-hover-color);
+    border-radius: 6px;
+
+    margin-block: 1em 0.75em;
+}
+
+.mu-fold-block-toggle,
+.mu-fold-block-settings > summary,
+.mu-fold-block-actions > button {
+    min-height: 34px;
+    padding: 5px 10px;
+
+    color: var(--editor-color);
+    font: inherit;
+
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.mu-fold-block-toggle {
+    display: flex;
+    flex: 1;
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+
+    font-weight: 600;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.mu-fold-block-toggle::before {
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+
+    border: solid currentcolor;
+    border-width: 0 1.5px 1.5px 0;
+
+    transform: rotate(-45deg);
+
+    content: '';
+}
+
+.mu-fold-block-toggle[aria-expanded='true']::before {
+    transform: rotate(45deg);
+}
+
+.mu-fold-block-settings > summary {
+    list-style: none;
+}
+
+.mu-fold-block-settings > summary::-webkit-details-marker {
+    display: none;
+}
+
+.mu-fold-block-actions {
+    position: absolute;
+    z-index: 5;
+
+    display: grid;
+    min-width: max-content;
+    padding: 4px;
+
+    background: var(--float-bg-color);
+    border-radius: 6px;
+    box-shadow: var(--float-shadow);
+    inset-inline-end: 0;
+}
+
+.mu-fold-block-actions > button {
+    text-align: start;
+}
+
+.mu-fold-block-actions > button[aria-pressed='true']::after {
+    content: '✓';
+    margin-inline-start: 10px;
+}
+
+.mu-fold-block-toggle:hover,
+.mu-fold-block-settings > summary:hover,
+.mu-fold-block-actions > button:hover {
+    background: var(--float-hover-color);
+}
+
+.mu-fold-block-toggle:focus-visible,
+.mu-fold-block-settings > summary:focus-visible,
+.mu-fold-block-actions > button:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: -2px;
+}
+
+.mu-container .mu-fold-block-hidden,
+.mu-fold-block-header[hidden],
+.mu-read-only .mu-fold-block-settings {
+    display: none !important;
+}
+
+.mu-container .mu-fold-block-source.mu-html-block > .mu-html-container {
+    position: relative;
+    z-index: 1;
+
+    width: 100%;
+    height: auto;
+    overflow: visible;
+
+    opacity: 1;
+}
+
+.mu-container .mu-fold-block-source > .mu-html-preview {
+    display: none;
+}

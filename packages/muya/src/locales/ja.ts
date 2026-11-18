@@ -2,6 +2,10 @@ export const ja = {
     name: 'ja',
     resource: {
         'Add tab': 'タブを追加',
+        'Fold block': '折りたたみブロック',
+        'Fold options': '折りたたみブロックの設定',
+        'Edit fold title': 'ブロックのタイトルを編集',
+        'Open by default': '既定で展開する',
         'Content tabs': 'コンテンツタブ',
         'Edit tabs source': 'タブのソースを編集',
         'Untitled tab': '無題のタブ',

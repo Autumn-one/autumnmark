@@ -10,8 +10,9 @@ import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
 import { CLASS_NAMES, HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
 import { ChangeSource } from '../../../types';
-import { adjustOffset, escapeHTML, firstGraphemeLength, firstWordOfInfo, lastGraphemeLength, lineBounds } from '../../../utils';
-import { computeLineCount, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
+import { adjustOffset, escapeHTML, firstGraphemeLength, lastGraphemeLength, lineBounds } from '../../../utils';
+import { computeLineCount, lineHighlightBackground, measureLineTops, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
+import { codeFenceLanguage } from '../../../utils/codeFenceAnnotations';
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
 import { tabText } from '../../../utils/tab';
@@ -102,7 +103,7 @@ class CodeBlockContent extends Content {
     private get _lang() {
         const { _codeContainer: codeContainer } = this;
 
-        return firstWordOfInfo(codeContainer ? codeContainer.lang : this._initialLang);
+        return codeFenceLanguage(codeContainer ? codeContainer.lang : this._initialLang);
     }
 
     private get _codeContainer() {
@@ -190,41 +191,68 @@ class CodeBlockContent extends Content {
             replaceIfChanged(domNode, code + trailingBreak);
         }
 
-        this._updateLineNumbers(text);
+        this._updateCodeDecorations(text);
         // Re-render the math/diagram/html preview too; undo/redo reaches this
         // block only through update(), not inputHandler (#1632).
         this._updatePreviewIfHave(text);
     }
 
     private _lastLineCount = -1;
-    private _lineNumberResizeObserver: ResizeObserver | null = null;
+    private _codeResizeObserver: ResizeObserver | null = null;
+    private _codeLayoutFrame: number | null = null;
 
-    private _updateLineNumbers(text: string) {
-        if (!this.muya.options.codeBlockLineNumbers)
+    private _updateCodeDecorations(text: string) {
+        const parent = this.parent;
+        const code = parent?.domNode;
+        const owner = parent?.parent;
+        if (!code || owner?.blockName !== 'code-block')
             return;
-        const wrapper = this.parent?.lineNumbersWrapper;
-        if (wrapper == null)
-            return;
-        const count = computeLineCount(text);
-        if (count !== this._lastLineCount) {
-            syncLineNumbersSpans(wrapper, count);
-            this._lastLineCount = count;
+        const wrapper = parent.lineNumbersWrapper;
+        if (wrapper) {
+            const count = computeLineCount(text);
+            if (count !== this._lastLineCount) {
+                syncLineNumbersSpans(wrapper, count);
+                this._lastLineCount = count;
+            }
         }
-        this._observeLineNumberResize(wrapper);
+        if (!owner.annotations.ranges.length && code.style.backgroundImage)
+            code.style.backgroundImage = '';
+        if ((!wrapper && !owner.annotations.ranges.length) || typeof Range.prototype.getBoundingClientRect !== 'function')
+            return;
+        if (!this._codeResizeObserver && typeof ResizeObserver !== 'undefined') {
+            this._codeResizeObserver = new ResizeObserver(() => this._scheduleCodeLayout());
+            this._codeResizeObserver.observe(code);
+        }
+        this._scheduleCodeLayout();
     }
 
-    // Measure after layout so code gutters follow content, wrapping and font changes.
-    private _observeLineNumberResize(wrapper: HTMLElement) {
-        if (this._lineNumberResizeObserver != null || typeof ResizeObserver === 'undefined')
+    private _scheduleCodeLayout(): void {
+        if (this._codeLayoutFrame !== null)
             return;
-        const codeEl = this.domNode!;
-        this._lineNumberResizeObserver = new ResizeObserver(() => {
-            if (codeEl.isConnected && wrapper.isConnected)
-                repositionLineNumberSpans(wrapper, codeEl);
-            else
-                this._lineNumberResizeObserver?.disconnect();
+        this._codeLayoutFrame = requestAnimationFrame(() => {
+            this._codeLayoutFrame = null;
+            const parent = this.parent;
+            const code = parent?.domNode;
+            const owner = parent?.parent;
+            const content = this.domNode;
+            if (!parent || !code?.isConnected || !content?.isConnected || owner?.blockName !== 'code-block') {
+                this._codeResizeObserver?.disconnect();
+                this._codeResizeObserver = null;
+                return;
+            }
+            const wrapper = parent.lineNumbersWrapper;
+            const ranges = owner.annotations.ranges;
+            if (!wrapper && !ranges.length)
+                return;
+
+            const tops = measureLineTops(content);
+            if (wrapper) {
+                const frame = owner.domNode!;
+                wrapper.style.top = `${code.getBoundingClientRect().top - frame.getBoundingClientRect().top - frame.clientTop}px`;
+                repositionLineNumberSpans(wrapper, content, tops);
+            }
+            code.style.backgroundImage = lineHighlightBackground(tops, code.clientHeight, ranges);
         });
-        this._lineNumberResizeObserver.observe(codeEl);
     }
 
     override inputHandler(event: Event): void {

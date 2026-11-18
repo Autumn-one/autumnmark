@@ -2,6 +2,10 @@ export const de = {
     name: 'de',
     resource: {
         'Add tab': 'Registerkarte hinzufügen',
+        'Fold block': 'Klappblock',
+        'Fold options': 'Klappblock-Optionen',
+        'Edit fold title': 'Blocktitel bearbeiten',
+        'Open by default': 'Standardmäßig geöffnet',
         'Content tabs': 'Inhaltsregisterkarten',
         'Edit tabs source': 'Registerkarten-Quelltext bearbeiten',
         'Untitled tab': 'Unbenannte Registerkarte',

@@ -2,6 +2,10 @@ export const zhTW = {
     name: 'zh-TW',
     resource: {
         'Add tab': '新增分頁',
+        'Fold block': '摺疊區塊',
+        'Fold options': '摺疊區塊選項',
+        'Edit fold title': '編輯區塊標題',
+        'Open by default': '預設展開',
         'Content tabs': '內容分頁',
         'Edit tabs source': '編輯分頁原始碼',
         'Untitled tab': '未命名分頁',

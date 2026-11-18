@@ -2,6 +2,10 @@ export const ko = {
     name: 'ko',
     resource: {
         'Add tab': '탭 추가',
+        'Fold block': '접이식 블록',
+        'Fold options': '블록 옵션',
+        'Edit fold title': '블록 제목 편집',
+        'Open by default': '기본값으로 펼치기',
         'Content tabs': '콘텐츠 탭',
         'Edit tabs source': '탭 소스 편집',
         'Untitled tab': '제목 없는 탭',

@@ -2,6 +2,10 @@ export const ru = {
     name: 'ru',
     resource: {
         'Add tab': 'Добавить вкладку',
+        'Fold block': 'Сворачиваемый блок',
+        'Fold options': 'Параметры блока',
+        'Edit fold title': 'Изменить заголовок блока',
+        'Open by default': 'Развёрнут по умолчанию',
         'Content tabs': 'Вкладки содержимого',
         'Edit tabs source': 'Изменить исходный код вкладок',
         'Untitled tab': 'Вкладка без названия',

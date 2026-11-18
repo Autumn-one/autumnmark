@@ -46,6 +46,7 @@ import './assets/styles/index.css';
 import './assets/styles/inlineSyntax.css';
 import './assets/styles/githubAlerts.css';
 import './assets/styles/contentTabs.css';
+import './assets/styles/foldBlocks.css';
 import './assets/styles/dragDropText.css';
 import './assets/styles/prismjs/light.theme.css';
 
@@ -1589,6 +1590,7 @@ export class Muya {
 
     destroy() {
         this.editor.contentTabs.dispose();
+        this.editor.foldBlocks.dispose();
         this.editor.inlineEngine.dispose();
         this.editor.textDrag?.destroy();
         this.editor.selection.cancel();

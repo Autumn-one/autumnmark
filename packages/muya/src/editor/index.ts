@@ -29,6 +29,7 @@ import { isIndentShortcut, isTabKey } from '../utils/tab';
 import { ContentTabs } from './contentTabs';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
+import { FoldBlocks } from './foldBlocks';
 import { attachLinkMouseHandlers } from './linkMouseEvents';
 import { handleIndentShortcut, handleTabSelection, shouldHandleIndentation } from './tab';
 import { EditTransactions } from './transactions';
@@ -285,6 +286,7 @@ export class Editor {
     scrollPage: Nullable<ScrollPage> = null;
     textDrag: TextDrag | null = null;
     contentTabs: ContentTabs;
+    foldBlocks: FoldBlocks;
 
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
@@ -313,6 +315,7 @@ export class Editor {
         this.clipboard = Clipboard.create(_muya);
         this.history = new History(_muya);
         this.contentTabs = new ContentTabs(_muya);
+        this.foldBlocks = new FoldBlocks(_muya);
     }
 
     get activeContentBlock() {
@@ -338,7 +341,7 @@ export class Editor {
         const state = this.jsonState.getState();
 
         this.scrollPage = ScrollPage.create(muya, state);
-        this.contentTabs.refresh();
+        this.refreshBlockViews();
 
         this._dispatchEvents();
         // Hovering a rendered link wrapper dispatches `muya-link-tools` so the
@@ -515,11 +518,14 @@ export class Editor {
 
         // TODO: the cursor maybe passed by muya options.cursor, and no need to find the first leaf block.
         let firstLeafBlock = scrollPage?.firstContentInDescendant();
-        if (firstLeafBlock && this.contentTabs.isHidden(firstLeafBlock)) {
+        if (firstLeafBlock && (this.contentTabs.isHidden(firstLeafBlock) || this.foldBlocks.isHidden(firstLeafBlock))) {
             const visible = firstLeafBlock.nextContentInContext(true);
             if (!visible) {
-                // An empty panel has no body block after a Markdown round-trip.
-                this.contentTabs.focusTabFor(firstLeafBlock);
+                const disclosure = this.foldBlocks.visibleToggleFor(firstLeafBlock);
+                if (disclosure)
+                    disclosure.focus();
+                else
+                    this.contentTabs.focusTabFor(firstLeafBlock);
                 return;
             }
             firstLeafBlock = visible;
@@ -634,6 +640,11 @@ export class Editor {
         this.selection.notify(operation !== null);
     }
 
+    refreshBlockViews(): void {
+        this.foldBlocks.refresh();
+        this.contentTabs.refresh();
+    }
+
     private _updateBlocks(operation: JSONOp, view: ICompletedTransaction['view'], selection: Nullable<TSelectionState>, recover: () => TState[]) {
         if (view === 'rebuild') {
             this.scrollPage!.updateState(recover());
@@ -641,14 +652,14 @@ export class Editor {
             return;
         }
         if (operation === null) {
-            this.contentTabs.refresh();
+            this.refreshBlockViews();
             return;
         }
         try {
             let completed: TState[] | undefined;
             const snapshot = pick(this.scrollPage as BlockNode, operation);
             drop(snapshot, operation, this._muya, () => completed ??= recover());
-            this.contentTabs.refresh();
+            this.refreshBlockViews();
             this._restoreSelection(selection);
         }
         catch (error) {

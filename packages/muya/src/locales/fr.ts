@@ -2,6 +2,10 @@ export const fr = {
     name: 'fr',
     resource: {
         'Add tab': 'Ajouter un onglet',
+        'Fold block': 'Bloc repliable',
+        'Fold options': 'Options du bloc',
+        'Edit fold title': 'Modifier le titre du bloc',
+        'Open by default': 'Déplié par défaut',
         'Content tabs': 'Onglets de contenu',
         'Edit tabs source': 'Modifier le code des onglets',
         'Untitled tab': 'Onglet sans titre',

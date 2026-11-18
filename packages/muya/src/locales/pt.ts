@@ -2,6 +2,10 @@ export const pt = {
     name: 'pt',
     resource: {
         'Add tab': 'Adicionar aba',
+        'Fold block': 'Bloco recolhível',
+        'Fold options': 'Opções do bloco',
+        'Edit fold title': 'Editar título do bloco',
+        'Open by default': 'Expandir por padrão',
         'Content tabs': 'Abas de conteúdo',
         'Edit tabs source': 'Editar código das abas',
         'Untitled tab': 'Aba sem título',

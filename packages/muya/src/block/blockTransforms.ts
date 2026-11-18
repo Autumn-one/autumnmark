@@ -206,6 +206,10 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
         insertContentTabs(block, muya, text);
         return;
     }
+    if (label === 'fold-block') {
+        insertFoldBlock(block, muya, text);
+        return;
+    }
     if (label.startsWith('github-alert ') || (['block-quote', 'github-alert'].includes(block.blockName) && muya.options.githubAlerts && (label === 'paragraph' || label === 'block-quote'))) {
         convertGithubAlert(block, label, text);
         return;
@@ -253,6 +257,19 @@ function insertContentTabs(block: Parent, muya: Muya, text: string): void {
         { name: 'html-block', text: '<!-- /tabs -->' },
     ]);
     muya.editor.contentTabs.editTitle(replacements[1]);
+}
+
+function insertFoldBlock(block: Parent, muya: Muya, text: string): void {
+    if (!block.parent?.isScrollPage)
+        return;
+    const title = muya.i18n.t('Fold block');
+    const replacements = muya.editor.scrollPage!.replaceBlock(block, [
+        { name: 'html-block', text: '<!-- fold -->' },
+        { name: 'atx-heading', meta: { level: 3 }, text: `### ${title}` },
+        { name: 'paragraph', text },
+        { name: 'html-block', text: '<!-- /fold -->' },
+    ]);
+    muya.editor.foldBlocks.editTitle(replacements[1]);
 }
 
 // A thematic break needs a trailing paragraph so the user can continue typing.

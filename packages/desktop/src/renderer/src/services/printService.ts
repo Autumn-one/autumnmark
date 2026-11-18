@@ -21,6 +21,9 @@ class MarkdownPrint {
     }
     this.container = printContainer
     printContainer.innerHTML = html
+    for (const fold of printContainer.querySelectorAll<HTMLDetailsElement>('details.mu-export-fold')) {
+      fold.open = true
+    }
 
     document.body.appendChild(printContainer)
     // The print container is hidden on screen, so layout does not request its fonts.

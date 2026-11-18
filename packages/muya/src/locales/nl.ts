@@ -2,6 +2,10 @@ export const nl = {
     name: 'nl',
     resource: {
         'Add tab': 'Tabblad toevoegen',
+        'Fold block': 'Uitklapbaar blok',
+        'Fold options': 'Blokopties',
+        'Edit fold title': 'Bloktitel bewerken',
+        'Open by default': 'Standaard uitgevouwen',
         'Content tabs': 'Inhoudstabbladen',
         'Edit tabs source': 'Broncode van tabbladen bewerken',
         'Untitled tab': 'Naamloos tabblad',

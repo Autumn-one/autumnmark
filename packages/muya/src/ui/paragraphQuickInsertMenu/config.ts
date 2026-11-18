@@ -234,6 +234,12 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 icon: newTableIcon,
             },
             {
+                title: 'Fold block',
+                subTitle: '<!-- fold -->',
+                label: 'fold-block',
+                icon: quoteIcon,
+            },
+            {
                 title: 'Code Block',
                 subTitle: '```java Lorem Ipsum ```',
                 label: 'code-block',

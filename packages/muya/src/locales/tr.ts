@@ -2,6 +2,10 @@ export const tr = {
     name: 'tr',
     resource: {
         'Add tab': 'Sekme ekle',
+        'Fold block': 'Katlanabilir blok',
+        'Fold options': 'Blok seçenekleri',
+        'Edit fold title': 'Blok başlığını düzenle',
+        'Open by default': 'Varsayılan olarak açık',
         'Content tabs': 'İçerik sekmeleri',
         'Edit tabs source': 'Sekme kaynağını düzenle',
         'Untitled tab': 'Başlıksız sekme',

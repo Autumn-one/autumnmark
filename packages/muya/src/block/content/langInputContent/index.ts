@@ -33,6 +33,7 @@ class LangInputContent extends Content {
 
     override update(_cursor?: IRenderCursor, highlights = []) {
         this.domNode!.innerHTML = escapeLangInputInnerHtml(this.text, highlights);
+        this.parent?.refreshAnnotations();
     }
 
     private _updateLanguage(lang: string) {
