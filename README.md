@@ -1,62 +1,54 @@
-<p align="center"><img src="docs/assets/logo-small.png" alt="MarkText" width="100" height="100"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Autumn-one/autumnmark/v0.24.3/docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
 
-<h1 align="center">MarkText</h1>
+<h1 align="center">AutumnMark · 秋笺</h1>
 
-<div align="center">
-  <a href="https://twitter.com/intent/tweet?via=marktextme&url=https://github.com/marktext/marktext/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkText">
-    <img src="https://img.shields.io/twitter/url/https/github.com/marktext/marktext.svg?style=for-the-badge" alt="twitter">
-  </a>
-</div>
-<div align="center">
-  <strong>:high_brightness: Next generation markdown editor :crescent_moon:</strong><br>
-  A simple and elegant open-source markdown editor that focused on speed and usability.<br>
-  <sub>Available for Linux, macOS and Windows.</sub>
-</div>
+AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的桌面 Markdown 编辑器，支持 Windows、macOS 和 Linux。可以在可视化编辑与源码编辑之间切换，适合写技术笔记、教程和项目文档。
 
-<br>
+[下载 AutumnMark 正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布说明](https://github.com/Autumn-one/autumnmark/releases) · [MIT 许可证](LICENSE)
 
-<div align="center">
-  <!-- License -->
-  <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/marktext/marktext.svg" alt="LICENSE">
-  </a>
-  <!-- Downloads total -->
-  <a href="https://github.com/marktext/marktext/releases">
-    <img src="https://img.shields.io/github/downloads/marktext/marktext/total.svg" alt="total download">
-  </a>
-  <!-- Downloads latest release -->
-  <a href="https://github.com/marktext/marktext/releases/latest">
-    <img src="https://img.shields.io/github/downloads/marktext/marktext/latest/total.svg" alt="latest download">
-  </a>
-  <!-- sponsors -->
-  <a href="https://opencollective.com/marktext">
-    <img src="https://opencollective.com/marktext/tiers/silver-sponsors/badge.svg?label=SilverSponsors&color=brightgreen" alt="sponsors">
-  </a>
-</div>
+## 下一版新增的三项语法
 
-<div align="center">
-  <h3>
-    <a href="https://marktext.me">
-      Website
-    </a>
-    <span> | </span>
-    <a href="https://github.com/marktext/marktext#features">
-      Features
-    </a>
-    <span> | </span>
-    <a href="https://github.com/marktext/marktext#download-and-installation">
-      Downloads
-    </a>
-    <span> | </span>
-    <a href="https://github.com/marktext/marktext#development">
-      Development
-    </a>
-    <span> | </span>
-    <a href="https://github.com/marktext/marktext#contribution">
-      Contribution
-    </a>
-  </h3>
-</div>
+### 折叠块
+
+把练习答案、排查日志和补充说明放到可展开的标题下面。在编辑器中输入 `/折叠` 可以插入。
+
+```markdown
+<!-- fold -->
+
+### 查看重试步骤
+
+收到 `429` 时，按 `Retry-After` 指示等待后再请求。
+
+<!-- /fold -->
+```
+
+`<!-- fold -->` 默认收起，`<!-- fold open -->` 默认展开。普通 Markdown 阅读器可以直接显示标题和完整正文。HTML 导出可交互展开，PDF 和打印会显示全部正文。
+
+### 代码块标题
+
+在围栏语言后加 `title="request.ts"`，代码块上方会显示文件名或示例名称。教程里的多个代码片段可以各自标明出处。
+
+### 行范围高亮
+
+用 `{2-3,5}` 强调第 2、3、5 行。逗号可以组合单行和范围，范围包含起止行。行号从源码第 1 行开始计。
+
+````markdown
+```ts title="request.ts" {2-3,5}
+const timeout = 5000
+const signal = AbortSignal.timeout(timeout)
+const response = await fetch('/api/items', { signal })
+
+console.log(response.status)
+```
+````
+
+## 开发
+
+从仓库根目录运行 `pnpm install` 安装依赖，再用 `pnpm run dev` 启动桌面端。Windows x64 安装包可用 `pnpm run build:win:x64` 构建。
+
+## 上游资料与致谢
+
+以下网站、安装说明、社区和赞助信息属于 MarkText 上游。
 
 <div align="center">
   <sub>Translations:</sub>
