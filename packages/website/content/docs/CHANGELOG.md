@@ -1,3 +1,10 @@
+## AutumnMark 0.24.4
+
+- Add collapsible Markdown blocks with a saved default open or closed state. Other Markdown readers can show the heading and full content.
+- Label fenced code blocks with a filename or title using `title="..."`.
+- Highlight selected code lines and inclusive ranges using fence metadata such as `{2-3,7}`.
+- Preserve code annotations in HTML export and show the complete contents of fold blocks in PDF exports and printing.
+
 ## AutumnMark 0.24.3
 
 - Use theme-aware surfaces and spacing to distinguish the application menu, document tab bar, and file sidebar.
