@@ -1,3 +1,9 @@
+## AutumnMark 0.24.2
+
+- The application menu spans the full window, with a theme-aware background and a divider above the file sidebar and document tabs.
+- Opened documents and folders have dedicated sections. Root folders collapse independently, and nested items have indentation guides.
+- The active document has a tinted row and a colored edge. The dot indicates unsaved edits.
+
 ## AutumnMark 0.24.1
 
 - Use Left and Right on the content tab bar to focus the add button, then press Enter or Space to add and name a tab.
