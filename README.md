@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/Autumn-one/autumnmark/v0.24.3/docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
 
 <h1 align="center">AutumnMark · 秋笺</h1>
 
