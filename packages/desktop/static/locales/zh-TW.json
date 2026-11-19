@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "正在讀取標題…",
     "placeholder": "輸入要執行的命令",
     "placeholders": {
       "selectOption": "選擇選項",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "上傳到雲端",
         "folder": "複製到資料夾",
-        "path": "使用絕對路徑"
+        "path": "使用絕對路徑",
+        "embed": "嵌入 Markdown（Base64）"
       },
       "folderSetting": {
         "title": "資料夾設定",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "取消",
     "ok": "確定"
+  },
+  "embeddedImage": {
+    "title": "內嵌圖片",
+    "delete": "刪除圖片",
+    "paste": "貼上圖片資料",
+    "choose": "選擇圖片…",
+    "invalid": "無法讀取圖片，請選擇圖片檔案或複製完整的圖片 Data URL。"
   },
   "dialog": {
     "moveToTrash": "確定要將「{name}」移到垃圾桶嗎？",

@@ -5,6 +5,7 @@ import type { IParagraphState } from '../state/types';
 import type { IHighlight, Labels } from './model/types';
 import { prepareReadingLinks } from '../editor/readOnly';
 import logger from '../utils/logger';
+import { projectEmbeddedImages } from './embeddedImages';
 import { tokenizer } from './lexer';
 import { profileForBlock } from './parser/profiles';
 import { getReferenceDefinition, ReferenceDefinitionIndex } from './referenceDefinitions';
@@ -37,7 +38,7 @@ class InlineEngine {
         }, new ImageMounts(muya.domNode));
     }
 
-    private _tokenizer(block: Format, highlights: IHighlight[]) {
+    private _tokenizer(block: Pick<Format, 'text' | 'blockName'>, highlights: IHighlight[]) {
         const { options } = this.muya;
         const { text } = block;
         const { labels } = this;
@@ -73,10 +74,17 @@ class InlineEngine {
         if (block.isParent())
             debug.error('Patch can only handle content block');
 
-        const tokens = this._tokenizer(block, highlights);
+        const projection = projectEmbeddedImages(block);
+        const view = projection ? { text: projection.text, blockName: block.blockName, domNode } : block;
+        const ranges = projection ? highlights.map(h => ({ ...h, start: projection.offset(h.start), end: projection.offset(h.end) })) : highlights;
+        const tokens = this._tokenizer(view, ranges);
         const renderCursor = !this.muya.isReadOnly && cursor?.block === block ? cursor : {};
-        const html = this.renderer.output(tokens, block, renderCursor);
+        const caret = projection && renderCursor.anchor && renderCursor.focus
+            ? { block: view, anchor: { offset: projection.offset(renderCursor.anchor.offset) }, focus: { offset: projection.offset(renderCursor.focus.offset) } }
+            : renderCursor;
+        const html = this.renderer.output(tokens, view, caret);
         domNode!.innerHTML = html;
+        projection?.mount(domNode!, true);
 
         if (this.muya.isReadOnly)
             prepareReadingLinks(domNode!);

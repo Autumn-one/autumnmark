@@ -4,7 +4,6 @@ import { RecoveryStatus, SessionLifecycle } from '@shared/types/applicationState
 import type {
   ApplicationState,
   ApplicationStateStorage,
-  DiscardedRecoveryRecord,
   DocumentRecoveryStorage,
   DocumentSnapshot,
   PersistResult,
@@ -18,7 +17,7 @@ import type {
 } from '@shared/types/applicationState'
 import type { DiskBaseline } from '@shared/types/files'
 import { parseWindowSnapshot } from './codec'
-import { DocumentRegistry } from './documentRegistry'
+import { DocumentRegistry, type DocumentCloseRecord } from './documentRegistry'
 import { createStateId } from './identity'
 import { contentSha256 } from 'common/filesystem'
 
@@ -378,17 +377,22 @@ export class CheckpointService {
   private _prepareDocumentEnds(
     candidate: ApplicationState,
     prepared: Pick<WindowSnapshot, 'id' | 'documents'>[],
-    discard: boolean
-  ): DiscardedRecoveryRecord[] {
+    discard: boolean,
+    keepSavedTabs = false
+  ): DocumentCloseRecord[] {
     const ended = prepared.flatMap((window) =>
       window.documents.map((document) =>
-        this._documents.prepareClose(document.id, discard, this._now())
+        this._documents.prepareClose(document.id, discard, this._now(), keepSavedTabs)
       )
     )
-    const ids = new Set(ended.map((record) => record.documentId))
+    const records = new Map(ended.map(record => [record.documentId, record]))
     for (const window of candidate.session.windows) {
       if (!prepared.some((entry) => entry.id === window.id)) continue
-      window.documents = window.documents.filter((document) => !ids.has(document.id))
+      window.documents = window.documents.flatMap(document => {
+        const record = records.get(document.id)
+        if (!record) return [document]
+        return record.status === RecoveryStatus.SAVED ? [record.document] : []
+      })
       if (!window.documents.some((document) => document.id === window.activeDocumentId))
         window.activeDocumentId = window.documents[0]?.id ?? null
     }
@@ -397,7 +401,7 @@ export class CheckpointService {
 
   private async _commitDocumentEnds(
     candidate: ApplicationState,
-    ended: DiscardedRecoveryRecord[],
+    ended: DocumentCloseRecord[],
     isCurrent: () => boolean
   ): Promise<void> {
     try {
@@ -513,6 +517,7 @@ export class CheckpointService {
           id: window.id,
           documents: window.documents.filter((document) => document.content.kind === 'recovery')
         })),
+        true,
         true
       )
       candidate.session = windowId
@@ -530,7 +535,7 @@ export class CheckpointService {
 
   private async _commitState(
     candidate: ApplicationState,
-    ended: DiscardedRecoveryRecord[] = [],
+    ended: DocumentCloseRecord[] = [],
     isCurrent?: () => boolean
   ): Promise<void> {
     const endedIds = new Set(ended.map((record) => record.documentId))
@@ -593,7 +598,7 @@ export class CheckpointService {
 
   private async _persist(
     candidate: ApplicationState,
-    ended: DiscardedRecoveryRecord[] = [],
+    ended: DocumentCloseRecord[] = [],
     isCurrent?: () => boolean
   ): Promise<void> {
     if (isCurrent && !isCurrent()) throw new StaleCloseError('Close preparation changed')
@@ -656,7 +661,7 @@ export class CheckpointService {
     if (isCurrent && !isCurrent())
       throw new StaleCloseError('Close preparation changed during recovery cleanup')
     this._state = next
-    for (const record of ended) this._documents.discard(record.documentId)
+    for (const record of ended) this._documents.finishClose(record)
     for (const record of completedRecords) this._documents.settle(record)
   }
 }

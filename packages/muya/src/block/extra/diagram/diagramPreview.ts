@@ -5,6 +5,7 @@ import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
 import { finalizeRenderedDiagram, renderDiagram } from '../../../utils/diagram/render';
+import { abbreviateEmbeddedImages, abbreviatePreviewText } from '../../../utils/embeddedImage';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 
@@ -105,6 +106,8 @@ class DiagramPreview extends Parent {
                     sequenceTheme,
                 });
                 this._rendered = true;
+                if (this.muya.options.editEmbeddedImage)
+                    abbreviatePreviewText(this.domNode!);
                 this._cancelFinalize = finalizeRenderedDiagram(this.domNode!, i18n.t('Diagram'));
             }
             catch (error) {
@@ -114,7 +117,7 @@ class DiagramPreview extends Parent {
                 this.domNode!.innerHTML = `<div class="mu-diagram-error">&lt; ${i18n.t(
                     'Invalid Diagram Code',
                 )} &gt;<div class="mu-diagram-error-detail">${sanitize(
-                    detail,
+                    this.muya.options.editEmbeddedImage ? abbreviateEmbeddedImages(detail) : detail,
                     PREVIEW_DOMPURIFY_CONFIG,
                     true,
                 )}</div></div>`;

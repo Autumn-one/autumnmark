@@ -172,7 +172,7 @@ function handleWebLinkImage(
 
     void (async () => {
         const url = firstUri(await uriPromise);
-        if (!URL_REG.test(url))
+        if (!URL_REG.test(url) && !/^data:image\//i.test(url))
             return;
 
         const html = await htmlPromise;
@@ -183,8 +183,10 @@ function handleWebLinkImage(
         if (!isImage || muya.isReadOnly || !muya.isBlockInDocument(target.anchor))
             return;
 
-        insertImageParagraph(muya, target, imageToMarkdown({ src: url }));
-    })();
+        const src = await (muya.options.embedImage?.(url) ?? url);
+        if (src && !muya.isReadOnly && muya.isBlockInDocument(target.anchor))
+            insertImageParagraph(muya, target, imageToMarkdown({ src }));
+    })().catch(error => muya.eventCenter.emit('image-drop-error', error));
 
     return true;
 }
@@ -272,6 +274,15 @@ function handleFileImage(
     const image = files.find(file => /image/.test(file.type));
     if (!image)
         return false;
+
+    const embedded = muya.options.embedImage?.(image);
+    if (embedded) {
+        void embedded.then((src) => {
+            if (src && !muya.isReadOnly && muya.isBlockInDocument(target.anchor))
+                insertImageParagraph(muya, target, imageToMarkdown({ alt: image.name.replace(/[\\[\]]/g, '\\$&'), src }));
+        }).catch(error => muya.eventCenter.emit('image-drop-error', error));
+        return true;
+    }
 
     const path = muya.options.getPathForFile?.(image);
     if (!path)

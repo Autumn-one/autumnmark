@@ -1,3 +1,10 @@
+## AutumnMark 0.24.10
+
+- Embed pasted or dropped images directly in Markdown as Base64. Click an embedded image to preview, replace, or delete it in either editing mode.
+- Drag headings in the outline to reorder whole sections, including their text and subheadings. Undo restores the previous order in one step.
+- Use heading suggestions to link within the current document or to a heading in another Markdown file. Suggestions appear in the visual editor and source mode.
+- Restore the previous workspace and its unsaved edits when opening a Markdown file from the file manager. Session checkpoints also continue during sustained editing.
+
 ## AutumnMark 0.24.9
 
 - Install AutumnMark alongside MarkText with separate app identities, settings, and update caches.

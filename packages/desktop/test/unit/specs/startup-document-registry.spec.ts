@@ -234,7 +234,7 @@ describe('document identity and content lifecycle', () => {
       )
     ])
     expect(() => registry.prepareClose(snapshot.id, false, 10)).toThrow(/unsaved/i)
-    registry.discard(snapshot.id)
+    registry.finishClose(registry.prepareClose(snapshot.id, true, 10))
     expect(registry.pendingRecords(10)).toMatchObject([
       { status: 'discarded', documentId: snapshot.id }
     ])

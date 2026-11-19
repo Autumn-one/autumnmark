@@ -58,7 +58,7 @@ class WindowSession {
   private readonly _pendingOpens: ManagedDocumentPayload[] = []
   private readonly _schedule = debounce(() => {
     void this._flush().catch((error) => this._failure(error))
-  }, 250)
+  }, 250, { maxWait: 1000 })
 
   async start(): Promise<void> {
     const ipc = window.electron.ipcRenderer

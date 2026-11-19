@@ -20,6 +20,7 @@ import {
     isKeyboardEvent,
     isMouseEvent,
 } from '../../utils';
+import { findEmbeddedImages } from '../../utils/embeddedImage';
 import { editTab } from '../../utils/tab';
 import { isFoldableHeading } from '../commonMark/atxHeading/foldSection';
 import { revealBlock } from '../folding';
@@ -861,9 +862,26 @@ class Content extends TreeNode {
         return true;
     }
 
+    private _embeddedImageToDelete(key: string) {
+        if (!this.muya.options.editEmbeddedImage || this.isComposed || (key !== 'Backspace' && key !== 'Delete'))
+            return;
+        const images = findEmbeddedImages(this.text);
+        const cursor = images.length ? this.getCursor() : null;
+        if (cursor && cursor.start.offset === cursor.end.offset)
+            return images.find(image => (key === 'Backspace' ? image.end : image.start) === cursor.start.offset);
+    }
+
     keydownHandler = (event: Event) => {
         if (!isKeyboardEvent(event))
             return;
+        const image = this._embeddedImageToDelete(event.key);
+        if (image) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.text = this.text.slice(0, image.start) + this.text.slice(image.end);
+            this.setCursor(image.start, image.start, true);
+            return;
+        }
 
         if (this.beforeKeydown(event))
             return;

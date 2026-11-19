@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Chargement des titres…",
     "placeholder": "Tapez une commande à exécuter",
     "placeholders": {
       "selectOption": "Sélectionner une option",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Télécharger vers le cloud",
         "folder": "Copier vers le dossier",
-        "path": "Utiliser le chemin absolu"
+        "path": "Utiliser le chemin absolu",
+        "embed": "Intégrer au Markdown (Base64)"
       },
       "folderSetting": {
         "title": "Paramètres de dossier",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Annuler",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Image intégrée",
+    "delete": "Supprimer l’image",
+    "paste": "Coller l’URL de données",
+    "choose": "Choisir une image…",
+    "invalid": "Impossible de lire l’image."
   },
   "dialog": {
     "moveToTrash": "Voulez-vous vraiment déplacer « {name} » vers la corbeille ?",

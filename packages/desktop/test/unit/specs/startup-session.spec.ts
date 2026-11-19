@@ -118,7 +118,7 @@ describe('latest session membership', () => {
 })
 
 describe('startup planning without filesystem or Electron effects', () => {
-  it('gives explicit input priority, including an explicit request that failed to resolve', () => {
+  it('opens requested files alongside the restored session and honors a blank startup choice', () => {
     const previous = state(window('old'))
     expect(
       buildStartupPlan({ state: previous, preferences, request: { kind: 'explicit', targets: [] } })
@@ -126,7 +126,11 @@ describe('startup planning without filesystem or Electron effects', () => {
     const targets = [{ kind: 'file' as const, pathname: '/new.md', readOnly: false }]
     expect(
       buildStartupPlan({ state: previous, preferences, request: { kind: 'explicit', targets } })
-    ).toEqual([{ kind: 'explicit', targets }])
+    ).toMatchObject([{ kind: 'restore', snapshot: { id: 'old' } }, { kind: 'explicit', targets }])
+    expect(buildStartupPlan({
+      state: previous, preferences: { ...preferences, startUpAction: 'blank' },
+      request: { kind: 'explicit', targets }
+    })).toEqual([{ kind: 'explicit', targets }])
   })
 
   it('splits explicit startup files when new-window preference is enabled', () => {

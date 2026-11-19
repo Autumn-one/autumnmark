@@ -108,6 +108,8 @@ export interface IMuyaOptions {
      * the raw `src` verbatim.
      */
     imageAction?: (state: IImageActionState) => Promise<string>;
+    editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit) => void;
+    embedImage?: (image: File | string) => Promise<string> | undefined;
     /**
      * Check whether a local image drop can proceed before changing the document.
      * Return undefined for immediate insertion, or a promise resolving to false

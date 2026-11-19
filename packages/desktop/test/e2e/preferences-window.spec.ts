@@ -247,6 +247,10 @@ test('image insertion behavior switches its related settings and preserves searc
       await settings.locator('#setting-imageInsertAction .el-select__wrapper').click()
       await settings.getByRole('option', { name: label, exact: true }).click()
     }
+    await chooseAction('Embed in Markdown (Base64)')
+    await expect.poll(async() => (await preferences(app)).imageInsertAction).toBe('embed')
+    await expect(folder).toHaveCount(0)
+    await expect(uploader).toHaveCount(0)
     await chooseAction('Upload to cloud')
     await expect(uploader).toBeVisible()
     await expect(folder).toHaveCount(0)

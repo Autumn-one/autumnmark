@@ -13,13 +13,14 @@ import { DEFAULT_OPTIONS } from './options';
 import { restoreCodeTabs } from './restoreCodeTabs';
 import walkTokens from './walkTokens';
 
-export function lexBlock(
+/** Keep the original root tokens for consumers that need exact source positions. */
+export function lexSourceBlocks(
     src: string,
     options: ILexOption = DEFAULT_OPTIONS,
-): TLexedToken[] {
+) {
     options = Object.assign({}, DEFAULT_OPTIONS, options);
     const { texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, frontMatter, footnote, multilineBlockquote, fancyLists } = options;
-    let tokens: (Token | IFrontmatterToken)[] = [];
+    const tokens: (Token | IFrontmatterToken)[] = [];
 
     // Per-call Marked instances prevent enabled extensions leaking into later calls.
     const m = new Marked(referenceDefinitionTabs());
@@ -86,10 +87,15 @@ export function lexBlock(
     if (src.includes('\t'))
         restoreCodeTabs(parsed, src);
     tokens.push(...parsed);
-    tokens = compatibleTaskList(tokens as Token[]);
+    return { tokens, lexer, marked: m };
+}
+
+export function lexBlock(src: string, options: ILexOption = DEFAULT_OPTIONS): TLexedToken[] {
+    const { tokens: source, lexer, marked } = lexSourceBlocks(src, options);
+    const tokens = compatibleTaskList(source as Token[]);
     if (options.githubAlerts)
         normalizeGithubAlertTokens(tokens as Token[], lexer);
-    m.walkTokens(tokens as Token[], walkTokens(options));
+    marked.walkTokens(tokens as Token[], walkTokens(options));
 
     // walkTokens and compatibleTaskList populate Muya fields absent from marked’s declared token types.
     return tokens as TLexedToken[];

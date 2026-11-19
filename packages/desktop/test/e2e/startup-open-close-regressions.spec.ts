@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ElectronApplication } from 'playwright'
 import type { ApplicationState } from '../../src/shared/types/applicationState'
-import { launchElectron, sendIpcToRenderer } from './helpers'
+import { enterSourceMode, launchElectron, openProjectFolder, sendIpcToRenderer } from './helpers'
 
 let directory: string
 let profile: string
@@ -29,6 +29,72 @@ const launch = async(args: string[], preferences: Record<string, unknown> = {}) 
   running.add(launched.app)
   return launched
 }
+
+test('closing the last window and launching the app restores its open folder and active tab', async() => {
+  const folder = join(directory, 'workspace')
+  mkdirSync(folder)
+  const pathname = join(folder, 'notes.md')
+  writeFileSync(pathname, '# Meeting notes\n')
+  const first = await launch([pathname])
+  await openProjectFolder(first.app, first.page, folder, pathname)
+  await sendIpcToRenderer(first.app, 'mt::set-view-layout', { showTabBar: true })
+  await expect(first.page.locator('.editor-tabs')).toBeVisible()
+  await first.page.getByRole('textbox', { name: 'Document', exact: true }).fill('Discard these edits')
+  await first.app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async() => ({ response: 1, checkboxChecked: false })
+  })
+  const closed = first.page.waitForEvent('close')
+  const quit = process.platform === 'darwin' ? null : first.app.waitForEvent('close')
+  await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close())
+  await closed
+  let page
+  if (quit) {
+    await quit
+    running.delete(first.app)
+    page = (await launch([])).page
+  } else {
+    const reopened = first.app.waitForEvent('window')
+    await first.app.evaluate(({ app }) => app.emit('activate'))
+    page = await reopened
+  }
+  await expect(page.locator('.project-root')).toContainText('workspace')
+  await expect(page.locator('.tabs-container > li.active')).toHaveAttribute('title', pathname)
+  await expect(page.getByRole('textbox', { name: 'Document', exact: true })).toContainText('Meeting notes')
+  expect(readFileSync(pathname, 'utf8')).toBe('# Meeting notes\n')
+})
+
+test('opening a file after a hard kill recovers the workspace and continuous edits', async() => {
+  const folder = join(directory, 'workspace')
+  mkdirSync(folder)
+  const firstPath = join(folder, 'first.md')
+  const draftPath = join(folder, 'draft.md')
+  writeFileSync(firstPath, 'First file\n')
+  writeFileSync(draftPath, 'Saved draft\n')
+  const first = await launch([folder, firstPath, draftPath])
+  await sendIpcToRenderer(first.app, 'mt::set-view-layout', { showSideBar: true, showTabBar: true })
+  await enterSourceMode(first.page, first.app)
+  const before = state().session.windows[0]
+  await first.page.locator('.source-code .CodeMirror').evaluate(element => {
+    const editor = (element as HTMLElement & { CodeMirror: { setValue(value: string): void } }).CodeMirror
+    let count = 0
+    window.setInterval(() => editor.setValue(`Unsaved version ${++count}`), 50)
+  })
+  await expect.poll(() => state().session.windows[0].documents.find(doc => doc.id === before.activeDocumentId)?.content.kind).toBe('recovery')
+  const pid = await first.app.evaluate(() => process.pid)
+  const closed = first.app.waitForEvent('close')
+  process.kill(pid, 'SIGKILL')
+  await closed
+  running.delete(first.app)
+
+  const restored = await launch([draftPath])
+  await expect(restored.page.locator('.project-root')).toContainText('workspace')
+  await expect(restored.page.locator('.source-code .CodeMirror-code')).toContainText('Unsaved version')
+  await expect(restored.page.locator('.tabs-container > li.active')).toHaveAttribute('title', draftPath)
+  const after = state().session.windows[0]
+  expect(after.id).toBe(before.id)
+  expect(after.documents.map(doc => doc.id)).toEqual(before.documents.map(doc => doc.id))
+  expect(readFileSync(draftPath, 'utf8')).toBe('Saved draft\n')
+})
 
 test('Save As writes the exact extensionless dialog path without overwriting its md sibling', async() => {
   const original = join(directory, 'original.md')

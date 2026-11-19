@@ -1,3 +1,4 @@
+import type { IHighlight } from '../../../inline/model/types';
 import type { Muya } from '../../../muya';
 import type { IRenderCursor } from '../../../selection/types';
 import type {
@@ -9,6 +10,8 @@ import type {
 import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
 import { CLASS_NAMES, HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
+import { projectEmbeddedImages } from '../../../inline/embeddedImages';
+import { getTextContent } from '../../../selection/dom';
 import { ChangeSource } from '../../../types';
 import { adjustOffset, escapeHTML, firstGraphemeLength, lastGraphemeLength, lineBounds } from '../../../utils';
 import { computeLineCount, lineHighlightBackground, measureLineTops, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
@@ -152,14 +155,16 @@ class CodeBlockContent extends Content {
             (this.outContainer?.attachments?.head as HTMLPreview).update(text);
     }
 
-    override update(_cursor?: IRenderCursor, highlights = []) {
+    override update(_cursor?: IRenderCursor, highlights: IHighlight[] = []) {
         const { _lang: lang, text } = this;
         const parentCode = this.parent as Code | null;
         if (parentCode?.copyButton && parentCode.parent?.blockName === 'code-block')
             parentCode.copyButton.hidden = !text;
         const fullLengthLang = transformAliasToOrigin([lang])[0];
         const domNode = this.domNode!;
-        const code = escapeHTML(getHighlightHtml(text, highlights, true))
+        const projection = projectEmbeddedImages(this);
+        const ranges = projection ? highlights.map(h => ({ ...h, start: projection.offset(h.start), end: projection.offset(h.end) })) : highlights;
+        const code = escapeHTML(getHighlightHtml(projection?.text ?? text, ranges, true))
             .replace(new RegExp(MARKER_HASH['<'], 'g'), '<')
             .replace(new RegExp(MARKER_HASH['>'], 'g'), '>')
             .replace(new RegExp(MARKER_HASH['"'], 'g'), '"')
@@ -185,10 +190,12 @@ class CodeBlockContent extends Content {
             wrapper.innerHTML = code;
             prism.highlightElement(wrapper, false, function (this: HTMLElement) {
                 replaceIfChanged(domNode, this.innerHTML + trailingBreak);
+                projection?.mount(domNode, false);
             });
         }
         else {
             replaceIfChanged(domNode, code + trailingBreak);
+            projection?.mount(domNode, false);
         }
 
         this._updateCodeDecorations(text);
@@ -259,7 +266,7 @@ class CodeBlockContent extends Content {
         if (this.isComposed)
             return;
 
-        const textContent = this.domNode!.textContent!;
+        const textContent = getTextContent(this.domNode!, [CLASS_NAMES.MU_TRAILING_BREAK]);
         const { start, end } = this.getCursor()!;
         const { text } = this.autoPair(
             event,

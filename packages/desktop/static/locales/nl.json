@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Koppen laden…",
     "placeholder": "Typ een opdracht om uit te voeren",
     "placeholders": {
       "selectOption": "Selecteer een optie",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Uploaden naar cloud",
         "folder": "Kopiëren naar map",
-        "path": "Absoluut pad gebruiken"
+        "path": "Absoluut pad gebruiken",
+        "embed": "In Markdown insluiten (Base64)"
       },
       "folderSetting": {
         "title": "Mapinstelling",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Annuleren",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Ingesloten afbeelding",
+    "delete": "Afbeelding verwijderen",
+    "paste": "Gegevens-URL plakken",
+    "choose": "Afbeelding kiezen…",
+    "invalid": "De afbeelding kan niet worden gelezen."
   },
   "dialog": {
     "moveToTrash": "Weet je zeker dat je \"{name}\" naar de prullenbak wilt verplaatsen?",

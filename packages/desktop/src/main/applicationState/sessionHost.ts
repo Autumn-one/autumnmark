@@ -24,6 +24,7 @@ import {
 import type {
   ApplicationState,
   DocumentSnapshot,
+  FileLocation,
   RecoveryRecord,
   WindowSnapshot,
   WindowInitialization,
@@ -61,6 +62,11 @@ interface PendingCheckpoint {
 const displays = () =>
   screen.getAllDisplays().map((display) => ({ id: String(display.id), workArea: display.workArea }))
 const primary = () => String(screen.getPrimaryDisplay().id)
+
+const findFileTab = (snapshot: WindowSnapshot, location: FileLocation): DocumentSnapshot | undefined =>
+  snapshot.documents.find(document =>
+    document.resource.kind === 'file' && document.resource.location.key === location.key
+  )
 
 /** Owns native editor lifetimes and checkpoints within the current application session. */
 export class SessionHost {
@@ -255,12 +261,11 @@ export class SessionHost {
     create: (prepared: PreparedSessionWindow) => void,
     forceNewWindow: boolean
   ): Promise<void> {
-    if (this._service) {
-      create(await this.prepareNewWindow(null, [], []))
-      return
-    }
-    const previous = await this._loaded
+    // macOS can activate during launch or after the last window closed with the app still running.
+    if (this._service && this._editors.size > 0) return
+    const previous = this._service?.getState() ?? await this._loaded
     const preferences = this._accessor.preferences.getAll()
+    this._startupWarning = undefined
     let configuredWorkspace: WindowSnapshot['workspace'] = null
     try {
       if (
@@ -301,9 +306,27 @@ export class SessionHost {
     }
     const plans = buildStartupPlan({ ...input, recoveryRecords: records })
     const prepared: PreparedSessionWindow[] = []
+    let activeId = previous.session.activeWindowId
     for (const plan of plans) {
+      if (plan.kind === 'explicit' && prepared.length > 0 && !forceNewWindow && !preferences.openFilesInNewWindow) {
+        const active = prepared.find(window => window.snapshot.id === activeId) ?? prepared[0]
+        const candidates = [active, ...prepared.filter(window => window !== active)]
+        for (const file of paths) {
+          const location = createFileLocation(file.path)
+          const destination = candidates.find(({ snapshot }) => findFileTab(snapshot, location)) ??
+            candidates.find(({ snapshot }) => snapshot.workspace?.roots.some(
+              root => containsPath(root.location.canonicalPath, location.canonicalPath)
+            )) ?? active
+          await this._openPreparedFile(destination, location, file)
+          activeId = destination.snapshot.id
+        }
+        continue
+      }
       const window = await this._preparePlan(plan, paths, plan.kind === 'restore' ? records.get(plan.snapshot.id) : undefined)
-      if (window.openable) prepared.push(window)
+      if (window.openable) {
+        prepared.push(window)
+        if (plan.kind === 'explicit') activeId = window.snapshot.id
+      }
     }
     if (!prepared.length) prepared.push(await this.prepareNewWindow(null, [], []))
     const runtime: ApplicationState = {
@@ -321,11 +344,7 @@ export class SessionHost {
     )
     for (const window of prepared) await this._attachPrepared(window)
     for (const window of prepared) this._startupWindowIds.add(window.snapshot.id)
-    this._startupActiveId = prepared.some(
-      (window) => window.snapshot.id === previous.session.activeWindowId
-    )
-      ? previous.session.activeWindowId
-      : null
+    this._startupActiveId = prepared.some(window => window.snapshot.id === activeId) ? activeId : null
     for (const window of prepared) create(window)
   }
 
@@ -533,34 +552,39 @@ export class SessionHost {
       const readOnly = readOnlyOverrides.get(document.resource.location.key)
       if (readOnly !== undefined) document.readOnly = readOnly
     }
-    for (const pathname of files) {
+    prepared.rememberPaths = workspace.roots.map(root => root.location.path)
+    for (const pathname of files) await this._openPreparedFile(prepared, createFileLocation(pathname), options[pathname])
+    return prepared
+  }
+
+  private async _openPreparedFile(
+    prepared: PreparedSessionWindow,
+    location: FileLocation,
+    options: FileOpenOptions = {}
+  ): Promise<void> {
+    const { snapshot } = prepared
+    const existing = findFileTab(snapshot, location)
+    if (existing) {
+      if (options.readOnly !== undefined) existing.readOnly = options.readOnly
+      snapshot.activeDocumentId = existing.id
+    } else {
       try {
-        const loaded = await this._readDocument(pathname, options[pathname])
-        const existing = prepared.snapshot.documents.find(
-          (document) =>
-            document.resource.kind === 'file' &&
-            loaded.document.resource.kind === 'file' &&
-            document.resource.location.key === loaded.document.resource.location.key
-        )
-        if (existing) {
-          prepared.snapshot.activeDocumentId = existing.id
-          continue
+        const loaded = await this._readDocument(location.path, options)
+        const [placeholder] = snapshot.documents
+        if (snapshot.documents.length === 1 && placeholder.resource.kind === 'untitled' && placeholder.content.kind === 'empty') {
+          snapshot.documents = []
+          prepared.contents = []
         }
-        prepared.snapshot.documents = prepared.snapshot.documents.filter(
-          (document) => document.content.kind !== 'empty' || document.resource.kind !== 'untitled'
-        )
-        prepared.contents = prepared.contents.filter((content) =>
-          prepared.snapshot.documents.some((document) => document.id === content.documentId)
-        )
-        prepared.snapshot.documents.push(loaded.document)
+        snapshot.documents.push(loaded.document)
         prepared.contents.push(loaded.content)
-        prepared.snapshot.activeDocumentId = loaded.document.id
+        snapshot.activeDocumentId = loaded.document.id
       } catch (error) {
         log.warn(error)
+        return
       }
     }
-    prepared.rememberPaths = [...workspace.roots.map((root) => root.location.path), ...files]
-    return prepared
+    prepared.rememberPaths ??= []
+    prepared.rememberPaths.push(location.path)
   }
 
   private async _attachPrepared(prepared: PreparedSessionWindow): Promise<void> {

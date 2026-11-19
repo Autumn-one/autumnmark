@@ -130,16 +130,16 @@ test.describe('#4997 icon-only controls in the editor window', () => {
               document.body.append(probe)
               const actual = getComputedStyle(el)
               const expected = getComputedStyle(probe)
-              const properties = ['backgroundColor', 'color', 'borderTopColor', 'boxShadow'] as const
-              const mismatches = properties
-                .filter(property => actual[property] !== expected[property])
-                .map(property => ({ property, actual: actual[property], expected: expected[property] }))
+              const matches = ['backgroundColor', 'color', 'borderTopColor', 'boxShadow'].every(
+                (property) =>
+                  actual[property as keyof CSSStyleDeclaration] ===
+                  expected[property as keyof CSSStyleDeclaration]
+              )
               probe.remove()
-              return mismatches
-            }),
-          { message: `Tooltip styling for ${theme}` }
+              return matches
+            })
           )
-          .toEqual([])
+          .toBe(true)
       }
     } finally {
       await page.keyboard.press('Escape')
@@ -216,8 +216,7 @@ test.describe('#4997 icon-only controls in the editor window', () => {
       .locator('.window-controls button')
       .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
     expect(labels).toEqual(['Minimize', expect.stringMatching(/^(Maximize|Restore)$/), 'Close'])
-    const menu = page.getByRole('menubar', { name: 'Application Menu' })
-    await expect(menu.getByRole('menuitem', { name: 'File', exact: true })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Application Menu' })).toHaveAttribute(
       'aria-haspopup',
       'menu'
     )

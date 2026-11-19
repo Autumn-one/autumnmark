@@ -88,6 +88,8 @@ import {
 import log from 'electron-log'
 import {
   Muya,
+  getStateSections,
+  headingLinkAt,
   CodeBlockLanguageSelector,
   EmojiSelector,
   FootnoteTool,
@@ -134,6 +136,8 @@ import { isMac, animatedScrollTo } from '@/util'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath, copyImageToClipboard, readImagePng, clipboardImagePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
+import { embedImage } from '@/util/embedImage'
+import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { getCssForOptions, type PdfCssOptions } from '@/util/pdf'
 import {
   getTocHeadingScrollTop,
@@ -141,6 +145,8 @@ import {
   TOP_LEVEL_HEADINGS_SELECTOR
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
+import type { BeginOutlineMove } from '@/util/outlineMove'
+import type { HeadingLinkRequest } from '@/util/headingLinks'
 import { addCommonStyle, setEditorWidth } from '@/util/theme'
 import { isDarkThemeId, resolveMermaidTheme } from 'common/theme'
 import { usePreferencesStore } from '@/store/preferences'
@@ -165,6 +171,7 @@ import { type InputNumberInstance } from 'element-plus'
 const { t } = useI18n()
 const STANDAR_Y = 320
 
+const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
   markdown?: string
   cursor?: unknown
@@ -831,6 +838,11 @@ const imageAction = async (
 ): Promise<string> => {
   if (!currentFile.value) return ''
   const { filename, pathname: currentPathname } = currentFile.value
+  if (imageInsertAction.value === 'embed') {
+    const src = await embedImage(image, currentPathname)
+    if (id && sourceCode.value) bus.emit('image-action', { id, result: src, alt })
+    return src
+  }
 
   // A pasted screenshot / bitmap clipboard comes in as a `data:` URL string
   // rather than a file path. `moveImageToFolder` and `uploadImage` treat any
@@ -1476,6 +1488,56 @@ const handleInlineFormat = (type: unknown) => {
   editor.value && editor.value.format(type as string)
 }
 
+function beginOutlineMove(begin: unknown) {
+  const muya = editor.value
+  const id = currentFile.value?.id
+  if (!muya || !id || sourceCode.value || muya.isReadOnly || typeof begin !== 'function') return
+  muya.flush()
+  const state = muya.getState()
+  const outline = getStateSections(state)
+  const revision = muya.editor.jsonState.revision
+  const live = muya.getTOC()
+  if (live.some((item, i) => item.slug !== editorStore.listToc[i]?.slug)) return
+  const send = begin as BeginOutlineMove
+  send({ outline, apply([from, pivot, to]) {
+    muya.flush()
+    if (currentFile.value?.id !== id || sourceCode.value || muya.isReadOnly || muya.editor.jsonState.revision !== revision) return
+    muya.replaceContent([...state.slice(0, from), ...state.slice(pivot, to), ...state.slice(from, pivot), ...state.slice(to)])
+  } })
+}
+
+function updateHeadingLink({ selection }: ISelectionChangePayload) {
+  const muya = editor.value
+  if (!muya || sourceCode.value) return
+  const id = currentFile.value?.id
+  if (muya.isReadOnly || selection?.kind !== SelectionType.TEXT || !selection.context.isCollapsed ||
+      !selection.context.cursorCoords || !muya.hasFocus()) {
+    emit('headingLink', null)
+    return
+  }
+  const block = selection.context.anchorBlock
+  const text = block.text
+  const offset = selection.anchor.offset
+  const link = 'getFormatsInRange' in block ? headingLinkAt(text, offset) : undefined
+  if (!link) {
+    emit('headingLink', null)
+    return
+  }
+  emit('headingLink', { file: link.file, query: link.query, rect: selection.context.cursorCoords,
+    apply(href, title) {
+      const live = muya.getSelection()
+      if (currentFile.value?.id !== id || sourceCode.value || muya.isReadOnly || block.text !== text ||
+          live?.kind !== SelectionType.TEXT || !live.context.isCollapsed || live.context.anchorBlock !== block ||
+          live.anchor.offset !== offset) return
+      const edit = link.complete(href, title)
+      muya.transact(() => {
+        block.text = text.slice(0, edit.from) + edit.text + text.slice(edit.to)
+        block.setCursor(edit.from + edit.text.length, edit.from + edit.text.length, true)
+      })
+    }
+  })
+}
+
 const handleDialogTableConfirm = () => {
   dialogTableVisible.value = false
   editor.value && editor.value.createTable(tableChecker)
@@ -1823,6 +1885,9 @@ onMounted(() => {
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
     beforeImageDrop,
+    editEmbeddedImage: (image) => emit('editEmbeddedImage', image),
+    embedImage: (image) => imageInsertAction.value === 'embed'
+      ? embedImage(image, currentFile.value?.pathname) : undefined,
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
   }
 
@@ -1860,6 +1925,8 @@ onMounted(() => {
   renderedMarkdown = currentFile.value?.markdown ?? ''
   releaseViewState = registerRenderedViewState({ documentId: () => renderedDocumentId, markdown: () => renderedMarkdown, view: { engine: muya, container, refreshToc: () => editorStore.UPDATE_TOC(muya.getTOC()) } })
   muya.on('selection-change', documentViewChanged)
+  muya.on('selection-change', updateHeadingLink)
+  bus.on('begin-outline-move', beginOutlineMove)
 
   bus.on('language-changed', handleLanguageChanged)
 
@@ -2054,6 +2121,7 @@ onBeforeUnmount(() => {
   bus.off('print-service-clearup', handlePrintServiceClearup)
   bus.off('paragraph', handleEditParagraph)
   bus.off('format', handleInlineFormat)
+  bus.off('begin-outline-move', beginOutlineMove)
   bus.off('searchValue', handleSearch)
   bus.off('search-visibility', handleSearchVisibility)
   bus.off('search-focus-editor', focusSearchEditor)

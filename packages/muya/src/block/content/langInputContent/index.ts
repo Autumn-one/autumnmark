@@ -3,6 +3,8 @@ import type { IRenderCursor } from '../../../selection/types';
 import type { ICodeBlockState } from '../../../state/types';
 import type CodeBlock from '../../commonMark/codeBlock';
 import { CLASS_NAMES } from '../../../config';
+import { projectEmbeddedImages } from '../../../inline/embeddedImages';
+import { getTextContent } from '../../../selection/dom';
 import { firstWordOfInfo } from '../../../utils';
 import { createDiagramState, diagramTypeOfLang } from '../../../utils/diagram/fence';
 import Content from '../../base/content';
@@ -32,7 +34,9 @@ class LangInputContent extends Content {
     }
 
     override update(_cursor?: IRenderCursor, highlights = []) {
-        this.domNode!.innerHTML = escapeLangInputInnerHtml(this.text, highlights);
+        const projection = projectEmbeddedImages(this);
+        this.domNode!.innerHTML = escapeLangInputInnerHtml(projection?.text ?? this.text, projection ? [] : highlights);
+        projection?.mount(this.domNode!, false);
         this.parent?.refreshAnnotations();
     }
 
@@ -51,7 +55,7 @@ class LangInputContent extends Content {
     }
 
     override inputHandler() {
-        const textContent = this.domNode!.textContent ?? '';
+        const textContent = getTextContent(this.domNode!, [CLASS_NAMES.MU_TRAILING_BREAK]);
         // Keep info-string attributes when editing; highlighting derives the first word elsewhere.
         this._updateLanguage(textContent);
     }

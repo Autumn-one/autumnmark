@@ -162,32 +162,25 @@ test('a fast resize before maximizing retains normal bounds across restart', asy
   test.skip(process.platform === 'linux' && process.env.CI === 'true',
     'The CI Xvfb session has no window manager for native maximization.')
   const { app } = await launch('Geometry state')
-  const resizedBounds = await app.evaluate(({ BrowserWindow }) => {
+  await app.evaluate(({ BrowserWindow }) => {
     const native = BrowserWindow.getAllWindows()[0]
-    const getNormalBounds = native.getNormalBounds.bind(native)
+    const normalBounds = native.getNormalBounds.bind(native)
     native.getNormalBounds = () => native.isMaximized()
       ? { x: 0, y: 0, width: 1200, height: 800 }
-      : getNormalBounds()
+      : normalBounds()
     native.setSize(875, 700)
-    const { width, height } = getNormalBounds()
     native.emit('resized')
     native.maximize()
     native.emit('maximize')
-    return { width, height }
   })
   await expect.poll(() => readState().session.windows[0].geometry).toMatchObject({
-    normalBounds: resizedBounds, maximized: true
+    normalBounds: { width: 875, height: 700 }, maximized: true
   })
   const restored = await restart(app)
   await restored.app.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0].unmaximize()
   })
-  const readGeometry = () => readState().session.windows[0].geometry
-  await expect.poll(() => readGeometry().maximized).toBe(false)
-  // Restoring the frame on Windows can round device-independent sizes to physical pixels.
-  const tolerance = process.platform === 'win32' ? 2 : 0
-  await expect.poll(() => {
-    const { width, height } = readGeometry().normalBounds
-    return Math.max(Math.abs(width - resizedBounds.width), Math.abs(height - resizedBounds.height))
-  }).toBeLessThanOrEqual(tolerance)
+  await expect.poll(() => readState().session.windows[0].geometry).toMatchObject({
+    normalBounds: { width: 875, height: 700 }, maximized: false
+  })
 })

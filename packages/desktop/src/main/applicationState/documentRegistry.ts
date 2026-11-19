@@ -1,6 +1,7 @@
 import type { DocumentRegistration } from '@shared/types/applicationState'
 import type {
   DiscardedRecoveryRecord,
+  SavedRecoveryRecord,
   DocumentSnapshot,
   DirtyContentUpdate,
   RecoveryRecord,
@@ -56,6 +57,8 @@ const checkedDocument = (snapshot: DocumentSnapshot): DocumentSnapshot => {
   if (!parsed) throw new Error('Invalid document')
   return structuredClone(parsed)
 }
+
+export type DocumentCloseRecord = SavedRecoveryRecord | DiscardedRecoveryRecord
 
 /** Main-process authority for document identity, live text and verified disk baselines. */
 export class DocumentRegistry {
@@ -313,18 +316,25 @@ export class DocumentRegistry {
     )
   }
 
-  prepareClose(id: string, discard: boolean, now: number): DiscardedRecoveryRecord {
+  prepareClose(id: string, discard: boolean, now: number, keepSavedTab = false): DocumentCloseRecord {
     const entry = this._entry(id)
     if (!discard && entry.snapshot.content.kind === 'recovery')
       throw new Error('Cannot close unsaved document')
-    return {
-      schemaVersion: 1,
-      status: RecoveryStatus.DISCARDED,
+    const common = {
+      schemaVersion: 1 as const,
       ownerWindowId: entry.ownerWindowId,
       documentId: id,
       contentRevision: entry.revision,
       updatedAtMs: now
     }
+    // Discarding edits at window close still leaves the on-disk file open for the next launch.
+    if (keepSavedTab && entry.saved) {
+      const document = structuredClone(entry.saved.snapshot)
+      document.view = structuredClone(entry.snapshot.view)
+      document.readOnly = entry.snapshot.readOnly
+      return { ...common, status: RecoveryStatus.SAVED, document }
+    }
+    return { ...common, status: RecoveryStatus.DISCARDED }
   }
 
   requireRecoveryWrite(id: string): void {
@@ -337,11 +347,12 @@ export class DocumentRegistry {
           : RecoveryStatus.DISCARDED
   }
 
-  discard(id: string): void {
-    const entry = this._entry(id)
+  finishClose(record: DocumentCloseRecord): void {
+    const entry = this._entry(record.documentId)
     entry.closed = true
     entry.markdown = ''
-    entry.pending = RecoveryStatus.DISCARDED
+    entry.pending = record.status
+    if (record.status === RecoveryStatus.SAVED) entry.snapshot = record.document
     entry.generation++
   }
 

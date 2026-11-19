@@ -124,7 +124,7 @@ class App {
       // On OS X it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (this._windowManager.windowCount === 0) {
-        this._createEditorWindow()
+        this._startEditorWindows([])
       }
     })
 
@@ -311,10 +311,7 @@ class App {
     }
 
     const createWindow = (): void => {
-      const host = this._accessor.sessionHost
-      const paths = _openFilesCache.splice(0)
-      void host.start(paths, prepared => this._createEditorWindow(null, [], [], {}, {}, prepared), args['--new-window'] === true)
-        .catch(error => host.report(error))
+      this._startEditorWindows(_openFilesCache.splice(0), args['--new-window'] === true)
     }
 
     if (isLinux) {
@@ -362,6 +359,12 @@ class App {
         }, 100)
       }
     }
+  }
+
+  private _startEditorWindows(paths: PathInfo[], forceNewWindow = false): void {
+    const host = this._accessor.sessionHost
+    void host.start(paths, prepared => this._createEditorWindow(null, [], [], {}, {}, prepared), forceNewWindow)
+      .catch(error => host.report(error))
   }
 
   private _createEditorWindow(

@@ -6,9 +6,11 @@ import {
   isDirectory as commonIsDirectory,
   isExecutableFile
 } from 'common/filesystem'
+import { hasMarkdownExtension } from 'common/filesystem/paths'
 import type { SerializedStat } from '@shared/types/files'
 import type { SidebarMoveRequest, SidebarMoveResult } from '@shared/types/project'
 import { copyFileWithContentHash } from '../filesystem'
+import { loadMarkdownFile } from '../filesystem/markdown'
 
 const serializeStat = (stats: Stats): SerializedStat => ({
   size: stats.size,
@@ -41,6 +43,10 @@ export interface FileOperations {
   moveInProject(sender: WebContents, request: SidebarMoveRequest): Promise<SidebarMoveResult>
 }
 export const registerFsHandlers = (operations?: FileOperations): void => {
+  ipcMain.handle('mt::read-heading-link-document', async(_event, pathname: string, guessEncoding: boolean) => {
+    if (!hasMarkdownExtension(pathname) || !commonIsFile(pathname)) return null
+    return (await loadMarkdownFile(pathname, 'lf', guessEncoding)).markdown
+  })
   ipcMain.handle('mt::project-move-item', (event, request: SidebarMoveRequest) => {
     if (!operations) throw new Error('Project operations unavailable')
     return operations.moveInProject(event.sender, request)

@@ -230,6 +230,17 @@ export function getClipboardImageFile(
     return null;
 }
 
+export function standaloneImageSource(html: string): string | null {
+    if (!/<img\b/i.test(html))
+        return null;
+    const body = new DOMParser().parseFromString(html, 'text/html').body;
+    const images = body.querySelectorAll('img');
+    if (images.length !== 1 || body.textContent.trim())
+        return null;
+    const src = images[0].getAttribute('src') ?? '';
+    return /^(?:https?:\/\/|data:image\/)/i.test(src) ? src : null;
+}
+
 // Read a bitmap as a data URL; return an empty string when reading is unavailable or fails.
 export function readFileAsDataURL(file: File): Promise<string> {
     if (typeof FileReader !== 'undefined') {

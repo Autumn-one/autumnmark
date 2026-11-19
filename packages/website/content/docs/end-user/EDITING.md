@@ -127,3 +127,7 @@ In the 0.24.0 development version, search covers all available sidebar folder ro
 Since 0.23.0, headings in the WYSIWYG editor have a fold control. Click it to hide the section beneath the heading, including deeper headings, up to the next heading of the same or a higher level. Click again to expand it. Folding changes the view only: it does not remove text from saved Markdown or exports.
 
 Open the **Outline** tab in the sidebar to browse the current document's headings. Select a heading to jump to it. Use <kbd>CmdOrCtrl</kbd>+<kbd>K</kbd> to switch between **Outline** and **Files**. See [Basics](BASICS.md) for sidebar controls, Reading Mode and document statistics.
+
+In either editing mode, drag a heading onto the top half of another outline row to place its section before that heading. Drop on the bottom half to place it after the entire target section. The insertion line marks a valid destination. Body text, code and subordinate headings move together, keeping their heading levels. Undo restores the previous order in one step.
+
+To link to a heading, select the link text and choose **Format → Hyperlink**. In the destination, type `#` followed by part of the heading, or type a relative path such as `guide.md#setup` for a heading in another file. Use the arrow keys and Enter to select a result, or Escape to dismiss the list. The same suggestions appear when typing a Markdown link in source mode.

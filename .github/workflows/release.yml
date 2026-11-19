@@ -283,11 +283,19 @@ jobs:
         env:
           IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
         run: |
+          highlights=$(awk -v heading="## AutumnMark ${GITHUB_REF_NAME#v}" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' packages/website/content/docs/CHANGELOG.md)
           {
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               echo "## ❗ This is a pre-release"
               echo "- May contain bugs and unfinished features."
               echo ""
+            fi
+            if [[ -n "$highlights" ]]; then
+              printf '## What’s new\n%s\n\n' "$highlights"
             fi
             echo "## First installation of the independent version"
             echo "If you use AutumnMark 0.24.8 or earlier, download the new installer below. On Windows, uninstall the old AutumnMark first and keep its settings when prompted. The current version uses its own settings directory and can coexist with MarkText."

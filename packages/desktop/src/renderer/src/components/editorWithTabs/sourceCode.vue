@@ -4,6 +4,8 @@
     class="source-code"
     @scroll.passive="handleScroll"
     @contextmenu.capture="showContextMenu"
+    @paste.capture="pasteEmbeddedImage"
+    @drop.capture="dropEmbeddedImage"
   />
 </template>
 
@@ -18,15 +20,18 @@ import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 
 import { registerSourceViewState, documentViewChanged } from '@/services/documentViewState'
-import {
-  findMarkdownHeadingLine,
-  getMarkdownHeadingLines,
-  scrollSourceEditorToLine
-} from '@/util/sourceModeToc'
+import { scrollSourceEditorToLine } from '@/util/sourceModeToc'
+import { sectionEdit, type BeginOutlineMove } from '@/util/outlineMove'
+import type { HeadingLinkRequest } from '@/util/headingLinks'
+import { getMarkdownOutline, headingLinkAt } from '@muyajs/core'
 import { storeToRefs } from 'pinia'
 import type CodeMirror from 'codemirror'
 import codeMirror, { setCursorAtFirstLine, setTextDirection } from '../../codeMirror'
-import { wordCount as getWordCount } from '@muyajs/core'
+import { getClipboardImageFile, standaloneImageSource, wordCount as getWordCount } from '@muyajs/core'
+import type { IEmbeddedImageEdit } from '@muyajs/core'
+import { installEmbeddedImages } from '../../codeMirror/embeddedImages'
+import { embedImage, readClipboardImage } from '@/util/embedImage'
+import notice from '@/services/notification'
 import { adjustCursor, isWindows } from '../../util'
 import { getSourceExtraKeys } from '../../codeMirror/keybindings'
 import bus from '../../bus'
@@ -41,6 +46,7 @@ interface MuyaIndexCursorLike {
   focus: CodeMirror.Position
 }
 
+const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
   markdown?: string
   muyaIndexCursor?: unknown
@@ -57,6 +63,7 @@ const viewDestroyed = ref(false)
 const tabId = ref<string | null>(null)
 let resizeObserver: ResizeObserver | undefined
 let releaseViewState: (() => void) | undefined
+let releaseEmbeddedImages: (() => void) | undefined
 
 const {
   theme,
@@ -68,6 +75,52 @@ const {
   texMathDoubleBackslash
 } = storeToRefs(preferencesStore)
 const { currentFile: currentTab } = storeToRefs(editorStore)
+
+function transferredImage(data: DataTransfer | null): File | string | null | undefined {
+  if (!data) return
+  return getClipboardImageFile(data) ?? standaloneImageSource(data.getData('text/html'))
+}
+
+async function insertEmbeddedImage(image: File | string, position?: CodeMirror.Position) {
+  const cm = editor.value
+  const tab = currentTab.value
+  if (!cm || !tab || tab.readOnly) return
+  const from = cm.setBookmark(position ?? cm.getCursor('from'))
+  const to = cm.setBookmark(position ?? cm.getCursor('to'))
+  try {
+    const src = await embedImage(image, tab.pathname)
+    const start = from.find()
+    const end = to.find()
+    if (start && end && editor.value === cm && !viewDestroyed.value && tabId.value === tab.id && !currentTab.value?.readOnly) {
+      const alt = typeof image === 'string' ? '' : image.name.replace(/[\\[\]]/g, '\\$&')
+      cm.replaceRange(`![${alt}](${src})`, start, end, 'embedded-image')
+    }
+  } catch {
+    void notice.notify({ title: t('embeddedImage.invalid'), type: 'error' })
+  } finally {
+    from.clear()
+    to.clear()
+  }
+}
+
+function pasteEmbeddedImage(event: ClipboardEvent) {
+  if (preferencesStore.imageInsertAction !== 'embed') return
+  const image = transferredImage(event.clipboardData)
+  if (!image) return
+  event.preventDefault()
+  event.stopPropagation()
+  void insertEmbeddedImage(image)
+}
+
+function dropEmbeddedImage(event: DragEvent) {
+  if (preferencesStore.imageInsertAction !== 'embed' || !editor.value) return
+  const image = transferredImage(event.dataTransfer)
+  if (!image) return
+  event.preventDefault()
+  event.stopPropagation()
+  const position = editor.value.coordsChar({ left: event.clientX, top: event.clientY }, 'window')
+  void insertEmbeddedImage(image, position)
+}
 
 const showContextMenu = (event: MouseEvent): void => {
   const cm = editor.value
@@ -88,6 +141,14 @@ const showContextMenu = (event: MouseEvent): void => {
       id: 'pasteMenuItem',
       label: t('contextMenu.paste'),
       click: async() => {
+        if (preferencesStore.imageInsertAction === 'embed') {
+          const image = await readClipboardImage().catch(() => undefined)
+          if (editor.value !== cm || tabId.value !== tab.id || viewDestroyed.value) return
+          if (image) {
+            await insertEmbeddedImage(image)
+            return
+          }
+        }
         const text = await window.electron.clipboard.readText()
         if (text && editor.value === cm && tabId.value === tab.id && !viewDestroyed.value) {
           cm.replaceSelection(text, 'end', 'paste')
@@ -391,20 +452,65 @@ const saveContent = (cm: CodeMirror.Editor) => {
   }
 }
 
-let headingMarkdown = ''
-let headingLines: number[] = []
+let headingMarkdown: string | undefined
+let outline: ReturnType<typeof getMarkdownOutline>
+
+function refreshOutline(cm: CodeMirror.Editor) {
+  const markdown = cm.getValue()
+  if (markdown !== headingMarkdown || editorStore.listToc[0]?.slug !== outline?.headings[0]?.slug) {
+    headingMarkdown = markdown
+    outline = getMarkdownOutline(markdown, preferencesStore)
+    editorStore.REFRESH_TOC(outline.headings)
+  }
+}
+
+function beginOutlineMove(begin: unknown) {
+  const cm = editor.value
+  const id = tabId.value
+  if (!cm || !id || currentTab.value?.readOnly || !sourceCode.value || typeof begin !== 'function') return
+  refreshOutline(cm)
+  const markdown = cm.getValue()
+  const send = begin as BeginOutlineMove
+  send({ outline, apply(cuts) {
+    if (tabId.value !== id || currentTab.value?.id !== id || currentTab.value.readOnly ||
+        viewDestroyed.value || !sourceCode.value || cm.getValue() !== markdown) return
+    const edit = sectionEdit(markdown, cuts)
+    cm.replaceRange(edit.text, cm.posFromIndex(edit.from), cm.posFromIndex(edit.to), 'move-section')
+  } })
+}
+
+function updateHeadingLink(cm: CodeMirror.Editor) {
+  const id = tabId.value
+  const pos = cm.getCursor()
+  const text = cm.getLine(pos.line)
+  const link = !currentTab.value?.readOnly && cm.hasFocus() && !cm.somethingSelected()
+    ? headingLinkAt(text, pos.ch) : undefined
+  if (!link || cm.getModeAt(pos).name !== 'markdown' || /(?:comment|math|code-block)/.test(cm.getTokenTypeAt(pos) ?? '')) {
+    emit('headingLink', null)
+    return
+  }
+  emit('headingLink', { file: link.file, query: link.query, rect: cm.cursorCoords(pos, 'window'),
+    apply(href, title) {
+      const live = cm.getCursor()
+      if (viewDestroyed.value || currentTab.value?.id !== id || currentTab.value?.readOnly ||
+          !sourceCode.value || live.line !== pos.line || live.ch !== pos.ch ||
+          cm.somethingSelected() || cm.getLine(pos.line) !== text) return
+      const edit = link.complete(href, title)
+      cm.operation(() => {
+        cm.replaceRange(edit.text, { line: pos.line, ch: edit.from }, { line: pos.line, ch: edit.to }, 'heading-link')
+        cm.setCursor(pos.line, edit.from + edit.text.length)
+      })
+    }
+  })
+}
 
 const setActiveHeadingAtLine = (line: number): void => {
   if (!editor.value) return
-  const markdown = editor.value.getValue()
-  if (markdown !== headingMarkdown) {
-    headingMarkdown = markdown
-    headingLines = getMarkdownHeadingLines(markdown)
-  }
+  refreshOutline(editor.value)
+  const lineEnd = editor.value.indexFromPos({ line, ch: Infinity })
   let slug: string | null = null
   for (let index = 0; index < editorStore.listToc.length; index++) {
-    const headingLine = headingLines[index] ?? -1
-    if (headingLine < 0 || headingLine > line) break
+    if (outline.headings[index].offset > lineEnd) break
     slug = editorStore.listToc[index].slug ?? null
   }
   editorStore.SET_ACTIVE_HEADING(slug)
@@ -428,6 +534,7 @@ const listenChange = (cm: CodeMirror.Editor) => {
     saveContent(instance)
     updateSelectionWordCount(instance)
     setActiveHeadingAtLine(instance.getCursor().line)
+    updateHeadingLink(instance)
   })
 }
 
@@ -438,8 +545,9 @@ const handleScrollToHeader = (slug: unknown) => {
   if (!editor.value) return
   const index = editorStore.listToc.findIndex((item) => item.slug === slug)
   if (index < 0) return
-  const line = findMarkdownHeadingLine(editor.value.getValue(), index)
-  if (line < 0) return
+  const heading = outline?.headings[index]
+  if (!heading) return
+  const line = editor.value.posFromIndex(heading.offset).line
   // `.source-code` is the scroll container (CodeMirror renders full-height with
   // viewportMargin: Infinity, so its own scroller never scrolls).
   scrollSourceEditorToLine(editor.value, line, sourceCodeContainer.value)
@@ -457,7 +565,7 @@ onMounted(() => {
   const container = sourceCodeContainer.value
   if (!container) return
   const codeMirrorConfig: Record<string, unknown> = {
-    value: markdown,
+    value: '',
     lineNumbers: sourceCodeLineNumbers.value,
     autofocus: true,
     lineWrapping: true,
@@ -480,10 +588,13 @@ onMounted(() => {
   bus.on('redo', handleRedo)
   bus.on('image-action', handleImageAction)
   bus.on('scroll-to-header', handleScrollToHeader)
+  bus.on('begin-outline-move', beginOutlineMove)
 
   // CodeMirror's line tree relies on object identity and must not be proxied by Vue.
   const codeMirrorInstance = markRaw(codeMirror(container, codeMirrorConfig))
 
+  releaseEmbeddedImages = installEmbeddedImages(codeMirrorInstance, (image) => emit('editEmbeddedImage', image))
+  codeMirrorInstance.setValue(markdown ?? '')
   codeMirrorInstance.setOption('mode', markdownMathMode())
 
   codeMirrorInstance.on('contextmenu', (_cm: CodeMirror.Editor, event: Event) => {
@@ -502,6 +613,8 @@ onMounted(() => {
   editor.value = codeMirrorInstance
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
+  refreshOutline(codeMirrorInstance)
+  codeMirrorInstance.on('changes', refreshOutline)
 
   // Pane resizing rewraps lines without triggering CodeMirror's window-resize listener.
   let measuredWidth = 0
@@ -526,6 +639,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  releaseEmbeddedImages?.()
   releaseViewState?.()
   editor.value?.off('cursorActivity', documentViewChanged)
   resizeObserver?.disconnect()
@@ -549,6 +663,7 @@ onBeforeUnmount(() => {
   editorStore.SET_SELECTION_WORD_COUNT(null)
   lastSelectionKey = ''
   bus.off('scroll-to-header', handleScrollToHeader)
+  bus.off('begin-outline-move', beginOutlineMove)
 
   if (editor.value) {
     const { cursor, markdown: newMarkdown } = getMarkdownAndCursor(editor.value)

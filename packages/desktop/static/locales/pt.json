@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Carregando títulos…",
     "placeholder": "Digite um comando para executar",
     "placeholders": {
       "selectOption": "Selecionar opção",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Enviar para nuvem",
         "folder": "Copiar para pasta",
-        "path": "Usar caminho absoluto"
+        "path": "Usar caminho absoluto",
+        "embed": "Incorporar no Markdown (Base64)"
       },
       "folderSetting": {
         "title": "Configuração de Pasta",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Cancelar",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Imagem incorporada",
+    "delete": "Excluir imagem",
+    "paste": "Colar URL de dados",
+    "choose": "Escolher imagem…",
+    "invalid": "Não foi possível ler a imagem."
   },
   "dialog": {
     "moveToTrash": "Tem certeza de que deseja mover \"{name}\" para a lixeira?",

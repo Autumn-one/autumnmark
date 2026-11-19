@@ -40,6 +40,7 @@ export const setSessionActions = (value: SessionActions | null): void => {
 interface TocItem extends ListItem {
   slug?: string
   githubSlug?: string
+  anchor?: string
   content?: string
   contentHtml?: string
   lvl: number | null
@@ -262,7 +263,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (item) {
         try {
-          return await window.electron.clipboard.writeText(`#${item.githubSlug}`)
+          return await window.electron.clipboard.writeText(`#${item.anchor ?? item.githubSlug}`)
         } catch {
           return false
         }
@@ -444,7 +445,7 @@ export const useEditorStore = defineStore('editor', {
       }
       if (!anchorSlug) return
 
-      const heading = this.listToc.find((item) => item.githubSlug === anchorSlug)
+      const heading = this.listToc.find((item) => (item.anchor ?? item.githubSlug) === anchorSlug)
       if (heading) {
         bus.emit('scroll-to-header', heading.slug)
         return

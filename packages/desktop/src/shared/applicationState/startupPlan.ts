@@ -21,7 +21,7 @@ export type ExplicitTarget =
 export type PlanningPreferences = RecoveryPreferences &
   Partial<Pick<UserPreferences, 'sourceCodeModeEnabled' | 'openFilesInNewWindow'>>
 
-/** Optional explicit targets override stored startup choices, even when resolution yields none. */
+/** A file association can request a document while the previous session is being restored. */
 export interface StartupPlanInput {
   state: ApplicationState
   preferences: PlanningPreferences
@@ -124,12 +124,18 @@ export const buildStartupPlan = (input: StartupPlanInput): StartupWindowPlan[] =
         ? structuredClone(state.recentEmptyWindowLayout.layout)
         : defaultLayout(preferences)
   })
+  let explicit: StartupWindowPlan[] = []
   if (input.request?.kind === 'explicit') {
     const targets = structuredClone(input.request.targets)
     if (!targets.length) return [empty()]
-    if (preferences.openFilesInNewWindow && !input.request.forceNewWindow)
-      return targets.map(target => ({ kind: 'explicit', targets: [target] }))
-    return [{ kind: 'explicit', targets }]
+    explicit = preferences.openFilesInNewWindow && !input.request.forceNewWindow
+      ? targets.map(target => ({ kind: 'explicit', targets: [target] }))
+      : [{ kind: 'explicit', targets }]
+    if (
+      targets.some(target => target.kind === 'folder') ||
+      (preferences.startUpAction !== StartupAction.RESTORE_ALL &&
+        preferences.startUpAction !== StartupAction.RESTORE_LAST_WINDOW)
+    ) return explicit
   }
   if (preferences.startUpAction === StartupAction.BLANK) return [empty()]
   if (preferences.startUpAction === StartupAction.FOLDER) {
@@ -174,6 +180,7 @@ export const buildStartupPlan = (input: StartupPlanInput): StartupWindowPlan[] =
       restoreGeometry: preferences.restoreLayoutState
     })
   }
+  plans.push(...explicit)
   return plans.length ? plans : [empty()]
 }
 

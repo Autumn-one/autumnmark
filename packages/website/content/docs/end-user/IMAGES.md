@@ -28,6 +28,12 @@ Examples for relative paths:
 
 Existing path strings are kept unchanged. Binary images, including pasted clipboard images, are written to the configured image folder; a saved document can use its configured relative image folder.
 
+### Embed in Markdown (Base64)
+
+Choose **Embed in Markdown (Base64)** under **Preferences → Images & Export** to keep pasted or dropped images inside the Markdown file. The editor saves the original image bytes as a data URL. You can then move or share the document as a single file.
+
+Both editing modes display embedded images as a single item. Click the item to replace the image from a file or paste a new image data URL. Press Backspace immediately after the item, press Delete immediately before it, or use **Delete image** in the dialog to remove it. Undo restores the whole image. These controls also work with images embedded before you changed this preference.
+
 ## Media viewer
 
 In the WYSIWYG editor, Command-click an image on macOS or Ctrl-click it on Linux/Windows to open the media viewer. The image preview action also opens this viewer. Rendered diagrams also have a **View** action in their hover toolbar. Use the mouse wheel or the zoom buttons to zoom, and drag to pan.

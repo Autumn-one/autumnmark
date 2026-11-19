@@ -3,6 +3,7 @@ export type { IClipboardImageCopy } from './clipboard/image';
 export type { ISerializedHistory } from './history';
 export type { ILocale } from './i18n/types';
 
+export { headingLinkAt } from './inline/headingLink';
 export { de, en, es, fr, it, ja, ko, nl, pt, ru, tr, zhCN, zhTW } from './locales';
 export { Muya } from './muya';
 export type { IMatch, IReplaceOption, ISearchOption } from './search/types';
@@ -20,6 +21,7 @@ export type {
     TSelectionState,
 } from './selection/types';
 export type { ITocItem } from './state/getTOC';
+export { getMarkdownOutline, getStateSections } from './state/markdownOutline';
 export { MarkdownToHtml } from './state/markdownToHtml';
 export type { IExportHeading, IHtmlExport, IHtmlExportOptions } from './state/markdownToHtml';
 export { renderToStaticHTML } from './state/renderToStaticHTML';
@@ -51,9 +53,12 @@ export { TableRowColumMenu } from './ui/tableRowColumMenu';
 export type { IKeyboardShortcutOptions, IShortcutHintOptions } from './ui/types';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions } from './utils/diagram/render';
+export { findEmbeddedImages, replaceEmbeddedImage } from './utils/embeddedImage';
+export type { IEmbeddedImage, IEmbeddedImageEdit } from './utils/embeddedImage';
 export type { IImageInfo } from './utils/image';
 export { getImageInfo } from './utils/image';
 export { escapeHTML, sanitize, unescapeHTML, wordCount } from './utils/index';
 export { default as logger } from './utils/logger';
 export type { TLogLevel, TLogSink } from './utils/logger';
+export { getClipboardImageFile, standaloneImageSource } from './utils/paste';
 export { generateGithubSlug } from './utils/slug';

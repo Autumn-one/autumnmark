@@ -67,6 +67,7 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
     ret: void
   }
   'mt::get-recently-used-documents': { args: []; ret: RecentDocument[] }
+  'mt::read-heading-link-document': { args: [pathname: string, guessEncoding: boolean]; ret: string | null }
   'mt::project-remove-root': { args: [key: string]; ret: boolean }
   'mt::project-retry-root': { args: [key: string]; ret: boolean }
   'mt::project-open-containing-folder': { args: [documentId: string]; ret: string | null }

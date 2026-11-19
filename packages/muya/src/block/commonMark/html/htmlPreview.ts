@@ -2,6 +2,7 @@ import type { Muya } from '../../../muya';
 import type { IHtmlBlockState, TState } from '../../../state/types';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
+import { abbreviatePreviewText } from '../../../utils/embeddedImage';
 import { getImageSrc } from '../../../utils/image';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
@@ -63,6 +64,8 @@ class HTMLPreview extends Parent {
         else {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlContent, 'text/html');
+            if (this.muya.options.editEmbeddedImage)
+                abbreviatePreviewText(doc.body);
             const imgs = doc.documentElement.querySelectorAll('img');
 
             for (const img of imgs) {

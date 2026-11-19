@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Überschriften werden geladen…",
     "placeholder": "Befehl zum Ausführen eingeben",
     "placeholders": {
       "selectOption": "Option auswählen",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "In die Cloud hochladen",
         "folder": "In Ordner kopieren",
-        "path": "Absoluten Pfad verwenden"
+        "path": "Absoluten Pfad verwenden",
+        "embed": "In Markdown einbetten (Base64)"
       },
       "folderSetting": {
         "title": "Ordnereinstellungen",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Abbrechen",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Eingebettetes Bild",
+    "delete": "Bild löschen",
+    "paste": "Daten-URL einfügen",
+    "choose": "Bild auswählen…",
+    "invalid": "Das Bild konnte nicht gelesen werden."
   },
   "dialog": {
     "moveToTrash": "Möchtest du \"{name}\" wirklich in den Papierkorb verschieben?",

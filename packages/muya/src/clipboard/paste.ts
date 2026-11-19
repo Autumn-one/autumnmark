@@ -14,11 +14,11 @@ import { atxHeadingBody, splitAtxHeading } from '../state/headings';
 import HtmlToMarkdown from '../state/htmlToMarkdown';
 import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState, markdownListMarker } from '../state/types';
-import { getClipboardImageFile, getCopyTextType, isHttpUrl, isStandaloneTableHtml, normalizePastedHTML } from '../utils/paste';
+import { getClipboardImageFile, getCopyTextType, isHttpUrl, isStandaloneTableHtml, normalizePastedHTML, standaloneImageSource } from '../utils/paste';
 import { pasteClipboardImage, readClipboardImage } from './image';
 import { hasMarkdownSource } from './markdownSource';
 import { mergePasteIntoHeading } from './mergePasteIntoHeading';
-import { insertImageSrc, replaceImageAt, resolveImageSrc } from './pasteImage';
+import { insertImageSrc, pasteEmbeddedImage, replaceImageAt, resolveImageSrc } from './pasteImage';
 import { getUrlPaste, pasteUrl } from './pasteUrl';
 import { PasteType } from './types';
 
@@ -684,6 +684,14 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
         return;
     }
 
+    if (clipboard.muya.options.embedImage && data.pasteType === PasteType.NORMAL) {
+        const source = data.imageFile ?? standaloneImageSource(data.html);
+        const embedded = source ? clipboard.muya.options.embedImage(source) : undefined;
+        if (embedded) {
+            await pasteEmbeddedImage(clipboard, target, embedded);
+            return;
+        }
+    }
     await pasteExternalData(clipboard, data, target);
 }
 

@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "正在读取标题…",
     "placeholder": "输入要执行的命令",
     "placeholders": {
       "selectOption": "选择一个选项",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "上传到云端",
         "folder": "复制到文件夹",
-        "path": "使用绝对路径"
+        "path": "使用绝对路径",
+        "embed": "嵌入 Markdown（Base64）"
       },
       "folderSetting": {
         "title": "文件夹设置",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "取消",
     "ok": "确定"
+  },
+  "embeddedImage": {
+    "title": "内嵌图片",
+    "delete": "删除图片",
+    "paste": "粘贴图片数据",
+    "choose": "选择图片…",
+    "invalid": "无法读取图片，请选择图片文件或复制完整的图片 Data URL。"
   },
   "dialog": {
     "moveToTrash": "确定要将“{name}”移到回收站吗？",

@@ -11,7 +11,7 @@ import { renderMermaid } from '../utils/diagram/mermaid';
 
 import { getHighlightHtml } from '../utils/marked';
 import { sanitizeExportHtml } from '../utils/sanitizeExportHtml';
-import { generateGithubSlug } from '../utils/slug';
+import { uniqueHeadingSlug } from '../utils/slug';
 import { transformFootnotes } from './transformFootnotes';
 
 // Inline core styles so exported documents render offline.
@@ -172,14 +172,7 @@ export class MarkdownToHtml {
             if (heading.id)
                 continue;
 
-            const base = generateGithubSlug(heading.textContent ?? '') || 'heading';
-            let slug = base;
-            let n = 1;
-            while (seen.has(slug))
-                slug = `${base}-${n++}`;
-
-            seen.add(slug);
-            heading.id = slug;
+            heading.id = uniqueHeadingSlug(heading.textContent ?? '', seen);
         }
 
         return [...headings].map(heading => ({

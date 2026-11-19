@@ -154,7 +154,7 @@ export interface UserPreferences extends RecoveryPreferences {
   spellcheckerEnabled: boolean
   spellcheckerNoUnderline: boolean
   spellcheckerLanguage: string
-  imageInsertAction: 'upload' | 'folder' | 'path'
+  imageInsertAction: 'upload' | 'folder' | 'path' | 'embed'
   imagePreferRelativeDirectory: boolean
   imageRelativeDirectoryBase: 'file' | 'folder'
   imageRelativeDirectoryName: string

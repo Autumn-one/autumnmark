@@ -563,7 +563,12 @@ class Format extends Content {
         if (footnoteEl)
             this._emitFootnoteToolEvent(footnoteEl);
 
+        const focusAtClick = document.activeElement;
         requestAnimationFrame(() => {
+            // Following a link can open another input before the deferred caret placement runs.
+            const focus = document.activeElement;
+            if (focus !== focusAtClick && !this.muya.domNode.contains(focus))
+                return;
             if (event.shiftKey && this.selection.anchorBlock !== this) {
                 // TODO: handle select multiple paragraphs
                 return;

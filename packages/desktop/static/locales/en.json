@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Loading headings…",
     "placeholder": "Type a command to execute",
     "placeholders": {
       "selectOption": "Select an option",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Upload to cloud",
         "folder": "Copy to folder",
-        "path": "Use absolute path"
+        "path": "Use absolute path",
+        "embed": "Embed in Markdown (Base64)"
       },
       "folderSetting": {
         "title": "Folder Setting",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Cancel",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Embedded image",
+    "delete": "Delete image",
+    "paste": "Paste data URL",
+    "choose": "Choose image…",
+    "invalid": "Could not read the image."
   },
   "dialog": {
     "moveToTrash": "Are you sure you want to move \"{name}\" to trash?",

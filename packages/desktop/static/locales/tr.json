@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Başlıklar yükleniyor…",
     "placeholder": "Çalıştırmak için bir komut yazın",
     "placeholders": {
       "selectOption": "Bir seçenek seçin",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Buluta yükle",
         "folder": "Klasöre kopyala",
-        "path": "Mutlak yolu kullan"
+        "path": "Mutlak yolu kullan",
+        "embed": "Markdown içine göm (Base64)"
       },
       "folderSetting": {
         "title": "Klasör Ayarı",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "İptal",
     "ok": "Tamam"
+  },
+  "embeddedImage": {
+    "title": "Gömülü görsel",
+    "delete": "Görseli sil",
+    "paste": "Veri URL’sini yapıştır",
+    "choose": "Görsel seç…",
+    "invalid": "Görsel okunamadı."
   },
   "dialog": {
     "moveToTrash": "\"{name}\" öğesini çöp kutusuna taşımak istediğinizden emin misiniz?",

@@ -317,6 +317,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Caricamento dei titoli…",
     "placeholder": "Digita il comando da eseguire",
     "placeholders": {
       "selectOption": "Seleziona un’opzione",
@@ -591,7 +592,8 @@
       "actions": {
         "upload": "Carica l’immagine nel cloud",
         "folder": "Copia l’immagine nella cartella predefinita",
-        "path": "Usa l’immagine da un percorso (path) assoluto"
+        "path": "Usa l’immagine da un percorso (path) assoluto",
+        "embed": "Incorpora in Markdown (Base64)"
       },
       "folderSetting": {
         "title": "Impostazione cartella",
@@ -950,6 +952,13 @@
   "common": {
     "cancel": "Annulla",
     "ok": "OK"
+  },
+  "embeddedImage": {
+    "title": "Immagine incorporata",
+    "delete": "Elimina immagine",
+    "paste": "Incolla URL dati",
+    "choose": "Scegli immagine…",
+    "invalid": "Impossibile leggere l’immagine."
   },
   "dialog": {
     "moveToTrash": "Si vuole veramente spostare \"{name}\" nel cestino?",
