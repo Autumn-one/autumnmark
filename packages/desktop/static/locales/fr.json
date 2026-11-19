@@ -238,6 +238,7 @@
     "searchLimited": "Recherche limitée aux {count} premiers résultats"
   },
   "sideBar": {
+    "resize": "Redimensionner la barre latérale",
     "search": {
       "backToFiles": "Retour aux fichiers",
       "searchInFolder": "Rechercher dans le dossier...",

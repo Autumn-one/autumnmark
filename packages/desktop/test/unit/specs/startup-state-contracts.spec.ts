@@ -83,16 +83,15 @@ describe('startup state identities', () => {
 
 describe('window defaults and contract fixtures', () => {
   it('keeps global defaults separate from independently mutable window layouts', () => {
-    const preferences = { tocPosition: 'right' as const, sourceCodeModeEnabled: true }
+    const preferences = { sourceCodeModeEnabled: true }
     const first = createDefaultLayout(preferences)
     const second = createDefaultLayout(preferences)
     first.sidebar.visible = true
-    first.outline.preferredWidthPx = 400
+    first.sidebar.activeView = 'outline'
     expect(second.sidebar.visible).toBe(false)
-    expect(second.outline.preferredWidthPx).toBe(220)
-    expect(second.outline.position).toBe('right')
+    expect(second.sidebar.activeView).toBe('files')
     expect(second.modes.sourceCode).toBe(true)
-    expect(preferences).toEqual({ tocPosition: 'right', sourceCodeModeEnabled: true })
+    expect(preferences).toEqual({ sourceCodeModeEnabled: true })
   })
 
   it('represents two windows in one workspace without sharing document identities', () => {

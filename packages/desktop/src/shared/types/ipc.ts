@@ -6,7 +6,7 @@ import type { ProjectRootsSnapshot, ProjectTreeEvent, SidebarMoveRequest, Sideba
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type { TabOptions, SidebarOpenOptions, PageOptions, ExportType, SerializedStat, LineEnding, FileChangeDetail, PandocExportPayload } from './files'
-import type { MenuTemplate, MenuPopupPosition, ApplicationMenuCategory } from './menu'
+import type { MenuTemplate, MenuPopupPosition, ContextMenuPopupOptions, ApplicationMenuCategory } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 
 export interface SaveDialogRequest {
@@ -182,7 +182,7 @@ export interface IpcSendChannels {
   'mt::handle-renderer-error': [error: unknown]
   'mt::keybinding-debug-dump-keyboard-info': []
   'mt::make-screenshot': []
-  'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
+  'mt::menu::popup': [template: MenuTemplate, options?: ContextMenuPopupOptions]
   'mt::menu::popup-application': [position?: MenuPopupPosition]
   'mt::open-file': [filePath: string, options?: SidebarOpenOptions]
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]

@@ -238,6 +238,7 @@
     "searchLimited": "Arama ilk {count} sonuçla sınırlandırıldı"
   },
   "sideBar": {
+    "resize": "Kenar çubuğunu yeniden boyutlandır",
     "search": {
       "backToFiles": "Dosyalara dön",
       "searchInFolder": "Klasörde ara...",

@@ -8,7 +8,7 @@ import type {
   ApplicationState,
   WindowCheckpointRequest
 } from '../../src/shared/types/applicationState'
-import { launchElectron, makeRoomForOutline, sendIpcToRenderer } from './helpers'
+import { launchElectron, showOutline, sendIpcToRenderer } from './helpers'
 
 let directory: string
 let profile: string
@@ -179,7 +179,7 @@ for (const dirty of [false, true]) {
 test('interaction while restore hashing is delayed preserves current outline folds', async() => {
   const markdown = '# A\n\n## B\n\n### Child\n\n## C\n'
   const { app, page } = await launch(markdown, '# Other file\n')
-  await makeRoomForOutline(app, page)
+  await showOutline(app, page)
   await expect(page.locator('.side-bar-toc .el-tree-node__label:visible')).toHaveText([
     'A',
     'B',

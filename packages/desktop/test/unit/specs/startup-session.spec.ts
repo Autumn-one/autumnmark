@@ -225,17 +225,17 @@ describe('startup planning without filesystem or Electron effects', () => {
       { kind: 'restore', snapshot: { id: 'last' } }
     ])
     const remembered = createDefaultLayout()
-    remembered.outline.position = 'right'
+    remembered.sidebar.activeView = 'outline'
     previous.recentEmptyWindowLayout = { updatedAtMs: 1, layout: remembered }
     expect(
       buildStartupPlan({ state: previous, preferences: { ...preferences, startUpAction: 'blank' } })
-    ).toMatchObject([{ kind: 'empty', layout: { outline: { position: 'right' } } }])
+    ).toMatchObject([{ kind: 'empty', layout: { sidebar: { activeView: 'outline' } } }])
     expect(
       buildStartupPlan({
         state: previous,
         preferences: { ...preferences, startUpAction: 'blank', restoreLayoutState: false }
       })
-    ).toMatchObject([{ kind: 'empty', layout: { outline: { position: 'left' } } }])
+    ).toMatchObject([{ kind: 'empty', layout: { sidebar: { activeView: 'files' } } }])
   })
 
   it('does not resurrect a closed tab from an unreferenced saved marker', () => {

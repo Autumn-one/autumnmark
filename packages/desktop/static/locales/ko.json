@@ -238,6 +238,7 @@
     "searchLimited": "처음 {count}개의 결과까지만 검색"
   },
   "sideBar": {
+    "resize": "사이드바 크기 조절",
     "search": {
       "backToFiles": "파일로 돌아가기",
       "searchInFolder": "폴더에서 검색...",

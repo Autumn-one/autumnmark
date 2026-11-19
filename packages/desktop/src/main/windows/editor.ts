@@ -112,8 +112,8 @@ class EditorWindow extends BaseWindow {
 
     appMenu.addEditorMenu(win, { sourceCodeModeEnabled })
 
-    win.webContents.on('context-menu', (event, params) => {
-      showEditorContextMenu(win, event, params, preferences.getItem('spellcheckerEnabled'))
+    win.webContents.on('context-menu', (_event, params) => {
+      showEditorContextMenu(win, params, preferences.getItem('spellcheckerEnabled'))
     })
 
     win.webContents.once('did-finish-load', () => {

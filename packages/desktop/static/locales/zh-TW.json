@@ -126,7 +126,7 @@
       "sourceCodeMode": "原始碼模式",
       "typewriterMode": "打字機模式",
       "focusMode": "專注模式",
-      "toggleTableOfContents": "顯示目錄",
+      "toggleTableOfContents": "顯示大綱",
       "reloadImages": "重新載入圖片",
       "showDeveloperTools": "顯示開發者工具",
       "reloadWindow": "重新載入視窗"
@@ -238,6 +238,7 @@
     "searchLimited": "搜尋僅限前 {count} 個結果"
   },
   "sideBar": {
+    "resize": "調整側邊欄寬度",
     "search": {
       "backToFiles": "返回檔案",
       "searchInFolder": "在資料夾中搜尋…",
@@ -275,7 +276,7 @@
       "empty": "尚無標題",
       "emptyHint": "新增標題後會顯示在這裡",
       "resize": "調整目錄寬度",
-      "title": "目錄",
+      "title": "大綱",
       "expandAll": "全部展開",
       "collapseAll": "全部折疊"
     },
@@ -913,7 +914,7 @@
       "toggleSidebar": "切換側邊欄",
       "outlineCollapseAll": "大綱：全部摺疊",
       "outlineExpandAll": "大綱：全部展開",
-      "toggleToc": "切換目錄",
+      "toggleToc": "切換大綱",
       "toggleTabbar": "切換標籤欄",
       "toggleDevTools": "切換開發者工具",
       "devReload": "開發者重新載入",

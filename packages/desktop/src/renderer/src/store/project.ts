@@ -389,25 +389,6 @@ export const useProjectStore = defineStore('project', () => {
     return expanded
   }
 
-  function REVEAL_FILE_IN_SIDE_BAR(pathname?: string | null): void {
-    const editorStore = useEditorStore()
-    const target = pathname ?? editorStore.currentFile?.pathname
-    if (!target) return
-    if (!FIND_ROOT(target)) {
-      notice.notify({
-        title: t('sideBar.icons.files'),
-        type: 'info',
-        message: t('sideBar.tree.fileOutsideFolders')
-      })
-      return
-    }
-
-    const layoutStore = useLayoutStore()
-    layoutStore.SET_LAYOUT({ showSideBar: true, rightColumn: 'files' })
-    // The tree mounts on the next flush, so the row cannot be found before it.
-    nextTick(() => bus.emit('SIDEBAR::reveal-path', target))
-  }
-
   let openContainingFolderRequest = 0
 
   async function OPEN_CONTAINING_FOLDER(documentId?: string | null): Promise<void> {
@@ -501,9 +482,6 @@ export const useProjectStore = defineStore('project', () => {
       const { pathname } = activeItem.value
       if (typeof pathname !== 'string' || !pathname) return
       window.electron.clipboard.writeText(pathname)
-    })
-    on('SIDEBAR::reveal-file', (pathname: unknown) => {
-      REVEAL_FILE_IN_SIDE_BAR(typeof pathname === 'string' ? pathname : null)
     })
     on('SIDEBAR::open-containing-folder', (documentId: unknown) => {
       void OPEN_CONTAINING_FOLDER(typeof documentId === 'string' ? documentId : null)
@@ -705,7 +683,6 @@ export const useProjectStore = defineStore('project', () => {
     LISTEN_FOR_UPDATE_PROJECT,
     CHANGE_ACTIVE_ITEM,
     REVEAL_PATH,
-    REVEAL_FILE_IN_SIDE_BAR,
     OPEN_CONTAINING_FOLDER,
     CHANGE_CLIPBOARD,
     CLEAR_NAME_INPUT_STATE,

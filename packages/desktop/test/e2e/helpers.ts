@@ -456,10 +456,8 @@ export const sendIpcToRenderer = async<K extends keyof IpcMainEventChannels>(
   )
 }
 
-export const makeRoomForOutline = async(app: ElectronApplication, page: Page): Promise<void> => {
-  const window = await app.browserWindow(page)
-  await window.evaluate((window) => {
-    const [, height] = window.getContentSize()
-    window.setContentSize(1600, height)
-  })
+export const showOutline = async(app: ElectronApplication, page: Page): Promise<void> => {
+  const outline = page.locator('#sidebar-panel-outline')
+  if (!(await outline.isVisible())) await clickMenuById(app, 'tocMenuItem')
+  await expect(outline).toBeVisible()
 }

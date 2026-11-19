@@ -238,6 +238,7 @@
     "searchLimited": "Zoeken beperkt tot eerste {count} resultaten"
   },
   "sideBar": {
+    "resize": "Zijbalkformaat wijzigen",
     "search": {
       "backToFiles": "Terug naar bestanden",
       "searchInFolder": "Zoeken in map...",

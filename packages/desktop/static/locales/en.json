@@ -126,7 +126,7 @@
       "sourceCodeMode": "Source Code Mode",
       "typewriterMode": "Typewriter Mode",
       "focusMode": "Focus Mode",
-      "toggleTableOfContents": "Show Table of Contents",
+      "toggleTableOfContents": "Show Outline",
       "reloadImages": "Reload Images",
       "showDeveloperTools": "Show Developer Tools",
       "reloadWindow": "Reload Window"
@@ -238,6 +238,7 @@
     "searchLimited": "Searched limited to first {count} results"
   },
   "sideBar": {
+    "resize": "Resize sidebar",
     "search": {
       "backToFiles": "Back to files",
       "searchInFolder": "Search in folder...",
@@ -275,7 +276,7 @@
       "empty": "No headings",
       "emptyHint": "Headings will appear here once added",
       "resize": "Resize table of contents",
-      "title": "Table Of Contents",
+      "title": "Outline",
       "expandAll": "Expand all",
       "collapseAll": "Collapse all"
     },
@@ -913,7 +914,7 @@
       "toggleSidebar": "Toggle Sidebar",
       "outlineCollapseAll": "Outline: Collapse All",
       "outlineExpandAll": "Outline: Expand All",
-      "toggleToc": "Toggle Table of Contents",
+      "toggleToc": "Toggle Outline",
       "toggleTabbar": "Toggle Tab Bar",
       "toggleDevTools": "Toggle Developer Tools",
       "devReload": "Developer Reload",

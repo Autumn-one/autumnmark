@@ -1,6 +1,6 @@
 // Serialize menu descriptors for main-process popup and route returned IDs to renderer callbacks.
 
-import type { MenuTemplate, MenuTemplateItem, MenuPopupPosition } from '@shared/types/menu'
+import type { MenuTemplate, MenuTemplateItem, ContextMenuPopupOptions } from '@shared/types/menu'
 
 // Renderer-side click handler. Receives the optional payload supplied when the
 // popup was opened (e.g. a tab id).
@@ -50,7 +50,7 @@ const serialize = (
 
 export const popupContextMenu = (
   items: Array<ContextMenuItem | null | undefined>,
-  position: MenuPopupPosition,
+  options: ContextMenuPopupOptions,
   payload: unknown = {}
 ): void => {
   const handlers = new Map<string, MenuClickHandler | undefined>()
@@ -86,5 +86,5 @@ export const popupContextMenu = (
   })
   offClosed = window.electron.ipcRenderer.on('mt::menu::closed', () => cleanup())
 
-  window.electron.windowControl.popupMenu(template, position)
+  window.electron.windowControl.popupMenu(template, options)
 }

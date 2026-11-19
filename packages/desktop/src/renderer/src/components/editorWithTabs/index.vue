@@ -5,7 +5,6 @@
   >
     <tabs v-show="showTabBar" />
     <div class="container">
-      <document-outline />
       <div class="document-body">
         <editor
           :markdown="markdown"
@@ -27,7 +26,6 @@
 
 <script setup lang="ts">
 import { MIN_EDITOR_WIDTH } from '@/util/editorLayout'
-import DocumentOutline from './outline.vue'
 import Tabs from './tabs.vue'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
@@ -43,6 +41,7 @@ defineProps<{
   textDirection: string
   platform: string
 }>()
+
 </script>
 
 <style scoped>
@@ -72,9 +71,5 @@ defineProps<{
   container-type: inline-size;
   height: 100%;
   overflow: hidden;
-}
-.container:has(.is-resizing) {
-  cursor: col-resize;
-  user-select: none;
 }
 </style>

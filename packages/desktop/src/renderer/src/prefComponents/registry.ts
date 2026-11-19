@@ -52,10 +52,6 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
     "category": "appearance",
     "label": "preferences.general.window.zoom"
   },
-  "tocPosition": {
-    "category": "general",
-    "label": "preferences.general.sidebar.tocPosition"
-  },
   "wordWrapInToc": {
     "category": "general",
     "label": "preferences.general.sidebar.wrapTextInToc"

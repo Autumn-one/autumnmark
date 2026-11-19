@@ -238,6 +238,7 @@
     "searchLimited": "最初の {count} 件まで表示しています"
   },
   "sideBar": {
+    "resize": "サイドバーの幅を調整",
     "search": {
       "backToFiles": "ファイルに戻る",
       "searchInFolder": "フォルダー内の検索...",

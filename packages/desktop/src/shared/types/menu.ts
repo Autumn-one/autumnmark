@@ -24,6 +24,13 @@ export interface MenuPopupPosition {
   y: number
 }
 
+export interface ContextMenuPopupOptions extends MenuPopupPosition {
+  editor?: {
+    selectionText: string
+    spellcheckerEnabled: boolean
+  }
+}
+
 export interface ApplicationMenuCategory {
   index: number
   label: string

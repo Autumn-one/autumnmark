@@ -53,15 +53,10 @@ export interface WindowGeometryState {
 export interface WindowLayoutState {
   sidebar: {
     visible: boolean
-    activeView: 'files' | 'search'
+    activeView: 'files' | 'outline' | 'search'
     // Remembered CSS-pixel width, including while the sidebar is hidden.
     preferredWidthPx: number
     openedFiles: { expanded: boolean; preferredHeightPx: number }
-  }
-  outline: {
-    visible: boolean
-    position: 'left' | 'right'
-    preferredWidthPx: number
   }
   tabBar: { visible: boolean }
   // Store intent before focus/read-only modes temporarily suppress UI elements.

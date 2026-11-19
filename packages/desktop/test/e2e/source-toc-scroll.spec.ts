@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { makeRoomForOutline, launchWithMarkdown, waitForEditor, enterSourceMode, clickMenuById } from './helpers'
+import { showOutline, launchWithMarkdown, waitForEditor, enterSourceMode, clickMenuById } from './helpers'
 
 // marktext #3580: clicking a TOC entry in SOURCE CODE mode must scroll the
 // editor to that heading and place it near the TOP of the viewport. The editor
@@ -42,7 +42,7 @@ test.describe('Source Code mode: TOC click scrolls to the heading at the top', (
     const launched = await launchWithMarkdown(buildLongDoc())
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await waitForEditor(page)
     await enterSourceMode(page, app)
     const sbVisible = await page.evaluate(() => {

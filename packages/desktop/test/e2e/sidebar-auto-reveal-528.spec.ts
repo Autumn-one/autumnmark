@@ -202,7 +202,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
     page = launched.page
     await openProject(app, page, fixture.root)
 
-    // The state the manual "Show in Side Bar" command has to fix up.
+    // The state the manual folder command has to fix up.
     await setFolderExpanded(page, fixture.bulk, true)
     await setFolderExpanded(page, fixture.target, true)
     await openFileFromTree(page, fixture.deep)
@@ -225,7 +225,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
   })
 
   test('the tab context menu reveals the file anyway', async() => {
-    await clickNextPopupItem(app, 'showInSideBar')
+    await clickNextPopupItem(app, 'openContainingFolder')
 
     await clickMenuById(app, 'sideBarMenuItem')
     await expect(page.locator('.side-bar')).toBeHidden()

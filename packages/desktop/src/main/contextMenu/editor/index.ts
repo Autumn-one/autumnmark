@@ -28,15 +28,8 @@ interface ContextMenuParams {
   }
   misspelledWord?: string
   dictionarySuggestions?: string[]
-  // Coordinates of the context-menu request. Electron names them `x`/`y` on
-  // the params (not the event); the renderer passes them through unchanged.
   x: number
   y: number
-}
-
-type ContextMenuEvent = {
-  preventDefault?: () => void
-  readonly defaultPrevented?: boolean
 }
 
 const getContextItems = (): MenuItemConstructorOptions[] => [
@@ -58,72 +51,36 @@ const isInsideEditor = (params: ContextMenuParams): boolean => {
   return isEditable && !inputFieldType && !!editFlags.canEditRichly
 }
 
-export const showEditorContextMenu = (
-  win: BrowserWindow,
-  event: ContextMenuEvent,
-  params: ContextMenuParams,
-  isSpellcheckerEnabled: boolean
-): void => {
-  const {
-    isEditable,
-    hasImageContents,
-    selectionText,
-    editFlags,
-    misspelledWord,
-    dictionarySuggestions
-  } = params
-
-  // NOTE: We have to get the word suggestions from this event because `webFrame.getWordSuggestions` and
-  //       `webFrame.isWordMisspelled` doesn't work on Windows (Electron#28684).
-
-  if (isInsideEditor(params) && !hasImageContents) {
-    const hasText = selectionText.trim().length > 0
-    const canCopy = hasText && editFlags.canCut && editFlags.canCopy
-    const isMisspelled = isEditable && !!selectionText && !!misspelledWord
-
-    const menu = new Menu()
-    if (isOsx && hasText) {
-      menu.append(new MenuItem(getLookUp(selectionText)))
-      menu.append(new MenuItem(SEPARATOR))
-    }
-
-    if (isSpellcheckerEnabled) {
-      const spellingSubmenu = spellcheckMenuBuilder(
-        isMisspelled,
-        misspelledWord,
-        dictionarySuggestions
-      )
-      menu.append(
-        new MenuItem({
-          label: t('contextMenu.spelling'),
-          submenu: spellingSubmenu as Electron.MenuItemConstructorOptions[]
-        })
-      )
-      menu.append(new MenuItem(SEPARATOR))
-    }
-
-    const contextItems = getContextItems()
-    const copyItemIds = new Set([
-      'cutMenuItem',
-      'copyMenuItem',
-      'copyAsHtmlMenuItem',
-      'copyAsRichMenuItem'
-    ])
-    contextItems.forEach((item) => {
-      if (item.id && copyItemIds.has(item.id)) {
-        item.enabled = canCopy
-      }
-      menu.append(new MenuItem(item))
-    })
-    // The original JS passes an array literal here, which Electron treats as
-    // the options object. Cast to satisfy the typed overload.
-    // The original JS passed an array literal — Electron tolerated it. The
-    // typed overload wants an options object, so produce one explicitly.
-    // `event` is intentionally unused (params carries x/y); the function
-    // signature keeps it to mirror the webContents.on('context-menu', ...)
-    // (event, params) shape.
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    event
-    menu.popup({ window: win, x: params.x, y: params.y })
+export const buildEditorContextMenu = (
+  selectionText: string,
+  spellcheckerEnabled: boolean,
+  canCopy = true,
+  misspelledWord?: string,
+  dictionarySuggestions?: string[]
+): Menu => {
+  const menu = new Menu()
+  const hasText = selectionText.trim().length > 0
+  if (isOsx && hasText) {
+    menu.append(new MenuItem(getLookUp(selectionText)))
+    menu.append(new MenuItem(SEPARATOR))
   }
+  if (spellcheckerEnabled) {
+    // Electron's native context-menu event supplies spelling suggestions on Windows.
+    const submenu = spellcheckMenuBuilder(!!selectionText && !!misspelledWord, misspelledWord, dictionarySuggestions)
+    menu.append(new MenuItem({ label: t('contextMenu.spelling'), submenu: submenu as MenuItemConstructorOptions[] }))
+    menu.append(new MenuItem(SEPARATOR))
+  }
+  const copyItemIds = new Set(['cutMenuItem', 'copyMenuItem', 'copyAsHtmlMenuItem', 'copyAsRichMenuItem'])
+  for (const item of getContextItems()) {
+    if (item.id && copyItemIds.has(item.id)) item.enabled = hasText && canCopy
+    menu.append(new MenuItem(item))
+  }
+  return menu
+}
+
+export const showEditorContextMenu = (win: BrowserWindow, params: ContextMenuParams, spellcheckerEnabled: boolean): void => {
+  if (!isInsideEditor(params) || params.hasImageContents) return
+  const menu = buildEditorContextMenu(params.selectionText, spellcheckerEnabled,
+    params.editFlags.canCut && params.editFlags.canCopy, params.misspelledWord, params.dictionarySuggestions)
+  menu.popup({ window: win, x: params.x, y: params.y })
 }

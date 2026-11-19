@@ -238,6 +238,7 @@
     "searchLimited": "Поиск ограничен первыми {count} результатами"
   },
   "sideBar": {
+    "resize": "Изменить ширину боковой панели",
     "search": {
       "backToFiles": "Вернуться к файлам",
       "searchInFolder": "Поиск в папке...",

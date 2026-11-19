@@ -3,6 +3,7 @@
     ref="sourceCodeContainer"
     class="source-code"
     @scroll.passive="handleScroll"
+    @contextmenu.capture="showContextMenu"
   />
 </template>
 
@@ -29,6 +30,10 @@ import { wordCount as getWordCount } from '@muyajs/core'
 import { adjustCursor, isWindows } from '../../util'
 import { getSourceExtraKeys } from '../../codeMirror/keybindings'
 import bus from '../../bus'
+import { t } from '@/i18n'
+import { getFileLocationMenuItems } from '@/contextMenu/fileLocation'
+import { isDocumentBackground } from '@/contextMenu/documentBackground'
+import { popupContextMenu } from '@/contextMenu/popupMenu'
 import { oneDarkThemes, railscastsThemes } from '@/config'
 
 interface MuyaIndexCursorLike {
@@ -63,6 +68,37 @@ const {
   texMathDoubleBackslash
 } = storeToRefs(preferencesStore)
 const { currentFile: currentTab } = storeToRefs(editorStore)
+
+const showContextMenu = (event: MouseEvent): void => {
+  const cm = editor.value
+  const tab = currentTab.value
+  if (!cm || !tab || !isDocumentBackground(event)) return
+  event.preventDefault()
+  event.stopPropagation()
+  const hasSelection = cm.somethingSelected()
+  const copySelection = (action: 'copy' | 'cut'): void => {
+    if (currentTab.value?.id !== tab.id) return
+    cm.focus()
+    document.execCommand(action)
+  }
+  popupContextMenu([
+    { id: 'cutMenuItem', label: t('contextMenu.cut'), enabled: hasSelection, click: () => copySelection('cut') },
+    { id: 'copyMenuItem', label: t('contextMenu.copy'), enabled: hasSelection, click: () => copySelection('copy') },
+    {
+      id: 'pasteMenuItem',
+      label: t('contextMenu.paste'),
+      click: async() => {
+        const text = await window.electron.clipboard.readText()
+        if (text && editor.value === cm && tabId.value === tab.id && !viewDestroyed.value) {
+          cm.replaceSelection(text, 'end', 'paste')
+          cm.focus()
+        }
+      }
+    },
+    { type: 'separator' },
+    ...getFileLocationMenuItems(tab)
+  ], { x: event.clientX, y: event.clientY })
+}
 
 const isValidMuyaIndexCursor = (cursor: unknown): cursor is MuyaIndexCursorLike => {
   const c = cursor as MuyaIndexCursorLike | null | undefined

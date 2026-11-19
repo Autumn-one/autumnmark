@@ -93,7 +93,7 @@ test.describe('Layout panel toggles', () => {
       )
     }
     await clickMenuById(app, 'tocMenuItem')
-    await expect(page.locator('.document-outline')).not.toHaveClass(/is-expanded/)
+    await expect(page.locator('#sidebar-panel-outline')).toBeVisible()
     await page.waitForTimeout(200)
     await clickMenuById(app, 'tocMenuItem')
   })

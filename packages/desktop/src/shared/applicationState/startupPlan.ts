@@ -19,7 +19,7 @@ export type ExplicitTarget =
 
 /** Only preferences that affect the pure startup decision; no filesystem access occurs here. */
 export type PlanningPreferences = RecoveryPreferences &
-  Partial<Pick<UserPreferences, 'tocPosition' | 'sourceCodeModeEnabled' | 'openFilesInNewWindow'>>
+  Partial<Pick<UserPreferences, 'sourceCodeModeEnabled' | 'openFilesInNewWindow'>>
 
 /** Optional explicit targets override stored startup choices, even when resolution yields none. */
 export interface StartupPlanInput {
@@ -50,7 +50,6 @@ export type StartupWindowPlan =
 
 const defaultLayout = (preferences: PlanningPreferences): WindowLayoutState =>
   createDefaultLayout({
-    tocPosition: preferences.tocPosition ?? 'left',
     sourceCodeModeEnabled: preferences.sourceCodeModeEnabled ?? false
   })
 

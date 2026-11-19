@@ -5,14 +5,12 @@ import {
   getCloseSaved,
   getCloseAll,
   getRENAME,
-  getCopyPath,
-  getShowInFolder,
-  getShowInSideBar,
-  getOpenContainingFolder
+  getCopyPath
 } from './menuItems'
 import { useEditorStore } from '@/store/editor'
 import { t } from '../../i18n'
 import { popupContextMenu } from '../popupMenu'
+import { getFileLocationMenuItems } from '../fileLocation'
 
 type MenuItemShape = {
   type?: string
@@ -21,12 +19,12 @@ type MenuItemShape = {
   [key: string]: unknown
 }
 
-const wrapClick = (item: MenuItemShape, tabId: string, pathname?: string | null): MenuItemShape => {
+const wrapClick = (item: MenuItemShape, tabId: string): MenuItemShape => {
   if (!item || item.type === 'separator') return item
   const click = item.click
   return {
     ...item,
-    click: click ? () => click({ _tabId: tabId, _pathname: pathname }, null) : undefined
+    click: click ? () => click({ _tabId: tabId }, null) : undefined
   }
 }
 
@@ -43,20 +41,11 @@ interface TabLike {
 }
 
 export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): void => {
-  const { pathname } = tab
   const closeThis = getCloseThis()
   const closeOthers = getCloseOthers()
   const closeSaved = getCloseSaved()
   const closeAll = getCloseAll()
-  const rename = getRENAME()
-  const copyPath = getCopyPath()
-  const showInFolder = getShowInFolder()
-  const showInSideBar = getShowInSideBar()
-  const openContainingFolder = getOpenContainingFolder()
-
-  ;([rename, copyPath, showInFolder, showInSideBar, openContainingFolder] as MenuItemShape[]).forEach((item) => {
-    item.enabled = !!pathname
-  })
+  const enabled = !!tab.pathname
 
   const items = [
     {
@@ -72,12 +61,9 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
     closeSaved,
     closeAll,
     SEPARATOR,
-    rename,
-    copyPath,
-    showInFolder,
-    showInSideBar,
-    openContainingFolder
-  ].map((item) => wrapClick(item as MenuItemShape, tab.id, pathname))
+    { ...getRENAME(), enabled },
+    { ...getCopyPath(), enabled }
+  ].map((item) => wrapClick(item as MenuItemShape, tab.id))
 
-  popupContextMenu(items, { x: event.clientX, y: event.clientY })
+  popupContextMenu([...items, ...getFileLocationMenuItems(tab)], { x: event.clientX, y: event.clientY })
 }

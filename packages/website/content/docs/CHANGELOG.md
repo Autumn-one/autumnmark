@@ -1,3 +1,8 @@
+## AutumnMark 0.24.8
+
+- Switch between Files and Outline in the left sidebar. Use the keyboard to switch tabs or resize the sidebar, and keep your file tree open at the same spot when returning to Files.
+- Use the document context menu on blank lines and margins to show a saved file in your file manager or open its containing folder in the sidebar. This works in editing, reading, and source-code views.
+
 ## AutumnMark 0.24.7
 
 - See download progress and speed in the software update dialog, continue the download in the background, and restart to install when ready.

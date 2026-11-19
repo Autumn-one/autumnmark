@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { clickMenuById, launchWithMarkdown, makeRoomForOutline, sendIpcToRenderer } from './helpers'
+import { clickMenuById, launchWithMarkdown, showOutline, sendIpcToRenderer } from './helpers'
 
 const MARKDOWN = '# A\n\n## B\n\n### B1\n\n#### B2\n\n## C\n\n### C1\n'
 const ALL_LABELS = ['A', 'B', 'B1', 'B2', 'C', 'C1']
@@ -30,7 +30,7 @@ test.describe('TOC state belongs to each open tab (#4914)', () => {
     app = launched.app
     page = launched.page
     filePath = launched.filePath
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await expect.poll(() => visibleLabels(page)).toEqual(ALL_LABELS)
   })
 
@@ -95,7 +95,7 @@ test.describe('TOC state belongs to each open tab (#4914)', () => {
     const folded = ['A', 'B', 'C', 'C1']
     await clickMenuById(app, 'tocMenuItem')
     await page.mouse.move(1200, 500)
-    await expect(page.locator('.outline-body')).toBeHidden()
+    await expect(page.locator('#sidebar-panel-outline')).toBeHidden()
     await clickMenuById(app, 'tocMenuItem')
     await expect.poll(() => visibleLabels(page)).toEqual(folded)
 

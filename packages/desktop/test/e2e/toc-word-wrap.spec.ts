@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { makeRoomForOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
+import { showOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
 
 const LONG_HEADING =
   '## A heading long enough that it cannot possibly fit on one line of the outline panel'
@@ -56,7 +56,7 @@ test.describe('TOC word wrap preference', () => {
     const launched = await launchWithMarkdown(DOC)
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await waitForEditor(page)
     const sidebarVisible = await page.evaluate(() => {
       const el = document.querySelector('.side-bar') as HTMLElement | null

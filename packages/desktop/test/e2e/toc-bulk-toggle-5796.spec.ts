@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { clickMenuById, launchWithMarkdown, makeRoomForOutline, sendIpcToRenderer, toggleReadingMode } from './helpers'
+import { clickMenuById, launchWithMarkdown, showOutline, sendIpcToRenderer, toggleReadingMode } from './helpers'
 
 const MARKDOWN = '## A\n\n#### B\n\n##### B1\n\n## C\n\n### C1\n\n# D\n\n## D1\n'
 const ALL_LABELS = ['A', 'B', 'B1', 'C', 'C1', 'D', 'D1']
@@ -15,7 +15,6 @@ const toggleNode = async(page: Page, label: string): Promise<void> => {
   }).locator(':scope > .el-tree-node__expand-icon').click()
 }
 const clickBulkToggle = async(page: Page): Promise<void> => {
-  await page.locator('.outline-toggle').hover()
   await page.locator('.outline-bulk-toggle').click()
 }
 
@@ -24,7 +23,7 @@ let page: Page
 
 test.beforeEach(async() => {
   ;({ app, page } = await launchWithMarkdown(MARKDOWN, { preferences: { language: 'en' } }))
-  await makeRoomForOutline(app, page)
+  await showOutline(app, page)
   await expect.poll(() => visibleLabels(page)).toEqual(ALL_LABELS)
 })
 test.afterEach(async() => { await app?.close() })
@@ -81,7 +80,7 @@ test('commands reveal a hidden outline without modifying or scrolling the docume
   const before = await editor.evaluate(el => ({ html: el.innerHTML, scroll: el.scrollTop }))
   await clickMenuById(app, 'tocMenuItem')
   await page.mouse.move(1200, 500)
-  await expect(page.locator('.outline-body')).toBeHidden()
+  await expect(page.locator('#sidebar-panel-outline')).toBeHidden()
   for (let i = 0; i < 2; i++) await command(app, 'collapse')
   await expect.poll(() => visibleLabels(page)).toEqual(ROOT_LABELS)
   expect(await editor.evaluate(el => ({ html: el.innerHTML, scroll: el.scrollTop }))).toEqual(before)
@@ -103,32 +102,14 @@ test('command palette exposes both actions without default shortcuts', async() =
   await expect.poll(() => visibleLabels(page)).toEqual(ROOT_LABELS)
 })
 
-test('floating toolbar stays inside the card and supports keyboard activation', async() => {
-  const win = await app.browserWindow(page)
-  await win.evaluate(window => window.setContentSize(850, 800))
-  await clickMenuById(app, 'tocMenuItem')
-  await page.mouse.move(800, 500)
-  const outline = page.locator('.document-outline')
-  await expect(outline).toHaveClass(/is-floating/)
-  await expect(page.locator('.outline-body')).toBeHidden()
-  await page.locator('.outline-toggle').focus()
+test('the outline action is keyboard accessible from the selected tab', async() => {
+  const outline = page.getByRole('tab', { name: 'Outline', selected: true })
+  await outline.focus()
   const button = page.locator('.outline-bulk-toggle')
-  await expect(button).toBeVisible()
   await page.keyboard.press('Tab')
   await expect(button).toBeFocused()
-  const card = await page.locator('.outline-body').boundingBox()
-  const bounds = await button.boundingBox()
-  expect(card && bounds && bounds.x >= card.x && bounds.x + bounds.width <= card.x + card.width).toBe(true)
-  await expect.poll(async() => {
-    const card = await page.locator('.outline-body').boundingBox()
-    const button = await page.locator('.outline-bulk-toggle').boundingBox()
-    const firstRow = await page.locator('.side-bar-toc .el-tree-node__content').first().boundingBox()
-    if (!card || !button || !firstRow) return null
-    return [Math.round(button.y - card.y), Math.round(firstRow.y - button.y - button.height)]
-  }).toEqual([8, 8])
   await page.keyboard.press('Enter')
   await expect.poll(() => visibleLabels(page)).toEqual(ROOT_LABELS)
-  await expect(outline).toHaveClass(/is-visible/)
   await page.keyboard.press('Space')
   await expect.poll(() => visibleLabels(page)).toEqual(ALL_LABELS)
 })

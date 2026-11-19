@@ -1,5 +1,4 @@
 import { useEditorStore } from '@/store/editor'
-import bus from '../../bus'
 
 export const closeThis = (tabId: string): void => {
   const store = useEditorStore()
@@ -30,18 +29,4 @@ export const rename = (tabId: string): void => {
 export const copyPath = (tabId: string): void => {
   const tab = useEditorStore().tabs.find(file => file.id === tabId)
   if (tab?.pathname) window.electron.clipboard.writeText(tab.pathname)
-}
-
-export const showInFolder = (tabId: string): void => {
-  const tab = useEditorStore().tabs.find(file => file.id === tabId)
-  if (tab?.pathname) window.electron.shell.showItemInFolder(tab.pathname)
-}
-
-export const showInSideBar = (pathname?: string | null): void => {
-  if (!pathname) return
-  bus.emit('SIDEBAR::reveal-file', pathname)
-}
-
-export const openContainingFolder = (tabId: string): void => {
-  bus.emit('SIDEBAR::open-containing-folder', tabId)
 }

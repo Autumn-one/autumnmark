@@ -17,8 +17,7 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 | openFolderInNewWindow  | Boolean | `false`       | Open folder via menu in a new window.                                                                                             |
 | zoom                   | Number  | `1.0`         | The zoom level. Between `0.5` and `2.0` inclusive.                                                                                |
 | hideScrollbar          | Boolean | `false`       | Whether to hide scrollbars.                                                                                                       |
-| wordWrapInToc          | Boolean | `false`       | Whether to enable word wrap in the table of contents.                                                                             |
-| tocPosition            | String  | `left`        | Dock the table of contents to the `left` or `right` of the editor.                                                                |
+| wordWrapInToc          | Boolean | `false`       | Wrap long headings in the sidebar's Outline tab.                                                                                  |
 | fileSortBy             | String  | `created`     | Sort files in the opened folder. Optional values: `created`, `modified`, `title`.                                                 |
 | fileSortOrder          | String  | `asc`         | Sort order for files in opened folders: `asc` (ascending) or `desc` (descending).                                                 |
 | startUpAction          | String  | `restoreAll`  | Startup action: `restoreAll`, `restoreLastWindow`, `openLastFolder`, `folder` or `blank`.                                         |

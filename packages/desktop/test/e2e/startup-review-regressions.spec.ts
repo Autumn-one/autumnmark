@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ApplicationState } from '../../src/shared/types/applicationState'
-import { enterSourceMode, exitSourceMode, launchElectron, sendIpcToRenderer } from './helpers'
+import { enterSourceMode, exitSourceMode, launchElectron, sendIpcToRenderer, showOutline } from './helpers'
 
 let directory: string
 let profile: string
@@ -120,25 +120,14 @@ test('source scrolling is checkpointed and restored from the visible outer conta
     .toBe(480)
 })
 
-test('an explicit TOC position preference moves the live outline and survives restart', async() => {
-  const { app, page } = await launch('# Outline position\n', { tocPosition: 'left' })
-  await expect(page.locator('.document-outline')).not.toHaveClass(/is-right/)
-  const opened = app.waitForEvent('window')
-  await page.evaluate(() => window.electron.ipcRenderer.send('mt::open-setting-window'))
-  const settings = await opened
-  await settings.locator('.pref-sidebar input').fill('tocPosition')
-  await settings.locator('.pref-autocomplete').getByText('Default table of contents position', { exact: true }).click()
-  const select = settings.locator('.pref-select-item').filter({
-    has: settings.getByRole('combobox', { name: 'Default table of contents position', exact: true })
-  })
-  await select.locator('.el-select__wrapper').click()
-  await settings.getByRole('option', { name: 'Right', exact: true }).click()
-  await expect(page.locator('.document-outline')).toHaveClass(/is-right/)
-  await expect.poll(() => readState().session.windows[0].layout.outline.position).toBe('right')
+test('the selected sidebar tab and its visible outline survive restart', async() => {
+  const { app, page } = await launch('# Restored outline\n')
+  await showOutline(app, page)
+  await expect.poll(() => readState().session.windows[0].layout.sidebar.activeView).toBe('outline')
   const restored = await restart(app)
-  await expect(restored.page.locator('.document-outline')).toHaveClass(/is-right/)
+  await expect(restored.page.getByRole('tab', { name: 'Outline', selected: true })).toBeVisible()
+  await expect(restored.page.locator('#sidebar-panel-outline')).toContainText('Restored outline')
 })
-
 
 test('switching editing modes retains each mode reading position across restart', async() => {
   const markdown = Array.from({ length: 150 }, (_, index) => `Paragraph ${index} for reading state.\n`).join('\n')
@@ -173,25 +162,32 @@ test('a fast resize before maximizing retains normal bounds across restart', asy
   test.skip(process.platform === 'linux' && process.env.CI === 'true',
     'The CI Xvfb session has no window manager for native maximization.')
   const { app } = await launch('Geometry state')
-  await app.evaluate(({ BrowserWindow }) => {
+  const resizedBounds = await app.evaluate(({ BrowserWindow }) => {
     const native = BrowserWindow.getAllWindows()[0]
-    const normalBounds = native.getNormalBounds.bind(native)
+    const getNormalBounds = native.getNormalBounds.bind(native)
     native.getNormalBounds = () => native.isMaximized()
       ? { x: 0, y: 0, width: 1200, height: 800 }
-      : normalBounds()
+      : getNormalBounds()
     native.setSize(875, 700)
+    const { width, height } = getNormalBounds()
     native.emit('resized')
     native.maximize()
     native.emit('maximize')
+    return { width, height }
   })
   await expect.poll(() => readState().session.windows[0].geometry).toMatchObject({
-    normalBounds: { width: 875, height: 700 }, maximized: true
+    normalBounds: resizedBounds, maximized: true
   })
   const restored = await restart(app)
   await restored.app.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0].unmaximize()
   })
-  await expect.poll(() => readState().session.windows[0].geometry).toMatchObject({
-    normalBounds: { width: 875, height: 700 }, maximized: false
-  })
+  const readGeometry = () => readState().session.windows[0].geometry
+  await expect.poll(() => readGeometry().maximized).toBe(false)
+  // Restoring the frame on Windows can round device-independent sizes to physical pixels.
+  const tolerance = process.platform === 'win32' ? 2 : 0
+  await expect.poll(() => {
+    const { width, height } = readGeometry().normalBounds
+    return Math.max(Math.abs(width - resizedBounds.width), Math.abs(height - resizedBounds.height))
+  }).toBeLessThanOrEqual(tolerance)
 })

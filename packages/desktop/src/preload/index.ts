@@ -8,6 +8,7 @@
 
 import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
+import type { ContextMenuPopupOptions, MenuTemplate } from '@shared/types/menu'
 import pathe from 'pathe'
 import { createPlatformPath } from 'common/filesystem/platformPath'
 
@@ -112,8 +113,8 @@ const windowControlAPI = {
   toggleFullScreen: () => send('mt::win::toggle-fullscreen'),
   isMaximized: () => invoke('mt::win::is-maximized'),
   isFullScreen: () => invoke('mt::win::is-fullscreen'),
-  popupMenu: (template: unknown, position?: { x: number; y: number }) =>
-    send('mt::menu::popup', template as never, position),
+  popupMenu: (template: MenuTemplate, options?: ContextMenuPopupOptions) =>
+    send('mt::menu::popup', template, options),
   popupApplicationMenu: (position?: { x: number; y: number }) =>
     send('mt::menu::popup-application', position),
   getApplicationMenuCategories: () => invoke('mt::menu::application-categories'),

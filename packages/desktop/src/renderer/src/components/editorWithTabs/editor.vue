@@ -5,6 +5,7 @@
       { typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }
     ]"
     :dir="textDirection"
+    @contextmenu="showDocumentBackgroundMenu"
   >
     <div
       ref="editorRef"
@@ -148,6 +149,8 @@ import {
   pruneSourceHistory
 } from '../../services/documentMode'
 import { popupContextMenu } from '../../contextMenu/popupMenu'
+import { getFileLocationMenuItems } from '../../contextMenu/fileLocation'
+import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
@@ -272,6 +275,38 @@ const tableChecker = reactive({
 
 const editorRef = ref<HTMLDivElement | null>(null)
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
+
+const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; href?: string; image?: string }): void => {
+  const muya = editor.value
+  const tab = currentFile.value
+  if (!muya || !tab) return
+  const hasSelection = document.getSelection()?.isCollapsed === false
+  const items = [
+    { label: t('menu.edit.copy'), enabled: hasSelection, click: () => document.execCommand('copy') },
+    { label: t('menu.edit.copyAsRich'), enabled: hasSelection, click: () => muya.copyAsRich() },
+    { label: t('menu.edit.copyAsHtml'), enabled: hasSelection, click: () => muya.copyAsHtml() },
+    { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
+    ...(href ? [{ label: t('readingMode.copyLink'), click: () => window.electron.clipboard.writeText(href) }] : []),
+    ...(image ? [{ label: t('readingMode.viewImage'), click: () => mediaViewer.value?.openImage(image) }] : [])
+  ]
+  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getFileLocationMenuItems(tab)] : []
+  popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
+}
+
+const showDocumentBackgroundMenu = (event: MouseEvent): void => {
+  const tab = currentFile.value
+  if (event.defaultPrevented || !tab || !isDocumentBackground(event)) return
+  event.preventDefault()
+  if (tab.readOnly) {
+    showReadingContextMenu({ event })
+    return
+  }
+  popupContextMenu([{ type: 'separator' }, ...getFileLocationMenuItems(tab)], {
+    x: event.clientX,
+    y: event.clientY,
+    editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+  })
+}
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
 
@@ -1808,51 +1843,7 @@ onMounted(() => {
   muya.on('image-drop-error', () => {
     void notice.notify({ title: t('editor.imageDrop.failed'), type: 'error' })
   })
-  muya.on(
-    'reading-context-menu',
-    ({ event, href, image }: { event: MouseEvent; href?: string; image?: string }) => {
-      const hasSelection = document.getSelection()?.isCollapsed === false
-      popupContextMenu(
-        [
-          {
-            label: t('menu.edit.copy'),
-            enabled: hasSelection,
-            click: () => {
-              document.execCommand('copy')
-            }
-          },
-          {
-            label: t('menu.edit.copyAsRich'),
-            enabled: hasSelection,
-            click: () => muya.copyAsRich()
-          },
-          {
-            label: t('menu.edit.copyAsHtml'),
-            enabled: hasSelection,
-            click: () => muya.copyAsHtml()
-          },
-          { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
-          ...(href
-            ? [
-                {
-                  label: t('readingMode.copyLink'),
-                  click: () => window.electron.clipboard.writeText(href)
-                }
-              ]
-            : []),
-          ...(image
-            ? [
-                {
-                  label: t('readingMode.viewImage'),
-                  click: () => mediaViewer.value?.openImage(image)
-                }
-              ]
-            : [])
-        ],
-        { x: event.clientX, y: event.clientY }
-      )
-    }
-  )
+  muya.on('reading-context-menu', showReadingContextMenu)
   document.addEventListener('selectionchange', readingSelectionChanged)
   registerDocumentView((value) => muya.setReadOnly(value))
   // The first document's content is set via constructor options, so no

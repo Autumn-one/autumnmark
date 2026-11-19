@@ -126,7 +126,7 @@
       "sourceCodeMode": "源码模式",
       "typewriterMode": "打字机模式",
       "focusMode": "专注模式",
-      "toggleTableOfContents": "显示目录",
+      "toggleTableOfContents": "显示大纲",
       "reloadImages": "重新加载图片",
       "showDeveloperTools": "显示开发者工具",
       "reloadWindow": "重新加载窗口"
@@ -238,6 +238,7 @@
     "searchLimited": "仅搜索前 {count} 个结果"
   },
   "sideBar": {
+    "resize": "调整侧边栏宽度",
     "search": {
       "backToFiles": "返回文件",
       "searchInFolder": "在文件夹中搜索…",
@@ -275,7 +276,7 @@
       "empty": "暂无标题",
       "emptyHint": "添加标题后将在这里显示",
       "resize": "调整目录宽度",
-      "title": "目录",
+      "title": "大纲",
       "expandAll": "全部展开",
       "collapseAll": "全部折叠"
     },
@@ -477,7 +478,7 @@
         "notFound": "未找到"
       },
       "sidebar": {
-        "title": "侧边栏和目录",
+        "title": "侧边栏和大纲",
         "wrapTextInToc": "在目录中换行文本",
         "tocPosition": "默认目录位置",
         "tocLeft": "左侧",
@@ -913,7 +914,7 @@
       "toggleSidebar": "切换侧边栏",
       "outlineCollapseAll": "大纲：全部折叠",
       "outlineExpandAll": "大纲：全部展开",
-      "toggleToc": "切换目录",
+      "toggleToc": "切换大纲",
       "toggleTabbar": "切换标签栏",
       "toggleDevTools": "切换开发者工具",
       "actualSize": "实际大小",

@@ -154,13 +154,6 @@ const commands: CommandDescriptor[] = [
     }
   },
   {
-    id: 'file.reveal-in-sidebar',
-    execute: async() => {
-      // Without a pathname the side bar reveals the active file.
-      bus.emit('SIDEBAR::reveal-file', null)
-    }
-  },
-  {
     id: 'file.open-containing-folder',
     execute: () => {
       bus.emit('SIDEBAR::open-containing-folder', null)

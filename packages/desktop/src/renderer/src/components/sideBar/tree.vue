@@ -583,12 +583,12 @@ watch(
   { flush: 'post' }
 )
 
-// The tree stays mounted while the side bar is hidden, so a switch made then
-// never scrolled; reveal again as soon as the file list is visible.
+// Showing a hidden sidebar can resume auto-reveal. Switching its tabs keeps
+// the remembered file viewport instead.
 watch(
-  () => layoutStore.showSideBar && layoutStore.rightColumn === 'files',
+  () => layoutStore.showSideBar,
   (visible) => {
-    if (visible) revealPath(editorStore.currentFile?.pathname)
+    if (visible && layoutStore.rightColumn === 'files') revealPath(editorStore.currentFile?.pathname)
   },
   { flush: 'post' }
 )

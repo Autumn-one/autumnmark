@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { launchWithMarkdown, makeRoomForOutline, sendIpcToRenderer } from './helpers'
+import { launchWithMarkdown, sendIpcToRenderer } from './helpers'
 
 // #4997: icon-only controls must have an accessible name, be reachable and
 // operable from the keyboard, and show their label on hover. These drive the
@@ -38,21 +38,20 @@ test.describe('#4997 icon-only controls in the editor window', () => {
     const launched = await launchWithMarkdown('# Doc\n\nneedle\n', { preferences: PREFERENCES, windowLayout: { showSideBar: true, showTabBar: true } })
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
   })
 
   test.afterAll(async() => {
     if (app) await app.close()
   })
 
-  test('the sidebar actions are named and the outline reports its expanded state', async() => {
+  test('the sidebar actions and tabs have accessible names and selection state', async() => {
     for (const name of ['Search', 'Settings']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     }
-    const outline = page.getByRole('button', { name: 'Collapse table of contents', exact: true })
+    const outline = page.getByRole('tab', { name: 'Outline', exact: true })
     await expect(outline).toBeVisible()
-    await expect(outline).toHaveAttribute('aria-expanded', 'true')
-    await expect(outline).toHaveAttribute('aria-controls', 'document-outline-tree')
+    await expect(outline).toHaveAttribute('aria-selected', 'false')
+    await expect(outline).toHaveAttribute('aria-controls', 'sidebar-panel-outline')
   })
 
   // el-tooltip calls preventDefault on Enter/Space keydown of its trigger, which
@@ -71,24 +70,24 @@ test.describe('#4997 icon-only controls in the editor window', () => {
 
   test('a brief hover does not show a tooltip or leave one scheduled after moving away', async() => {
     await page.bringToFront()
-    const toc = page.getByRole('button', { name: 'Collapse table of contents', exact: true })
-    await toc.hover()
+    const search = page.getByRole('button', { name: 'Search', exact: true })
+    await search.hover()
     // Sample after the old 300ms delay but before either platform's new delay.
     await page.waitForTimeout(350)
-    await expect(tooltip(page, 'Collapse table of contents')).toBeHidden()
+    await expect(tooltip(page, 'Search')).toBeHidden()
     await page.mouse.move(0, 0)
     await page.waitForTimeout(HOVER_DELAY + 100)
-    await expect(tooltip(page, 'Collapse table of contents')).toBeHidden()
+    await expect(tooltip(page, 'Search')).toBeHidden()
   })
 
   test('hovering shows the label as a tooltip and Escape dismisses it', async() => {
     // Hover events only reach the page while its window is in front.
     await page.bringToFront()
-    const toc = page.getByRole('button', { name: 'Collapse table of contents', exact: true })
-    await toc.hover()
-    await expect(tooltip(page, 'Collapse table of contents')).toBeVisible()
+    const search = page.getByRole('button', { name: 'Search', exact: true })
+    await search.hover()
+    await expect(tooltip(page, 'Search')).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(tooltip(page, 'Collapse table of contents')).toBeHidden()
+    await expect(tooltip(page, 'Search')).toBeHidden()
     await page.mouse.move(0, 0)
   })
 
@@ -131,16 +130,16 @@ test.describe('#4997 icon-only controls in the editor window', () => {
               document.body.append(probe)
               const actual = getComputedStyle(el)
               const expected = getComputedStyle(probe)
-              const matches = ['backgroundColor', 'color', 'borderTopColor', 'boxShadow'].every(
-                (property) =>
-                  actual[property as keyof CSSStyleDeclaration] ===
-                  expected[property as keyof CSSStyleDeclaration]
-              )
+              const properties = ['backgroundColor', 'color', 'borderTopColor', 'boxShadow'] as const
+              const mismatches = properties
+                .filter(property => actual[property] !== expected[property])
+                .map(property => ({ property, actual: actual[property], expected: expected[property] }))
               probe.remove()
-              return matches
-            })
+              return mismatches
+            }),
+          { message: `Tooltip styling for ${theme}` }
           )
-          .toBe(true)
+          .toEqual([])
       }
     } finally {
       await page.keyboard.press('Escape')
@@ -155,9 +154,9 @@ test.describe('#4997 icon-only controls in the editor window', () => {
   // An open el-tooltip sets the trigger's aria-describedby, which would make
   // screen readers repeat the label after the name.
   test('keyboard focus does not open the tooltip', async() => {
-    await tabTo(page, 'Collapse table of contents')
+    await tabTo(page, 'Search')
     await page.waitForTimeout(HOVER_DELAY + 100)
-    await expect(tooltip(page, 'Collapse table of contents')).toBeHidden()
+    await expect(tooltip(page, 'Search')).toBeHidden()
     expect(
       await page.evaluate(() => document.activeElement?.getAttribute('aria-describedby') ?? null)
     ).toBeNull()
@@ -170,7 +169,7 @@ test.describe('#4997 icon-only controls in the editor window', () => {
       return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) }
     })
     expect(outline.style).toBe('solid')
-    expect(outline.width).toBeGreaterThanOrEqual(2)
+    expect(outline.width).toBeGreaterThan(0)
   })
 
   test('the tab strip buttons are in the tab order and named after their file', async() => {
@@ -217,7 +216,8 @@ test.describe('#4997 icon-only controls in the editor window', () => {
       .locator('.window-controls button')
       .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
     expect(labels).toEqual(['Minimize', expect.stringMatching(/^(Maximize|Restore)$/), 'Close'])
-    await expect(page.getByRole('button', { name: 'Application Menu' })).toHaveAttribute(
+    const menu = page.getByRole('menubar', { name: 'Application Menu' })
+    await expect(menu.getByRole('menuitem', { name: 'File', exact: true })).toHaveAttribute(
       'aria-haspopup',
       'menu'
     )

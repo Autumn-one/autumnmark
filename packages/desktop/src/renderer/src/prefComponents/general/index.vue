@@ -122,16 +122,6 @@
         </h6>
       </template>
       <template #children>
-        <cur-select
-          id="setting-tocPosition"
-          :description="preferenceLabel('tocPosition')"
-          :value="tocPosition"
-          :options="[
-            { label: t('preferences.general.sidebar.tocLeft'), value: 'left' },
-            { label: t('preferences.general.sidebar.tocRight'), value: 'right' }
-          ]"
-          :on-change="(value) => onSelectChange('tocPosition', value)"
-        />
         <bool
           id="setting-wordWrapInToc"
           :description="preferenceLabel('wordWrapInToc')"
@@ -273,7 +263,6 @@ const {
   zoom,
   hideScrollbar,
   wordWrapInToc,
-  tocPosition,
   fileSortBy,
   fileSortOrder,
   language,

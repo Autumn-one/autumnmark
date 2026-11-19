@@ -74,6 +74,7 @@ describe('open containing folder (#6073)', () => {
     const tab = useEditorStore().tabs[2]
     showContextMenu({ clientX: 1, clientY: 2 }, tab)
     const items = vi.mocked(popupContextMenu).mock.lastCall?.[0] as ContextMenuItem[]
+    expect(items.find(item => item.id === 'showInFolder')?.enabled).toBe(false)
     expect(items.find(item => item.id === 'openContainingFolder')?.enabled).toBe(false)
     await useProjectStore().OPEN_CONTAINING_FOLDER(tab.id)
     await useProjectStore().OPEN_CONTAINING_FOLDER('closed')
