@@ -4,7 +4,7 @@ import os from 'os'
 import { isDirectory } from 'common/filesystem'
 import parseArgs, { userArguments, type ParsedArgs } from './parser'
 import { getPath } from '../utils'
-import { APP_NAME } from '@shared/brand'
+import { APP_NAME, APP_PROFILE_NAME } from '@shared/brand'
 
 const write = (s: string): boolean => process.stdout.write(s)
 const writeLine = (s: string): boolean => write(s + '\n')
@@ -12,8 +12,7 @@ const writeLine = (s: string): boolean => write(s + '\n')
 const cli = (): ParsedArgs => {
   let argv = userArguments(process.argv, !!process.defaultApp, app.getAppPath())
   if (import.meta.env.DEV) {
-    // Don't pass electron development arguments to MarkText and change user data path.
-    argv = ['--user-data-dir', path.join(getPath('appData'), 'marktext-dev')]
+    argv = ['--user-data-dir', path.join(getPath('appData'), `${APP_PROFILE_NAME}-dev`)]
   }
 
   const args = parseArgs(argv, true)
@@ -48,10 +47,8 @@ const cli = (): ParsedArgs => {
   // Check for portable mode and ensure the user data path is absolute. We assume
   // that the path is writable if not this lead to an application crash.
   if (!args['--user-data-dir']) {
-    const portablePath = ['autumnmark-user-data', 'marktext-user-data']
-      .map(name => path.join(app.getAppPath(), '..', '..', name))
-      .find(isDirectory)
-    if (portablePath) {
+    const portablePath = path.join(app.getAppPath(), '..', '..', `${APP_PROFILE_NAME}-user-data`)
+    if (isDirectory(portablePath)) {
       args['--user-data-dir'] = portablePath
     }
   } else {

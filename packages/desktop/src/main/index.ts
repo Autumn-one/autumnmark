@@ -14,7 +14,7 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
-import { APP_NAME } from '@shared/brand'
+import { APP_ID, APP_NAME } from '@shared/brand'
 
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
 process.env.MARKTEXT_VERSION_STRING = MARKTEXT_VERSION_STRING
@@ -92,7 +92,7 @@ registerSandboxIpcHandlers({
   }
 })
 
-electronApp.setAppUserModelId('com.electron.marktext')
+electronApp.setAppUserModelId(APP_ID)
 
 app.on('browser-window-created', (_, window) => {
   optimizer.watchWindowShortcuts(window)

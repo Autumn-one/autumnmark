@@ -1,11 +1,15 @@
-# The installed app identity remains stable across the AutumnMark rename.
-appId: com.github.marktext.marktext
+# NSIS derives the Windows uninstall key from appId. Keep it in sync with APP_ID in src/shared/brand.ts.
+appId: io.github.autumn-one.autumnmark
 productName: AutumnMark
+# The packaged name determines the updater cache and Linux package name.
+extraMetadata:
+  name: autumnmark
 publish:
   provider: github
   owner: Autumn-one
   repo: autumnmark
-  channel: latest
+  # Older releases used MarkText's install identity. Match scripts/merge-release-artifacts.py.
+  channel: autumnmark
 directories:
   buildResources: build
   output: ../../dist
@@ -85,45 +89,9 @@ electronFuses:
 
 asarUnpack:
   - resources/**
-fileAssociations:
-  - ext: md
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: markdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mmd
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtxt
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtext
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
 win:
-  executableName: autumnmark
+  # NSIS uses the executable name for its default directory. Older releases used autumnmark.
+  executableName: autumnmark-editor
   artifactName: 'autumnmark-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
@@ -140,6 +108,13 @@ nsis:
   perMachine: false
   include: windows/installer.nsh
 mac:
+  fileAssociations:
+    - ext: [md, markdown, mmd, mdown, mdtxt, mdtext]
+      name: Markdown
+      description: Markdown document
+      mimeType: text/markdown
+      role: Editor
+      icon: icons/md.ico
   artifactName: 'autumnmark-mac-${arch}-${version}.${ext}'
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:

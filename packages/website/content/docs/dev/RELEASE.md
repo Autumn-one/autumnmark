@@ -4,7 +4,7 @@ The release pipeline is triggered by pushing a `v*` tag. The `Release AutumnMark
 
 Release notes explicitly compare against the highest published stable `vX.Y.Z` version below the new version, selected from all release pages by `scripts/select-release-base.py`. Drafts, prereleases, and the current version are excluded. RCs compare against the previous stable cycle; hotfixes exclude newer versions. For example, `v0.22.0` compares against `v0.21.2` even if that tag is on a separate release branch. A repository with no published stable releases may publish its first release cycle without a comparison base. Otherwise, the workflow fails if no earlier stable release exists. Verify the `Full Changelog` link during release review.
 
-This fork publishes updates through `Autumn-one/autumnmark`. The GitHub provider is pinned in `packages/desktop/electron-builder.yml`; the app checks published stable releases only. Upload the generated installers, blockmaps, and `latest*.yml` files together. A local build does not publish a release. Keep both package versions equal to the pushed tag (without `v`), and increase the version for each update. Install the fork's Windows setup once to switch an existing upstream installation to this update source; ZIP builds do not offer in-app installation of updates.
+AutumnMark checks published stable releases in `Autumn-one/autumnmark` on the `autumnmark` channel configured in `packages/desktop/electron-builder.yml`. Upload the generated installers, blockmaps, and `autumnmark*.yml` files together. Keep both package versions equal to the pushed tag (without `v`), and increase the version for each update. Users upgrading from 0.24.8 or earlier need to install an independent release manually before receiving updates on this channel. In-app updates are available for Windows setup and Linux AppImage installations.
 
 The flow below covers both release candidates and stable releases — same steps, only the version string differs.
 
@@ -89,7 +89,7 @@ Confirm:
   - **macOS x64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
   - **Windows x64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
   - **Windows arm64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
-  - **Auto-updater metadata** (4): `latest.yml`, `latest-mac.yml`, `latest-linux.yml`, `latest-linux-arm64.yml`
+  - **Auto-updater metadata** (4): `autumnmark.yml`, `autumnmark-mac.yml`, `autumnmark-linux.yml`, `autumnmark-linux-arm64.yml`
   - **Build diagnostics** (1): `builder-debug.yml`
   - **Checksums** (1): `SHA256SUMS.txt`
 - Auto-generated release notes compare against the selected previous stable release

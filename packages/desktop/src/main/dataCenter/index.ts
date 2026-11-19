@@ -7,6 +7,7 @@ import Store, { type Schema } from 'electron-store'
 import log from 'electron-log'
 import { ensureDirSync } from 'common/filesystem'
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
+import { APP_PROFILE_NAME } from '@shared/brand'
 import { TypedEmitter } from '@shared/types/typedEmitter'
 
 const DATA_CENTER_NAME = 'dataCenter'
@@ -21,7 +22,7 @@ interface DataCenterPaths {
 }
 
 class DataCenter extends TypedEmitter<DataCenterEvents> {
-  private readonly _serviceName = 'marktext'
+  private readonly _serviceName = APP_PROFILE_NAME
   private readonly _encryptKeys: string[] = []
   private readonly _defaults: Record<string, unknown>
   // Unavailable storage uses detached defaults without allowing writes to replace the original.

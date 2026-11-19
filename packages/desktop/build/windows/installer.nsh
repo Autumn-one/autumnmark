@@ -1,32 +1,13 @@
-; Windows remembers an "Open with" choice as a UserChoice naming this ProgId,
-; and that pin outlives any reinstall, so the name must stay as it is.
-!define MT_PROGID "MarkText.Document"
+; Windows can keep a UserChoice pointing to this ProgId across upgrades.
+!define AUTUMNMARK_PROGID "AutumnMark.Document"
 
-; These must be written on every install and removed only on a real uninstall.
-; electron-builder runs the previous version's uninstaller silently before it
-; installs, so unregistering there unconditionally while registering only
-; behind a prompt left any update or reinstall answered "No" with a UserChoice
-; pointing at a ProgId that no longer existed, and Explorer's double-click did
-; nothing at all (#4966).
-
-; The "Open with" dialog builds its UserChoice from OpenWithProgids, so
-; without that entry Windows pins the ProgId electron-builder registers from
-; `fileAssociations` rather than this one.
-!macro mtAssociateExtension EXT
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${EXT}" "" "${MT_PROGID}"
-  WriteRegNone SHELL_CONTEXT "Software\Classes\${EXT}\OpenWithProgids" "${MT_PROGID}"
+; OpenWithProgids lets Explorer offer AutumnMark while preserving the user's default app.
+!macro autumnmarkAssociateExtension EXT
+  WriteRegNone SHELL_CONTEXT "Software\Classes\${EXT}\OpenWithProgids" "${AUTUMNMARK_PROGID}"
 !macroend
 
-; The extension key also carries the OpenWithProgids entries of every other
-; Markdown editor the user has installed, so only MarkText's own values go.
-!macro mtUnassociateExtension EXT
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\${EXT}\OpenWithProgids" "${MT_PROGID}"
-  Push $0
-  ReadRegStr $0 SHELL_CONTEXT "Software\Classes\${EXT}" ""
-  ${if} $0 == "${MT_PROGID}"
-    DeleteRegValue SHELL_CONTEXT "Software\Classes\${EXT}" ""
-  ${endIf}
-  Pop $0
+!macro autumnmarkUnassociateExtension EXT
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\${EXT}\OpenWithProgids" "${AUTUMNMARK_PROGID}"
 !macroend
 
 !macro customInstall
@@ -36,26 +17,19 @@
   FileClose $0
   Pop $0
 
-  !insertmacro mtAssociateExtension ".md"
-  !insertmacro mtAssociateExtension ".markdown"
-  !insertmacro mtAssociateExtension ".mmd"
-  !insertmacro mtAssociateExtension ".mdown"
-  !insertmacro mtAssociateExtension ".mdtxt"
-  !insertmacro mtAssociateExtension ".mdtext"
-  !insertmacro mtAssociateExtension ".mdx"
+  !insertmacro autumnmarkAssociateExtension ".md"
+  !insertmacro autumnmarkAssociateExtension ".markdown"
+  !insertmacro autumnmarkAssociateExtension ".mmd"
+  !insertmacro autumnmarkAssociateExtension ".mdown"
+  !insertmacro autumnmarkAssociateExtension ".mdtxt"
+  !insertmacro autumnmarkAssociateExtension ".mdtext"
+  !insertmacro autumnmarkAssociateExtension ".mdx"
 
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}" \
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${AUTUMNMARK_PROGID}" \
     "" "AutumnMark Markdown Document"
-  WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\DefaultIcon" \
+  WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${AUTUMNMARK_PROGID}\DefaultIcon" \
     "" "$INSTDIR\resources\icons\md.ico,0"
-  WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\shell\open\command" \
-    "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
-
-  ; electron-builder writes the command for its own ProgId — `Markdown`, the
-  ; `fileAssociations[].name` in electron-builder.yml — with the executable
-  ; path unquoted, which runs `C:\Program` when the directory the user picked
-  ; during setup contains a space.
-  WriteRegStr SHELL_CONTEXT "Software\Classes\Markdown\shell\open\command" \
+  WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${AUTUMNMARK_PROGID}\shell\open\command" \
     "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
 
   ; Explorer serves file types from a cache that a fresh install otherwise
@@ -64,21 +38,20 @@
 !macroend
 
 !macro customUnInstall
-  ; An update reaches here through the old uninstaller, right before the new
-  ; version registers the association again.
+  ; Keep the association and profile intact when an update invokes this uninstaller.
   ${ifNot} ${isUpdated}
-    !insertmacro mtUnassociateExtension ".md"
-    !insertmacro mtUnassociateExtension ".markdown"
-    !insertmacro mtUnassociateExtension ".mmd"
-    !insertmacro mtUnassociateExtension ".mdown"
-    !insertmacro mtUnassociateExtension ".mdtxt"
-    !insertmacro mtUnassociateExtension ".mdtext"
-    !insertmacro mtUnassociateExtension ".mdx"
-    DeleteRegKey SHELL_CONTEXT "Software\Classes\${MT_PROGID}"
-  ${endIf}
+    !insertmacro autumnmarkUnassociateExtension ".md"
+    !insertmacro autumnmarkUnassociateExtension ".markdown"
+    !insertmacro autumnmarkUnassociateExtension ".mmd"
+    !insertmacro autumnmarkUnassociateExtension ".mdown"
+    !insertmacro autumnmarkUnassociateExtension ".mdtxt"
+    !insertmacro autumnmarkUnassociateExtension ".mdtext"
+    !insertmacro autumnmarkUnassociateExtension ".mdx"
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\${AUTUMNMARK_PROGID}"
 
-  MessageBox MB_YESNO "Do you want to delete user settings?" /SD IDNO IDNO SkipRemoval
-    SetShellVarContext current
-    RMDir /r "$APPDATA\marktext"
-  SkipRemoval:
+    MessageBox MB_YESNO "Do you want to delete user settings?" /SD IDNO IDNO SkipRemoval
+      SetShellVarContext current
+      RMDir /r "$APPDATA\${APP_PACKAGE_NAME}"
+    SkipRemoval:
+  ${endIf}
 !macroend

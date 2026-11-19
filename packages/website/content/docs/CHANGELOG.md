@@ -1,3 +1,8 @@
+## AutumnMark 0.24.9
+
+- Install AutumnMark alongside MarkText with separate app identities, settings, and update caches.
+- Install this release manually when upgrading from 0.24.8 or earlier. On Windows, uninstall the previous AutumnMark installation first and keep its settings when prompted. The new version starts with its own settings directory.
+
 ## AutumnMark 0.24.8
 
 - Switch between Files and Outline in the left sidebar. Use the keyboard to switch tabs or resize the sidebar, and keep your file tree open at the same spot when returning to Files.

@@ -31,23 +31,22 @@ const customInstall = macroBody('customInstall')
 const customUnInstall = macroBody('customUnInstall')
 
 describe('Windows Markdown file association (build/windows/installer.nsh)', () => {
-  it('keeps the ProgId name an existing "Open with" choice points at', () => {
-    expect(script).toMatch(/!define\s+MT_PROGID\s+"MarkText\.Document"/)
+  it('registers an AutumnMark-specific ProgId', () => {
+    expect(script).toMatch(/!define\s+AUTUMNMARK_PROGID\s+"AutumnMark\.Document"/)
+    expect(script).not.toMatch(/MarkText\.Document|Classes\\Markdown\\/)
   })
 
   it('registers without prompting, so no answer can leave the ProgId deleted', () => {
     expect(customInstall).not.toMatch(/MessageBox/)
   })
 
-  it('claims every Markdown extension for the ProgId', () => {
+  it('offers AutumnMark for every extension while preserving the default app', () => {
     for (const ext of EXTENSIONS) {
-      expect(customInstall, `${ext} is not associated`).toContain(`"${ext}"`)
+      expect(customInstall, `${ext} is not associated`).toContain(`autumnmarkAssociateExtension "${ext}"`)
     }
-    expect(customInstall).toContain('MT_PROGID')
-  })
-
-  it('offers the ProgId in the "Open with" dialog, which is what a UserChoice pins', () => {
-    expect(script).toContain('OpenWithProgids')
+    const associateExtension = macroBody('autumnmarkAssociateExtension')
+    expect(associateExtension).toContain('"Software\\Classes\\${EXT}\\OpenWithProgids" "${AUTUMNMARK_PROGID}"')
+    expect(associateExtension).not.toContain('"Software\\Classes\\${EXT}"')
   })
 
   it('quotes the executable path in every open command it writes', () => {
@@ -66,7 +65,8 @@ describe('Windows Markdown file association (build/windows/installer.nsh)', () =
     const guardEnd = guarded.search(/\$\{endIf\}/i)
     expect(guardEnd, 'the isUpdated guard is not closed').toBeGreaterThan(-1)
     const guardedBody = guarded.slice(0, guardEnd)
-    expect(guardedBody).toContain('MT_PROGID')
+    expect(guardedBody).toContain('AUTUMNMARK_PROGID')
+    expect(guardedBody).toContain('RMDir /r "$APPDATA\\${APP_PACKAGE_NAME}"')
     for (const ext of EXTENSIONS) {
       expect(guardedBody, `${ext} is unregistered outside the guard`).toContain(`"${ext}"`)
     }
