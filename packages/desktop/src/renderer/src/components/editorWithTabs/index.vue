@@ -25,6 +25,10 @@
       </div>
     </div>
     <tab-notifications />
+    <div v-if="progress.total" class="image-paste-progress" role="status">
+      <span>{{ t(progress.failed && progress.completed === progress.total ? 'embeddedImage.pasteFailed' : 'embeddedImage.pasteProgress', progress) }}</span>
+      <progress v-if="progress.completed < progress.total" :value="progress.completed || undefined" :max="progress.total" aria-hidden="true" />
+    </div>
     <heading-link-picker v-if="headingLink" :request="headingLink" @close="headingLink = null" />
     <embedded-image-dialog
       v-if="embeddedImage"
@@ -38,7 +42,9 @@
 <script setup lang="ts">
 import { MIN_EDITOR_WIDTH } from '@/util/editorLayout'
 import Tabs from './tabs.vue'
-import { shallowRef, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
+import { imagePasteJobs } from '@/services/pastedImages'
+import { t } from '@/i18n'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
 import { documentVideos } from '@/util/videoAttachments'
@@ -75,6 +81,16 @@ function handleImage(image: IEmbeddedImageEdit, event?: MouseEvent) {
 }
 const headingLink = shallowRef<HeadingLinkRequest | null>(null)
 const store = useEditorStore()
+const progress = computed(() => {
+  const totals = { completed: 0, total: 0, failed: 0 }
+  for (const job of imagePasteJobs) {
+    if (!job.visible || job.tabId !== store.currentFile?.id) continue
+    totals.completed += job.completed
+    totals.total += job.total
+    totals.failed += job.failed
+  }
+  return totals
+})
 watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentFile?.readOnly], () => {
   embeddedImage.value = null
   headingLink.value = null
@@ -83,6 +99,26 @@ watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentF
 </script>
 
 <style scoped>
+.image-paste-progress {
+  position: absolute;
+  inset-inline-end: 16px;
+  bottom: 12px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--editorColor10);
+  border-radius: 5px;
+  background: var(--editorBgColor);
+  color: var(--editorColor);
+  font-size: 12px;
+  pointer-events: none;
+}
+.image-paste-progress progress {
+  width: 100%;
+  height: 3px;
+  accent-color: var(--themeColor);
+}
 .editor-with-tabs {
   position: relative;
   flex: 1;

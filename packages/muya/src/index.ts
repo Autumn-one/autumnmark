@@ -1,5 +1,7 @@
 export type { IHeadingFoldState } from './block/folding';
 export type { IClipboardImageCopy } from './clipboard/image';
+export { imageDocumentMarkdown } from './clipboard/markdownSource';
+export { embeddedImageDestination, findPastedImageSources } from './clipboard/pastedImageSources';
 export type { ISerializedHistory } from './history';
 export type { ILocale } from './i18n/types';
 

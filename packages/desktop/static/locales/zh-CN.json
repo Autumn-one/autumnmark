@@ -980,6 +980,8 @@
     "copy": "复制视频文件"
   },
   "embeddedImage": {
+    "pasteProgress": "正在内嵌图片 {completed}/{total}",
+    "pasteFailed": "{total} 张图片中有 {failed} 张未能内嵌，已保留原链接",
     "preview": "图片预览",
     "source": "内嵌源码",
     "replace": "替换图片",

@@ -136,6 +136,7 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath, copyImageToClipboard, readImagePng, clipboardImagePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { embedImage } from '@/util/embedImage'
+import { embedDocumentImages } from '@/services/pastedImages'
 import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
@@ -271,7 +272,7 @@ const resolveEditorFont = (family: string): string =>
   family ? `${family}, ${defaultFontFamily}` : defaultFontFamily
 const resolveCodeFont = (family: string): string =>
   family ? `${family}, ${DEFAULT_CODE_FONT_FAMILY}` : DEFAULT_CODE_FONT_FAMILY
-const selectionChange = ref<ISelectionChangePayload | null>(null)
+const selectionChange = shallowRef<ISelectionChangePayload | null>(null)
 // `shallowRef`: the engine instance is `markRaw`d anyway, and a deep ref
 // would map `Muya` through `UnwrapRef` and lose the class's own type.
 const editor = shallowRef<Muya | null>(null)
@@ -1821,6 +1822,17 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 }
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
+const embedPastedImages = async(sources: string[]) => {
+  const tab = currentFile.value
+  if (!tab) return new Map<string, string>()
+  const result = await embedDocumentImages(sources, tab)
+  return currentFile.value?.id === tab.id && !sourceCode.value ? result : new Map<string, string>()
+}
+
+watch(imageInsertAction, action => {
+  editor.value?.setOptions({ embedPastedImages: action === 'embed' ? embedPastedImages : undefined })
+})
+
 onMounted(() => {
   printer = new Printer()
   const ele = editorRef.value
@@ -1924,6 +1936,7 @@ onMounted(() => {
     editEmbeddedImage: (image, event) => emit('editEmbeddedImage', image, event),
     embedImage: (image) => imageInsertAction.value === 'embed'
       ? embedImage(image, currentFile.value?.pathname) : undefined,
+    embedPastedImages: imageInsertAction.value === 'embed' ? embedPastedImages : undefined,
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
   }
 
@@ -2034,8 +2047,7 @@ onMounted(() => {
       // Synthetic, desktop-shaped history so the store's save/dirty tracking
       // keeps working (the engine history shape is incompatible).
       history: makeSyntheticHistory(id, markdown),
-      toc: editor.value.getTOC(),
-      blocks: editor.value.getState()
+      toc: editor.value.getTOC()
     })
   })
 
@@ -2132,7 +2144,10 @@ onMounted(() => {
 
     selectionChange.value = changes
     if (!sourceCode.value && editor.value) {
-      setSelectionWordCountFromText(editor.value.getSelectedText())
+      const { selection } = changes
+      const hasRange = selection?.kind === SelectionType.TABLE ||
+        (selection?.kind === SelectionType.TEXT && !selection.context.isCollapsed)
+      setSelectionWordCountFromText(hasRange ? editor.value.getSelectedText() : '')
     }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what

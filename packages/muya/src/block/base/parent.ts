@@ -86,7 +86,7 @@ class Parent extends TreeNode {
     }
 
     length() {
-        return this.reduce((acc: number) => acc + 1, 0);
+        return this.children.length;
     }
 
     offset(node: TreeNode) {

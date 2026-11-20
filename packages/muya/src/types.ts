@@ -114,6 +114,8 @@ export interface IMuyaOptions {
     imageAction?: (state: IImageActionState) => Promise<string>;
     editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit, event?: MouseEvent) => void;
     embedImage?: (image: File | string) => Promise<string> | undefined;
+    /** Omitted sources keep their original destinations in the pasted document. */
+    embedPastedImages?: (sources: string[]) => Promise<ReadonlyMap<string, string>>;
     importVideo?: (input: File | string) => Promise<string>;
     /** The host owns tab-scoped attachment references and their playback URLs. */
     videoAttachments?: {

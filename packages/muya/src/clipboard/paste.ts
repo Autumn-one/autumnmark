@@ -16,8 +16,9 @@ import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState, markdownListMarker } from '../state/types';
 import { standaloneRemoteMarkdownImage } from '../utils/image';
 import { getClipboardImageFile, getCopyTextType, isHttpUrl, isStandaloneTableHtml, normalizePastedHTML, standaloneImageSource } from '../utils/paste';
+import { embedAfterPaste } from './embedPastedImages';
 import { pasteClipboardImage, readClipboardImage } from './image';
-import { hasMarkdownSource } from './markdownSource';
+import { hasMarkdownSource, imageDocumentFlavor } from './markdownSource';
 import { mergePasteIntoHeading } from './mergePasteIntoHeading';
 import { insertImageSrc, pasteEmbeddedImage, replaceImageAt, resolveImageSrc } from './pasteImage';
 import { getUrlPaste, pasteUrl } from './pasteUrl';
@@ -508,6 +509,7 @@ interface IPasteData {
     imageFile: File | null;
     pasteType: PasteType;
     internalImage?: IClipboardImage | null;
+    imageDocument?: boolean;
 }
 
 function applyNormalizedPaste(
@@ -515,10 +517,11 @@ function applyNormalizedPaste(
     anchorBlock: Content,
     text: string,
     html: string,
-    pasteType: PasteType,
+    data: IPasteData,
 ): void {
+    const { pasteType } = data;
     const { bulletListMarker } = clipboard.muya.options;
-    const copyType = getCopyTextType(html, text, pasteType);
+    const copyType = html && data.imageDocument ? 'html' : getCopyTextType(html, text, pasteType);
 
     const { start, end } = anchorBlock.getCursor()!;
     const { text: content } = anchorBlock;
@@ -598,8 +601,14 @@ async function applyTextPaste(
                 cursorBeforeNormalize.end,
             ),
     });
-    if (!clipboard.muya.isReadOnly && clipboard.muya.isBlockInDocument(anchorBlock) && anchorBlock.getCursor())
-        clipboard.muya.transact(() => applyNormalizedPaste(clipboard, anchorBlock, text, html, pasteType));
+    const { muya } = clipboard;
+    if (muya.isReadOnly || !muya.isBlockInDocument(anchorBlock) || !anchorBlock.getCursor())
+        return;
+    const paste = () => muya.transact(() => applyNormalizedPaste(clipboard, anchorBlock, text, html, data));
+    if (data.imageDocument && muya.options.embedPastedImages)
+        await embedAfterPaste(anchorBlock, paste, muya.options.embedPastedImages);
+    else
+        paste();
 }
 
 async function pasteInternalImageText(clipboard: Clipboard, data: IPasteData): Promise<void> {
@@ -677,6 +686,24 @@ function getEmbeddedPaste(target: Content, data: IPasteData) {
     return { source, alt, title: markdown?.title };
 }
 
+function imageDocumentPaste(clipboard: Clipboard, target: Content, data: IPasteData) {
+    if (!clipboard.muya.options.embedPastedImages || data.pasteType !== PasteType.NORMAL || clipboard.selection.image)
+        return;
+    if (target.blockName === 'language-input' || (target.blockName === 'codeblock.content' && !target.closestBlock('html-block')))
+        return;
+    const flavor = imageDocumentFlavor(data.text, data.html, data.imageFile);
+    if (flavor)
+        return { ...data, html: flavor === 'markdown' ? '' : data.html, imageDocument: true };
+}
+
+async function pasteImageDocument(clipboard: Clipboard, data: IPasteData) {
+    if (clipboard.selection.getTextSelection()?.isSelectionInSameBlock === false)
+        clipboard.cutHandler();
+    const block = clipboard.selection.getTextSelection()?.anchor.block;
+    if (block)
+        await applyTextPaste(clipboard, block, data.text.replace(/\r\n?/g, '\n'), data);
+}
+
 async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void> {
     const target = clipboard.selection.image?.block ?? clipboard.selection.getTextSelection()?.anchor.block;
     if (!target || clipboard.muya.isReadOnly || !clipboard.muya.isBlockInDocument(target))
@@ -690,6 +717,12 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
             await pasteInternalImageText(clipboard, data);
         else
             await pasteClipboardImage(clipboard, data.internalImage);
+        return;
+    }
+
+    const imageDocument = imageDocumentPaste(clipboard, target, data);
+    if (imageDocument) {
+        await pasteImageDocument(clipboard, imageDocument);
         return;
     }
 

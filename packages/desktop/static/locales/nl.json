@@ -980,6 +980,8 @@
     "copy": "Videobestand kopiëren"
   },
   "embeddedImage": {
+    "pasteProgress": "Afbeeldingen insluiten {completed}/{total}",
+    "pasteFailed": "Originele links behouden voor {failed} van {total} afbeeldingen",
     "preview": "Afbeeldingsvoorbeeld",
     "source": "Ingesloten bron",
     "replace": "Afbeelding vervangen",

@@ -206,7 +206,49 @@ test('saves the original local image from the preview menu', async() => {
   }
 })
 
+async function pasteDocument(target: Locator, content: string, format = 'text/plain') {
+  await target.evaluate((node, { content, format }) => {
+    const transfer = new DataTransfer()
+    transfer.setData(format, content)
+    const input = node.querySelector('textarea') ?? node
+    input.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }))
+  }, { content, format })
+}
+
 for (const mode of ['wysiwyg', 'source']) {
+  test(`embeds both images from an HTML clipboard document in ${mode}`, async() => {
+    const { app, page, filePath } = await launchWithMarkdown('Here ', { preferences: { imageInsertAction: 'embed' } })
+    try {
+      writeFileSync(join(dirname(filePath), 'square.png'), Buffer.from(png, 'base64'))
+      if (mode === 'source') await enterSourceMode(page, app)
+      const target = page.locator(mode === 'source' ? '.CodeMirror' : '.mu-paragraph-content').first()
+      await target.click()
+      await page.keyboard.press('End')
+      await pasteDocument(target, '<p>First <img src="square.png" alt="first"></p><p>Second <img src="square.png" alt="second"></p>', 'text/html')
+      await expect(page.locator(mode === 'source' ? '.embedded-image-chip' : '.mu-embedded-image')).toHaveCount(2)
+      await clickMenuById(app, 'fileSaveMenuItem')
+      await expect.poll(() => readFileSync(filePath, 'utf8').split(src).length).toBe(3)
+      expect(readFileSync(filePath, 'utf8')).toContain('Second')
+    } finally { await app.close() }
+  })
+
+  test(`keeps pasted image paths in ${mode} when embedding is disabled`, async() => {
+    const { app, page, filePath } = await launchWithMarkdown('Here ', { preferences: { imageInsertAction: 'path' } })
+    try {
+      writeFileSync(join(dirname(filePath), 'square.png'), Buffer.from(png, 'base64'))
+      if (mode === 'source') await enterSourceMode(page, app)
+      const target = page.locator(mode === 'source' ? '.CodeMirror' : '.mu-paragraph-content').first()
+      await target.click()
+      await page.keyboard.press('End')
+      const text = 'First ![one](square.png) second <img src="square.png">'
+      await pasteDocument(target, text)
+      await expect(target).toContainText('second')
+      await clickMenuById(app, 'fileSaveMenuItem')
+      await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(text)
+      await expect(page.locator('.image-paste-progress')).toHaveCount(0)
+    } finally { await app.close() }
+  })
+
   test(`edits, validates and undoes image replacements in ${mode}`, async() => {
     const { page, app } = await launchWithMarkdown(`![square](${src})`, { preferences: { language: 'en' } })
     try {
@@ -380,3 +422,56 @@ test('existing embedded images stay compact in references, literal code and HTML
     await app.close()
   }
 })
+
+for (const mode of ['wysiwyg', 'source']) {
+  test(`embeds a pasted image document in ${mode} while a web image is downloading`, async() => {
+    const { app, page, filePath } = await launchWithMarkdown('Keep ![existing](local%20pic.png)\n\nPaste here ', {
+      preferences: { imageInsertAction: 'embed', language: 'en' }
+    })
+    let release!: () => void
+    const pending = new Promise<void>(resolve => { release = resolve })
+    const server = createServer(async(req, res) => {
+      await pending
+      if (req.url === '/missing') res.writeHead(404).end()
+      else res.writeHead(200, { 'content-type': 'image/png' }).end(Buffer.from(png, 'base64'))
+    })
+    try {
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+      const base = 'http://127.0.0.1:' + (server.address() as AddressInfo).port
+      writeFileSync(join(dirname(filePath), 'local pic.png'), Buffer.from(png, 'base64'))
+      const text = [
+        'Local ![one](local%20pic.png "Caption")',
+        `Remote <img width="12" alt='two' src="${base}/image"> and ![again](${base}/image).`,
+        `Keep ![failed](${base}/missing) and \`![sample](local%20pic.png)\`.`,
+        '```markdown\n<img src="local%20pic.png">\n```',
+        'End'
+      ].join('\n\n')
+      if (mode === 'source') await enterSourceMode(page, app)
+      const target = page.locator(mode === 'source' ? '.CodeMirror' : '.mu-paragraph-content').last()
+      await target.click()
+      await page.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End')
+      await pasteDocument(target, text)
+      const progress = page.locator('.image-paste-progress')
+      await expect(progress).toContainText('Embedding images 1/4')
+      await page.keyboard.type(' typed')
+      release()
+      await expect(progress).toContainText('Kept original links for 1 of 4 images')
+      if (mode === 'source') await expect(page.locator('.CodeMirror .embedded-image-chip')).toHaveCount(3)
+      await clickMenuById(app, 'fileSaveMenuItem')
+      await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(`![one](${src} "Caption")`)
+      const saved = readFileSync(filePath, 'utf8')
+      expect(saved).toContain(`<img width="12" alt='two' src="${src}">`)
+      expect(saved).toContain(`![again](${src})`)
+      expect(saved).toContain(`![failed](${base}/missing)`)
+      expect(saved).toContain('![existing](local%20pic.png)')
+      expect(saved).toContain('`![sample](local%20pic.png)`')
+      expect(saved).toContain('<img src="local%20pic.png">')
+      expect(saved).toContain('End typed')
+    } finally {
+      release()
+      server.close()
+      server.closeAllConnections()
+      await app.close()
+    }
+  })
+}

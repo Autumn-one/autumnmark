@@ -1,3 +1,8 @@
+## AutumnMark 0.24.13
+
+- Paste Markdown or HTML with image links to embed the images in both editing modes. You can keep editing while images load. The editor shows progress for longer pastes and keeps the original links for images it cannot load.
+- Keep images near the compact-mode height limit stable when switching documents or resizing the editor.
+
 ## AutumnMark 0.24.12
 
 - Embed local videos of 32 MiB or more with less memory use. Save the Markdown, move it on its own, and reopen it with the video intact.

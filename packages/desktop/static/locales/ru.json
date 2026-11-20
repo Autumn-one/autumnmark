@@ -980,6 +980,8 @@
     "copy": "Копировать видеофайл"
   },
   "embeddedImage": {
+    "pasteProgress": "Встраивание изображений {completed}/{total}",
+    "pasteFailed": "Сохранены исходные ссылки для {failed} из {total} изображений",
     "preview": "Просмотр изображения",
     "source": "Встроенный код",
     "replace": "Заменить изображение",

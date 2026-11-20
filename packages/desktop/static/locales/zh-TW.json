@@ -980,6 +980,8 @@
     "copy": "複製影片檔案"
   },
   "embeddedImage": {
+    "pasteProgress": "正在內嵌圖片 {completed}/{total}",
+    "pasteFailed": "{total} 張圖片中有 {failed} 張無法內嵌，已保留原連結",
     "preview": "圖片預覽",
     "source": "內嵌原始碼",
     "replace": "取代圖片",

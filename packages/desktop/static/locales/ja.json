@@ -980,6 +980,8 @@
     "copy": "動画ファイルをコピー"
   },
   "embeddedImage": {
+    "pasteProgress": "画像を埋め込み中 {completed}/{total}",
+    "pasteFailed": "{total} 枚中 {failed} 枚は元のリンクを保持しました",
     "preview": "画像プレビュー",
     "source": "埋め込みソース",
     "replace": "画像を置換",

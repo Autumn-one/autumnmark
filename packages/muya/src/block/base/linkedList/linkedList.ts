@@ -8,6 +8,19 @@ export class LinkedList<T extends ILinkedNode> {
 
     length: number = 0;
 
+    // Caret paths need both directions repeatedly between changes to sibling order.
+    private _index?: { nodes: T[]; offsets: Map<T, number> };
+
+    private _getIndex() {
+        if (!this._index) {
+            const nodes = [...this.iterator()];
+            const offsets = new Map<T, number>();
+            nodes.forEach((node, i) => offsets.set(node, i));
+            this._index = { nodes, offsets };
+        }
+        return this._index;
+    }
+
     * iterator(curNode = this.head, length = this.length) {
         let count = 0;
 
@@ -24,17 +37,7 @@ export class LinkedList<T extends ILinkedNode> {
     }
 
     contains(node: T) {
-        const it = this.iterator();
-        let data = null;
-
-        // eslint-disable-next-line no-cond-assign
-        while ((data = it.next()).done !== true) {
-            const { value } = data;
-            if (value === node)
-                return true;
-        }
-
-        return false;
+        return this.offset(node) !== -1;
     }
 
     insertBefore(node: T, refNode: T | null = null) {
@@ -60,10 +63,15 @@ export class LinkedList<T extends ILinkedNode> {
             this.head = this.tail = node;
         }
         this.length += 1;
+        this._index = undefined;
     }
 
     offset(node: T) {
-        return [...this.iterator()].indexOf(node);
+        if (node === this.head)
+            return 0;
+        if (node === this.tail)
+            return this.length - 1;
+        return this._getIndex().offsets.get(node) ?? -1;
     }
 
     remove(node: T) {
@@ -82,13 +90,18 @@ export class LinkedList<T extends ILinkedNode> {
             this.tail = node.prev as T;
 
         this.length -= 1;
+        this._index = undefined;
     }
 
     find(index: number) {
         if (index < 0 || index >= this.length)
             return null;
 
-        return [...this.iterator()][index];
+        if (index === 0)
+            return this.head;
+        if (index === this.length - 1)
+            return this.tail;
+        return this._getIndex().nodes[index];
     }
 
     forEach(callback: (cur: T, i: number) => void) {
@@ -108,9 +121,7 @@ export class LinkedList<T extends ILinkedNode> {
     }
 
     map<M>(callback: (cur: T, i: number) => M): M[] {
-        return this.reduce((acc: M[], node: T, i: number) => {
-            return [...acc, callback(node, i)];
-        }, []);
+        return [...this.iterator()].map((node, i) => callback(node, i));
     }
 
     reduce<M>(callback: (memo: M, cur: T, i: number) => M, memo: M): M {

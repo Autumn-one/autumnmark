@@ -333,12 +333,18 @@ importers:
       mermaid:
         specifier: ^12.2.0
         version: 12.2.0
+      micromark:
+        specifier: 4.0.2
+        version: 4.0.2
       ot-json1:
         specifier: ^1.0.2
         version: 1.0.2
       ot-text-unicode:
         specifier: ^4.0.0
         version: 4.0.0
+      parse5:
+        specifier: 8.0.1
+        version: 8.0.1
       plantuml-encoder:
         specifier: ^1.4.0
         version: 1.4.0
@@ -424,9 +430,6 @@ importers:
       madge:
         specifier: ^8.0.0
         version: 8.0.0(typescript@6.0.3)
-      parse5:
-        specifier: 8.0.1
-        version: 8.0.1
       stylelint:
         specifier: ^17.16.0
         version: 17.16.0(typescript@6.0.3)

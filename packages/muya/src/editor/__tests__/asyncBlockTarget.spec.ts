@@ -36,6 +36,26 @@ afterEach(() => {
 });
 
 describe('asynchronous block targets', () => {
+    it('keeps the original document when a paste is undone during image embedding', async () => {
+        normalize.mockResolvedValue('');
+        const download = deferred<ReadonlyMap<string, string>>();
+        const embedPastedImages = vi.fn(() => download.promise);
+        const { muya } = boot({ embedPastedImages }, 'original ![previous](one.png)');
+        const before = muya.getMarkdown();
+        const text = ' ![pasted](one.png) and <img src="two.png">';
+        const event = {
+            preventDefault() {},
+            stopPropagation() {},
+            clipboardData: { getData: () => '', files: [], items: [] },
+        } as unknown as ClipboardEvent;
+        const pasted = muya.editor.clipboard.pasteHandler(event, text, '');
+        await vi.waitFor(() => expect(embedPastedImages).toHaveBeenCalledWith(['one.png', 'two.png']));
+        muya.undo();
+        download.resolve(new Map([['one.png', 'data:image/png;base64,AAAA'], ['two.png', 'data:image/png;base64,AAAA']]));
+        await pasted;
+        expect(muya.getMarkdown()).toBe(before);
+    });
+
     it.each(['remove', 'replace', 'read', 'destroy'] as const)('discards an upload after %s invalidates its target', async (action) => {
         const upload = deferred<string>();
         const { muya, target } = boot({ imageAction: () => upload.promise });

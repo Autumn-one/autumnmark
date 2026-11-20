@@ -1,6 +1,32 @@
 import type { Muya } from '../muya';
 import { findScrollContainer, getBlock } from '../utils/dom';
 
+interface IImageProbe {
+    viewport: HTMLElement;
+    image: HTMLImageElement;
+    top: number;
+    left: number;
+}
+
+function codeHeightLimit(viewport: HTMLElement, body: HTMLElement, lines: number): number | null {
+    const limit = Number.parseFloat(getComputedStyle(body).lineHeight) * lines;
+    if (body.clientHeight <= Math.round(limit))
+        return null;
+    // A horizontal scrollbar takes up space below the requested rows.
+    return limit + viewport.offsetHeight - viewport.clientHeight;
+}
+
+// A scrollbar may be the only reason a responsive image fits. Check borderline
+// images together at the width they would regain without it.
+function measureUncappedImages(probes: IImageProbe[], limit: number, heights: Map<HTMLElement, number | null>): void {
+    for (const { viewport } of probes)
+        viewport.classList.remove('mu-compact-limited');
+    for (const { viewport, image } of probes)
+        heights.set(viewport, image.offsetHeight > Math.round(limit) ? limit : null);
+    for (const { viewport } of probes)
+        viewport.classList.add('mu-compact-limited');
+}
+
 export class CompactBlocks {
     private _bodies = new Map<HTMLElement, HTMLElement>();
     private _observer?: ResizeObserver;
@@ -37,11 +63,7 @@ export class CompactBlocks {
 
     private _flush(): void {
         this._frame = undefined;
-        for (const viewport of this._pending) {
-            const body = this._bodies.get(viewport);
-            if (body)
-                this._measure(viewport, body);
-        }
+        this._measure(this._pending);
         this._pending.clear();
     }
 
@@ -73,32 +95,53 @@ export class CompactBlocks {
     }
 
     refresh(): void {
-        for (const [viewport, body] of this._bodies)
-            this._measure(viewport, body);
+        this._measure(this._bodies.keys());
     }
 
-    private _measure(viewport: HTMLElement, body: HTMLElement): void {
+    private _measure(viewports: Iterable<HTMLElement>): void {
         const { compactMode, compactImageMaxHeight, compactCodeMaxLines } = this._muya.options;
+        if (!compactMode) {
+            for (const viewport of viewports)
+                this._clear(viewport);
+            return;
+        }
+        // Image loads and window resizes arrive in batches. Finish geometry reads
+        // before changing any cap, since one cap can invalidate the whole editor's layout.
+        const heights = new Map<HTMLElement, number | null>();
+        const probes: IImageProbe[] = [];
+        const imageLimit = compactImageMaxHeight ?? 320;
+        const roundedLimit = Math.round(imageLimit);
+        for (const viewport of viewports) {
+            const body = this._bodies.get(viewport);
+            if (!body)
+                continue;
+            if (viewport.classList.contains('mu-code')) {
+                heights.set(viewport, codeHeightLimit(viewport, body, compactCodeMaxLines ?? 12));
+                continue;
+            }
+            const image = body.querySelector('img');
+            const limited = image && image.offsetHeight > roundedLimit;
+            heights.set(viewport, limited ? imageLimit : null);
+            if (image && !limited && viewport.matches('.mu-compact-limited:not(.mu-compact-expanded)'))
+                probes.push({ viewport, image, top: viewport.scrollTop, left: viewport.scrollLeft });
+        }
+        measureUncappedImages(probes, imageLimit, heights);
+        for (const [viewport, height] of heights) {
+            if (height === null)
+                this._clear(viewport);
+            else
+                this._applyLimit(viewport, height);
+        }
+        for (const { viewport, top, left } of probes) {
+            if (top || left)
+                viewport.scrollTo({ top, left, behavior: 'instant' });
+        }
+    }
+
+    private _applyLimit(viewport: HTMLElement, height: number): void {
         const owner = viewport.parentElement;
         if (!owner)
             return;
-        if (!compactMode) {
-            this._clear(viewport);
-            return;
-        }
-        const code = viewport.classList.contains('mu-code');
-        const limit = code
-            ? Number.parseFloat(getComputedStyle(body).lineHeight) * (compactCodeMaxLines ?? 12)
-            : (compactImageMaxHeight ?? 320);
-        const naturalHeight = code
-            ? body.clientHeight
-            : body.querySelector('img')?.offsetHeight ?? 0;
-        if (naturalHeight <= Math.round(limit)) {
-            this._clear(viewport);
-            return;
-        }
-        // The horizontal scrollbar occupies space in addition to the requested number of code rows.
-        const height = limit + (code ? viewport.offsetHeight - viewport.clientHeight : 0);
         viewport.style.setProperty('--mu-compact-height', `${height}px`);
         viewport.classList.add('mu-compact-limited');
         let button = owner.querySelector<HTMLButtonElement>(':scope > .mu-compact-toggle');
@@ -163,13 +206,15 @@ export class CompactBlocks {
         if (!paths.length)
             return;
         const expanded = new Set(paths);
-        for (const [viewport, body] of this._bodies) {
+        const restored: HTMLElement[] = [];
+        for (const viewport of this._bodies.keys()) {
             const block = getBlock(viewport.parentElement);
             if (block?.parent && expanded.has(JSON.stringify(block.path))) {
                 viewport.classList.add('mu-compact-expanded');
-                this._measure(viewport, body);
+                restored.push(viewport);
             }
         }
+        this._measure(restored);
     }
 
     dispose(): void {

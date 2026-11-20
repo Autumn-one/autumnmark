@@ -980,6 +980,8 @@
     "copy": "동영상 파일 복사"
   },
   "embeddedImage": {
+    "pasteProgress": "이미지 포함 중 {completed}/{total}",
+    "pasteFailed": "이미지 {total}개 중 {failed}개는 원본 링크를 유지했습니다",
     "preview": "이미지 미리보기",
     "source": "내장 소스",
     "replace": "이미지 교체",

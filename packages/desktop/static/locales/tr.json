@@ -980,6 +980,8 @@
     "copy": "Video dosyasını kopyala"
   },
   "embeddedImage": {
+    "pasteProgress": "Görseller gömülüyor {completed}/{total}",
+    "pasteFailed": "{total} görselden {failed} tanesi için özgün bağlantılar korundu",
     "preview": "Görüntü önizlemesi",
     "source": "Gömülü kaynak",
     "replace": "Görüntüyü değiştir",

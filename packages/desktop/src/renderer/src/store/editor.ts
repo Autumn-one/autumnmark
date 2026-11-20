@@ -1,4 +1,5 @@
-import equal from 'deep-equal'
+import isEqual from 'lodash/isEqual'
+import { toRaw } from 'vue'
 import { adjustTrailingNewlines } from '@/util/markdown'
 import { documentVideos, releaseDocumentVideos } from '@/util/videoAttachments'
 import { prepareReading, applyReadOnly } from '../services/documentMode'
@@ -1140,7 +1141,7 @@ export const useEditorStore = defineStore('editor', {
       if (history) tab.history = history
       if (blocks) tab.blocks = blocks
 
-      if (id === this.currentFile?.id && toc && !equal(toc, this.listToc)) {
+      if (id === this.currentFile?.id && toc && !isEqual(toc, toRaw(this.listToc))) {
         this.listToc = toc
         this.toc = listToTree<TocItem>(toc)
       }

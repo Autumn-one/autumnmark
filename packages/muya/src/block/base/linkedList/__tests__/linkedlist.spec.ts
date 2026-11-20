@@ -89,6 +89,21 @@ describe('test LinkedList', () => {
     });
 
     describe('linkedList method `offset`', () => {
+        it('resolves paths after insertion, removal and moving a sibling', () => {
+            const list = new LinkedList<IMockNode>();
+            const [a, b, c, d] = Array.from({ length: 4 }, createLinkedNode);
+            list.append(a, b, c);
+            expect(list.find(1)).toBe(b);
+            list.insertBefore(d, b);
+            expect(list.offset(b)).toBe(2);
+            list.remove(b);
+            expect(list.find(2)).toBe(c);
+            expect(list.contains(b)).toBe(false);
+            list.insertBefore(b, d);
+            expect(list.find(1)).toBe(b);
+            expect(list.offset(d)).toBe(2);
+        });
+
         it('should work correctly in LinkedList method `offset`', () => {
             const nodes: Record<string, IMockNode> = {};
             for (const i of [...Array.from({ length: 5 })].map((_, index) => index)) {

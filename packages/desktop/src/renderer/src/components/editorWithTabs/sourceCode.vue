@@ -30,10 +30,11 @@ import { getMarkdownOutline, headingLinkAt } from '@muyajs/core'
 import { storeToRefs } from 'pinia'
 import type CodeMirror from 'codemirror'
 import codeMirror, { setCursorAtFirstLine, setTextDirection } from '../../codeMirror'
-import { getClipboardImageFile, standaloneImageSource, standaloneRemoteMarkdownImage, imageToMarkdown } from '@muyajs/core'
+import { embeddedImageDestination, findPastedImageSources, getClipboardImageFile, imageDocumentMarkdown, standaloneImageSource, imageToMarkdown } from '@muyajs/core'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { installEmbeddedImages } from '../../codeMirror/embeddedImages'
 import { embedImage, readClipboardImage } from '@/util/embedImage'
+import { embedDocumentImages } from '@/services/pastedImages'
 import { videoFromTransfer } from '@muyajs/core'
 import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
@@ -109,12 +110,12 @@ async function insertMarkup(load: () => Promise<string>, position?: CodeMirror.P
   }
 }
 
-function insertEmbeddedImage(image: File | string, position?: CodeMirror.Position, markdown?: { alt: string; title: string } | null) {
+function insertEmbeddedImage(image: File | string, position?: CodeMirror.Position) {
   const path = currentTab.value?.pathname
   return insertMarkup(async() => {
     const src = await embedImage(image, path)
     const alt = typeof image === 'string' ? '' : image.name.replace(/[\\[\]]/g, '\\$&')
-    return imageToMarkdown({ src, alt: markdown?.alt ?? alt, title: markdown?.title })
+    return imageToMarkdown({ src, alt })
   }, position)
 }
 
@@ -160,6 +161,43 @@ function expandVideoDrag(event: DragEvent) {
   if (text !== expanded) event.dataTransfer.setData('text/plain', expanded)
 }
 
+async function pasteImageDocument(text: string) {
+  const cm = editor.value
+  const tab = currentTab.value
+  if (!cm || !tab || tab.readOnly || cm.getOption('readOnly')) return
+  const markdown = documentVideos(tab.id).compact(text.replace(/\r\n?/g, '\n'))
+  cm.replaceSelection(markdown, 'end', 'paste')
+  const ends = cm.listSelections().map(selection => cm.indexFromPos(selection.head))
+  const pasted = cm.getValue()
+  const images = findPastedImageSources(pasted).filter(image =>
+    ends.some(end => image.start >= end - markdown.length && image.end <= end))
+  if (!images.length) return
+  const targets = images.map(image => ({
+    image,
+    marker: cm.markText(cm.posFromIndex(image.start), cm.posFromIndex(image.end))
+  }))
+  try {
+    const converted = await embedDocumentImages(images.map(image => image.src), tab)
+    if (viewDestroyed.value || editor.value !== cm || tabId.value !== tab.id || currentTab.value?.readOnly) return
+    const live = cm.getValue()
+    const destinations = live === pasted ? null : new Map(findPastedImageSources(live).map(item => [item.start, item]))
+    cm.operation(() => {
+      for (const { marker, image } of targets.reverse()) {
+        const range = marker.find()
+        const src = converted.get(image.src)
+        if (!range || !src || cm.getRange(range.from, range.to) !== pasted.slice(image.start, image.end)) continue
+        const destination = destinations ? destinations.get(cm.indexFromPos(range.from)) : image
+        if (destination?.src !== image.src) continue
+        cm.replaceRange(embeddedImageDestination(destination, src), range.from, range.to, 'embed-pasted-images')
+      }
+    })
+    // Patches on earlier lines can leave the caret stationary, so cursorActivity may never publish them.
+    saveContent(cm)
+  } finally {
+    for (const { marker } of targets) marker.clear()
+  }
+}
+
 function pasteEmbeddedImage(event: ClipboardEvent) {
   const video = videoFromTransfer(event.clipboardData)
   if (video) {
@@ -169,12 +207,20 @@ function pasteEmbeddedImage(event: ClipboardEvent) {
     return
   }
   if (preferencesStore.imageInsertAction !== 'embed') return
-  const markdown = standaloneRemoteMarkdownImage(event.clipboardData?.getData('text/plain') ?? '')
-  const image = markdown?.src ?? transferredImage(event.clipboardData)
+  const transfer = event.clipboardData
+  const markdown = transfer && imageDocumentMarkdown(transfer.getData('text/plain'), transfer.getData('text/html'),
+    getClipboardImageFile(transfer), preferencesStore.bulletListMarker)
+  if (markdown) {
+    event.preventDefault()
+    event.stopPropagation()
+    void pasteImageDocument(markdown)
+    return
+  }
+  const image = transferredImage(event.clipboardData)
   if (!image) return
   event.preventDefault()
   event.stopPropagation()
-  void insertEmbeddedImage(image, undefined, markdown)
+  void insertEmbeddedImage(image)
 }
 
 function dropEmbeddedImage(event: DragEvent) {
@@ -208,6 +254,12 @@ const showContextMenu = (event: MouseEvent): void => {
       id: 'pasteMenuItem',
       label: t('contextMenu.paste'),
       click: async() => {
+        const text = await window.electron.clipboard.readText()
+        if (editor.value !== cm || tabId.value !== tab.id || viewDestroyed.value) return
+        if (preferencesStore.imageInsertAction === 'embed' && /!\[|<img\b/i.test(text)) {
+          await pasteImageDocument(text)
+          return
+        }
         const video = await readClipboardImage('video').catch(() => undefined)
         if (editor.value !== cm || tabId.value !== tab.id || viewDestroyed.value) return
         if (video) {
@@ -222,7 +274,6 @@ const showContextMenu = (event: MouseEvent): void => {
             return
           }
         }
-        const text = await window.electron.clipboard.readText()
         if (text && editor.value === cm && tabId.value === tab.id && !viewDestroyed.value) {
           cm.replaceSelection(text, 'end', 'paste')
           cm.focus()

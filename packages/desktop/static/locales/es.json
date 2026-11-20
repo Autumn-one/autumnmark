@@ -980,6 +980,8 @@
     "copy": "Copiar archivo de vídeo"
   },
   "embeddedImage": {
+    "pasteProgress": "Incrustando imágenes {completed}/{total}",
+    "pasteFailed": "Se conservaron los enlaces originales de {failed} de {total} imágenes",
     "preview": "Vista previa",
     "source": "Código incrustado",
     "replace": "Reemplazar imagen",

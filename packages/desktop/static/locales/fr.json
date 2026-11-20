@@ -980,6 +980,8 @@
     "copy": "Copier le fichier vidéo"
   },
   "embeddedImage": {
+    "pasteProgress": "Intégration des images {completed}/{total}",
+    "pasteFailed": "Liens d’origine conservés pour {failed} images sur {total}",
     "preview": "Aperçu",
     "source": "Source intégrée",
     "replace": "Remplacer l’image",
