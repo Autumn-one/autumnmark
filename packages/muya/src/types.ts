@@ -13,6 +13,10 @@ export interface IMuyaOptions {
     editorFontFamily?: string;
     codeFontSize?: number;
     codeFontFamily?: string;
+    compactMode?: boolean;
+    compactImageMaxHeight?: number;
+    compactVideoMaxHeight?: number;
+    compactCodeMaxLines?: number;
     wrapCodeBlocks?: boolean;
     focusMode: boolean;
     trimUnnecessaryCodeBlockEmptyLines: boolean;
@@ -108,8 +112,15 @@ export interface IMuyaOptions {
      * the raw `src` verbatim.
      */
     imageAction?: (state: IImageActionState) => Promise<string>;
-    editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit) => void;
+    editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit, event?: MouseEvent) => void;
     embedImage?: (image: File | string) => Promise<string> | undefined;
+    importVideo?: (input: File | string) => Promise<string>;
+    /** The host owns tab-scoped attachment references and their playback URLs. */
+    videoAttachments?: {
+        compact: (text: string) => string;
+        expand: (text: string) => string;
+        playback: (src: string) => string | undefined;
+    };
     /**
      * Check whether a local image drop can proceed before changing the document.
      * Return undefined for immediate insertion, or a promise resolving to false

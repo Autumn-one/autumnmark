@@ -23,6 +23,7 @@ interface DocumentEntry {
   ownerWindowId: string
   snapshot: DocumentSnapshot
   markdown: string
+  textHash: string
   // Changes only with content or save-format edits.
   revision: number
   // Also invalidates prepared updates after saves, relocations, and disk observations.
@@ -60,6 +61,33 @@ const checkedDocument = (snapshot: DocumentSnapshot): DocumentSnapshot => {
 
 export type DocumentCloseRecord = SavedRecoveryRecord | DiscardedRecoveryRecord
 
+function checkpointMarkdown(current: DocumentEntry, update: DirtyContentUpdate): string {
+  const { markdown, reuse } = update
+  if (typeof markdown !== 'string') throw new Error('Invalid Markdown')
+  if (!reuse) return markdown
+  if (reuse.revision !== current.revision || !Array.isArray(reuse.spans))
+    throw new Error('Invalid checkpoint base')
+  const parts: string[] = []
+  let cursor = 0
+  let remaining = current.markdown.length
+  for (const { at, from, length } of reuse.spans) {
+    if (!Number.isSafeInteger(at) || at < cursor || at > markdown.length ||
+        !Number.isSafeInteger(from) || from < 0 || !Number.isSafeInteger(length) ||
+        length <= 0 || length > remaining || from > current.markdown.length - length)
+      throw new Error('Invalid checkpoint span')
+    parts.push(markdown.slice(cursor, at), current.markdown.slice(from, from + length))
+    cursor = at
+    remaining -= length
+  }
+  parts.push(markdown.slice(cursor))
+  return parts.join('')
+}
+
+function cloneEntry(entry: DocumentEntry): DocumentEntry {
+  const { markdown, ...metadata } = entry
+  return { ...structuredClone(metadata), markdown }
+}
+
 /** Main-process authority for document identity, live text and verified disk baselines. */
 export class DocumentRegistry {
   private readonly _entries = new Map<string, DocumentEntry>()
@@ -91,9 +119,10 @@ export class DocumentRegistry {
       (markdown !== '' || (document.resource.kind === 'file' && !document.resource.pendingCreation))
     )
       throw new Error('Invalid empty document')
+    const textHash = contentSha256(markdown)
     let saved: SavedDocument | null = null
     if (document.content.kind === 'disk') {
-      saved = { snapshot: structuredClone(document), textHash: contentSha256(markdown) }
+      saved = { snapshot: structuredClone(document), textHash }
     } else if (options.saved) {
       const baseline = checkedDocument(options.saved.snapshot)
       if (baseline.id !== document.id || baseline.content.kind !== 'disk')
@@ -113,6 +142,7 @@ export class DocumentRegistry {
       ownerWindowId,
       snapshot: document,
       markdown,
+      textHash,
       revision,
       generation: 0,
       saved,
@@ -166,7 +196,6 @@ export class DocumentRegistry {
       title: current.snapshot.title
     })
     const revision = update?.contentRevision ?? current.revision
-    const markdown = update?.markdown ?? current.markdown
     if (
       (update && (update.documentId !== metadata.id || typeof update.markdown !== 'string')) ||
       !Number.isSafeInteger(revision) ||
@@ -174,13 +203,15 @@ export class DocumentRegistry {
       (snapshot.content.kind === 'recovery' && snapshot.content.contentRevision !== revision)
     )
       throw new Error('Invalid content revision')
-    const changed =
-      markdown !== current.markdown || !sameFormat(snapshot.saveFormat, current.snapshot.saveFormat)
+    const markdown = update ? checkpointMarkdown(current, update) : current.markdown
+    const textChanged = markdown !== current.markdown
+    const changed = textChanged || !sameFormat(snapshot.saveFormat, current.snapshot.saveFormat)
     if (changed && revision === current.revision)
       throw new Error('Content changed without a new revision')
+    const textHash = textChanged ? contentSha256(markdown) : current.textHash
     const matchesSaved =
       current.saved !== null &&
-      contentSha256(markdown) === current.saved.textHash &&
+      textHash === current.saved.textHash &&
       sameFormat(snapshot.saveFormat, current.saved.snapshot.saveFormat)
     const matchesEmpty =
       !current.saved &&
@@ -189,7 +220,7 @@ export class DocumentRegistry {
       sameFormat(snapshot.saveFormat, current.emptyFormat)
     if (snapshot.content.kind !== 'recovery' && !matchesSaved && !matchesEmpty)
       throw new Error('Clean content does not match saved content')
-    const entry = structuredClone(current)
+    const entry = cloneEntry(current)
     snapshot.content =
       matchesSaved && current.saved
         ? structuredClone(current.saved.snapshot.content)
@@ -210,6 +241,7 @@ export class DocumentRegistry {
     if (acceptsObserved) entry.baseline = structuredClone(observed.baseline)
     entry.snapshot = snapshot
     entry.markdown = markdown
+    entry.textHash = textHash
     entry.revision = revision
     entry.generation++
     if (
@@ -237,7 +269,7 @@ export class DocumentRegistry {
         throw new Error('Stale or duplicate prepared document')
       seen.add(update.id)
     }
-    for (const update of updates) this._entries.set(update.id, structuredClone(update.entry))
+    for (const update of updates) this._entries.set(update.id, cloneEntry(update.entry))
   }
 
   markSaved(id: string, savedRevision: number, snapshot: DocumentSnapshot, markdown: string): void {
@@ -254,7 +286,7 @@ export class DocumentRegistry {
     current.saved = { snapshot: saved, textHash: contentSha256(markdown) }
     current.baseline = structuredClone(saved.content.baseline)
     const clean =
-      contentSha256(current.markdown) === current.saved.textHash &&
+      current.textHash === current.saved.textHash &&
       sameFormat(current.snapshot.saveFormat, saved.saveFormat)
     current.snapshot = {
       ...current.snapshot,
@@ -375,7 +407,7 @@ export class DocumentRegistry {
             status: RecoveryStatus.DIRTY,
             document: structuredClone(entry.snapshot),
             markdown: entry.markdown,
-            contentSha256: contentSha256(entry.markdown),
+            contentSha256: entry.textHash,
             baseline: structuredClone(entry.baseline)
           }
         ]

@@ -186,15 +186,15 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       this.setItems(userData)
     })
 
-    ipcMain.handle('mt::ask-for-image-path', async(e) => {
+    ipcMain.handle('mt::ask-for-image-path', async(e, kind?: 'video') => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return ''
       const { filePaths } = await dialog.showOpenDialog(win, {
         properties: ['openFile'],
         filters: [
           {
-            name: 'Images',
-            extensions: [...IMAGE_EXTENSIONS]
+            name: kind === 'video' ? 'Video' : 'Images',
+            extensions: kind === 'video' ? ['mp4', 'webm', 'ogv', 'mov', 'm4v', 'mkv', 'avi', 'mpeg', 'mpg', '3gp'] : [...IMAGE_EXTENSIONS]
           }
         ]
       })

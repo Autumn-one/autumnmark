@@ -8,6 +8,7 @@ import type {
   BootInfo,
   PlantumlFetchResult,
   SaveDialogRequest,
+  ClipboardImageInput,
   ClipboardImageWriteOptions
 } from '@shared/types/ipc'
 import type { MenuTemplate, MenuPopupPosition, ContextMenuPopupOptions, ApplicationMenuCategory } from '@shared/types/menu'
@@ -46,10 +47,12 @@ declare global {
   }
 
   interface ElectronClipboardAPI {
+    hasImage(kind?: 'video'): Promise<boolean>
+    readImageInput(kind?: 'video'): Promise<ClipboardImageInput>
     writeText(text: string): Promise<boolean>
     readText(): Promise<string>
     guessFilePath(): Promise<string | null>
-    writeImage(png: Uint8Array, options?: ClipboardImageWriteOptions): Promise<boolean>
+    writeImage(bytes: Uint8Array, options?: ClipboardImageWriteOptions): Promise<boolean>
     beginImageCopy(marker?: string): Promise<number | null>
     cancelImageCopy(ticket: number): Promise<void>
     readImageSource(src: string): Promise<PlantumlFetchResult>
@@ -65,6 +68,7 @@ declare global {
   }
 
   interface ElectronWebUtilsAPI {
+    dragEmbeddedImage(src: string, name: string): Promise<void>
     getPathForFile(file: File): string
   }
 

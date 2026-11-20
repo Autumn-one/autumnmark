@@ -1,6 +1,8 @@
 export const es = {
     name: 'es',
     resource: {
+        'Expand': 'Expandir',
+        'Collapse': 'Contraer',
         'Add tab': 'Añadir pestaña',
         'Fold block': 'Bloque plegable',
         'Fold options': 'Opciones del bloque',

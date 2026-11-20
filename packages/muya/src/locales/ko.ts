@@ -1,6 +1,8 @@
 export const ko = {
     name: 'ko',
     resource: {
+        'Expand': '펼치기',
+        'Collapse': '접기',
         'Add tab': '탭 추가',
         'Fold block': '접이식 블록',
         'Fold options': '블록 옵션',

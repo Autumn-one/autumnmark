@@ -93,6 +93,47 @@
           :bool="wrapCodeBlocks"
           :on-change="(value) => onSelectChange('wrapCodeBlocks', value)"
         />
+        <div class="compact-settings">
+          <bool
+            id="setting-compactMode"
+            :description="preferenceLabel('compactMode')"
+            :bool="compactMode"
+            :on-change="(value) => onSelectChange('compactMode', value)"
+          />
+          <label id="setting-compactImageMaxHeight">
+            {{ preferenceLabel('compactImageMaxHeight') }}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              :disabled="!compactMode"
+              :value="compactImageMaxHeight"
+              @change="changeLimit('compactImageMaxHeight', $event)"
+            >
+          </label>
+          <label id="setting-compactVideoMaxHeight">
+            {{ preferenceLabel('compactVideoMaxHeight') }}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              :disabled="!compactMode"
+              :value="compactVideoMaxHeight"
+              @change="changeLimit('compactVideoMaxHeight', $event)"
+            >
+          </label>
+          <label id="setting-compactCodeMaxLines">
+            {{ preferenceLabel('compactCodeMaxLines') }}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              :disabled="!compactMode"
+              :value="compactCodeMaxLines"
+              @change="changeLimit('compactCodeMaxLines', $event)"
+            >
+          </label>
+        </div>
       </template>
     </compound>
 
@@ -274,6 +315,10 @@ const {
   autoCheck,
   sourceCodeLineNumbers,
   autoNormalizeLineEndings,
+  compactMode,
+  compactImageMaxHeight,
+  compactVideoMaxHeight,
+  compactCodeMaxLines,
   wrapCodeBlocks,
   editorLineWidth,
   defaultEncoding,
@@ -284,9 +329,51 @@ const {
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
 }
+
+const changeLimit = (key: 'compactImageMaxHeight' | 'compactVideoMaxHeight' | 'compactCodeMaxLines', event: Event): void => {
+  const input = event.target as HTMLInputElement
+  const value = input.valueAsNumber
+  if (input.validity.valid && Number.isSafeInteger(value) && value > 0) {
+    onSelectChange(key, value)
+  } else {
+    input.value = String(preferenceStore[key])
+  }
+}
 </script>
 
 <style scoped>
+.compact-settings,
+.compact-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compact-settings {
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 16px 0;
+}
+
+.compact-settings .pref-switch-item {
+  margin: 0;
+  gap: 8px;
+}
+
+.compact-settings input {
+  width: 5em;
+  padding: 4px 6px;
+  font: inherit;
+  color: var(--editorColor);
+  background: transparent;
+  border: 1px solid var(--editorColor30);
+  border-radius: 4px;
+}
+
+.compact-settings input:disabled {
+  opacity: 0.5;
+}
+
 .pref-editor .image-ctrl {
   font-size: 14px;
   user-select: none;

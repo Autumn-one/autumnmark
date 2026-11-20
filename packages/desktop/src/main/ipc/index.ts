@@ -14,6 +14,7 @@ import { registerDiagramHandlers } from './diagram'
 import { registerLinkHtmlHandler } from './linkHtml'
 import { registerImageClipboardHandlers } from './clipboardImage'
 import { RemoteContentCache } from './remoteContent'
+import { registerEmbeddedImageDrag } from './embeddedImageDrag'
 
 export const registerSandboxIpcHandlers = (fileOperations?: FileOperations): void => {
   registerBootInfo()
@@ -30,6 +31,7 @@ export const registerSandboxIpcHandlers = (fileOperations?: FileOperations): voi
   registerDiagramHandlers()
   registerLinkHtmlHandler()
   registerImageClipboardHandlers()
+  registerEmbeddedImageDrag()
   const remoteContent = new RemoteContentCache(net.fetch, snapshot => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send('mt::announcement-changed', snapshot)

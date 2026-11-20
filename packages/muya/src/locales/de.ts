@@ -1,6 +1,8 @@
 export const de = {
     name: 'de',
     resource: {
+        'Expand': 'Ausklappen',
+        'Collapse': 'Einklappen',
         'Add tab': 'Registerkarte hinzufügen',
         'Fold block': 'Klappblock',
         'Fold options': 'Klappblock-Optionen',

@@ -81,6 +81,8 @@ export function attachReadingEvents(muya: Muya): () => void {
     attach('contextmenu', (event) => {
         if (!(event.target instanceof Element))
             return;
+        if (event.target.closest('.mu-embedded-image[role="button"], .mu-embedded-video'))
+            return;
         const link = event.target.closest<HTMLElement>(`${LINK_SELECTOR}, a[href]`);
         event.preventDefault();
         eventCenter.emit('reading-context-menu', {

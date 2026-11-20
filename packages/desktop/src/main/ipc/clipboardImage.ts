@@ -84,10 +84,12 @@ export const cancelImageCopy = (owner: number, ticket: number): void => {
 
 export const writeClipboardImage = async(
   owner: number,
-  png: Uint8Array,
+  bytes: Uint8Array,
   options?: ClipboardImageWriteOptions
 ): Promise<boolean> => {
-  const image = nativeImage.createFromBuffer(Buffer.from(png))
+  const jpeg = options?.mime === 'image/jpeg'
+  if (jpeg && (bytes[0] !== 0xff || bytes[1] !== 0xd8)) return false
+  const image = nativeImage.createFromBuffer(Buffer.from(bytes))
   if (image.isEmpty()) return false
 
   let request = activeImageCopy
@@ -108,8 +110,9 @@ export const writeClipboardImage = async(
     activeImageCopy = request
   }
 
+  const mime = jpeg ? 'image/jpeg' : 'image/png'
   const data: Record<string, Blob | string> = {
-    'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' })
+    [mime]: new Blob([new Uint8Array(jpeg ? bytes : image.toPNG())], { type: mime })
   }
   if (options?.text !== undefined) data['text/plain'] = options.text
   if (options?.html !== undefined) data['text/html'] = options.html

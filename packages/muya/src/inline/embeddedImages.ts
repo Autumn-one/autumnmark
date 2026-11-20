@@ -1,16 +1,68 @@
 import type Content from '../block/base/content';
 import type { IEmbeddedImage } from '../utils/embeddedImage';
 import { getOffsetOfParagraph } from '../selection/dom';
-import { embeddedImageSource, findEmbeddedImages, replaceEmbeddedImage } from '../utils/embeddedImage';
+import { bindEmbeddedImageEvents, embeddedImageSource, findEmbeddedMedia, replaceEmbeddedImage } from '../utils/embeddedImage';
+import { resolveVideoSource } from '../utils/fileUrl';
 import { isImageToken } from '../utils/image';
 import { parseInline } from './parser/lexer';
+
+function stopEditorEvent(event: Event) {
+    event.stopPropagation();
+}
+
+export function mountVideoPlayer(node: HTMLElement, player: HTMLVideoElement, label: string, edit: (event: MouseEvent) => void) {
+    node.classList.add('mu-embedded-image', 'mu-embedded-video');
+    node.contentEditable = 'false';
+    player.controls = true;
+    player.preload = 'metadata';
+    player.setAttribute('aria-label', label);
+    bindEmbeddedImageEvents(player, edit);
+    player.onmousedown = player.onkeydown = player.onkeyup = stopEditorEvent;
+
+    const caption = node.ownerDocument.createElement('button');
+    caption.type = 'button';
+    caption.textContent = label;
+    caption.onkeydown = caption.onkeyup = stopEditorEvent;
+    bindEmbeddedImageEvents(caption, edit);
+    node.replaceChildren(player, caption);
+}
+
+export function openEmbeddedMedia(block: Content, image: IEmbeddedImage, raw: string, name: string, start: number, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const matches = (expected: string) => {
+        const previous = replaceEmbeddedImage(raw, image, expected);
+        return block.muya.isBlockInDocument(block) && block.text.startsWith(previous, start);
+    };
+    block.muya.options.editEmbeddedImage?.({
+        src: image.src,
+        kind: image.kind,
+        name,
+        readOnly: block.muya.isReadOnly,
+        matches,
+        undo: () => block.muya.undo(),
+        apply: (src, expected = image.src) => {
+            if (block.muya.isReadOnly || !matches(expected))
+                return;
+            const previous = replaceEmbeddedImage(raw, image, expected);
+            const replacement = replaceEmbeddedImage(raw, image, src);
+            block.muya.editor.history.cutoff();
+            block.muya.transact(() => {
+                block.text = block.text.slice(0, start) + replacement + block.text.slice(start + previous.length);
+                const caret = start + replacement.length;
+                block.setCursor(caret, caret, true);
+            });
+            block.muya.editor.history.cutoff();
+        },
+    }, event instanceof MouseEvent ? event : undefined);
+}
 
 /** Only the display copy goes through the inline lexer and syntax highlighter. */
 export function projectEmbeddedImages(block: Content) {
     if (!block.muya.options.editEmbeddedImage)
         return;
     const original = block.text;
-    const images = findEmbeddedImages(original);
+    const images = findEmbeddedMedia(original);
     if (!images.length)
         return;
     let prefix = '\uE000';
@@ -48,7 +100,31 @@ export function projectEmbeddedImages(block: Content) {
         const raw = original.slice(image.start, image.end);
         embeddedImageSource.set(node, raw);
         node.textContent = image.label;
-        if (preview && image.preview) {
+        let name = /^!\[([^\]]*)\]/.exec(raw)?.[1] ?? '';
+        const edit = (event: Event) => {
+            const start = getOffsetOfParagraph(node, block.domNode!);
+            openEmbeddedMedia(block, image, raw, name, start, event);
+        };
+        if (image.kind === 'video') {
+            node.classList.add('mu-embedded-video');
+            name = image.name ?? '';
+            node.textContent = name || image.label;
+            if (preview && image.preview) {
+                const player = document.createElement('video');
+                player.src = block.muya.options.videoAttachments?.playback(image.src) ?? resolveVideoSource(image.src);
+                const token = parseInline(replaceEmbeddedImage(raw, image, 'video.webm'))[0];
+                if (token?.type === 'html_tag' && token.tag === 'video') {
+                    for (const dimension of ['width', 'height'] as const) {
+                        const value = token.attrs[dimension];
+                        if (value)
+                            player.setAttribute(dimension, value);
+                    }
+                }
+                mountVideoPlayer(node, player, name || image.label, edit);
+                return node;
+            }
+        }
+        else if (preview && image.preview) {
             const img = document.createElement('img');
             img.src = image.src;
             const token = parseInline(raw.replace(image.src, 'image.png'))[0];
@@ -59,36 +135,17 @@ export function projectEmbeddedImages(block: Content) {
                         img.setAttribute(attr, value);
                 }
             }
+            name = img.alt || name;
             img.draggable = false;
             node.prepend(img);
         }
-        if (!block.muya.isReadOnly) {
-            node.tabIndex = 0;
-            node.setAttribute('role', 'button');
-            const edit = (event: Event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const start = getOffsetOfParagraph(node, block.domNode!);
-                block.muya.options.editEmbeddedImage?.({
-                    src: image.src,
-                    apply: (src) => {
-                        if (block.muya.isReadOnly || !block.muya.isBlockInDocument(block) || block.text.slice(start, start + raw.length) !== raw)
-                            return;
-                        const replacement = replaceEmbeddedImage(raw, image, src);
-                        block.muya.transact(() => {
-                            block.text = block.text.slice(0, start) + replacement + block.text.slice(start + raw.length);
-                            const caret = start + replacement.length;
-                            block.setCursor(caret, caret, true);
-                        });
-                    },
-                });
-            };
-            node.onclick = edit;
-            node.onkeydown = (event) => {
-                if (event.key === 'Enter' || event.key === ' ')
-                    edit(event);
-            };
-        }
+        node.tabIndex = 0;
+        node.setAttribute('role', 'button');
+        bindEmbeddedImageEvents(node, edit);
+        node.onkeydown = (event) => {
+            if (event.key === 'Enter' || event.key === ' ')
+                edit(event);
+        };
         return node;
     }
 
@@ -115,5 +172,10 @@ export function projectEmbeddedImages(block: Content) {
         }
     }
 
-    return { text: parts.join(''), offset, mount };
+    function isImageMarker(raw: string) {
+        const media = byMarker.get(raw);
+        return media?.preview === true && media.kind !== 'video';
+    }
+
+    return { text: parts.join(''), offset, mount, isImageMarker };
 }

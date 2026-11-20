@@ -1,6 +1,8 @@
 export const nl = {
     name: 'nl',
     resource: {
+        'Expand': 'Uitklappen',
+        'Collapse': 'Inklappen',
         'Add tab': 'Tabblad toevoegen',
         'Fold block': 'Uitklapbaar blok',
         'Fold options': 'Blokopties',

@@ -37,9 +37,14 @@ function firstAlertBodyContent(container: Parent) {
     return first?.blockName === 'language-input' ? first.nextContentInContext() : first;
 }
 
+function expandAttachments(clipboard: Clipboard, text: string) {
+    return clipboard.muya.options?.videoAttachments?.expand(text) ?? text;
+}
+
 // Same list separators as a save, so a paste reads back the same lists.
 function clipboardMarkdown(clipboard: Clipboard, states: TState[]) {
-    return new StateToMarkdown({ fancyLists: clipboard.muya.options.fancyLists }).generate(states);
+    const text = new StateToMarkdown({ fancyLists: clipboard.muya.options.fancyLists }).generate(states);
+    return expandAttachments(clipboard, text);
 }
 
 function buildHtmlOptions(options: Muya['options']) {
@@ -74,7 +79,8 @@ function getTableSelectionClipboardData(
     const isSingleCell
         = state.children.length === 1 && state.children[0].children.length === 1;
     if (isSingleCell) {
-        return { html: '', text: state.children[0].children[0].text };
+        const text = state.children[0].children[0].text;
+        return { html: '', text: expandAttachments(clipboard, text) };
     }
 
     const text = clipboardMarkdown(clipboard, [state]);
@@ -333,7 +339,7 @@ export function getClipboardData(clipboard: Clipboard): IClipboardPayload {
     if (copyType === CopyType.COPY_CODE_CONTENT) {
         return {
             html: '',
-            text: copyInfo,
+            text: expandAttachments(clipboard, copyInfo),
         };
     }
 
@@ -369,7 +375,8 @@ export function getClipboardData(clipboard: Clipboard): IClipboardPayload {
         const begin = Math.min(anchor.offset, focus.offset);
         const end = Math.max(anchor.offset, focus.offset);
 
-        const text = anchorBlock.text.substring(begin, end);
+        const selected = anchorBlock.text.substring(begin, end);
+        const text = expandAttachments(clipboard, selected);
 
         return { html: getClipBoardHtml(text, options), text };
     }

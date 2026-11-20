@@ -91,6 +91,8 @@ export class ImageEditTool extends BaseFloat {
     /** Monotonic counter used to drop out-of-order imagePathAutoComplete responses */
     private _autoCompleteSeq = 0;
 
+    private _embedRequest = 0;
+
     /** Current editing state */
     private _state: IState = {
         alt: '',
@@ -355,23 +357,32 @@ export class ImageEditTool extends BaseFloat {
         return this._replaceImageAsync(this._state);
     }
 
-    /**
-     * Replace image asynchronously
-     * Handles two scenarios:
-     * 1. Direct replacement: when src is a URL or no imageAction provided
-     * 2. Upload flow: when src is a local path and imageAction is available
-     * @param param - Image state object
-     * @param param.alt - Image alt text
-     * @param param.src - Image source (local path or URL)
-     * @param param.title - Image title
-     */
     private _replaceImageAsync = async ({ alt, src, title }: IState) => {
-        // No source provided, just hide
         if (!src) {
             this.hide();
             return;
         }
-        // Direct replacement: no upload needed
+        const target = this._block;
+        const info = this._imageInfo;
+        const original = target?.text;
+        if (!target || !info)
+            return;
+        const request = ++this._embedRequest;
+        const embedded = this.muya.options.embedImage?.(src);
+        if (embedded) {
+            try {
+                const result = await embedded;
+                if (request === this._embedRequest && this._block === target && this._imageInfo === info && target.text === original
+                    && !this.muya.isReadOnly && this.muya.isBlockInDocument(target)) {
+                    this._replaceImageDirect(alt, result, title);
+                }
+            }
+            catch (error) {
+                if (request === this._embedRequest)
+                    this.muya.eventCenter.emit('image-drop-error', error);
+            }
+            return;
+        }
         if (!this.options.imageAction || URL_REG.test(src)) {
             this._replaceImageDirect(alt, src, title);
             return;
@@ -447,6 +458,7 @@ export class ImageEditTool extends BaseFloat {
      * confirm/close never leaves a dangling suggestions dropdown.
      */
     override hide() {
+        this._embedRequest++;
         const picker = this._getOpenImagePathPicker();
         if (picker)
             picker.hide();

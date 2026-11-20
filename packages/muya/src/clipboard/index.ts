@@ -4,7 +4,9 @@ import type { Nullable } from '../types';
 import type { IClipboardPayload } from './copyData';
 import Format from '../block/base/format';
 import { classifyInputKind } from '../history';
+import { equalSelections } from '../selection/state';
 import { isClipboardEvent, isInputEvent, isKeyboardEvent } from '../utils';
+import { videoFromTransfer } from '../utils/paste';
 import { getBlockClipboardData, getClipboardData, writeClipboardData } from './copyData';
 import { cutSelection, deleteTableSelection, insertTextAtCursor } from './cut';
 import { pastePlainText, pasteSelection } from './paste';
@@ -187,7 +189,36 @@ class Clipboard {
     ): Promise<void> {
         if (!this.muya.canMutate)
             return Promise.resolve();
+        if (this.pasteType === PasteType.NORMAL && this.muya.options.importVideo) {
+            const video = videoFromTransfer(event.clipboardData);
+            if (video) {
+                event.preventDefault();
+                event.stopPropagation();
+                return this.insertVideo(this.muya.options.importVideo(video));
+            }
+        }
         return pasteSelection(this, event, rawText, rawHtml);
+    }
+
+    async insertVideo(markdown: Promise<string>) {
+        const target = this.selection.getTextSelection()?.anchor.block ?? this.muya.editor.activeContentBlock;
+        const original = target?.text;
+        const before = this.selection.getSelectionState();
+        try {
+            const html = await markdown;
+            if (!html || !target || !this.muya.isBlockInDocument(target) || this.muya.isReadOnly
+                || target.text !== original || !equalSelections(before, this.selection.getSelectionState())) {
+                return;
+            }
+            this.muya.transact(() => {
+                if (!this.selection.getTextSelection()?.isCollapsed)
+                    this.cutHandler();
+                insertTextAtCursor(this, html);
+            });
+        }
+        catch (error) {
+            this.muya.eventCenter.emit('video-import-error', error);
+        }
     }
 
     copyAsMarkdown() {

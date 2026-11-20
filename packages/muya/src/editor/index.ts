@@ -26,6 +26,7 @@ import { deepClone, hasPick, isHTMLElement } from '../utils';
 import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { isIndentShortcut, isTabKey } from '../utils/tab';
+import { CompactBlocks } from './compactBlocks';
 import { ContentTabs } from './contentTabs';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
@@ -286,6 +287,7 @@ export class Editor {
     scrollPage: Nullable<ScrollPage> = null;
     textDrag: TextDrag | null = null;
     contentTabs: ContentTabs;
+    compactBlocks: CompactBlocks;
     foldBlocks: FoldBlocks;
 
     private _activeContentBlock: Nullable<Content> = null;
@@ -315,6 +317,7 @@ export class Editor {
         this.clipboard = Clipboard.create(_muya);
         this.history = new History(_muya);
         this.contentTabs = new ContentTabs(_muya);
+        this.compactBlocks = new CompactBlocks(_muya);
         this.foldBlocks = new FoldBlocks(_muya);
     }
 
@@ -641,6 +644,7 @@ export class Editor {
     }
 
     refreshBlockViews(): void {
+        this.compactBlocks.prune();
         this.foldBlocks.refresh();
         this.contentTabs.refresh();
     }

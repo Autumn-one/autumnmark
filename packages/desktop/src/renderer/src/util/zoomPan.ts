@@ -74,6 +74,7 @@ export function wheelZoomFactor(event: WheelEvent): number {
 
 export interface ZoomPanOptions {
   onChange?: (state: ZoomState) => void
+  canPan?: () => boolean
   /**
    * Where wheel events are listened for. Defaults to the viewport, which is
    * wrong wherever something is layered on top of it: the wheel would then be
@@ -112,7 +113,7 @@ export class ZoomPanController {
       this._apply(zoomAt(this._state, factor, event.clientX, event.clientY, cx, cy))
     }
     this._onMouseDown = (event) => {
-      if (event.button !== 0) return
+      if (event.button !== 0 || this.options.canPan?.() === false) return
       this._dragging = true
       this._originX = event.clientX - this._state.x
       this._originY = event.clientY - this._state.y

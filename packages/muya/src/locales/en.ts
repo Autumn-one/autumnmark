@@ -1,6 +1,8 @@
 export const en = {
     name: 'en',
     resource: {
+        'Expand': 'Expand',
+        'Collapse': 'Collapse',
         'Add tab': 'Add tab',
         'Fold block': 'Fold block',
         'Fold options': 'Fold options',

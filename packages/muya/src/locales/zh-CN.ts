@@ -1,6 +1,8 @@
 export const zhCN = {
     name: 'zh-CN',
     resource: {
+        'Expand': '展开',
+        'Collapse': '收起',
         'Add tab': '添加选项卡',
         'Fold block': '折叠块',
         'Fold options': '折叠块选项',

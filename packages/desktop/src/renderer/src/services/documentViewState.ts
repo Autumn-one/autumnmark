@@ -3,6 +3,7 @@ import type { Muya, TSelectionState } from '@muyajs/core'
 import type { DocumentViewState, SourcePosition, IFileState } from '@shared/types/files'
 import { STATE_LIMITS } from '@shared/types/applicationState'
 import { getHash } from '@/util/fileSystem'
+import { documentVideos } from '@/util/videoAttachments'
 import { adjustTrailingNewlines } from '@/util/markdown'
 
 interface SourceView {
@@ -17,6 +18,7 @@ interface RenderedView {
 }
 /** Only the active editor is exposed; isCurrent guards asynchronous hash completion. */
 interface ViewPorts {
+  documentId?: string
   source?: SourceView
   rendered?: RenderedView
   collapsedOutlineKeys?: string[]
@@ -63,7 +65,7 @@ export class DocumentViewAdapter {
       renderedScrollTopPx: nonnegative(ports.rendered?.container.scrollTop ?? 0),
       collapsedOutlineKeys: keys(ports.collapsedOutlineKeys ?? [])
     }
-    return { ...captured, contentSha256: await this._hash(markdown) }
+    return { ...captured, contentSha256: await this._viewHash(markdown, ports.documentId) }
   }
 
   async restore(
@@ -73,7 +75,7 @@ export class DocumentViewAdapter {
     enabled = true
   ): Promise<string[]> {
     const matching =
-      enabled && state !== null && state.contentSha256 === (await this._hash(markdown))
+      enabled && state !== null && state.contentSha256 === (await this._viewHash(markdown, ports.documentId))
     if (ports.isCurrent && !ports.isCurrent()) return []
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const source = ports.source
@@ -112,6 +114,11 @@ export class DocumentViewAdapter {
       focused.focus({ preventScroll: true })
     return matching && state ? keys(state.collapsedOutlineKeys) : []
   }
+
+  private async _viewHash(markdown: string, id?: string) {
+    const key = id ? await documentVideos(id).viewKey(markdown) : markdown
+    return this._hash(key)
+  }
 }
 
 /** Teardown releases only its own editor binding, preserving a newer mounted view. */
@@ -145,6 +152,7 @@ export const documentViewChanged = (): void => {
   changed?.()
 }
 const portsFor = (id: string): ViewPorts => ({
+  documentId: id,
   source: source?.documentId() === id ? source.view : undefined,
   rendered: rendered?.documentId() === id ? rendered.view : undefined
 })

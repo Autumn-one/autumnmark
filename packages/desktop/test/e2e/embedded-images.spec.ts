@@ -1,15 +1,54 @@
 import { expect, test } from '@playwright/test'
 import type CodeMirror from 'codemirror'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { join, dirname } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import type { ElectronApplication, Locator } from 'playwright'
+import type { MenuTemplate } from '../../src/shared/types/menu'
 import { clickMenuById, enterSourceMode, exitSourceMode, getMarkdownContent, launchWithMarkdown } from './helpers'
 
 const png = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAAdSURBVDhPY5Cb8P8/JZgBXYBUPGrAqAGjBgwWAwAsZKwfgyie3AAAAABJRU5ErkJggg=='
 const src = 'data:image/png;base64,' + png
 
+test('opens a compact portrait image from either side of the picture', async() => {
+  const portrait = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="800"><rect width="180" height="800" fill="navy"/></svg>')
+  const source = 'data:image/svg+xml;base64,' + portrait.toString('base64')
+  const { app, page } = await launchWithMarkdown(`![Portrait](${source})`, { preferences: { language: 'en' } })
+  try {
+    const viewport = page.locator('.mu-paragraph-content.mu-compact-limited')
+    const preview = page.locator('.embedded-image-preview')
+    const toggle = page.locator('.mu-compact-toggle')
+    for (const expanded of [false, true]) {
+      await expect(toggle).toHaveAttribute('aria-expanded', String(expanded))
+      const { left, right, width } = await viewport.evaluate(el => {
+        const portrait = el.querySelector('img')
+        if (!portrait) throw new Error('Missing portrait image')
+        const image = portrait.getBoundingClientRect()
+        const left = image.left - el.getBoundingClientRect().left
+        return { left, right: el.clientWidth - left - image.width, width: el.clientWidth }
+      })
+      expect(left).toBeGreaterThan(10)
+      expect(Math.abs(left - right)).toBeLessThan(2)
+      await viewport.click({ position: { x: expanded ? width - 5 : 5, y: 40 } })
+      await expect(preview).toBeVisible()
+      await expect(preview).toHaveAttribute('src', source)
+      await page.keyboard.press('Escape')
+      await expect(preview).toBeHidden()
+      await toggle.click()
+    }
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(preview).toBeHidden()
+  } finally {
+    await app.close()
+  }
+})
+
 test('embedded images survive save and mode changes and delete in one keystroke', async() => {
   test.setTimeout(60000)
   const markdown = `before ![dot](${src}) after`
-  const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { imageInsertAction: 'embed' } })
+  const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { imageInsertAction: 'embed', language: 'en' } })
   try {
     const atom = page.locator('.mu-editor .mu-embedded-image')
     await expect(atom).toHaveCount(1)
@@ -55,7 +94,8 @@ test('embedded images survive save and mode changes and delete in one keystroke'
     await expect(chip).toHaveCount(1)
     await chip.click()
     await expect(page.locator('.embedded-image-preview')).toBeVisible()
-    await page.locator('.el-dialog:visible .el-button--danger').click()
+    await page.locator('.embedded-image-dialog .el-dropdown__caret-button').click()
+    await page.getByRole('menuitem', { name: 'Delete image', exact: true }).click()
     expect((await getMarkdownContent(page, app)).trim()).toBe('before  after')
     await page.locator('.CodeMirror').evaluate((node, data) => {
       const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0))
@@ -116,7 +156,8 @@ test('paste, drop and replace embedded images without changing the original byte
     await page.locator('.el-dialog:visible input[type=file]').setInputFiles({
       name: 'large.png', mimeType: 'image/png', buffer: Buffer.from(replacement.split(',')[1], 'base64')
     })
-    await expect(page.locator('.embedded-image-preview')).toHaveCount(0)
+    await expect(page.locator('.embedded-image-preview')).toHaveAttribute('src', replacement)
+    await page.keyboard.press('Escape')
     await expect(page.locator('.CodeMirror-code')).not.toContainText(replacement.slice(30, 90))
     await clickMenuById(app, 'fileSaveMenuItem')
     await expect.poll(() => readFileSync(filePath, 'utf8').includes(replacement)).toBe(true)
@@ -127,6 +168,196 @@ test('paste, drop and replace embedded images without changing the original byte
   } finally {
     await app.close()
   }
+})
+
+async function selectImageAction(app: ElectronApplication, target: Locator, label: string) {
+  await app.evaluate(({ ipcMain }, label) => {
+    ipcMain.removeAllListeners('mt::menu::popup')
+    ipcMain.on('mt::menu::popup', (event, template: MenuTemplate) => {
+      const items = template.flatMap(item => [item, ...(item.submenu ?? [])])
+      const match = items.find(item => item.label === label && item.enabled)
+      if (match) event.sender.send('mt::menu::click', { id: match.id })
+      event.sender.send('mt::menu::closed', {})
+    })
+  }, label)
+  await target.click({ button: 'right' })
+}
+
+test('saves the original local image from the preview menu', async() => {
+  const file = test.info().outputPath('linked picture.png')
+  const saved = test.info().outputPath('saved picture.png')
+  writeFileSync(file, Buffer.from(png, 'base64'))
+  const { app, page } = await launchWithMarkdown(`![linked](${pathToFileURL(file).href})`, {
+    preferences: { language: 'en' }
+  })
+  try {
+    await page.locator('.mu-inline-image img').click({ modifiers: ['ControlOrMeta'] })
+    const preview = page.locator('.image-viewer img')
+    await expect(preview).toBeVisible()
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showSaveDialog = async() => ({ canceled: false, filePath })
+    }, saved)
+    await selectImageAction(app, preview, 'Save image as…')
+    await expect.poll(() => {
+      try { return readFileSync(saved).toString('base64') } catch { return '' }
+    }).toBe(png)
+  } finally {
+    await app.close()
+  }
+})
+
+for (const mode of ['wysiwyg', 'source']) {
+  test(`edits, validates and undoes image replacements in ${mode}`, async() => {
+    const { page, app } = await launchWithMarkdown(`![square](${src})`, { preferences: { language: 'en' } })
+    try {
+      if (mode === 'source') await enterSourceMode(page, app)
+      const atom = page.locator(mode === 'source' ? '.embedded-image-chip' : '.mu-embedded-image')
+      await selectImageAction(app, atom, 'View embedded source')
+      const field = page.getByRole('textbox', { name: 'Base64' })
+      await expect(field).toHaveValue(src)
+      await field.fill('data:image/png;base64,AA==')
+      await page.getByRole('button', { name: 'Apply changes' }).click()
+      await expect(page.getByRole('alert').filter({ hasText: 'Could not read' })).toBeVisible()
+      const replacement = await page.evaluate(() => document.createElement('canvas').toDataURL())
+      await field.fill(replacement)
+      await page.getByRole('tab', { name: 'Image preview' }).click()
+      const preview = page.locator('.embedded-image-preview')
+      await expect(preview).toHaveAttribute('src', src)
+      await selectImageAction(app, preview, 'View embedded source')
+      await expect(field).toHaveValue(replacement)
+      await page.getByRole('button', { name: 'Apply changes' }).click()
+      await page.getByRole('tab', { name: 'Image preview' }).click()
+      await expect(preview).toHaveAttribute('src', replacement)
+      await preview.hover()
+      await page.mouse.wheel(0, -180)
+      await expect(page.locator('.zoom output')).not.toHaveText('100%')
+      await page.getByRole('button', { name: 'Fit to window' }).click()
+      await page.locator('.image-stage').evaluate((stage, source) => {
+        const transfer = new DataTransfer()
+        transfer.setData('text/plain', source)
+        stage.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }))
+      }, src)
+      await expect(preview).toHaveAttribute('src', src)
+      await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+      await expect(preview).toHaveAttribute('src', replacement)
+      await app.evaluate(({ clipboard, ClipboardItem }, b64) => {
+        clipboard.read = async() => [new ClipboardItem({ 'image/png': new Blob([Uint8Array.from(Buffer.from(b64, 'base64'))], { type: 'image/png' }) })]
+      }, png)
+      await page.keyboard.press(process.platform === 'darwin' ? 'Meta+v' : 'Control+v')
+      await expect(preview).toHaveAttribute('src', src)
+      await clickMenuById(app, 'undoMenuItem')
+      await expect(preview).toHaveAttribute('src', replacement)
+      await page.keyboard.press('Escape')
+      await clickMenuById(app, 'undoMenuItem')
+      expect((await getMarkdownContent(page, app)).trim()).toBe(`![square](${src})`)
+    } finally { await app.close() }
+  })
+}
+
+test('downloads a remote image with default preferences and converts it to a relative local file', async() => {
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'image/png' })
+    res.end(Buffer.from(png, 'base64'))
+  })
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+  const { app, page, filePath } = await launchWithMarkdown('Here', { preferences: {
+    language: 'en', imageRelativeDirectoryName: '${filename} assets'
+  } })
+  try {
+    const url = 'http://127.0.0.1:' + (server.address() as AddressInfo).port + '/picture.png'
+    const paragraph = page.locator('.mu-paragraph-content').first()
+    await paragraph.click()
+    await page.keyboard.press('End')
+    await paragraph.evaluate((node, url) => {
+      const transfer = new DataTransfer()
+      transfer.setData('text/plain', url)
+      node.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }))
+    }, url)
+    const atom = page.locator('.mu-embedded-image')
+    await expect(atom.locator('img')).toHaveAttribute('src', src)
+    await atom.click()
+    const preview = page.locator('.embedded-image-preview')
+    await selectImageAction(app, preview, 'Convert to local image')
+    await expect(preview).toBeHidden()
+    await expect(atom).toHaveCount(0)
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('%20assets/')
+    const markdown = readFileSync(filePath, 'utf8')
+    const destination = /!\[.*?\]\(([^)]+)\)/.exec(markdown)?.[1]
+    expect(destination).toBeTruthy()
+    expect(readFileSync(join(dirname(filePath), decodeURIComponent(destination!))).toString('base64')).toBe(png)
+    await clickMenuById(app, 'undoMenuItem')
+    await expect(atom.locator('img')).toHaveAttribute('src', src)
+    await enterSourceMode(page, app)
+    const sourceEditor = page.locator('.CodeMirror')
+    await sourceEditor.evaluate((node, url) => {
+      const cm = (node as HTMLElement & { CodeMirror: CodeMirror.Editor }).CodeMirror
+      cm.setCursor({ line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length })
+      const transfer = new DataTransfer()
+      transfer.setData('text/plain', `![remote](${url} "Caption")`)
+      node.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }))
+    }, url)
+    await expect.poll(() => getMarkdownContent(page, app)).toContain(`![remote](${src} "Caption")`)
+  } finally {
+    server.close()
+    await app.close()
+  }
+})
+
+test('hands the original file to native drag and offers PNG, JPEG and data URL copies', async() => {
+  const { page, app } = await launchWithMarkdown(`![square](${src})`, { preferences: { language: 'en' } })
+  try {
+    const received = await app.evaluateHandle(({ BrowserWindow, clipboard }) => {
+      const state = { file: '', type: '', value: '' }
+      BrowserWindow.getAllWindows()[0].webContents.startDrag = item => { state.file = item.file ?? '' }
+      clipboard.write = async items => {
+        const type = items[0].types[0]
+        const blob = await items[0].getType(type)
+        if (blob instanceof Blob) {
+          state.type = type
+          state.value = Buffer.from(await blob.arrayBuffer()).subarray(0, 4).toString('hex')
+        }
+      }
+      clipboard.writeText = async text => {
+        state.type = 'text'
+        state.value = text
+      }
+      return state
+    })
+    const atom = page.locator('.mu-embedded-image')
+    const image = atom.locator('img')
+    const rect = await image.boundingBox()
+    if (!rect) throw new Error('Missing image')
+    await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(rect.x + 80, rect.y, { steps: 8 })
+    await page.mouse.up()
+    await expect.poll(() => received.evaluate(state => state.file)).toMatch(/square\.png$/)
+    const file = await received.evaluate(state => state.file)
+    expect(readFileSync(file).toString('base64')).toBe(png)
+    await selectImageAction(app, atom, 'Copy image')
+    await expect.poll(() => received.jsonValue()).toMatchObject({ type: 'image/png', value: '89504e47' })
+    await selectImageAction(app, atom, 'JPEG image')
+    await expect.poll(() => received.jsonValue()).toMatchObject({ type: 'image/jpeg', value: expect.stringMatching(/^ffd8ff/) })
+    await selectImageAction(app, atom, 'Base64 Data URL')
+    await expect.poll(() => received.jsonValue()).toMatchObject({ type: 'text', value: src })
+    const output = test.info().outputPath('export.jpg')
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showSaveDialog = async() => ({ canceled: false, filePath })
+    }, output)
+    await selectImageAction(app, atom, 'Save image as…')
+    await expect.poll(() => {
+      try { return readFileSync(output).subarray(0, 3).toString('hex') } catch { return '' }
+    }).toBe('ffd8ff')
+    await expect(image).toHaveAttribute('src', src)
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async() => ({ canceled: false, filePaths: [filePath] })
+    }, output)
+    await selectImageAction(app, atom, 'Choose image…')
+    await expect(atom.locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/)
+    await clickMenuById(app, 'undoMenuItem')
+    await expect(atom.locator('img')).toHaveAttribute('src', src)
+  } finally { await app.close() }
 })
 
 test('existing embedded images stay compact in references, literal code and HTML', async() => {

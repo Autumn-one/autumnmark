@@ -1,3 +1,11 @@
+## AutumnMark 0.24.11
+
+- Insert videos from a file, by dragging them into the editor, or by pasting them. Link to a local file or embed the video directly in Markdown, then play it in the editor.
+- Use compact mode to limit the display height of images and videos and the number of visible code lines.
+- Preview, zoom, replace, copy, export, or drag out embedded images. Convert embedded images to local files from the context menu.
+- Embed newly inserted images by default on fresh installations. Existing image preferences still apply.
+- Reduce the amount of data sent between processes when saving recovery checkpoints for documents with embedded videos.
+
 ## AutumnMark 0.24.10
 
 - Embed pasted or dropped images directly in Markdown as Base64. Click an embedded image to preview, replace, or delete it in either editing mode.

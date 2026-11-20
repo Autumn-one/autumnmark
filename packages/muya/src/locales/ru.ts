@@ -1,6 +1,8 @@
 export const ru = {
     name: 'ru',
     resource: {
+        'Expand': 'Развернуть',
+        'Collapse': 'Свернуть',
         'Add tab': 'Добавить вкладку',
         'Fold block': 'Сворачиваемый блок',
         'Fold options': 'Параметры блока',

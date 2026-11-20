@@ -19,7 +19,9 @@ const accepts = (value: unknown, rule: Rule): boolean => {
   if (rule.anyOf) return rule.anyOf.some((item) => accepts(value, item))
   if ('const' in rule) return value === rule.const
   if (rule.enum && !rule.enum.includes(value)) return false
-  if (rule.type && (rule.type === 'array' ? !Array.isArray(value) : typeof value !== rule.type))
+  if (rule.type === 'integer') {
+    if (!Number.isSafeInteger(value)) return false
+  } else if (rule.type && (rule.type === 'array' ? !Array.isArray(value) : typeof value !== rule.type))
     return false
   if (
     typeof value === 'number' &&

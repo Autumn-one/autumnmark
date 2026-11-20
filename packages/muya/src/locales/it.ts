@@ -1,6 +1,8 @@
 export const it = {
     name: 'it',
     resource: {
+        'Expand': 'Espandi',
+        'Collapse': 'Comprimi',
         'Add tab': 'Aggiungi scheda',
         'Fold block': 'Blocco comprimibile',
         'Fold options': 'Opzioni del blocco',

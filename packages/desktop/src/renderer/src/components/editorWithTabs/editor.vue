@@ -107,7 +107,6 @@ import {
   TableColumnToolbar,
   TableDragBar,
   TableRowColumMenu,
-  wordCount as muyaWordCount,
   type TSelectionState,
   type ISelectionChangePayload,
   SelectionType,
@@ -137,6 +136,8 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath, copyImageToClipboard, readImagePng, clipboardImagePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { embedImage } from '@/util/embedImage'
+import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
+import { documentVideos } from '@/util/videoAttachments'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { getCssForOptions, type PdfCssOptions } from '@/util/pdf'
 import {
@@ -171,7 +172,7 @@ import { type InputNumberInstance } from 'element-plus'
 const { t } = useI18n()
 const STANDAR_Y = 320
 
-const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit]; headingLink: [request: HeadingLinkRequest | null] }>()
+const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit, event?: MouseEvent]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
   markdown?: string
   cursor?: unknown
@@ -219,6 +220,10 @@ const {
   hideLinkPopup,
   autoCheck,
   editorLineWidth,
+  compactMode,
+  compactImageMaxHeight,
+  compactVideoMaxHeight,
+  compactCodeMaxLines,
   wrapCodeBlocks,
   imageInsertAction,
   imagePreferRelativeDirectory,
@@ -326,13 +331,14 @@ let scrollHandler: ((e: Event) => void) | null = null
 // Keep engine undo history per tab; the store uses a separate save-tracking history shape.
 const engineHistoryByTab = new Map<string, ISerializedHistory>()
 
-const headingFoldsByTab = new Map<string, { markdown: string; folds: IHeadingFoldState[] }>()
+const blockViewsByTab = new Map<string, { markdown: string; folds: IHeadingFoldState[]; expanded: string[] }>()
 
-const captureHeadingFolds = (): void => {
+const captureBlockViews = (): void => {
   if (!editor.value || !renderedDocumentId || !tabs.value.some(tab => tab.id === renderedDocumentId)) return
-  headingFoldsByTab.set(renderedDocumentId, {
+  blockViewsByTab.set(renderedDocumentId, {
     markdown: editor.value.getMarkdown(),
-    folds: editor.value.getHeadingFoldState()
+    folds: editor.value.getHeadingFoldState(),
+    expanded: editor.value.editor.compactBlocks.expandedPaths()
   })
 }
 
@@ -366,8 +372,8 @@ const pruneClosedTabState = (liveTabIds: Set<string>): void => {
   for (const id of syntheticHistoryByTab.keys()) {
     if (!liveTabIds.has(id)) syntheticHistoryByTab.delete(id)
   }
-  for (const id of headingFoldsByTab.keys()) {
-    if (!liveTabIds.has(id)) headingFoldsByTab.delete(id)
+  for (const id of blockViewsByTab.keys()) {
+    if (!liveTabIds.has(id)) blockViewsByTab.delete(id)
   }
 }
 
@@ -434,7 +440,7 @@ const setSelectionWordCountFromText = (selectedText: string) => {
   const hasSelection = selectedText.trim().length > 0
   if (!hasSelection && editorStore.selectionWordCount == null) return
 
-  editorStore.SET_SELECTION_WORD_COUNT(hasSelection ? muyaWordCount(selectedText) : null)
+  editorStore.SET_SELECTION_WORD_COUNT(hasSelection && currentFile.value ? documentVideos(currentFile.value.id).wordCount(selectedText) : null)
 }
 
 // Watch tab IDs to prune history maps only when tabs are added or closed.
@@ -636,6 +642,15 @@ watch(editorLineWidth, (value, oldValue) => {
   if (value !== oldValue) {
     setEditorWidth(value)
   }
+})
+
+watch([compactMode, compactImageMaxHeight, compactVideoMaxHeight, compactCodeMaxLines], ([enabled, imageHeight, videoHeight, lines]) => {
+  editor.value?.setOptions({
+    compactMode: enabled,
+    compactImageMaxHeight: imageHeight,
+    compactVideoMaxHeight: videoHeight,
+    compactCodeMaxLines: lines
+  })
 })
 
 watch(wrapCodeBlocks, (value, oldValue) => {
@@ -1324,7 +1339,8 @@ const handleExport = async (options: unknown) => {
     tocIncludeTopHeading: opts.tocIncludeTopHeading
   }
   // The hidden WYSIWYG engine keeps its pre-source-mode document until the handoff.
-  const markdown = sourceCode.value ? (editorStore.currentFile?.markdown ?? '') : muya.getMarkdown()
+  const text = sourceCode.value ? (editorStore.currentFile?.markdown ?? '') : muya.getMarkdown()
+  const markdown = currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text
   const header = (opts.header ?? null) as HeaderFooterPart | null
   const footer = (opts.footer ?? null) as HeaderFooterPart | null
 
@@ -1485,7 +1501,15 @@ const handleInlineFormat = (type: unknown) => {
   if (sourceCode.value) {
     return
   }
-  editor.value && editor.value.format(type as string)
+  const muya = editor.value
+  if (!muya || muya.isReadOnly) return
+  if (type === 'video') {
+    const path = savedVideoDocument(currentFile.value)
+    const videos = currentFile.value && documentVideos(currentFile.value.id)
+    void muya.editor.clipboard.insertVideo(pickVideo().then(file => file ? videoMarkdown(file, path, videos) : ''))
+    return
+  }
+  muya.format(type as string)
 }
 
 function beginOutlineMove(begin: unknown) {
@@ -1552,7 +1576,7 @@ interface FileLoadedPayload {
 const setMarkdownToEditor = (payload: unknown) => {
   const { id, markdown: newMarkdown, cursor: newCursor } = (payload ?? {}) as FileLoadedPayload
   if (editor.value) {
-    captureHeadingFolds()
+    captureBlockViews()
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
@@ -1610,7 +1634,7 @@ const handleFileChange = (payload: unknown) => {
   if (!container) return
 
   if (typeof newMarkdown === 'string') {
-    captureHeadingFolds()
+    captureBlockViews()
     // Returning from source-code mode: the WYSIWYG engine is never unmounted
     // while source mode is up (index.vue overlays it via `v-if`), so it still
     // holds the PRE-source-mode document and undo history. Record the bulk
@@ -1689,10 +1713,11 @@ const handleFileChange = (payload: unknown) => {
       if (id) {
         getSyntheticHistory(id, editor.value.getMarkdown())
       }
-      const savedFolds = id ? headingFoldsByTab.get(id) : undefined
+      const savedViews = id ? blockViewsByTab.get(id) : undefined
       // Paths are valid only for the captured document, including after source edits or disk reloads.
-      if (savedFolds?.markdown === editor.value.getMarkdown()) {
-        editor.value.setHeadingFoldState(savedFolds.folds)
+      if (savedViews?.markdown === editor.value.getMarkdown()) {
+        editor.value.setHeadingFoldState(savedViews.folds)
+        editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
       }
     }
   } else if (newCursor) {
@@ -1849,6 +1874,10 @@ onMounted(() => {
     editorFontFamily: resolveEditorFont(editorFontFamily.value),
     codeFontSize: codeFontSize.value,
     codeFontFamily: resolveCodeFont(codeFontFamily.value),
+    compactMode: compactMode.value,
+    compactImageMaxHeight: compactImageMaxHeight.value,
+    compactVideoMaxHeight: compactVideoMaxHeight.value,
+    compactCodeMaxLines: compactCodeMaxLines.value,
     wrapCodeBlocks: wrapCodeBlocks.value,
     codeBlockLineNumbers: codeBlockLineNumbers.value,
     listIndentation: listIndentation.value,
@@ -1877,7 +1906,7 @@ onMounted(() => {
     clipboardFilePath: guessClipboardFilePath,
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
-    clipboardWriteText: window.electron.clipboard.writeText,
+    clipboardWriteText: text => window.electron.clipboard.writeText(currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text),
     documentId: () => currentFile.value?.pathname || currentFile.value?.id || '',
     clipboardWriteImage: (data) => copyImageToClipboard(() => readImagePng(data.src), data),
     clipboardImageAction: (src) => imageAction(clipboardImagePath(src), null),
@@ -1885,7 +1914,13 @@ onMounted(() => {
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
     beforeImageDrop,
-    editEmbeddedImage: (image) => emit('editEmbeddedImage', image),
+    importVideo: input => videoMarkdown(input, savedVideoDocument(currentFile.value), currentFile.value && documentVideos(currentFile.value.id)),
+    videoAttachments: {
+      compact: text => currentFile.value ? documentVideos(currentFile.value.id).compact(text) : text,
+      expand: text => currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text,
+      playback: src => currentFile.value ? documentVideos(currentFile.value.id).playback(src) : undefined
+    },
+    editEmbeddedImage: (image, event) => emit('editEmbeddedImage', image, event),
     embedImage: (image) => imageInsertAction.value === 'embed'
       ? embedImage(image, currentFile.value?.pathname) : undefined,
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
@@ -1905,6 +1940,9 @@ onMounted(() => {
   const muya = markRaw(new Muya(ele, options))
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  muya.on('video-import-error', () => {
+    void notice.notify({ title: t('video.invalid'), type: 'error' })
+  })
   muya.on('image-drop-error', () => {
     void notice.notify({ title: t('editor.imageDrop.failed'), type: 'error' })
   })
@@ -1990,7 +2028,7 @@ onMounted(() => {
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id,
       markdown,
-      wordCount: muyaWordCount(markdown),
+      wordCount: documentVideos(id).wordCount(markdown),
       cursor: editor.value.getSelectionState(),
       // Synthetic, desktop-shaped history so the store's save/dirty tracking
       // keeps working (the engine history shape is incompatible).

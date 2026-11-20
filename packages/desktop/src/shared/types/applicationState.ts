@@ -224,11 +224,17 @@ export interface RendererDocumentCheckpoint {
   view: DocumentViewState | null
 }
 
-/** Full Markdown at a monotonically increasing per-document content revision. */
+/** Offsets count UTF-16 units. Insert prior document slices at offsets in the transmitted Markdown. */
+export interface ReusedContent {
+  revision: number
+  spans: Array<{ at: number; from: number; length: number }>
+}
+
 export interface DirtyContentUpdate {
   documentId: DocumentId
   contentRevision: number
   markdown: string
+  reuse?: ReusedContent
 }
 
 /** Complete window membership plus bodies changed since the last acknowledged checkpoint. */

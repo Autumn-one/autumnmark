@@ -1,6 +1,8 @@
 export const fr = {
     name: 'fr',
     resource: {
+        'Expand': 'Développer',
+        'Collapse': 'Replier',
         'Add tab': 'Ajouter un onglet',
         'Fold block': 'Bloc repliable',
         'Fold options': 'Options du bloc',

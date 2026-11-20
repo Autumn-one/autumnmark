@@ -10,14 +10,14 @@ import { readFileAsDataURL, resolveClipboardImagePath } from '../utils/paste';
 
 // Replace the current range with image Markdown and return the inserted text.
 // Escape the source so path delimiters survive Markdown parsing.
-function insertImageText(anchorBlock: Content, src: string, alt = ''): string {
+function insertImageText(anchorBlock: Content, src: string, alt = '', title = ''): string {
     const cursor = anchorBlock.getCursor();
     if (!cursor)
         return '';
 
     const { start, end } = cursor;
     const { text: content } = anchorBlock;
-    const imageText = imageToMarkdown({ alt, src });
+    const imageText = imageToMarkdown({ alt, src, title });
 
     anchorBlock.text
         = content.substring(0, start.offset)
@@ -86,7 +86,7 @@ export async function insertImageSrc(
     replacePlaceholderImage(anchorBlock, placeholderText, finalSrc);
 }
 
-export async function pasteEmbeddedImage(clipboard: Clipboard, target: Content, pending: Promise<string>): Promise<void> {
+export async function pasteEmbeddedImage(clipboard: Clipboard, target: Content, pending: Promise<string>, alt = '', title = ''): Promise<void> {
     const { muya, selection } = clipboard;
     const before = selection.getSelectionState();
     const text = target.text;
@@ -106,7 +106,7 @@ export async function pasteEmbeddedImage(clipboard: Clipboard, target: Content, 
                 clipboard.cutHandler();
             const block = selection.getTextSelection()?.anchor.block;
             if (block)
-                insertImageText(block, src);
+                insertImageText(block, src, alt, title);
         });
     }
     catch (error) {

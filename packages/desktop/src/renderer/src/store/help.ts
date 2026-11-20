@@ -1,6 +1,6 @@
 import type { IFileState, SaveFormatState } from '@shared/types/files'
-import { wordCount as getWordCount } from '@muyajs/core'
 import { getUniqueId, deepClone } from '../util'
+import { documentVideos } from '@/util/videoAttachments'
 
 const defaultFileState = {
   readOnly: false,
@@ -84,9 +84,11 @@ export const createDocumentState = (
     }
   }
 
+  const videos = documentVideos(id)
+  docState.markdown = videos.compact(docState.markdown)
   return Object.assign(docState, {
     id,
     // A zeroed default cannot distinguish an omitted count from a supplied one.
-    wordCount: src.wordCount ?? getWordCount(docState.markdown)
+    wordCount: src.wordCount ?? videos.wordCount(docState.markdown)
   }) as IFileState
 }

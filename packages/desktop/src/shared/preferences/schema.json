@@ -104,6 +104,29 @@
     "minimum": 1.2,
     "default": 1.6
   },
+  "compactMode": {
+    "description": "Editor--Limit the displayed height of images, videos and code blocks",
+    "type": "boolean",
+    "default": true
+  },
+  "compactImageMaxHeight": {
+    "description": "Editor--Maximum image height in pixels in compact mode",
+    "type": "integer",
+    "minimum": 1,
+    "default": 320
+  },
+  "compactVideoMaxHeight": {
+    "description": "Editor--Maximum video height in pixels in compact mode",
+    "type": "integer",
+    "minimum": 1,
+    "default": 320
+  },
+  "compactCodeMaxLines": {
+    "description": "Editor--Maximum number of visible code lines in compact mode",
+    "type": "integer",
+    "minimum": 1,
+    "default": 12
+  },
   "wrapCodeBlocks": {
     "description": "Editor--Wrap text inside code blocks",
     "type": "boolean",
@@ -453,10 +476,15 @@
     "pattern": "^[a-z]{2,3}(?:[-](?:[0-9]|[a-zA-Z]){2,}){0,2}$",
     "default": "en-US"
   },
+  "embedVideos": {
+    "description": "Video--Embed inserted videos as Base64",
+    "type": "boolean",
+    "default": false
+  },
   "imageInsertAction": {
     "description": "Image--The default behavior after insert image from local folder",
     "enum": ["upload", "folder", "path", "embed"],
-    "default": "path"
+    "default": "embed"
   },
   "imagePreferRelativeDirectory": {
     "description": "Image--Whether to prefer the relative image directory.",

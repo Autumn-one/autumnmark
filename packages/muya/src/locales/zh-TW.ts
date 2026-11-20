@@ -1,6 +1,8 @@
 export const zhTW = {
     name: 'zh-TW',
     resource: {
+        'Expand': '展開',
+        'Collapse': '收合',
         'Add tab': '新增分頁',
         'Fold block': '摺疊區塊',
         'Fold options': '摺疊區塊選項',

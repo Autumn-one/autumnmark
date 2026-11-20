@@ -1,6 +1,8 @@
 export const tr = {
     name: 'tr',
     resource: {
+        'Expand': 'Genişlet',
+        'Collapse': 'Daralt',
         'Add tab': 'Sekme ekle',
         'Fold block': 'Katlanabilir blok',
         'Fold options': 'Blok seçenekleri',

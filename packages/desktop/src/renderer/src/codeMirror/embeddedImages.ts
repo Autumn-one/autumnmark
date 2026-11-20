@@ -1,18 +1,19 @@
 import type CodeMirror from 'codemirror'
-import { findEmbeddedImages, replaceEmbeddedImage, type IEmbeddedImageEdit } from '@muyajs/core'
+import { bindEmbeddedImageEvents, findEmbeddedMedia, replaceEmbeddedImage, type IEmbeddedImageEdit } from '@muyajs/core'
 
-export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbeddedImageEdit) => void) {
+export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbeddedImageEdit, event?: MouseEvent) => void, compact: (text: string) => string) {
   const widgets = new WeakSet<CodeMirror.TextMarker>()
   const refresh = (first: number, last: number) => cm.operation(() => {
     for (let line = first; line <= last; line++) {
       const text = cm.getLine(line)
       const markers = cm.findMarks({ line, ch: 0 }, { line, ch: text.length }).filter(m => widgets.has(m))
       for (const marker of markers) marker.clear()
-      for (const image of findEmbeddedImages(text)) {
+      for (const image of findEmbeddedMedia(text)) {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'embedded-image-chip'
         button.textContent = image.label
+        if (image.kind === 'video') button.classList.add('embedded-video-chip')
         const marker = cm.markText({ line, ch: image.start }, { line, ch: image.end }, {
           replacedWith: button,
           handleMouseEvents: false,
@@ -20,16 +21,32 @@ export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbe
         })
         widgets.add(marker)
         const raw = text.slice(image.start, image.end)
-        button.onclick = () => edit({
-          src: image.src,
-          apply: (src) => {
-            const range = marker.find()
-            if (!range || cm.getRange(range.from, range.to) !== raw || cm.getOption('readOnly')) return
-            const next = replaceEmbeddedImage(raw, image, src)
-            cm.replaceRange(next, range.from, range.to, 'embedded-image')
-            cm.focus()
+        const activate = (event: MouseEvent) => {
+          event.preventDefault()
+          event.stopPropagation()
+          const range = marker.find()
+          if (!range) return
+          const { from } = range
+          const end = (value: string) => ({ line: from.line, ch: from.ch + value.length })
+          const matches = (expected: string) => {
+            const previous = replaceEmbeddedImage(raw, image, expected)
+            return cm.getRange(from, end(previous)) === previous
           }
-        })
+          edit({
+            src: image.src,
+            kind: image.kind,
+            readOnly: !!cm.getOption('readOnly'),
+            name: image.name ?? /^!\[([^\]]*)\]/.exec(raw)?.[1] ?? '',
+            matches,
+            undo: () => cm.undo(),
+            apply: (src, expected = image.src) => {
+              if (cm.getOption('readOnly') || !matches(expected)) return
+              const previous = replaceEmbeddedImage(raw, image, expected)
+              cm.replaceRange(replaceEmbeddedImage(raw, image, src), from, end(previous), 'embedded-image')
+            }
+          }, event)
+        }
+        bindEmbeddedImageEvents(button, activate)
       }
     }
   })
@@ -52,7 +69,10 @@ export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbe
       if (range.from.line === from.line && range.from.ch < from.ch) from = range.from
       if (range.to.line === to.line && range.to.ch > to.ch) to = range.to
     }
-    if (from !== change.from || to !== change.to) change.update(from, to)
+    const text = change.text.join('\n')
+    const packed = compact(text)
+    if (packed !== text) change.update(from, to, packed.split('\n'))
+    else if (from !== change.from || to !== change.to) change.update(from, to)
   }
   refresh(cm.firstLine(), cm.lastLine())
   cm.on('changes', changed)

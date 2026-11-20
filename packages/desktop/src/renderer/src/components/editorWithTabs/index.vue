@@ -12,7 +12,7 @@
           :text-direction="textDirection"
           :platform="platform"
           @heading-link="headingLink = $event"
-          @edit-embedded-image="embeddedImage = $event"
+          @edit-embedded-image="handleImage"
         />
         <source-code
           v-if="sourceCode"
@@ -20,7 +20,7 @@
           :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
           @heading-link="headingLink = $event"
-          @edit-embedded-image="embeddedImage = $event"
+          @edit-embedded-image="handleImage"
         />
       </div>
     </div>
@@ -29,6 +29,7 @@
     <embedded-image-dialog
       v-if="embeddedImage"
       :image="embeddedImage"
+      :initial-tab="initialTab"
       @close="embeddedImage = null"
     />
   </div>
@@ -40,7 +41,9 @@ import Tabs from './tabs.vue'
 import { shallowRef, watch } from 'vue'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
+import { documentVideos } from '@/util/videoAttachments'
 import EmbeddedImageDialog from './embeddedImageDialog.vue'
+import { dragOriginal, showImageMenu, type EmbeddedTab, reportImageError } from '@/util/embeddedImageActions'
 import HeadingLinkPicker from './headingLinkPicker.vue'
 import type { HeadingLinkRequest } from '@/util/headingLinks'
 import Editor from './editor.vue'
@@ -59,6 +62,17 @@ const props = defineProps<{
 }>()
 
 const embeddedImage = shallowRef<IEmbeddedImageEdit | null>(null)
+const initialTab = shallowRef<EmbeddedTab>('preview')
+function handleImage(image: IEmbeddedImageEdit, event?: MouseEvent) {
+  if (store.currentFile) image = documentVideos(store.currentFile.id).edit(image)
+  const open = (tab: EmbeddedTab) => {
+    initialTab.value = tab
+    embeddedImage.value = image
+  }
+  if (event?.type === 'dragstart') dragOriginal(image.src, image.name, image.kind)
+  else if (event?.type === 'contextmenu') void showImageMenu(image, event, open).catch(error => reportImageError(error, image.kind))
+  else open('preview')
+}
 const headingLink = shallowRef<HeadingLinkRequest | null>(null)
 const store = useEditorStore()
 watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentFile?.readOnly], () => {
@@ -116,9 +130,31 @@ watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentF
   flex-direction: column;
   max-width: 100%;
 }
+.mu-embedded-video video {
+  max-width: 100%;
+  max-height: 36vh;
+  object-fit: contain;
+  cursor: default;
+}
+.mu-embedded-video > button {
+  max-width: 100%;
+  border: 0;
+  padding: 0.15em 0.4em;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+  cursor: grab;
+}
+.mu-embedded-video > button:is(:hover, :focus-visible) {
+  text-decoration: underline;
+}
 .mu-embedded-image img {
   max-width: 100%;
   max-height: 55vh;
   object-fit: contain;
+}
+.mu-compact-mode .mu-compact-image-body .mu-embedded-image img {
+  max-height: none;
 }
 </style>

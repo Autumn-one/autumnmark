@@ -2,8 +2,9 @@ import type Format from '../block/base/format';
 import type { Muya } from '../muya';
 import type { IRenderCursor } from '../selection/types';
 import type { IParagraphState } from '../state/types';
-import type { IHighlight, Labels } from './model/types';
+import type { IHighlight, Labels, Token } from './model/types';
 import { prepareReadingLinks } from '../editor/readOnly';
+import { isImageToken } from '../utils/image';
 import logger from '../utils/logger';
 import { projectEmbeddedImages } from './embeddedImages';
 import { tokenizer } from './lexer';
@@ -13,6 +14,16 @@ import Renderer from './renderer';
 import { ImageMounts } from './resources/imageMounts';
 
 const debug = logger('inlineEngine:');
+
+function isStandaloneImage(tokens: Token[], isImageMarker?: (raw: string) => boolean): boolean {
+    const visible = tokens.length === 1 ? tokens : tokens.filter(token => token.raw.trim());
+    if (visible.length !== 1)
+        return false;
+    const [token] = visible;
+    if (token.type === 'link' || token.type === 'reference_link' || (token.type === 'html_tag' && token.tag === 'a'))
+        return isStandaloneImage(token.children ?? [], isImageMarker);
+    return isImageToken(token) || token.type === 'reference_image' || isImageMarker?.(token.raw.trim()) === true;
+}
 
 class InlineEngine {
     private _labels: Labels = new Map();
@@ -83,8 +94,11 @@ class InlineEngine {
             ? { block: view, anchor: { offset: projection.offset(renderCursor.anchor.offset) }, focus: { offset: projection.offset(renderCursor.focus.offset) } }
             : renderCursor;
         const html = this.renderer.output(tokens, view, caret);
-        domNode!.innerHTML = html;
+        const standalone = block.blockName === 'paragraph.content' && isStandaloneImage(tokens, projection?.isImageMarker);
+        domNode!.innerHTML = standalone ? `<span class="mu-compact-image-body">${html}</span>` : html;
         projection?.mount(domNode!, true);
+        if (block.blockName === 'paragraph.content')
+            this.muya.editor.compactBlocks.track(domNode!, standalone ? domNode!.firstElementChild as HTMLElement : null);
 
         if (this.muya.isReadOnly)
             prepareReadingLinks(domNode!);

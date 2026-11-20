@@ -15,6 +15,7 @@ export interface PreferenceDefinition {
 // IDs are persisted keys where available; auxiliary controls use stable UI IDs.
 export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
   "imageInsertAction": { "category": "images", "label": "preferences.image.defaultBehavior" },
+  "embedVideos": { "category": "video", "label": "video.embed", "notes": "video.note" },
   "defaultOpenMode": {
     "category": "general",
     "label": "readingMode.defaultMode",
@@ -117,6 +118,22 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
   "trimUnnecessaryCodeBlockEmptyLines": {
     "category": "editor",
     "label": "preferences.editor.codeBlock.removeEmptyLines"
+  },
+  "compactMode": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactMode"
+  },
+  "compactImageMaxHeight": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactImageMaxHeight"
+  },
+  "compactVideoMaxHeight": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactVideoMaxHeight"
+  },
+  "compactCodeMaxLines": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactCodeMaxLines"
   },
   "wrapCodeBlocks": {
     "category": "editor",

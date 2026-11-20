@@ -1,6 +1,8 @@
 export const ja = {
     name: 'ja',
     resource: {
+        'Expand': '展開',
+        'Collapse': '折りたたむ',
         'Add tab': 'タブを追加',
         'Fold block': '折りたたみブロック',
         'Fold options': '折りたたみブロックの設定',

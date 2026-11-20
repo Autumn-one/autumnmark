@@ -45,6 +45,10 @@ export interface PreferencesState {
   codeBlockLineNumbers: boolean
   sourceCodeLineNumbers: boolean
   trimUnnecessaryCodeBlockEmptyLines: boolean
+  compactMode: boolean
+  compactImageMaxHeight: number
+  compactVideoMaxHeight: number
+  compactCodeMaxLines: number
   wrapCodeBlocks: boolean
   editorLineWidth: string
 
@@ -60,6 +64,7 @@ export interface PreferencesState {
   textDirection: TextDirection | string
   hideQuickInsertHint: boolean
   imageInsertAction: ImageInsertAction | string
+  embedVideos: boolean
   imagePreferRelativeDirectory: boolean
   imageRelativeDirectoryBase: ImageRelativeDirectoryBase | string
   imageRelativeDirectoryName: string
@@ -171,6 +176,10 @@ export const usePreferencesStore = defineStore('preferences', {
     codeBlockLineNumbers: false,
     sourceCodeLineNumbers: true,
     trimUnnecessaryCodeBlockEmptyLines: true,
+    compactMode: true,
+    compactImageMaxHeight: 320,
+    compactVideoMaxHeight: 320,
+    compactCodeMaxLines: 12,
     wrapCodeBlocks: false,
     editorLineWidth: '',
 
@@ -185,7 +194,8 @@ export const usePreferencesStore = defineStore('preferences', {
     trimTrailingNewline: 2,
     textDirection: 'ltr',
     hideQuickInsertHint: false,
-    imageInsertAction: 'folder',
+    imageInsertAction: 'embed',
+    embedVideos: false,
     imagePreferRelativeDirectory: false,
     imageRelativeDirectoryBase: 'file',
     imageRelativeDirectoryName: 'assets',

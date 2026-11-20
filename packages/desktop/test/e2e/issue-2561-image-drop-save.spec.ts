@@ -12,7 +12,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expectNoRendererErrors, launchElectron, typeIntoEditor, waitForEditor } from './helpers'
+import { expectNoRendererErrors, launchElectron, waitForEditor } from './helpers'
 
 const markdown = (page: Page): Promise<string> =>
   page.evaluate(() => {
@@ -80,7 +80,9 @@ for (const outcome of ['prompt-cancel', 'native-cancel', 'saved', 'failed', 'cop
     })
     try {
       await waitForEditor(page)
-      await typeIntoEditor(page, 'Draft')
+      await page.locator('.mu-paragraph-content').first().click()
+      await page.keyboard.insertText('Draft')
+      await expect.poll(async() => (await markdown(page)).trim()).toBe('Draft')
       const original = await markdown(page)
       await app.evaluate(
         ({ dialog }, { outcome, document, blocked }) => {
@@ -113,18 +115,18 @@ for (const outcome of ['prompt-cancel', 'native-cancel', 'saved', 'failed', 'cop
         await expect(page.locator(outcome === 'failed' ? '.editor-notifications' : '.mt-notification')).toBeVisible()
         expect(await markdown(page)).toBe(original)
         expect(readdirSync(globalImages)).toEqual([])
-        if (outcome === 'copy-failed') expect(readFileSync(document, 'utf8')).toBe(original)
+        if (outcome === 'copy-failed') expect(readFileSync(document, 'utf8').replace(/\r\n/g, '\n')).toBe(original)
       } else {
         await expect(page.locator('.editor-component .mu-image-success')).toHaveCount(1)
-        const inserted = await markdown(page)
+        const inserted = (await markdown(page)).replaceAll('\\\\', '/')
         expect(inserted).not.toContain('loading-')
         if (outcome === 'saved') {
-          expect(readFileSync(document, 'utf8')).toBe(original)
+          expect(readFileSync(document, 'utf8').replace(/\r\n/g, '\n')).toBe(original)
           expect(inserted).toContain('demo.assets/')
           expect(readdirSync(join(root, 'demo.assets'))).toHaveLength(1)
           expect(readdirSync(globalImages)).toEqual([])
         } else {
-          expect(inserted).toContain(globalImages)
+          expect(inserted).toContain(globalImages.replaceAll('\\', '/'))
           expect(readdirSync(globalImages)).toHaveLength(1)
           expect(existsSync(document)).toBe(false)
         }

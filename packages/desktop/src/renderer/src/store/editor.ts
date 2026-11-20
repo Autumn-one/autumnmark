@@ -1,5 +1,6 @@
 import equal from 'deep-equal'
 import { adjustTrailingNewlines } from '@/util/markdown'
+import { documentVideos, releaseDocumentVideos } from '@/util/videoAttachments'
 import { prepareReading, applyReadOnly } from '../services/documentMode'
 import bus from '../bus'
 import { getUniqueId, deepClone } from '../util'
@@ -333,16 +334,6 @@ export const useEditorStore = defineStore('editor', {
         markdown,
         filename
       } = data
-      const newFileState = createDocumentState({
-        markdown,
-        filename,
-        pathname,
-        encoding,
-        lineEnding,
-        adjustLineEndingOnSave,
-        trimTrailingNewline
-      })
-
       const tab = tabs.find((t) => window.fileUtils.isSamePathSync(t.pathname, pathname))
       if (!tab) {
         console.error('loadChange: Cannot find tab in tab list.')
@@ -357,6 +348,9 @@ export const useEditorStore = defineStore('editor', {
       }
 
       const oldId = tab.id
+      const newFileState = createDocumentState({
+        markdown, filename, pathname, encoding, lineEnding, adjustLineEndingOnSave, trimTrailingNewline
+      }, oldId)
       const oldNotifications = tab.notifications.filter(
         (item) => item.exclusiveType !== 'file_changed'
       )
@@ -408,7 +402,7 @@ export const useEditorStore = defineStore('editor', {
         const { id, cursor, history, scrollTop, muyaIndexCursor } = tab // Should not use blocks history as this is loaded from disk
         bus.emit('file-changed', {
           id,
-          markdown,
+          markdown: tab.markdown,
           muyaIndexCursor,
           cursor,
           renderCursor: true,
@@ -777,6 +771,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     FORCE_CLOSE_TAB(file: IFileState): void {
+      releaseDocumentVideos(file.id)
       window.electron.ipcRenderer.send('mt::forget-document', file.id)
       const { tabs, currentFile } = this
       const index = tabs.findIndex((t) => t.id === file.id)
@@ -1249,7 +1244,7 @@ export const useEditorStore = defineStore('editor', {
       const preferencesStore = usePreferencesStore()
       window.electron.ipcRenderer.send('mt::response-pandoc-export', {
         target,
-        markdown,
+        markdown: documentVideos(this.currentFile.id).expand(markdown),
         superSubScript: preferencesStore.superSubScript === true,
         githubAlerts: preferencesStore.githubAlerts === true,
         footnote: preferencesStore.footnote === true,
@@ -1373,7 +1368,7 @@ export const useEditorStore = defineStore('editor', {
               // that left the content byte-identical) — there is nothing to
               // reload and no reason to warn the user (#1861).
               const newMarkdown = (change as unknown as FileChangePayload).data?.markdown
-              if (typeof newMarkdown === 'string' && newMarkdown === tab.markdown) {
+              if (typeof newMarkdown === 'string' && newMarkdown === documentVideos(id).expand(tab.markdown)) {
                 if (wasMissing)
                   tab.notifications = tab.notifications.filter(
                     (item) => item.exclusiveType !== 'file_changed'
@@ -1420,7 +1415,7 @@ export const useEditorStore = defineStore('editor', {
       })
     },
 
-    ASK_FOR_IMAGE_PATH(): Promise<string[]> {
+    ASK_FOR_IMAGE_PATH(): Promise<string> {
       return window.electron.ipcRenderer.invoke('mt::ask-for-image-path')
     },
 

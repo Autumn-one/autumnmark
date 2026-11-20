@@ -17,9 +17,12 @@ export interface SaveDialogRequest {
 
 export interface ClipboardImageWriteOptions {
   ticket: number
+  mime?: 'image/png' | 'image/jpeg'
   text?: string
   html?: string
 }
+
+export type ClipboardImageInput = string | { mime: string; data: Uint8Array } | null
 
 export type PlantumlFetchResult =
   { ok: true; mime: string; data: Uint8Array } | { ok: false; error: string }
@@ -73,7 +76,9 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   'mt::project-open-containing-folder': { args: [documentId: string]; ret: string | null }
   'mt::clipboard::write-text': { args: [text: string]; ret: boolean }
   'mt::set-document-read-only': { args: [tabId: string, readOnly: boolean]; ret: void }
-  'mt::ask-for-image-path': { args: []; ret: string[] }
+  'mt::ask-for-image-path': { args: [kind?: 'video']; ret: string }
+  'mt::video::download': { args: [url: string]; ret: { mime: string; data: Uint8Array } }
+  'mt::video::copy-file': { args: [src: string, name: string]; ret: void }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
@@ -83,12 +88,15 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
     ret: RemoteContentSnapshot
   }
   'mt::clipboard::write-image': {
-    args: [png: Uint8Array, options?: ClipboardImageWriteOptions]
+    args: [bytes: Uint8Array, options?: ClipboardImageWriteOptions]
     ret: boolean
   }
   'mt::clipboard::begin-image-copy': { args: [marker?: string]; ret: number | null }
   'mt::clipboard::cancel-image-copy': { args: [ticket: number]; ret: void }
   'mt::clipboard::read-image-source': { args: [src: string]; ret: PlantumlFetchResult }
+  'mt::clipboard::has-image': { args: [kind?: 'video']; ret: boolean }
+  'mt::clipboard::image-input': { args: [kind?: 'video']; ret: ClipboardImageInput }
+  'mt::embedded-image::drag': { args: [src: string, name: string]; ret: void }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::diagram::fetch-plantuml': {
     args: [server: string, encoded: string, format: 'svg' | 'png']

@@ -47,6 +47,7 @@ class CodeBlock extends Parent {
 
         codeBlock.append(langInput);
         codeBlock.append(code);
+        muya.editor.compactBlocks.track(code.domNode!, code.lastContentInDescendant()!.domNode!);
         const copyButton = (code as { copyButton?: HTMLButtonElement | null }).copyButton;
         if (copyButton)
             codeBlock.domNode!.appendChild(copyButton);
@@ -55,6 +56,9 @@ class CodeBlock extends Parent {
         const lnWrapper = (code as { lineNumbersWrapper?: HTMLElement | null }).lineNumbersWrapper;
         if (lnWrapper) {
             codeBlock.domNode!.appendChild(lnWrapper);
+            code.domNode!.addEventListener('scroll', () => {
+                lnWrapper.scrollTop = code.domNode!.scrollTop;
+            });
             // Seed gutters after attachment: unknown or absent languages never trigger a language-load render.
             requestAnimationFrame(() => {
                 codeBlock.lastContentInDescendant()?.update();

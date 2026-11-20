@@ -1,0 +1,107 @@
+.mu-compact-image-body {
+    display: block;
+}
+
+@media screen {
+    .mu-compact-mode .mu-container video {
+        max-width: 100%;
+        max-height: var(--mu-compact-video-height, 320px);
+        object-fit: contain;
+    }
+
+    .mu-compact-mode .mu-container video[height] {
+        width: auto;
+    }
+
+    .mu-compact-limited > .mu-compact-image-body {
+        text-align: center;
+
+        cursor: zoom-in;
+    }
+
+    .mu-compact-limited > .mu-compact-image-body .mu-embedded-image {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0;
+
+        background: transparent;
+        border: 0;
+        cursor: zoom-in;
+    }
+
+    .mu-code.mu-compact-limited:not(.mu-compact-expanded) {
+        background-attachment: local;
+    }
+
+    .mu-editor .mu-paragraph-content.mu-compact-limited:not(.mu-compact-expanded),
+    .mu-editor .mu-code-block .mu-code.mu-compact-limited:not(.mu-compact-expanded) {
+        max-height: var(--mu-compact-height);
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+    }
+
+    .mu-code.mu-compact-limited:not(.mu-compact-expanded) ~ .mu-line-numbers-rows {
+        height: var(--mu-gutter-height);
+        overflow: hidden;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded),
+    .mu-code.mu-compact-limited:not(.mu-compact-expanded) ~ .mu-line-numbers-rows {
+        mask-image: linear-gradient(to bottom, black calc(100% - 24px), rgb(0 0 0 / 45%));
+    }
+}
+
+.mu-compact-toggle {
+    display: grid;
+    width: 40px;
+    height: 24px;
+    margin: 3px auto 0;
+    padding: 0;
+
+    color: var(--editor-color-80);
+
+    background: linear-gradient(transparent, var(--float-hover-color));
+    border: 1px solid var(--editor-color-10);
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0.72;
+
+    transition: opacity 120ms ease;
+    place-items: center;
+}
+
+.mu-compact-toggle::before {
+    width: 7px;
+    height: 7px;
+
+    border-right: 2px solid currentcolor;
+    border-bottom: 2px solid currentcolor;
+
+    transform: translateY(-2px) rotate(45deg);
+
+    content: '';
+}
+
+.mu-compact-toggle[aria-expanded='true']::before {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.mu-compact-toggle:hover,
+.mu-compact-toggle:focus-visible {
+    color: var(--editor-color);
+
+    background: var(--float-hover-color);
+    opacity: 1;
+}
+
+.mu-compact-toggle:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
+}
+
+@media print {
+    .mu-compact-toggle {
+        display: none;
+    }
+}

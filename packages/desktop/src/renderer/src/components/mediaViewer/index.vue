@@ -121,6 +121,7 @@
       <div
         ref="stageRef"
         class="media-viewer-stage"
+        @contextmenu="showImageMenu"
       />
       <span
         class="visually-hidden"
@@ -155,6 +156,8 @@ import {
 } from '@/util/diagramExport'
 import notice from '@/services/notification'
 import { copyImageToClipboard, readImagePng } from '@/util/clipboard'
+import { popupContextMenu } from '@/contextMenu/popupMenu'
+import { reportImageError, saveImage } from '@/util/embeddedImageActions'
 
 const PAN_STEP = 40
 const PAN_STEP_FAST = 160
@@ -314,6 +317,32 @@ const copy = async () => {
   } finally {
     if (isCurrent()) copying.value = false
   }
+}
+
+const showImageMenu = (event: MouseEvent) => {
+  const src = imageSource.value
+  if (!src) return
+  event.preventDefault()
+  event.stopPropagation()
+  popupContextMenu([
+    { label: t('editor.mediaViewer.copyImage'), enabled: imageReady.value && !copying.value, click: copy },
+    {
+      label: t('embeddedImage.saveAs'),
+      enabled: imageReady.value,
+      click: async () => {
+        try {
+          const url = new URL(src, document.baseURI)
+          const name = url.protocol === 'data:' ? '' : window.path.basename(decodeURIComponent(url.pathname))
+          await saveImage({ src: url.href, name })
+        } catch (error) {
+          reportImageError(error)
+        }
+      }
+    },
+    { type: 'separator' },
+    { label: t('editor.mediaViewer.actualSize'), click: actualSize },
+    { label: t('editor.mediaViewer.fit'), click: fit }
+  ], { x: event.clientX, y: event.clientY })
 }
 
 // Every control the reader can reach, in the order Tab should visit them.

@@ -44,6 +44,10 @@ export interface UserPreferences extends RecoveryPreferences {
   editorFontFamily: string
   fontSize: number
   lineHeight: number
+  compactMode: boolean
+  compactImageMaxHeight: number
+  compactVideoMaxHeight: number
+  compactCodeMaxLines: number
   wrapCodeBlocks: boolean
   editorLineWidth: string
   codeFontSize: number
@@ -155,6 +159,7 @@ export interface UserPreferences extends RecoveryPreferences {
   spellcheckerNoUnderline: boolean
   spellcheckerLanguage: string
   imageInsertAction: 'upload' | 'folder' | 'path' | 'embed'
+  embedVideos: boolean
   imagePreferRelativeDirectory: boolean
   imageRelativeDirectoryBase: 'file' | 'folder'
   imageRelativeDirectoryName: string

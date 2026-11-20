@@ -6,6 +6,11 @@ import { useLayoutStore } from './layout'
 export const useListenForMainStore = defineStore('listenForMain', () => {
   let stopEditListener: (() => void) | undefined
   function EDITOR_EDIT_ACTION(type: string): void {
+    const imageDialog = document.querySelector('.embedded-image-workspace')
+    if (imageDialog && (type === 'undo' || type === 'redo')) {
+      imageDialog.dispatchEvent(new CustomEvent('image-history', { detail: type }))
+      return
+    }
     if (
       useEditorStore().currentFile?.readOnly &&
       !['copy', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)

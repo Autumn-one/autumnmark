@@ -31,6 +31,14 @@
       v-if="category === 'images'"
       embedded
     />
+    <Bool
+      v-if="category === 'video'"
+      id="setting-embedVideos"
+      :description="t('video.embed')"
+      :notes="t('video.note')"
+      :bool="preferenceStore.embedVideos"
+      :on-change="value => preferenceStore.SET_SINGLE_PREFERENCE({ type: 'embedVideos', value })"
+    />
   </div>
 </template>
 
@@ -42,7 +50,10 @@ import EditorSettings from './editor/index.vue'
 import ThemeSettings from './theme/index.vue'
 import SpellcheckerSettings from './spellchecker/index.vue'
 import ImageSettings from './image/index.vue'
+import Bool from './common/bool/index.vue'
+import { usePreferencesStore } from '@/store/preferences'
 
 defineProps<{ category: PreferenceCategoryId }>()
 const { t } = useI18n()
+const preferenceStore = usePreferencesStore()
 </script>

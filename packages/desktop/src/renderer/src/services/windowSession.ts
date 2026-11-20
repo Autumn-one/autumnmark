@@ -19,6 +19,7 @@ import { useProjectStore } from '@/store/project'
 import { useMainStore } from '@/store'
 import { createDocumentState, getOptionsFromState } from '@/store/help'
 import { deepClone } from '@/util'
+import { documentVideos } from '@/util/videoAttachments'
 import {
   captureDocumentView,
   restoreDocumentView,
@@ -31,6 +32,7 @@ import { t } from '@/i18n'
 
 /** Last locally captured content and its revision, retained until native persistence acknowledges it. */
 interface ObservedContent {
+  base: { markdown: string; revision: number } | null
   markdown: string
   format: string
   revision: number
@@ -223,7 +225,8 @@ class WindowSession {
     file.viewState = deepClone(document.view)
     file.tocCollapsedKeys = [...(document.view?.collapsedOutlineKeys ?? [])]
     this._observed.set(document.id, {
-      markdown,
+      base: { markdown: file.markdown, revision: payload.contentRevision },
+      markdown: file.markdown,
       format: JSON.stringify(getOptionsFromState(file)),
       revision: payload.contentRevision,
       pending: false
@@ -436,12 +439,15 @@ class WindowSession {
         observed.format = formatKey
         observed.pending = true
       }
-      if (observed.pending)
+      if (observed.pending) {
         contents.push({
           documentId: file.id,
           contentRevision: observed.revision,
-          markdown: file.markdown
+          ...documentVideos(file.id).checkpoint(file.markdown, observed.base)
         })
+        // A failed write or lost reply can still advance native memory. Retry with a complete body.
+        observed.base = null
+      }
       captured.set(file.id, {
         markdown: file.markdown,
         format: formatKey,
@@ -486,7 +492,10 @@ class WindowSession {
       const sent = captured.get(document.id)
       const observed = this._observed.get(document.id)
       if (!file || !sent || !observed) continue
-      if (observed.revision === sent.revision) observed.pending = false
+      if (observed.revision === sent.revision) {
+        observed.pending = false
+        observed.base = { markdown: sent.markdown, revision: sent.revision }
+      }
       if ((this._serverRevision.get(document.id) ?? -1) > result.receipt.metadataRevision) continue
       this._serverRevision.set(document.id, result.receipt.metadataRevision)
       this._applyResource(file, document)
@@ -517,7 +526,7 @@ class WindowSession {
     file.diskMissing = false
     const baseline = { markdown: result.savedMarkdown, format: JSON.stringify(result.savedFormat) }
     file.isSaved =
-      file.markdown === baseline.markdown && JSON.stringify(getOptionsFromState(file)) === baseline.format
+      documentVideos(file.id).expand(file.markdown) === baseline.markdown && JSON.stringify(getOptionsFromState(file)) === baseline.format
     if (this._editor.currentFile?.id === file.id) window.DIRNAME = window.path.dirname(file.pathname)
     this._schedule()
   }

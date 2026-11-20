@@ -256,9 +256,11 @@ class CodeBlockContent extends Content {
             if (wrapper) {
                 const frame = owner.domNode!;
                 wrapper.style.top = `${code.getBoundingClientRect().top - frame.getBoundingClientRect().top - frame.clientTop}px`;
+                wrapper.style.setProperty('--mu-gutter-height', `${code.clientHeight}px`);
                 repositionLineNumberSpans(wrapper, content, tops);
+                wrapper.scrollTop = code.scrollTop;
             }
-            code.style.backgroundImage = lineHighlightBackground(tops, code.clientHeight, ranges);
+            code.style.backgroundImage = lineHighlightBackground(tops, code.scrollHeight, ranges);
         });
     }
 
@@ -266,7 +268,8 @@ class CodeBlockContent extends Content {
         if (this.isComposed)
             return;
 
-        const textContent = getTextContent(this.domNode!, [CLASS_NAMES.MU_TRAILING_BREAK]);
+        // Chromium can insert the next line's text inside the trailing <br> wrapper.
+        const textContent = getTextContent(this.domNode!, []);
         const { start, end } = this.getCursor()!;
         const { text } = this.autoPair(
             event,

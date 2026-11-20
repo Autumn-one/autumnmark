@@ -14,6 +14,7 @@ import { atxHeadingBody, splitAtxHeading } from '../state/headings';
 import HtmlToMarkdown from '../state/htmlToMarkdown';
 import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState, markdownListMarker } from '../state/types';
+import { standaloneRemoteMarkdownImage } from '../utils/image';
 import { getClipboardImageFile, getCopyTextType, isHttpUrl, isStandaloneTableHtml, normalizePastedHTML, standaloneImageSource } from '../utils/paste';
 import { pasteClipboardImage, readClipboardImage } from './image';
 import { hasMarkdownSource } from './markdownSource';
@@ -668,6 +669,14 @@ async function pasteExternalData(clipboard: Clipboard, data: IPasteData, target:
     await applyTextPaste(clipboard, anchorBlock, text, data);
 }
 
+function getEmbeddedPaste(target: Content, data: IPasteData) {
+    const url = target.getCursor()?.isCollapsed ? data.text : '';
+    const markdown = /^(?:codeblock\.content|language-input)$/.test(target.blockName) ? null : standaloneRemoteMarkdownImage(data.text);
+    const source = markdown?.src ?? standaloneImageSource(data.html, url) ?? data.imageFile;
+    const alt = markdown?.alt ?? data.imageFile?.name.replace(/[\\[\]]/g, '\\$&') ?? '';
+    return { source, alt, title: markdown?.title };
+}
+
 async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void> {
     const target = clipboard.selection.image?.block ?? clipboard.selection.getTextSelection()?.anchor.block;
     if (!target || clipboard.muya.isReadOnly || !clipboard.muya.isBlockInDocument(target))
@@ -685,10 +694,10 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     }
 
     if (clipboard.muya.options.embedImage && data.pasteType === PasteType.NORMAL) {
-        const source = data.imageFile ?? standaloneImageSource(data.html);
+        const { source, alt, title } = getEmbeddedPaste(target, data);
         const embedded = source ? clipboard.muya.options.embedImage(source) : undefined;
         if (embedded) {
-            await pasteEmbeddedImage(clipboard, target, embedded);
+            await pasteEmbeddedImage(clipboard, target, embedded, alt, title);
             return;
         }
     }
@@ -708,8 +717,11 @@ export function pasteSelection(
     if (!event.clipboardData)
         return Promise.resolve();
 
-    const text = rawText ?? event.clipboardData.getData('text/plain');
-    const html = rawHtml ?? event.clipboardData.getData('text/html');
+    const { videoAttachments } = clipboard.muya.options;
+    const plain = rawText ?? event.clipboardData.getData('text/plain');
+    const rich = rawHtml ?? event.clipboardData.getData('text/html');
+    const text = videoAttachments?.compact(plain) ?? plain;
+    const html = videoAttachments?.compact(rich) ?? rich;
     const imageFile = getClipboardImageFile(event.clipboardData);
 
     return applyPaste(clipboard, { text, html, imageFile, pasteType: clipboard.pasteType, internalImage: readClipboardImage(html, text) });
@@ -718,7 +730,7 @@ export function pasteSelection(
 // Treat the supplied text as Markdown source without synthesizing rich HTML.
 export function pastePlainText(clipboard: Clipboard, text: string): Promise<void> {
     return applyPaste(clipboard, {
-        text,
+        text: clipboard.muya.options.videoAttachments?.compact(text) ?? text,
         html: '',
         imageFile: null,
         pasteType: PasteType.PASTE_AS_PLAIN_TEXT,

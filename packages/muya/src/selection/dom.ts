@@ -151,11 +151,11 @@ export function compareParagraphsOrder(paragraph1: HTMLElement, paragraph2: HTML
     );
 }
 
-export function getTextContent(node: Node, blackList: string[] = []) {
+export function getTextContent(node: Node, blackList?: string[]) {
     const embedded = embeddedImageSource.get(node);
     if (embedded !== undefined)
         return embedded;
-    if (node.nodeType === Node.TEXT_NODE || blackList.length === 0)
+    if (node.nodeType === Node.TEXT_NODE || !blackList)
         return node.textContent!;
 
     let text = '';

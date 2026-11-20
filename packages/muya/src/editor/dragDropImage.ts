@@ -8,6 +8,7 @@ import { getUniqueId } from '../utils';
 import { getBlock, query } from '../utils/dom';
 import { checkImageContentType, getImageInfo, getImageSrc, imageToMarkdown } from '../utils/image';
 import logger from '../utils/logger';
+import { videoFromTransfer } from '../utils/paste';
 
 const debug = logger('editor:dragDropImage:');
 
@@ -79,6 +80,27 @@ function resolveDropTarget(event: DragEvent): IDropTarget | null {
     const rect = anchor.domNode.getBoundingClientRect();
 
     return { anchor, position: verticalPosition(event, rect) };
+}
+
+function videoDropTarget(muya: Muya, event: DragEvent): IDropTarget | null {
+    const target = resolveDropTarget(event);
+    const page = muya.editor.scrollPage;
+    if (target || !page)
+        return target;
+
+    // The editor margins and the space after the last paragraph also accept files.
+    let last: Parent | undefined;
+    for (const block of page.children.iterator()) {
+        if (!block.isParent() || !block.domNode)
+            continue;
+        const rect = block.domNode.getBoundingClientRect();
+        if (!rect.height)
+            continue;
+        if (rect.bottom >= event.clientY)
+            return { anchor: block, position: verticalPosition(event, rect) };
+        last = block;
+    }
+    return last ? { anchor: last, position: 'down' } : null;
 }
 
 // Draw the horizontal drop indicator at the anchor block's top/bottom edge.
@@ -324,13 +346,11 @@ export function attachDragDropImageHandlers(muya: Muya): void {
         if (!dataTransfer)
             return;
 
-        // Only intercept a single image file or a likely web-image drag; leave
-        // everything else (plain hyperlinks, tab reordering, text) to the
-        // browser so we never suppress an unrelated default drop.
-        if (!isImageFileDrag(dataTransfer) && !isWebImageDrag(dataTransfer))
+        const video = muya.options.importVideo && Array.from(dataTransfer.items).some(item => item.type.startsWith('video/'));
+        if (!video && !isImageFileDrag(dataTransfer) && !isWebImageDrag(dataTransfer))
             return;
 
-        const target = resolveDropTarget(dragEvent);
+        const target = video ? videoDropTarget(muya, dragEvent) : resolveDropTarget(dragEvent);
         if (!target) {
             hideGhost();
             return;
@@ -348,7 +368,8 @@ export function attachDragDropImageHandlers(muya: Muya): void {
             return;
 
         hideGhost();
-        const target = resolveDropTarget(dragEvent);
+        const video = muya.options.importVideo ? videoFromTransfer(dataTransfer) : undefined;
+        const target = video ? videoDropTarget(muya, dragEvent) : resolveDropTarget(dragEvent);
         if (!target)
             return;
 
@@ -357,6 +378,14 @@ export function attachDragDropImageHandlers(muya: Muya): void {
         // Only fall through to the web-link branch for the likely-web-image
         // signature, so a plain hyperlink drop is left to the browser rather
         // than suppressed by `preventDefault()`.
+        if (video && muya.options.importVideo) {
+            event.preventDefault();
+            void muya.options.importVideo(video).then((html) => {
+                if (html && !muya.isReadOnly && muya.isBlockInDocument(target.anchor))
+                    muya.transact(() => insertImageParagraph(muya, target, html));
+            }).catch(error => muya.eventCenter.emit('video-import-error', error));
+            return;
+        }
         let inserted = handleFileImage(muya, dragEvent, target);
         if (!inserted && isWebImageDrag(dataTransfer))
             inserted = handleWebLinkImage(muya, dragEvent, target);

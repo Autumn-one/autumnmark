@@ -6,6 +6,9 @@
     @contextmenu.capture="showContextMenu"
     @paste.capture="pasteEmbeddedImage"
     @drop.capture="dropEmbeddedImage"
+    @copy.capture="copyVideoSelection"
+    @cut.capture="copyVideoSelection"
+    @dragstart="expandVideoDrag"
   />
 </template>
 
@@ -27,10 +30,13 @@ import { getMarkdownOutline, headingLinkAt } from '@muyajs/core'
 import { storeToRefs } from 'pinia'
 import type CodeMirror from 'codemirror'
 import codeMirror, { setCursorAtFirstLine, setTextDirection } from '../../codeMirror'
-import { getClipboardImageFile, standaloneImageSource, wordCount as getWordCount } from '@muyajs/core'
+import { getClipboardImageFile, standaloneImageSource, standaloneRemoteMarkdownImage, imageToMarkdown } from '@muyajs/core'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { installEmbeddedImages } from '../../codeMirror/embeddedImages'
 import { embedImage, readClipboardImage } from '@/util/embedImage'
+import { videoFromTransfer } from '@muyajs/core'
+import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
+import { documentVideos } from '@/util/videoAttachments'
 import notice from '@/services/notification'
 import { adjustCursor, isWindows } from '../../util'
 import { getSourceExtraKeys } from '../../codeMirror/keybindings'
@@ -46,7 +52,7 @@ interface MuyaIndexCursorLike {
   focus: CodeMirror.Position
 }
 
-const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit]; headingLink: [request: HeadingLinkRequest | null] }>()
+const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit, event?: MouseEvent]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
   markdown?: string
   muyaIndexCursor?: unknown
@@ -78,48 +84,109 @@ const { currentFile: currentTab } = storeToRefs(editorStore)
 
 function transferredImage(data: DataTransfer | null): File | string | null | undefined {
   if (!data) return
-  return getClipboardImageFile(data) ?? standaloneImageSource(data.getData('text/html'))
+  return standaloneImageSource(data.getData('text/html'), data.getData('text/uri-list') || data.getData('text/plain')) ?? getClipboardImageFile(data)
 }
 
-async function insertEmbeddedImage(image: File | string, position?: CodeMirror.Position) {
+async function insertMarkup(load: () => Promise<string>, position?: CodeMirror.Position, errorKey = 'embeddedImage.invalid') {
   const cm = editor.value
   const tab = currentTab.value
   if (!cm || !tab || tab.readOnly) return
   const from = cm.setBookmark(position ?? cm.getCursor('from'))
   const to = cm.setBookmark(position ?? cm.getCursor('to'))
   try {
-    const src = await embedImage(image, tab.pathname)
+    const markup = await load()
+    if (!markup) return
     const start = from.find()
     const end = to.find()
     if (start && end && editor.value === cm && !viewDestroyed.value && tabId.value === tab.id && !currentTab.value?.readOnly) {
-      const alt = typeof image === 'string' ? '' : image.name.replace(/[\\[\]]/g, '\\$&')
-      cm.replaceRange(`![${alt}](${src})`, start, end, 'embedded-image')
+      cm.replaceRange(markup, start, end, 'embedded-media')
     }
   } catch {
-    void notice.notify({ title: t('embeddedImage.invalid'), type: 'error' })
+    void notice.notify({ title: t(errorKey), type: 'error' })
   } finally {
     from.clear()
     to.clear()
   }
 }
 
+function insertEmbeddedImage(image: File | string, position?: CodeMirror.Position, markdown?: { alt: string; title: string } | null) {
+  const path = currentTab.value?.pathname
+  return insertMarkup(async() => {
+    const src = await embedImage(image, path)
+    const alt = typeof image === 'string' ? '' : image.name.replace(/[\\[\]]/g, '\\$&')
+    return imageToMarkdown({ src, alt: markdown?.alt ?? alt, title: markdown?.title })
+  }, position)
+}
+
+function insertVideo(input: File | string | Promise<string>, position?: CodeMirror.Position) {
+  const path = savedVideoDocument(currentTab.value)
+  const videos = currentTab.value && documentVideos(currentTab.value.id)
+  return insertMarkup(async() => {
+    const file = await input
+    return file ? videoMarkdown(file, path, videos) : ''
+  }, position, 'video.invalid')
+}
+
+function handleVideoFormat(type: unknown) {
+  if (type === 'video' && sourceCode.value && !currentTab.value?.readOnly) void insertVideo(pickVideo())
+}
+
+function copyVideoSelection(event: ClipboardEvent) {
+  const cm = editor.value
+  if (!cm || !tabId.value || !event.clipboardData) return
+  const selected = cm.somethingSelected()
+  if (!selected && !cm.getOption('lineWiseCopyCut')) return
+  const ranges = cm.listSelections().map(({ anchor, head }) => selected ? { anchor, head } : {
+    anchor: { line: head.line, ch: 0 }, head: { line: head.line + 1, ch: 0 }
+  })
+  const text = selected ? cm.getSelection() : ranges.map(r => cm.getRange(r.anchor, r.head)).join('\n')
+  const expanded = documentVideos(tabId.value).expand(text)
+  if (expanded === text) return
+  event.preventDefault()
+  event.stopPropagation()
+  event.clipboardData.setData('text/plain', expanded)
+  if (event.type === 'cut' && !cm.getOption('readOnly')) {
+    cm.operation(() => {
+      if (!selected) cm.setSelections(ranges)
+      cm.replaceSelections(cm.listSelections().map(() => ''), 'start', 'cut')
+    })
+  }
+}
+
+function expandVideoDrag(event: DragEvent) {
+  if (!event.dataTransfer || !tabId.value) return
+  const text = event.dataTransfer.getData('text/plain')
+  const expanded = documentVideos(tabId.value).expand(text)
+  if (text !== expanded) event.dataTransfer.setData('text/plain', expanded)
+}
+
 function pasteEmbeddedImage(event: ClipboardEvent) {
+  const video = videoFromTransfer(event.clipboardData)
+  if (video) {
+    event.preventDefault()
+    event.stopPropagation()
+    void insertVideo(video)
+    return
+  }
   if (preferencesStore.imageInsertAction !== 'embed') return
-  const image = transferredImage(event.clipboardData)
+  const markdown = standaloneRemoteMarkdownImage(event.clipboardData?.getData('text/plain') ?? '')
+  const image = markdown?.src ?? transferredImage(event.clipboardData)
   if (!image) return
   event.preventDefault()
   event.stopPropagation()
-  void insertEmbeddedImage(image)
+  void insertEmbeddedImage(image, undefined, markdown)
 }
 
 function dropEmbeddedImage(event: DragEvent) {
-  if (preferencesStore.imageInsertAction !== 'embed' || !editor.value) return
-  const image = transferredImage(event.dataTransfer)
-  if (!image) return
+  if (!editor.value) return
+  const video = videoFromTransfer(event.dataTransfer)
+  const image = preferencesStore.imageInsertAction === 'embed' ? transferredImage(event.dataTransfer) : null
+  if (!video && !image) return
   event.preventDefault()
   event.stopPropagation()
   const position = editor.value.coordsChar({ left: event.clientX, top: event.clientY }, 'window')
-  void insertEmbeddedImage(image, position)
+  if (video) void insertVideo(video, position)
+  else if (image) void insertEmbeddedImage(image, position)
 }
 
 const showContextMenu = (event: MouseEvent): void => {
@@ -141,6 +208,12 @@ const showContextMenu = (event: MouseEvent): void => {
       id: 'pasteMenuItem',
       label: t('contextMenu.paste'),
       click: async() => {
+        const video = await readClipboardImage('video').catch(() => undefined)
+        if (editor.value !== cm || tabId.value !== tab.id || viewDestroyed.value) return
+        if (video) {
+          await insertVideo(video)
+          return
+        }
         if (preferencesStore.imageInsertAction === 'embed') {
           const image = await readClipboardImage().catch(() => undefined)
           if (editor.value !== cm || tabId.value !== tab.id || viewDestroyed.value) return
@@ -431,18 +504,17 @@ const updateSelectionWordCount = (cm: CodeMirror.Editor) => {
   const hasSelection = selectedText.trim().length > 0
   if (!hasSelection && editorStore.selectionWordCount == null) return
 
-  editorStore.SET_SELECTION_WORD_COUNT(hasSelection ? getWordCount(selectedText) : null)
+  editorStore.SET_SELECTION_WORD_COUNT(hasSelection && tabId.value ? documentVideos(tabId.value).wordCount(selectedText) : null)
 }
 
 const saveContent = (cm: CodeMirror.Editor) => {
   const { cursor, markdown: newMarkdown } = getMarkdownAndCursor(cm)
-  const wordCount = getWordCount(newMarkdown)
   if (!viewDestroyed.value) {
     if (tabId.value) {
       editorStore.LISTEN_FOR_CONTENT_CHANGE({
         id: tabId.value,
         markdown: newMarkdown,
-        wordCount,
+        wordCount: documentVideos(tabId.value).wordCount(newMarkdown),
         muyaIndexCursor: cursor
       })
     } else {
@@ -586,6 +658,7 @@ onMounted(() => {
   bus.on('selectAll', handleSelectAll)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
+  bus.on('format', handleVideoFormat)
   bus.on('image-action', handleImageAction)
   bus.on('scroll-to-header', handleScrollToHeader)
   bus.on('begin-outline-move', beginOutlineMove)
@@ -593,7 +666,8 @@ onMounted(() => {
   // CodeMirror's line tree relies on object identity and must not be proxied by Vue.
   const codeMirrorInstance = markRaw(codeMirror(container, codeMirrorConfig))
 
-  releaseEmbeddedImages = installEmbeddedImages(codeMirrorInstance, (image) => emit('editEmbeddedImage', image))
+  releaseEmbeddedImages = installEmbeddedImages(codeMirrorInstance, (image, event) => emit('editEmbeddedImage', image, event),
+    text => tabId.value ? documentVideos(tabId.value).compact(text) : text)
   codeMirrorInstance.setValue(markdown ?? '')
   codeMirrorInstance.setOption('mode', markdownMathMode())
 
@@ -659,6 +733,7 @@ onBeforeUnmount(() => {
   bus.off('selectAll', handleSelectAll)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
+  bus.off('format', handleVideoFormat)
   bus.off('image-action', handleImageAction)
   editorStore.SET_SELECTION_WORD_COUNT(null)
   lastSelectionKey = ''

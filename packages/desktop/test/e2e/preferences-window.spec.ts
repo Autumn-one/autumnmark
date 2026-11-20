@@ -3,7 +3,8 @@ import en from '../../static/locales/en.json'
 import type { ElectronApplication, Page } from 'playwright'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { expectNoRendererErrors, launchWithMarkdown } from './helpers'
+import { pathToFileURL } from 'node:url'
+import { expectNoRendererErrors, launchWithMarkdown, sendIpcToRenderer } from './helpers'
 
 const openSettings = async(app: ElectronApplication, editor: Page): Promise<Page> => {
   const opened = app.waitForEvent('window')
@@ -36,6 +37,60 @@ test('the full settings window indexes searchable controls without renderer exce
     await settings.locator('.pref-sidebar input').fill('auto')
     await expect(settings.locator('.pref-autocomplete li').first()).toBeVisible()
     await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('compact limits apply live and each tab remembers its expanded blocks', async() => {
+  const code = ['```', ...Array.from({ length: 24 }, (_, i) => String(i)), '```', ''].join('\n')
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="800"/>').toString('base64')
+  const videoUrl = pathToFileURL(join(__dirname, 'data', 'portrait.mp4')).href
+  const markdown = code + '\n![tall](data:image/svg+xml;base64,' + svg + ')\n\n<video src="' + videoUrl + '"></video>\n'
+  const { app, page } = await launchWithMarkdown(markdown, { preferences: { language: 'en' } })
+  try {
+    const toggle = page.locator('.mu-code-block .mu-compact-toggle')
+    const image = page.locator('.mu-paragraph-content').filter({ has: page.locator('.mu-embedded-image img') })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect.poll(() => image.evaluate(el => el.clientHeight)).toBe(320)
+    const settings = await openSettings(app, page)
+    await settings.locator('.pref-sidebar input').fill('compactMode')
+    await settings.locator('.pref-autocomplete li').first().click()
+    const mode = settings.locator('#setting-compactMode').getByRole('switch')
+    const height = settings.locator('#setting-compactImageMaxHeight input')
+    const videoHeight = settings.locator('#setting-compactVideoMaxHeight input')
+    const video = page.locator('.editor-component .mu-embedded-video video')
+    const rows = settings.locator('#setting-compactCodeMaxLines input')
+    await expect(mode).toBeChecked()
+    await expect(height).toHaveValue('320')
+    await expect(videoHeight).toHaveValue('320')
+    await expect(rows).toHaveValue('12')
+    await mode.locator('..').click()
+    await expect(rows).toBeDisabled()
+    await expect(videoHeight).toBeDisabled()
+    await expect(toggle).toHaveCount(0)
+    await mode.locator('..').click()
+    await height.fill('200')
+    await height.press('Tab')
+    await expect.poll(() => image.evaluate(el => el.clientHeight)).toBe(200)
+    await expect.poll(() => video.evaluate(el => el.clientHeight)).toBe(320)
+    await videoHeight.fill('150')
+    await videoHeight.press('Tab')
+    await expect.poll(() => video.evaluate(el => [el.clientWidth, el.clientHeight])).toEqual([100, 150])
+    await expect.poll(() => image.evaluate(el => el.clientHeight)).toBe(200)
+    await rows.fill('30')
+    await rows.press('Tab')
+    await expect(toggle).toHaveCount(0)
+    await rows.fill('4')
+    await rows.press('Tab')
+    await expect(toggle).toBeVisible()
+    await expect.poll(() => preferences(app)).toMatchObject({ compactMode: true, compactCodeMaxLines: 4, compactVideoMaxHeight: 150 })
+    await closeSettings(app, settings)
+    await toggle.click()
+    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, code)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
   } finally {
     await app.close()
   }

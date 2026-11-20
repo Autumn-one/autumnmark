@@ -107,7 +107,8 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 
 | Key                          | Type    | Default  | Description                                                                                      |
 | ---------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------ |
-| imageInsertAction            | String  | `path`   | Default action after inserting a local image: `upload`, `folder`, or `path`.                     |
+| imageInsertAction            | String  | `embed`  | Image insertion mode. Supported values are `embed`, `upload`, `folder`, and `path`.              |
+| embedVideos                  | Boolean | `false`  | Embed newly inserted video files as Base64. Available under **Preferences → Video**.             |
 | imagePreferRelativeDirectory | Boolean | `false`  | Prefer the relative image directory when copying images.                                         |
 | imageRelativeDirectoryBase   | String  | `file`   | Where relative images are anchored: `file` (next to the document) or `folder` (project root).    |
 | imageRelativeDirectoryName   | String  | `assets` | Folder name (or relative path) used for local image copies. Supports the `${filename}` variable. |

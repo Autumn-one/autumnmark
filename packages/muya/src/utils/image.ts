@@ -16,6 +16,15 @@ export function isImageToken(token: Token | undefined): token is TSelectableImag
     return token?.type === 'image' || (token?.type === 'html_tag' && token.tag === 'img' && token.kind === 'tag');
 }
 
+export function standaloneRemoteMarkdownImage(text: string) {
+    if (!text.startsWith('!['))
+        return null;
+    const [token] = parseInline(text);
+    if (token?.type !== 'image' || token.raw !== text || !/^https?:\/\//i.test(token.attrs.src))
+        return null;
+    return { src: token.attrs.src, alt: token.alt + token.backlash.first, title: token.attrs.title };
+}
+
 export function getImageInfo(image: HTMLElement): IImageInfo {
     const paragraph = findContentDOM(image)!;
     const raw = image.getAttribute('data-raw')!;

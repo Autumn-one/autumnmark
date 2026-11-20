@@ -488,15 +488,13 @@ class AppMenu {
       this._applyDocumentMode(windowId, (menu) => updateSelectionMenus(menu, changes))
     })
 
-    // In source-code mode the Paragraph and Format commands act on the hidden
-    // WYSIWYG engine, so grey them out; on return to WYSIWYG they are re-enabled
-    // and the next selection change refines them (#3531).
+    // Source mode owns video insertion. Other formatting commands target the hidden Muya view.
     ipcMain.on('mt::set-editor-format-menus-enabled', (_e, windowId: number, enabled: boolean) => {
       if (!this.has(windowId)) return
       this._applyDocumentMode(windowId, (menu) => {
         for (const id of ['paragraphMenuEntry', 'formatMenuItem']) {
           const entry = menu.getMenuItemById(id)
-          entry?.submenu?.items.forEach((item) => (item.enabled = enabled))
+          entry?.submenu?.items.forEach((item) => { item.enabled = enabled || item.id === 'videoMenuItem' })
         }
       })
     })

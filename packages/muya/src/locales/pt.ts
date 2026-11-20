@@ -1,6 +1,8 @@
 export const pt = {
     name: 'pt',
     resource: {
+        'Expand': 'Expandir',
+        'Collapse': 'Recolher',
         'Add tab': 'Adicionar aba',
         'Fold block': 'Bloco recolhível',
         'Fold options': 'Opções do bloco',

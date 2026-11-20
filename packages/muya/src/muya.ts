@@ -46,6 +46,7 @@ import './assets/styles/index.css';
 import './assets/styles/inlineSyntax.css';
 import './assets/styles/githubAlerts.css';
 import './assets/styles/contentTabs.css';
+import './assets/styles/compactBlocks.css';
 import './assets/styles/foldBlocks.css';
 import './assets/styles/dragDropText.css';
 import './assets/styles/prismjs/light.theme.css';
@@ -439,6 +440,8 @@ export class Muya {
         }
 
         applyAppearance(this.domNode, options);
+        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options)
+            this.editor.compactBlocks.refresh();
         if (!forceRender)
             return;
 
@@ -457,7 +460,9 @@ export class Muya {
 
     private _forceRender() {
         this._prepareDocumentRebuild();
+        const expanded = this.editor.compactBlocks.expandedPaths();
         this.runDocumentUpdate(() => this._renderDocument());
+        this.editor.compactBlocks.restoreExpandedPaths(expanded);
         this._refreshReadingPresentation();
     }
 
@@ -1126,9 +1131,11 @@ export class Muya {
         // without an intermediate paint. setContent clears history, so preserve it here.
         const savedHistory = this.getHistory();
 
+        const expanded = this.editor.compactBlocks.expandedPaths();
         this.editor.setContent(sentinelMarkdown);
         const cursor = resolveSentinelCursor(this.editor.scrollPage!);
         this.editor.setContent(cleanMarkdown);
+        this.editor.compactBlocks.restoreExpandedPaths(expanded);
         this.setHistory(savedHistory);
 
         if (!cursor)
@@ -1589,6 +1596,7 @@ export class Muya {
     }
 
     destroy() {
+        this.editor.compactBlocks.dispose();
         this.editor.contentTabs.dispose();
         this.editor.foldBlocks.dispose();
         this.editor.inlineEngine.dispose();
@@ -1617,6 +1625,10 @@ export class Muya {
 
 function applyAppearance(domNode: HTMLElement, options: Partial<IMuyaOptions>) {
     const { style } = domNode;
+    if ('compactMode' in options)
+        domNode.classList.toggle('mu-compact-mode', !!options.compactMode);
+    if (typeof options.compactVideoMaxHeight === 'number')
+        style.setProperty('--mu-compact-video-height', `${options.compactVideoMaxHeight}px`);
     if (typeof options.fontSize === 'number')
         style.setProperty('--mu-font-size', `${options.fontSize}px`);
     if (typeof options.lineHeight === 'number')
