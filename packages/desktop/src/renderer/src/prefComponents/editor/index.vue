@@ -93,47 +93,32 @@
           :bool="wrapCodeBlocks"
           :on-change="(value) => onSelectChange('wrapCodeBlocks', value)"
         />
-        <div class="compact-settings">
-          <bool
-            id="setting-compactMode"
-            :description="preferenceLabel('compactMode')"
-            :bool="compactMode"
-            :on-change="(value) => onSelectChange('compactMode', value)"
-          />
-          <label id="setting-compactImageMaxHeight">
-            {{ preferenceLabel('compactImageMaxHeight') }}
+        <bool
+          id="setting-compactMode"
+          :description="preferenceLabel('compactMode')"
+          :bool="compactMode"
+          :on-change="(value) => onSelectChange('compactMode', value)"
+        />
+        <fieldset
+          class="compact-limits"
+          :aria-label="preferenceLabel('compactMode')"
+          :disabled="!compactMode"
+        >
+          <label
+            v-for="key in compactLimitKeys"
+            :id="`setting-${key}`"
+            :key="key"
+          >
+            <span>{{ preferenceLabel(key) }}</span>
             <input
               type="number"
               min="1"
               step="1"
-              :disabled="!compactMode"
-              :value="compactImageMaxHeight"
-              @change="changeLimit('compactImageMaxHeight', $event)"
+              :value="preferenceStore[key]"
+              @change="changeLimit(key, $event)"
             >
           </label>
-          <label id="setting-compactVideoMaxHeight">
-            {{ preferenceLabel('compactVideoMaxHeight') }}
-            <input
-              type="number"
-              min="1"
-              step="1"
-              :disabled="!compactMode"
-              :value="compactVideoMaxHeight"
-              @change="changeLimit('compactVideoMaxHeight', $event)"
-            >
-          </label>
-          <label id="setting-compactCodeMaxLines">
-            {{ preferenceLabel('compactCodeMaxLines') }}
-            <input
-              type="number"
-              min="1"
-              step="1"
-              :disabled="!compactMode"
-              :value="compactCodeMaxLines"
-              @change="changeLimit('compactCodeMaxLines', $event)"
-            >
-          </label>
-        </div>
+        </fieldset>
       </template>
     </compound>
 
@@ -316,9 +301,6 @@ const {
   sourceCodeLineNumbers,
   autoNormalizeLineEndings,
   compactMode,
-  compactImageMaxHeight,
-  compactVideoMaxHeight,
-  compactCodeMaxLines,
   wrapCodeBlocks,
   editorLineWidth,
   defaultEncoding,
@@ -330,7 +312,9 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
 }
 
-const changeLimit = (key: 'compactImageMaxHeight' | 'compactVideoMaxHeight' | 'compactCodeMaxLines', event: Event): void => {
+const compactLimitKeys = ['compactImageMaxHeight', 'compactVideoMaxHeight', 'compactCodeMaxLines'] as const
+
+const changeLimit = (key: typeof compactLimitKeys[number], event: Event): void => {
   const input = event.target as HTMLInputElement
   const value = input.valueAsNumber
   if (input.validity.valid && Number.isSafeInteger(value) && value > 0) {
@@ -342,36 +326,63 @@ const changeLimit = (key: 'compactImageMaxHeight' | 'compactVideoMaxHeight' | 'c
 </script>
 
 <style scoped>
-.compact-settings,
-.compact-settings label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.compact-settings {
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 16px 0;
-}
-
-.compact-settings .pref-switch-item {
+.compact-limits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
+  min-inline-size: 0;
   margin: 0;
-  gap: 8px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--editorColor04);
 }
 
-.compact-settings input {
-  width: 5em;
-  padding: 4px 6px;
-  font: inherit;
+.compact-limits label {
+  display: grid;
+  align-content: end;
+  gap: 6px;
+  color: var(--editorColor80);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.compact-limits input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--pref-control-height);
+  padding-inline: 10px;
+  font-family: inherit;
+  font-size: 14px;
   color: var(--editorColor);
-  background: transparent;
-  border: 1px solid var(--editorColor30);
+  background: var(--editorBgColor);
+  border: var(--buttonBorder);
   border-radius: 4px;
 }
 
-.compact-settings input:disabled {
-  opacity: 0.5;
+.compact-limits input:focus-visible {
+  outline: 2px solid var(--themeColor);
+  outline-offset: -1px;
+}
+
+.compact-limits:disabled label {
+  opacity: 0.55;
+}
+
+@container (max-width: 540px) {
+  .compact-limits {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (280px < width <= 540px) {
+  .compact-limits label {
+    grid-template-columns: minmax(0, 1fr) 6rem;
+    align-items: center;
+    gap: 16px;
+  }
 }
 
 .pref-editor .image-ctrl {

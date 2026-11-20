@@ -4,9 +4,11 @@ import { copyFile, mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/
 import { createHash } from 'node:crypto'
 import writeFileAtomic from 'write-file-atomic'
 import { rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import log from 'electron-log'
 import { embeddedImageFilename, videoMime } from '../../shared/embeddedImage'
+import { cleanDiskVideosOnStartup, importDiskVideo } from '../filesystem/diskVideo'
+import { diskVideoDirectory } from '@shared/diskVideo'
 
 function decodeMedia(src: string, name: string) {
   const comma = src.indexOf(',')
@@ -23,14 +25,20 @@ function decodeMedia(src: string, name: string) {
 
 // File references on the system clipboard must still resolve after the editor exits.
 async function cacheClipboardVideo(src: string, name: string) {
-  const { filename, mime, bytes } = decodeMedia(src, name)
+  const path = src.startsWith('file:') ? fileURLToPath(src) : undefined
+  if (path && dirname(path) !== join(app.getPath('userData'), diskVideoDirectory)) return
+  const embedded = path ? undefined : decodeMedia(src, name)
+  const mime = embedded?.mime ?? videoMime(path ?? '')
   if (!mime.startsWith('video/')) throw new Error('Expected a video')
+  const filename = embeddedImageFilename(name, mime)
   const cache = join(app.getPath('userData'), 'Cache', 'clipboard-videos')
-  const digest = createHash('sha256').update(bytes).digest('hex')
+  const digest = embedded ? createHash('sha256').update(embedded.bytes).digest('hex') : basename(path ?? '').split('.')[0]
+  if (!/^[a-f0-9]{64}$/.test(digest)) throw new Error('Invalid video attachment')
   const folder = join(cache, digest)
   await mkdir(folder, { recursive: true })
   const file = join(folder, filename)
-  await writeFileAtomic(file, bytes)
+  if (embedded) await writeFileAtomic(file, embedded.bytes)
+  else if (path) await copyFile(path, file)
   return { file, cache, digest }
 }
 
@@ -46,6 +54,8 @@ async function expireClipboardVideos(cache: string, current: string) {
 }
 
 export function registerEmbeddedImageDrag() {
+  cleanDiskVideosOnStartup()
+  ipcMain.handle('mt::video::embed-file', (_event, pathname: string) => importDiskVideo(pathname))
   let directory: Promise<string> | undefined
   let ownedDirectory: string | undefined
   app.once('will-quit', () => {
@@ -106,7 +116,7 @@ export function registerEmbeddedImageDrag() {
     return { mime: type, data: new Uint8Array(await response.arrayBuffer()) }
   })
   ipcMain.handle('mt::video::copy-file', async(_event, src: string, name: string) => {
-    const cached = src.startsWith('file:') ? undefined : await cacheClipboardVideo(src, name)
+    const cached = await cacheClipboardVideo(src, name)
     const file = cached?.file ?? referencedVideo(src)
     await clipboard.write([new ClipboardItem({ 'text/uri-list': pathToFileURL(file).href })])
     if (cached)

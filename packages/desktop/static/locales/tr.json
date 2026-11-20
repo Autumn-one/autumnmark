@@ -959,6 +959,7 @@
     "ok": "Tamam"
   },
   "video": {
+    "streamedSource": "Kaydedildiğinde videonun tamamı ({size} MiB) Markdown dosyasına eklenir. Base64 kaynağı burada düzenlenemeyecek kadar büyük.",
     "embed": "Videoları Base64 olarak göm",
     "note": "Yeni videoları Markdown belgesine kaydeder. Kapalıyken dosya başvurusu eklenir.",
     "title": "Video",

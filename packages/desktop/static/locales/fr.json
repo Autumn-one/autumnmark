@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "À l’enregistrement, le fichier Markdown contient la vidéo entière ({size} Mio). Le contenu Base64 est trop volumineux pour être modifié ici.",
     "embed": "Intégrer les vidéos en Base64",
     "note": "Enregistre les nouvelles vidéos dans le document Markdown. Sinon, un lien vers le fichier est inséré.",
     "title": "Vidéo",

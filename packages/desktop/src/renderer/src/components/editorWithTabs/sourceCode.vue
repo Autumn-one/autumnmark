@@ -140,7 +140,7 @@ function copyVideoSelection(event: ClipboardEvent) {
     anchor: { line: head.line, ch: 0 }, head: { line: head.line + 1, ch: 0 }
   })
   const text = selected ? cm.getSelection() : ranges.map(r => cm.getRange(r.anchor, r.head)).join('\n')
-  const expanded = documentVideos(tabId.value).expand(text)
+  const expanded = documentVideos(tabId.value).externalText(text)
   if (expanded === text) return
   event.preventDefault()
   event.stopPropagation()
@@ -156,7 +156,7 @@ function copyVideoSelection(event: ClipboardEvent) {
 function expandVideoDrag(event: DragEvent) {
   if (!event.dataTransfer || !tabId.value) return
   const text = event.dataTransfer.getData('text/plain')
-  const expanded = documentVideos(tabId.value).expand(text)
+  const expanded = documentVideos(tabId.value).externalText(text)
   if (text !== expanded) event.dataTransfer.setData('text/plain', expanded)
 }
 

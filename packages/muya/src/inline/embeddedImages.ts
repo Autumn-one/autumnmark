@@ -16,7 +16,9 @@ export function mountVideoPlayer(node: HTMLElement, player: HTMLVideoElement, la
     player.controls = true;
     player.preload = 'metadata';
     player.setAttribute('aria-label', label);
-    bindEmbeddedImageEvents(player, edit);
+    player.oncontextmenu = player.onclick = edit;
+    // Chromium's seek slider emits input through the video host. A text edit would remount it mid-seek.
+    player.oninput = stopEditorEvent;
     player.onmousedown = player.onkeydown = player.onkeyup = stopEditorEvent;
 
     const caption = node.ownerDocument.createElement('button');

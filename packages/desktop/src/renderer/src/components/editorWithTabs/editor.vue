@@ -1340,7 +1340,8 @@ const handleExport = async (options: unknown) => {
   }
   // The hidden WYSIWYG engine keeps its pre-source-mode document until the handoff.
   const text = sourceCode.value ? (editorStore.currentFile?.markdown ?? '') : muya.getMarkdown()
-  const markdown = currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text
+  const videos = currentFile.value && documentVideos(currentFile.value.id)
+  const markdown = videos ? (type === 'styledHtml' ? videos.expand(text) : videos.externalText(text)) : text
   const header = (opts.header ?? null) as HeaderFooterPart | null
   const footer = (opts.footer ?? null) as HeaderFooterPart | null
 
@@ -1906,7 +1907,7 @@ onMounted(() => {
     clipboardFilePath: guessClipboardFilePath,
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
-    clipboardWriteText: text => window.electron.clipboard.writeText(currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text),
+    clipboardWriteText: text => window.electron.clipboard.writeText(currentFile.value ? documentVideos(currentFile.value.id).externalText(text) : text),
     documentId: () => currentFile.value?.pathname || currentFile.value?.id || '',
     clipboardWriteImage: (data) => copyImageToClipboard(() => readImagePng(data.src), data),
     clipboardImageAction: (src) => imageAction(clipboardImagePath(src), null),
@@ -1917,7 +1918,7 @@ onMounted(() => {
     importVideo: input => videoMarkdown(input, savedVideoDocument(currentFile.value), currentFile.value && documentVideos(currentFile.value.id)),
     videoAttachments: {
       compact: text => currentFile.value ? documentVideos(currentFile.value.id).compact(text) : text,
-      expand: text => currentFile.value ? documentVideos(currentFile.value.id).expand(text) : text,
+      expand: text => currentFile.value ? documentVideos(currentFile.value.id).externalText(text) : text,
       playback: src => currentFile.value ? documentVideos(currentFile.value.id).playback(src) : undefined
     },
     editEmbeddedImage: (image, event) => emit('editEmbeddedImage', image, event),

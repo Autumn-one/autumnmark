@@ -959,6 +959,7 @@
     "ok": "확인"
   },
   "video": {
+    "streamedSource": "저장하면 Markdown 파일에 동영상 전체({size} MiB)가 포함됩니다. Base64 소스가 너무 커서 여기에서 편집할 수 없습니다.",
     "embed": "동영상을 Base64로 삽입",
     "note": "새 동영상을 Markdown 문서에 저장합니다. 끄면 파일 참조를 삽입합니다.",
     "title": "동영상",

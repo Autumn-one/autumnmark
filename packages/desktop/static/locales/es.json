@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "Al guardar, el vídeo completo ({size} MiB) se incluye en el archivo Markdown. El código Base64 es demasiado largo para editarlo aquí.",
     "embed": "Incrustar vídeos como Base64",
     "note": "Guarda los vídeos nuevos dentro del documento Markdown. Si se desactiva, se inserta una referencia al archivo.",
     "title": "Vídeo",

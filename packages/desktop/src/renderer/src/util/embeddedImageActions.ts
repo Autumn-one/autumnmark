@@ -8,6 +8,7 @@ import {
   pickVideo,
   videoFile,
   videoData,
+  embedVideo,
   videoSource,
   videoPlaybackUrl,
   videoTransferSource,
@@ -26,7 +27,8 @@ import { copyImageToClipboard, rasterizeImage } from './clipboard'
 import { dataURLToFile } from './dataURLToFile'
 import { embedImage, isEmbeddedImageUrl, readClipboardImage } from './embedImage'
 import { moveImageToFolder } from './fileSystem'
-import { documentVideos } from './videoAttachments'
+import { diskVideoPath, documentVideos } from './videoAttachments'
+import { diskVideoInfo } from '@shared/diskVideo'
 
 export type EmbeddedTab = 'preview' | 'source'
 
@@ -107,14 +109,17 @@ export async function copySource(src: string) {
 export async function saveImage(image: Pick<IEmbeddedImageEdit, 'src' | 'name' | 'kind'>) {
   const video = image.kind === 'video'
   const src = video ? image.src : await embedImage(image.src)
-  const file = video ? await videoFile(videoPlaybackUrl(src)) : originalImage(src)
-  const ext = embeddedImageExtension(file.type)
+  const cached = video ? diskVideoPath(src) : undefined
+  const file = cached ? undefined : video ? await videoFile(videoPlaybackUrl(src)) : originalImage(src)
+  const mime = file?.type ?? diskVideoInfo(src)?.mime
+  if (!mime) throw new Error(t(video ? 'video.invalid' : 'embeddedImage.invalid'))
+  const ext = embeddedImageExtension(mime)
   const formats = video ? [ext] : [...new Set([ext, 'png', 'jpg'])]
   const path = await window.electron.dialog.showSave({
     title: t(video ? 'video.saveAs' : 'embeddedImage.saveAs'),
     defaultPath: embeddedImageFilename(
       image.name || fallbackName(image.src, image.kind),
-      file.type
+      mime
     ),
     filters: formats.map((format) => ({
       name: format.toUpperCase(),
@@ -127,8 +132,12 @@ export async function saveImage(image: Pick<IEmbeddedImageEdit, 'src' | 'name' |
     .slice(1)
     .toLowerCase()
     .replace(/^jpeg$/, 'jpg')
+  if (cached && suffix === ext) {
+    if (!window.fileUtils.isSamePathSync(cached, path)) await window.fileUtils.copy(cached, path)
+    return
+  }
   let bytes: Uint8Array
-  if (suffix === ext) bytes = new Uint8Array(await file.arrayBuffer())
+  if (suffix === ext && file) bytes = new Uint8Array(await file.arrayBuffer())
   else if (!video && (suffix === 'png' || suffix === 'jpg'))
     bytes = await imageBytes(src, suffix === 'jpg' ? 'image/jpeg' : 'image/png')
   else throw new Error(t('embeddedImage.unsupported'))
@@ -152,17 +161,18 @@ async function convertImage(image: IEmbeddedImageEdit, current: () => boolean) {
     /\$\{filename\}/g,
     tab.filename.replace(/\.[^.]+$/, '')
   )
-  const file = image.kind === 'video' ? await videoFile(image.src) : originalImage(image.src)
-  const asset = new File([file], embeddedImageFilename(image.kind || 'image', file.type), {
-    type: file.type
-  })
-  const relative = await moveImageToFolder(
-    tab.pathname,
-    asset,
-    window.path.resolve(root, folder),
-    true,
-    tab.pathname
-  )
+  const cached = image.kind === 'video' ? diskVideoPath(image.src) : undefined
+  const outputDir = window.path.resolve(root, folder)
+  let relative: string
+  if (cached) {
+    await window.fileUtils.ensureDir(outputDir)
+    const asset = await window.fileUtils.copyWithContentHash(cached, outputDir)
+    relative = window.path.relative(directory, asset)
+  } else {
+    const file = image.kind === 'video' ? await videoFile(image.src) : originalImage(image.src)
+    const asset = new File([file], embeddedImageFilename(image.kind || 'image', file.type), { type: file.type })
+    relative = await moveImageToFolder(tab.pathname, asset, outputDir, true, tab.pathname)
+  }
   if (!current()) return
   const reference = relative
     .replace(/\\/g, '/')
@@ -234,6 +244,7 @@ export async function showImageMenu(
         ? [
           {
             label: 'Base64 Data URL',
+            enabled: !diskVideoInfo(image.src),
             click: action(async() => copySource(await videoData(videoPlaybackUrl(image.src))))
           }
         ]
@@ -252,7 +263,7 @@ export async function showImageMenu(
         enabled: !image.readOnly,
         click: action(async() => {
           if (video && !isVideoData(image.src)) {
-            const data = await videoData(videoPlaybackUrl(image.src))
+            const data = await embedVideo(videoPlaybackUrl(image.src))
             if (current()) image.apply(data)
           } else await convertImage(image, current)
         })

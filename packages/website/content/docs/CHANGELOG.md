@@ -1,3 +1,9 @@
+## AutumnMark 0.24.12
+
+- Embed local videos of 32 MiB or more with less memory use. Save the Markdown, move it on its own, and reopen it with the video intact.
+- Recover large embedded videos with unsaved edits after restarting the editor.
+- Use the playback controls directly in the editor to seek within a video.
+
 ## AutumnMark 0.24.11
 
 - Insert videos from a file, by dragging them into the editor, or by pasting them. Link to a local file or embed the video directly in Markdown, then play it in the editor.

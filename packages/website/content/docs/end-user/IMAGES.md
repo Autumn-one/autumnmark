@@ -44,7 +44,9 @@ Use **Format → Insert video…**, drop a video file into the editor, or paste 
 
 Hover over a video in the editor to play, pause, seek, or enter fullscreen. In compact mode, **Maximum video height (px)** scales the player proportionally. The default limit is 320 px.
 
-Click the filename beneath the player to open the preview. An embedded video also has an editable source tab. Right-click to copy the video as a file, save it in its original format, replace it, or switch between an embedded video and a local file reference. Drag the filename, or use **Drag original video out** in the preview, to drop a copy into another application. Playback depends on the codec available in the desktop player.
+Click the filename beneath the player to open the preview. The source tab lets you edit Base64 for smaller embedded videos. Right-click to copy the video as a file, save it in its original format, replace it, or switch between an embedded video and a local file reference. Drag the filename, or use **Drag original video out** in the preview, to drop a copy into another application. Playback depends on the codec available in the desktop player.
+
+For local videos of 32 MiB or more, the editor streams the original bytes into the Markdown file when you save. You can move the Markdown file alone and reopen it in AutumnMark. The source tab shows the video size for these attachments. Use **Replace** to change the video.
 
 ## Media viewer
 

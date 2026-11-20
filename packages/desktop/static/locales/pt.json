@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "Ao salvar, o vídeo completo ({size} MiB) é incluído no arquivo Markdown. O conteúdo Base64 é grande demais para ser editado aqui.",
     "embed": "Incorporar vídeos como Base64",
     "note": "Salva novos vídeos dentro do documento Markdown. Desativado, insere uma referência ao arquivo.",
     "title": "Vídeo",

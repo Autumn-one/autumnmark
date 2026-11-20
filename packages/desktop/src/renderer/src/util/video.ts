@@ -6,12 +6,14 @@ import { encodeDirnameForUrl, localPathToFileUrl } from './fileUrl'
 import { resolveLocalLinkHref } from './resolveLinkHref'
 import { toDataUrl } from './embedImage'
 import type { VideoAttachments } from './videoAttachments'
+import { diskVideoUrl } from './videoAttachments'
+import { diskVideoInfo, diskVideoThreshold } from '@shared/diskVideo'
 
 export const isVideoData = (src: string) =>
-  /^data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={0,2}$/i.test(src)
+  !!diskVideoInfo(src) || /^data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={0,2}$/i.test(src)
 
 export function videoPlaybackUrl(src: string) {
-  return /^data:video\//i.test(src) ? src : resolveLocalLinkHref(src.replace(/&amp;/g, '&'))
+  return /^data:video\//i.test(src) ? diskVideoUrl(src) ?? src : resolveLocalLinkHref(src.replace(/&amp;/g, '&'))
 }
 
 export async function videoTransferSource(src: string) {
@@ -50,6 +52,21 @@ export async function videoData(input: File | string) {
   return toDataUrl(await videoFile(input), 'video')
 }
 
+export async function embedVideo(input: File | string) {
+  if (typeof input === 'string') {
+    if (/^(?:https?:|data:)/i.test(input)) return videoData(input)
+    const path = input.startsWith('file:') ? clipboardImagePath(input) : input
+    if (window.path.isAbsolute(path)) {
+      const { size } = await window.fileUtils.stat(path)
+      if (size >= diskVideoThreshold) return window.electron.ipcRenderer.invoke('mt::video::embed-file', path)
+    }
+  } else if (input.size >= diskVideoThreshold) {
+    const path = window.electron.webUtils.getPathForFile(input)
+    if (path) return window.electron.ipcRenderer.invoke('mt::video::embed-file', path)
+  }
+  return videoData(input)
+}
+
 export function savedVideoDocument(tab?: { pathname?: string | null; isPendingCreation?: boolean } | null) {
   return tab?.isPendingCreation ? undefined : tab?.pathname
 }
@@ -68,7 +85,7 @@ export async function videoSource(
   embed: boolean,
   documentPath?: string | null
 ) {
-  if (embed) return videoData(input)
+  if (embed) return embedVideo(input)
   if (typeof input === 'string' && /^https?:\/\//i.test(input)) return input
   let path =
     typeof input === 'string'

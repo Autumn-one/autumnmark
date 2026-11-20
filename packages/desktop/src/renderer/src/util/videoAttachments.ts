@@ -2,6 +2,20 @@
 import { findEmbeddedMedia, type IEmbeddedImageEdit, wordCount } from '@muyajs/core'
 import type { ReusedContent } from '@shared/types/applicationState'
 import { getHash } from './fileSystem'
+import { diskVideoDirectory, diskVideoInfo, diskVideoReferences } from '@shared/diskVideo'
+import { encodeDirnameForUrl, localPathToFileUrl } from './fileUrl'
+
+export function diskVideoPath(src: string) {
+  const info = diskVideoInfo(src)
+  if (info && window.electron.paths.userData) {
+    return window.path.join(window.electron.paths.userData, diskVideoDirectory, info.filename)
+  }
+}
+
+export function diskVideoUrl(src: string) {
+  const path = diskVideoPath(src)
+  if (path) return new URL(localPathToFileUrl(encodeDirnameForUrl(path))).href
+}
 
 const minimumDataUrlLength = 64 * 1024
 const dataUrl = /data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={0,2}/gi
@@ -56,6 +70,11 @@ export class VideoAttachments {
     return text.replace(reference, ref => this.attachments.get(ref)?.payload ?? ref)
   }
 
+  // Clipboard text and print DOM must resolve without the editor's private attachment markers.
+  externalText(text: string): string {
+    return this.expand(text.replace(diskVideoReferences(), src => diskVideoUrl(src) ?? src))
+  }
+
   wordCount(text: string) {
     return wordCount(this.attachments.size ? text.replace(reference, ref => this.attachments.has(ref) ? '' : ref) : text)
   }
@@ -98,6 +117,8 @@ export class VideoAttachments {
   }
 
   playback(src: string): string | undefined {
+    const file = diskVideoUrl(src)
+    if (file) return file
     const comma = src.indexOf(',')
     const item = this.attachments.get(src.slice(comma + 1))
     if (!item) return

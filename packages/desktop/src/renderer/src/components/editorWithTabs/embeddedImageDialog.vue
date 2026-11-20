@@ -114,8 +114,6 @@
             preload="metadata"
             :src="playbackUrl"
             :aria-label="image.name || label('title')"
-            draggable="true"
-            @dragstart.prevent="dragOut"
             @error="error = label('invalid')"
           />
           <img
@@ -178,7 +176,8 @@
         aria-labelledby="embedded-tab-source"
         class="source-pane"
       >
-        <div class="source-heading">
+        <p v-if="diskVideo">{{ t('video.streamedSource', { size: (diskVideo.size / 1048576).toFixed(1) }) }}</p>
+        <div v-else class="source-heading">
           <label for="embedded-data">{{
             linkedVideo ? t('video.location') : 'Base64 · ' + mime
           }}</label>
@@ -187,6 +186,7 @@
           </button>
         </div>
         <textarea
+          v-if="!diskVideo"
           id="embedded-data"
           v-model="draft"
           :readonly="image.readOnly || linkedVideo"
@@ -194,7 +194,7 @@
           autocapitalize="off"
           @input="draftChanged"
         />
-        <footer v-if="!image.readOnly && !linkedVideo">
+        <footer v-if="!image.readOnly && !linkedVideo && !diskVideo">
           <span class="hint">{{ draft !== src ? t('embeddedImage.dirty') : '' }}</span>
           <button
             :disabled="draft === src"
@@ -244,6 +244,7 @@ import {
 } from '@element-plus/icons-vue'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { isVideoData, videoPlaybackUrl } from '@/util/video'
+import { diskVideoInfo } from '@shared/diskVideo'
 import { documentVideos } from '@/util/videoAttachments'
 import { useEditorStore } from '@/store/editor'
 import { videoFromTransfer } from '@muyajs/core'
@@ -277,6 +278,7 @@ const playbackUrl = computed(() => {
   return videos?.playback(videos.storedSource(src.value)) ?? videoPlaybackUrl(src.value)
 })
 const draft = ref(src.value)
+const diskVideo = computed(() => isVideo.value && diskVideoInfo(src.value))
 const linkedVideo = computed(() => isVideo.value && !isVideoData(src.value))
 const mime = computed(() => src.value.slice(5, src.value.indexOf(';')))
 const history = ref<string[]>([])

@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "Al salvataggio, il file Markdown include l’intero video ({size} MiB). Il contenuto Base64 è troppo grande per essere modificato qui.",
     "embed": "Incorpora video in Base64",
     "note": "Salva i nuovi video nel documento Markdown. Se disattivato, inserisce un riferimento al file.",
     "title": "Video",

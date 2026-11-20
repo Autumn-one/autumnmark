@@ -1,5 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, screen, type WebContents } from 'electron'
-import { readFile, stat, rename, readdir } from 'node:fs/promises'
+import { stat, rename, readdir } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import log from 'electron-log'
 import debounce from 'lodash/debounce'
@@ -41,7 +43,6 @@ import { ApplicationStateStore, RecoveryStore } from './storage'
 import { CheckpointService } from './checkpointService'
 import { CloseCoordinator } from './closeCoordinator'
 import { createStateId, createFileLocation, createWorkspaceDescriptor } from './identity'
-import { contentSha256 } from 'common/filesystem'
 import { applyWindowGeometry, captureWindowGeometry } from './windowGeometry'
 import type { SidebarMoveRequest, SidebarMoveResult } from '@shared/types/project'
 import { confirmAndMoveSidebarItem } from '../filesystem/sidebarMove'
@@ -989,12 +990,17 @@ export class SessionHost {
 
   private async _diskBaseline(pathname: string): Promise<DiskBaseline> {
     try {
-      const bytes = await readFile(pathname)
+      const hash = createHash('sha256')
+      let sizeBytes = 0
+      for await (const bytes of createReadStream(pathname, { highWaterMark: 1024 * 1024 })) {
+        hash.update(bytes)
+        sizeBytes += bytes.length
+      }
       const info = await stat(pathname)
       return {
         exists: true,
-        rawSha256: contentSha256(bytes),
-        sizeBytes: bytes.byteLength,
+        rawSha256: hash.digest('hex'),
+        sizeBytes,
         mtimeMs: info.mtimeMs
       }
     } catch (error) {

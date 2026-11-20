@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "Beim Speichern wird das vollständige Video ({size} MiB) in die Markdown-Datei eingebettet. Der Base64-Quelltext ist für die Bearbeitung hier zu groß.",
     "embed": "Videos als Base64 einbetten",
     "note": "Speichert neue Videos im Markdown-Dokument. Ansonsten wird ein Dateiverweis eingefügt.",
     "title": "Video",

@@ -78,6 +78,7 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   'mt::set-document-read-only': { args: [tabId: string, readOnly: boolean]; ret: void }
   'mt::ask-for-image-path': { args: [kind?: 'video']; ret: string }
   'mt::video::download': { args: [url: string]; ret: { mime: string; data: Uint8Array } }
+  'mt::video::embed-file': { args: [pathname: string]; ret: string }
   'mt::video::copy-file': { args: [src: string, name: string]; ret: void }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }

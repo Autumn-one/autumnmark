@@ -959,6 +959,7 @@
     "ok": "確定"
   },
   "video": {
+    "streamedSource": "儲存時會將完整影片（{size} MiB）寫入 Markdown 檔案。Base64 原始碼過長，無法在此直接編輯。",
     "embed": "以 Base64 內嵌影片",
     "note": "開啟後，新插入的影片會儲存在 Markdown 文件中。關閉時使用檔案參照。",
     "title": "影片",

@@ -6,7 +6,9 @@ import iconv from 'iconv-lite'
 import { LINE_ENDING_REG, LF_LINE_ENDING_REG, CRLF_LINE_ENDING_REG } from '../config'
 import { isDirectory2 } from 'common/filesystem'
 import { hasMarkdownExtension, isMarkdownFile } from 'common/filesystem/paths'
-import { normalizeAndResolvePath, writeFile } from '../filesystem'
+import { normalizeAndResolvePath, writeFile, writeFileChunks } from '../filesystem'
+import { diskVideoReferences, diskVideoThreshold } from '@shared/diskVideo'
+import { expandDiskVideos, readVideoMarkdown } from './diskVideo'
 import { guessEncoding } from './encoding'
 import { getEncodingName, type Encoding } from 'common/encoding'
 import type { LineEnding } from '@shared/types/files'
@@ -158,6 +160,9 @@ export const writeMarkdownFile = (
     return Promise.reject(error)
   }
 
+  if (diskVideoReferences().test(content)) {
+    return writeFileChunks(pathname, expandDiskVideos(content, encoding, !!isBom))
+  }
   return writeFile(pathname, buffer)
 }
 
@@ -168,13 +173,14 @@ export const loadMarkdownFile = async(
   trimTrailingNewline: number = 2,
   autoNormalizeLineEndings: boolean = false
 ): Promise<MarkdownDocumentRaw> => {
-  // TODO: Use streams to not buffer the file multiple times and only guess
-  //       encoding on the first 256/512 bytes.
-
-  const buffer = await fsPromises.readFile(path.resolve(pathname))
   const diskStat = await fsPromises.stat(path.resolve(pathname))
+  const streamed = diskStat.size >= diskVideoThreshold ? await readVideoMarkdown(pathname) : null
+  const buffer = streamed?.buffer ?? await fsPromises.readFile(pathname)
 
-  const encoding = guessEncoding(buffer, autoGuessEncoding)
+  const wideEncoding = streamed?.wideEncoding
+  const encoding = wideEncoding
+    ? { encoding: wideEncoding, isBom: buffer.indexOf(iconv.encode('\uFEFF', wideEncoding)) === 0 }
+    : guessEncoding(buffer, autoGuessEncoding)
   const supported = iconv.encodingExists(encoding.encoding)
   if (!supported) {
     throw new Error(`"${encoding.encoding}" encoding is not supported.`)
@@ -221,7 +227,7 @@ export const loadMarkdownFile = async(
 
   return {
     markdown,
-    rawBaseline: { exists: true, sizeBytes: buffer.byteLength, mtimeMs: diskStat.mtimeMs, rawSha256: contentSha256(buffer) },
+    rawBaseline: { exists: true, sizeBytes: streamed?.sizeBytes ?? buffer.byteLength, mtimeMs: diskStat.mtimeMs, rawSha256: streamed?.rawSha256 ?? contentSha256(buffer) },
     filename,
     pathname,
     encoding,

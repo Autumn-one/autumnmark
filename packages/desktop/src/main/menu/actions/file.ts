@@ -22,7 +22,9 @@ import { checkUpdates, userSetting } from './marktext'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG } from '../../config'
-import { normalizeAndResolvePath, resolveLocalLinkTarget, writeFile } from '../../filesystem'
+import { normalizeAndResolvePath, resolveLocalLinkTarget, writeFile, writeFileChunks } from '../../filesystem'
+import { expandDiskVideos } from '../../filesystem/diskVideo'
+import { diskVideoReferences } from '@shared/diskVideo'
 
 import { documentWrites } from '../../filesystem/documentWrites'
 import { getPath } from '../../utils'
@@ -137,7 +139,12 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
         if (!content) {
           throw new Error('No HTML content found.')
         }
-        await writeFile(filePath, content, extension, 'utf8')
+        if (diskVideoReferences().test(content)) {
+          const target = filePath.endsWith(extension) ? filePath : filePath + extension
+          await writeFileChunks(target, expandDiskVideos(content, 'utf8', false))
+        } else {
+          await writeFile(filePath, content, extension, 'utf8')
+        }
       }
       win.webContents.send('mt::export-success', { type, filePath })
     } catch (err) {

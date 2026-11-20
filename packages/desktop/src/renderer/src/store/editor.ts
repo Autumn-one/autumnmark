@@ -1244,7 +1244,7 @@ export const useEditorStore = defineStore('editor', {
       const preferencesStore = usePreferencesStore()
       window.electron.ipcRenderer.send('mt::response-pandoc-export', {
         target,
-        markdown: documentVideos(this.currentFile.id).expand(markdown),
+        markdown: documentVideos(this.currentFile.id).externalText(markdown),
         superSubScript: preferencesStore.superSubScript === true,
         githubAlerts: preferencesStore.githubAlerts === true,
         footnote: preferencesStore.footnote === true,

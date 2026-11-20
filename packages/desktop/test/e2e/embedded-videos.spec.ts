@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Locator } from 'playwright'
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, readFileSync, statSync, truncateSync, unlinkSync, writeFileSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
@@ -135,6 +136,56 @@ async function chooseAction(app: ElectronApplication, target: Locator, label: st
   }, label)
   await target.click({ button: 'right' })
 }
+
+test('a converted MP4 survives draft recovery, moving the Markdown alone and seeking in the focused paragraph', async() => {
+  const input = test.info().outputPath(' 中文示例！ .mp4')
+  copyFileSync(join(__dirname, 'data', 'portrait.mp4'), input)
+  truncateSync(input, 32 * 1024 * 1024 + 1)
+  const size = statSync(input).size
+  const digest = createHash('sha256').update(readFileSync(input)).digest('hex')
+  const markup = `<video controls title=" 中文示例！ .mp4" src="${pathToFileURL(input).href}"></video>`
+  const { app, page, filePath } = await launchWithMarkdown(markup, { preferences: { language: 'en' } })
+  const moved = test.info().outputPath('moved.md')
+  const profile = await app.evaluate(({ app }) => app.getPath('userData'))
+  try {
+    const player = page.locator('.mu-embedded-video video').first()
+    await expect(player).toHaveJSProperty('videoHeight', 360)
+    await chooseAction(app, player, 'Embed video in Markdown')
+    await expect(player).toHaveAttribute('src', /video-attachments/)
+    await expect.poll(() => readFileSync(join(profile, 'state', 'application-state.json'), 'utf8')).toContain('"recovery"')
+  } finally {
+    await app.close()
+  }
+  unlinkSync(input)
+  const recovered = await launchElectron([], { userDataDir: profile })
+  try {
+    await expect(recovered.page.locator('.mu-embedded-video video').first()).toHaveJSProperty('videoHeight', 360)
+    await clickMenuById(recovered.app, 'fileSaveMenuItem')
+    await expect.poll(() => statSync(filePath).size).toBeGreaterThan(size)
+    copyFileSync(filePath, moved)
+  } finally {
+    await recovered.app.close()
+  }
+  const reopened = await launchElectron([moved])
+  try {
+    const player = reopened.page.locator('.mu-embedded-video video').first()
+    await expect(player).toHaveJSProperty('videoHeight', 360)
+    const restored = fileURLToPath(await player.evaluate(el => (el as HTMLVideoElement).currentSrc))
+    expect(createHash('sha256').update(readFileSync(restored)).digest('hex')).toBe(digest)
+    await player.hover()
+    const box = await player.boundingBox()
+    if (!box) throw new Error('Missing inline player')
+    const seek = (fraction: number) => player.click({ position: { x: box.width * fraction, y: box.height - 22 } })
+    const time = () => player.evaluate(el => (el as HTMLVideoElement).currentTime)
+    await seek(0.75)
+    await expect.poll(time).toBeGreaterThan(1)
+    await seek(0.25)
+    await expect.poll(time).toBeLessThan(0.8)
+    await expect(reopened.page.locator('.embedded-video-player')).toHaveCount(0)
+  } finally {
+    await reopened.app.close()
+  }
+})
 
 test('a saved remote video reopens offline with embedding switched off', async() => {
   const server = createServer((_req, res) => {

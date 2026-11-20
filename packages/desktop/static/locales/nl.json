@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "Bij het opslaan wordt de volledige video ({size} MiB) in het Markdown-bestand opgenomen. De Base64-bron is te groot om hier te bewerken.",
     "embed": "Video’s als Base64 insluiten",
     "note": "Slaat nieuwe video’s op in het Markdown-document. Uitgeschakeld wordt een bestandsverwijzing ingevoegd.",
     "title": "Video",

@@ -959,6 +959,7 @@
     "ok": "OK"
   },
   "video": {
+    "streamedSource": "保存時に動画全体（{size} MiB）が Markdown ファイルに埋め込まれます。Base64 ソースが大きいため、ここでは直接編集できません。",
     "embed": "動画を Base64 で埋め込む",
     "note": "新しく挿入する動画を Markdown 文書内に保存します。オフの場合はファイルを参照します。",
     "title": "動画",
