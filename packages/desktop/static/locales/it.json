@@ -585,6 +585,7 @@
         "autoCheck": "Collega attività principali e secondarie",
         "autoNormalizeLineEndings": "All’apertura converte automaticamente i caratteri di fine riga in LF",
         "compactMode": "Modalità compatta",
+        "compactLimitHint": "Imposta il limite a 0 per disattivare la modalità compatta per quel tipo.",
         "compactImageMaxHeight": "Altezza massima delle immagini (px)",
         "compactVideoMaxHeight": "Altezza massima dei video (px)",
         "compactCodeMaxLines": "Numero massimo di righe di codice visibili",
@@ -979,7 +980,24 @@
     "toEmbedded": "Incorpora video in Markdown",
     "copy": "Copia file video"
   },
+  "documentImages": {
+    "words": "{count} parole",
+    "paragraphs": "{count} paragrafi",
+    "title": "Immagini del documento",
+    "noImages": "Nessuna immagine",
+    "allEmbedded": "Tutte le immagini sono incorporate",
+    "pending": "Immagini da incorporare: {count}",
+    "convertAll": "Incorpora tutte le immagini del documento ({count})",
+    "summary": "Incorporate: {embedded} · Non incorporate: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Imposta dimensioni…",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "lockAspect": "Mantieni proporzioni",
+    "autoSize": "Ripristina dimensioni automatiche",
+    "auto": "Automatico",
+    "toEmbedded": "Incorpora questa immagine",
     "pasteProgress": "Incorporamento immagini {completed}/{total}",
     "pasteFailed": "Link originali mantenuti per {failed} immagini su {total}",
     "preview": "Anteprima immagine",

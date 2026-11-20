@@ -34,9 +34,9 @@ import { getTextContent } from '../../selection/dom';
 import { contentPath } from '../../selection/state';
 import { SelectionType } from '../../selection/types';
 import { isListItemState } from '../../state/types';
-import { conflict, escapeHTML, firstGraphemeLength, isHTMLElement, isKeyboardEvent, isMouseEvent, lastGraphemeLength } from '../../utils';
+import { conflict, firstGraphemeLength, isHTMLElement, isKeyboardEvent, isMouseEvent, lastGraphemeLength } from '../../utils';
 import { COLOR_SPAN_CLOSE_TAG, colorPropertyOf, colorSpanOpenTag, isColorStyleEmpty, parseColorStyle } from '../../utils/colorSpan';
-import { correctImageSrc, getImageInfo, imageToMarkdown, isImageToken } from '../../utils/image';
+import { getImageInfo, imageToHtml, imageToMarkdown, isImageToken } from '../../utils/image';
 import { minSpacesAfterMarker, parseListMarker, toListDelimiter } from '../../utils/listMarker';
 import logger from '../../utils/logger';
 
@@ -464,19 +464,7 @@ class Format extends Content {
             imageText = imageToMarkdown({ alt, src, title });
         }
         else if (type === 'html_tag') {
-            const { attrs } = token;
-            Object.assign(attrs, { alt, src, title });
-            imageText = '<img ';
-
-            for (const attr of Object.keys(attrs)) {
-                let value = attrs[attr];
-                if (value && attr === 'src')
-                    value = correctImageSrc(value);
-
-                imageText += `${attr}="${escapeHTML(String(value))}" `;
-            }
-            imageText = imageText.trim();
-            imageText += ' />';
+            imageText = imageToHtml({ ...token.attrs, alt, src, title });
         }
 
         this.text
@@ -486,27 +474,17 @@ class Format extends Content {
     }
 
     updateImage(
-        { token }: IImageInfo,
+        image: IImageInfo,
         attrName: string,
         attrValue: string,
     ) {
+        this.updateImageAttributes(image, { [attrName]: attrValue });
+    }
+
+    updateImageAttributes({ token }: IImageInfo, changes: Record<string, string>) {
         const { start, end } = token.range;
         const oldText = this.text;
-        let imageText = '';
-        const attrs = Object.assign({}, token.attrs);
-        attrs[attrName] = attrValue;
-
-        imageText = '<img ';
-
-        for (const attr of Object.keys(attrs)) {
-            let value = attrs[attr];
-            if (value && attr === 'src')
-                value = correctImageSrc(value);
-
-            imageText += `${attr}="${escapeHTML(String(value))}" `;
-        }
-        imageText = imageText.trim();
-        imageText += ' />';
+        const imageText = imageToHtml({ ...token.attrs, ...changes });
         this.text
             = oldText.substring(0, start) + imageText + oldText.substring(end);
 

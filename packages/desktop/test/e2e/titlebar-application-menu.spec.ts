@@ -41,7 +41,9 @@ test.describe('Persistent title bar menus', () => {
     ])
     await expect(page.getByRole('menuitem', { name: '文件', exact: true })).toBeVisible()
     await expect(page.locator('.frameless-titlebar-menu')).toHaveCount(0)
-    await expect(page.locator('.word-count')).toBeVisible()
+    await expect(page.locator('.title-bar .title')).toHaveText('note.md - AutumnMark')
+    await expect(page.locator('.announcement-trigger')).toBeVisible()
+    await expect(page.locator('.document-status .word-count')).toBeVisible()
   })
 
   test('opens and closes the existing native submenu', async() => {

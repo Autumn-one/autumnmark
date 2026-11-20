@@ -112,12 +112,14 @@
             <span>{{ preferenceLabel(key) }}</span>
             <input
               type="number"
-              min="1"
+              min="0"
               step="1"
+              aria-describedby="compact-limit-hint"
               :value="preferenceStore[key]"
               @change="changeLimit(key, $event)"
             >
           </label>
+          <span id="compact-limit-hint">{{ t('preferences.editor.misc.compactLimitHint') }}</span>
         </fieldset>
       </template>
     </compound>
@@ -317,7 +319,7 @@ const compactLimitKeys = ['compactImageMaxHeight', 'compactVideoMaxHeight', 'com
 const changeLimit = (key: typeof compactLimitKeys[number], event: Event): void => {
   const input = event.target as HTMLInputElement
   const value = input.valueAsNumber
-  if (input.validity.valid && Number.isSafeInteger(value) && value > 0) {
+  if (input.validity.valid && Number.isSafeInteger(value) && value >= 0) {
     onSelectChange(key, value)
   } else {
     input.value = String(preferenceStore[key])
@@ -336,6 +338,12 @@ const changeLimit = (key: typeof compactLimitKeys[number], event: Event): void =
   border: 0;
   border-radius: 6px;
   background: var(--editorColor04);
+}
+
+#compact-limit-hint {
+  grid-column: 1 / -1;
+  color: var(--editorColor80);
+  font-size: 12px;
 }
 
 .compact-limits label {

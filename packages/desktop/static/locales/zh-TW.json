@@ -585,6 +585,7 @@
         "autoCheck": "連動勾選父子任務",
         "autoNormalizeLineEndings": "開啟時自動將行尾標準化為 LF",
         "compactMode": "緊湊模式",
+        "compactLimitHint": "設為 0 表示此類型不使用緊湊模式。",
         "compactImageMaxHeight": "圖片最大高度（px）",
         "compactVideoMaxHeight": "影片最大高度（px）",
         "compactCodeMaxLines": "程式碼區塊最多顯示行數",
@@ -979,7 +980,24 @@
     "toEmbedded": "轉換為內嵌影片",
     "copy": "複製影片檔案"
   },
+  "documentImages": {
+    "words": "{count} 字",
+    "paragraphs": "{count} 段",
+    "title": "文件圖片",
+    "noImages": "此文件沒有圖片",
+    "allEmbedded": "圖片已全部嵌入",
+    "pending": "還有 {count} 張圖片待嵌入",
+    "convertAll": "嵌入目前文件的所有圖片（{count} 張）",
+    "summary": "已嵌入 {embedded} 張 · 未嵌入 {pending} 張"
+  },
   "embeddedImage": {
+    "setSize": "設定尺寸…",
+    "width": "寬度",
+    "height": "高度",
+    "lockAspect": "鎖定長寬比",
+    "autoSize": "恢復自動尺寸",
+    "auto": "自動",
+    "toEmbedded": "轉換為嵌入圖片",
     "pasteProgress": "正在內嵌圖片 {completed}/{total}",
     "pasteFailed": "{total} 張圖片中有 {failed} 張無法內嵌，已保留原連結",
     "preview": "圖片預覽",

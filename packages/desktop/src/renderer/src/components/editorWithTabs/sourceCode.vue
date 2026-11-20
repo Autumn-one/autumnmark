@@ -45,7 +45,8 @@ import bus from '../../bus'
 import { t } from '@/i18n'
 import { getFileLocationMenuItems } from '@/contextMenu/fileLocation'
 import { isDocumentBackground } from '@/contextMenu/documentBackground'
-import { popupContextMenu } from '@/contextMenu/popupMenu'
+import { imageDestinationEdits } from '@/util/documentImages'
+import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
 import { oneDarkThemes, railscastsThemes } from '@/config'
 
 interface MuyaIndexCursorLike {
@@ -55,6 +56,7 @@ interface MuyaIndexCursorLike {
 
 const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit, event?: MouseEvent]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
+  imageMenuItem: ContextMenuItem
   markdown?: string
   muyaIndexCursor?: unknown
   textDirection: string
@@ -235,6 +237,20 @@ function dropEmbeddedImage(event: DragEvent) {
   else if (image) void insertEmbeddedImage(image, position)
 }
 
+function applyDocumentImages(id: string, converted: ReadonlyMap<string, string>) {
+  const cm = editor.value
+  if (!cm || tabId.value !== id || currentTab.value?.readOnly) return
+  const edits = imageDestinationEdits(cm.getValue(), converted)
+  cm.operation(() => {
+    for (const edit of edits.reverse()) {
+      cm.replaceRange(edit.text, cm.posFromIndex(edit.start), cm.posFromIndex(edit.end), 'embed-document-images')
+    }
+  })
+  saveContent(cm)
+}
+
+defineExpose({ applyDocumentImages })
+
 const showContextMenu = (event: MouseEvent): void => {
   const cm = editor.value
   const tab = currentTab.value
@@ -281,7 +297,9 @@ const showContextMenu = (event: MouseEvent): void => {
       }
     },
     { type: 'separator' },
-    ...getFileLocationMenuItems(tab)
+    ...getFileLocationMenuItems(tab),
+    { type: 'separator' },
+    props.imageMenuItem
   ], { x: event.clientX, y: event.clientY })
 }
 
@@ -739,7 +757,11 @@ onMounted(() => {
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
   refreshOutline(codeMirrorInstance)
-  codeMirrorInstance.on('changes', refreshOutline)
+  codeMirrorInstance.on('changes', (cm: CodeMirror.Editor, changes: CodeMirror.EditorChange[]) => {
+    refreshOutline(cm)
+    // Undoing image edits away from the caret does not always emit cursorActivity.
+    if (changes.some(change => change.origin === 'undo' || change.origin === 'redo' || change.origin === 'embedded-image-size')) saveContent(cm)
+  })
 
   // Pane resizing rewraps lines without triggering CodeMirror's window-resize listener.
   let measuredWidth = 0

@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { ElectronApplication, Locator } from 'playwright'
 import type { MenuTemplate } from '../../src/shared/types/menu'
-import { clickMenuById, enterSourceMode, exitSourceMode, getMarkdownContent, launchWithMarkdown } from './helpers'
+import { clickMenuById, enterSourceMode, exitSourceMode, getMarkdownContent, launchWithDoc, launchWithMarkdown } from './helpers'
 
 const png = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAAdSURBVDhPY5Cb8P8/JZgBXYBUPGrAqAGjBgwWAwAsZKwfgyie3AAAAABJRU5ErkJggg=='
 const src = 'data:image/png;base64,' + png
@@ -181,6 +181,283 @@ async function selectImageAction(app: ElectronApplication, target: Locator, labe
     })
   }, label)
   await target.click({ button: 'right' })
+}
+
+test('resizes an embedded picture from either edge without opening its preview', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`Before ![leaf](${src} "Leaf title") after`)
+  try {
+    const picture = page.locator('.mu-embedded-image img')
+    for (const [edge, delta] of [['right', 80], ['left', -35]] as const) {
+      await picture.hover()
+      const handle = page.locator('.mu-transformer .' + edge)
+      await expect(handle).toBeVisible()
+      const box = (await handle.boundingBox())!
+      const width = (await picture.boundingBox())!.width
+      const x = box.x + box.width / 2
+      const y = box.y + box.height / 2
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + delta, y, { steps: 5 })
+      await page.mouse.up()
+      await expect(picture).toHaveAttribute('width', String(Math.floor(width + Math.abs(delta))))
+      await expect(page.locator('.embedded-image-dialog:visible')).toHaveCount(0)
+    }
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('width="131"')
+    expect(readFileSync(filePath, 'utf8')).toContain(src)
+    await picture.click()
+    await expect(page.locator('.embedded-image-preview')).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('aligns mixed pictures at the top and resizes a linked picture on hover alone', async() => {
+  const filePath = test.info().outputPath('pictures.md')
+  writeFileSync(test.info().outputPath('leaf.png'), Buffer.from(png, 'base64'))
+  writeFileSync(filePath, `![one](${src})\u3000<img src="leaf.png" width="79" alt="two" />\u3000![three](leaf.png)`)
+  const { app, page } = await launchWithDoc(filePath, { preferences: { compactMode: true, compactImageMaxHeight: 50, language: 'en' } })
+  try {
+    const pictures = page.locator('.mu-content img')
+    await expect(pictures).toHaveCount(3)
+    await expect.poll(() => pictures.evaluateAll(nodes => {
+      const tops = nodes.map(node => node.getBoundingClientRect().top)
+      return Math.max(...tops) - Math.min(...tops)
+    })).toBeLessThan(1)
+    for (const picture of await pictures.all()) {
+      const chrome = await picture.evaluate(node => {
+        const wrapper = node.closest('.mu-inline-image, .mu-embedded-picture')
+        if (!wrapper) throw new Error('Missing rendered picture')
+        const style = getComputedStyle(wrapper)
+        return [style.backgroundColor, style.borderTopWidth, style.paddingTop, style.verticalAlign]
+      })
+      expect(chrome).toEqual(['rgba(0, 0, 0, 0)', '0px', '0px', 'top'])
+    }
+    await expect(page.locator('.mu-embedded-picture')).toHaveText('')
+    await expect(page.locator('.mu-embedded-picture-badge')).toHaveCount(1)
+    await expect(page.locator('.mu-embedded-picture-badge')).toHaveAttribute('title', 'Embedded in this document')
+    await expect(page.locator('.mu-compact-toggle')).toHaveCount(0)
+    await pictures.first().hover()
+    await expect(page.locator('.mu-transformer .right')).toBeVisible()
+    await pictures.first().click()
+    await expect(page.locator('.embedded-image-preview')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await pictures.nth(1).hover()
+    await expect(page.locator('.mu-inline-image-selected')).toHaveCount(0)
+    const handle = page.locator('.mu-transformer .right')
+    await expect(handle).toBeVisible()
+    const box = await handle.boundingBox()
+    if (!box) throw new Error('Missing hover resize handle')
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 24, y, { steps: 5 })
+    await page.mouse.up()
+    await expect(pictures.nth(1)).toHaveAttribute('width', '103')
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('width="103"')
+    expect(readFileSync(filePath, 'utf8')).toContain('![three](leaf.png)')
+    await clickMenuById(app, 'undoMenuItem')
+    await expect(pictures.nth(1)).toHaveAttribute('width', '79')
+  } finally {
+    await app.close()
+  }
+})
+
+test('resizing across the compact height limit keeps the saved width and reachable handles', async() => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="240"/>').toString('base64')
+  const { app, page, filePath } = await launchWithMarkdown(`<img src="data:image/svg+xml;base64,${svg}" alt="portrait" width="70" />`, {
+    preferences: { compactMode: true, compactImageMaxHeight: 160, language: 'en' }
+  })
+  try {
+    const picture = page.locator('.mu-embedded-picture img')
+    const viewport = page.locator('.mu-paragraph-content').filter({ has: picture })
+    const toggle = page.locator('.mu-compact-toggle')
+    const handle = page.locator('.mu-transformer .right')
+    const drag = async(delta: number) => {
+      await picture.hover({ position: { x: 6, y: 10 } })
+      await expect(handle).toBeVisible()
+      const box = await handle.boundingBox()
+      if (!box) throw new Error('Missing resize handle')
+      const x = box.x + box.width / 2
+      const y = box.y + box.height / 2
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + delta, y, { steps: 5 })
+    }
+    await expect(toggle).toHaveCount(0)
+    await drag(130)
+    await expect.poll(() => viewport.evaluate(el => el.clientHeight)).toBe(160)
+    await expect.poll(() => page.evaluate(() => {
+      const cropped = document.querySelector('.mu-compact-limited')!.getBoundingClientRect()
+      const bar = document.querySelector('.mu-transformer .right')!.getBoundingClientRect()
+      return bar.top >= cropped.top - 1 && bar.bottom <= cropped.bottom + 1
+    })).toBe(true)
+    await page.mouse.up()
+    await expect(picture).toHaveAttribute('width', '200')
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('width="200"')
+    await toggle.click()
+    await expect.poll(() => viewport.evaluate(el => el.clientHeight)).toBeGreaterThanOrEqual(400)
+    await toggle.click()
+    await drag(-130)
+    await page.mouse.up()
+    await expect(picture).toHaveAttribute('width', '70')
+    await expect(toggle).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('embeds only the right-clicked occurrence and preserves its size and caption', async() => {
+  const file = test.info().outputPath('leaf.png')
+  writeFileSync(file, Buffer.from(png, 'base64'))
+  const local = pathToFileURL(file).href
+  const markdown = `![embedded](${src}) ![first](${local}) <img src="${local}" width="93" alt="second" title="Leaf title" />`
+  const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { language: 'en' } })
+  try {
+    const target = page.locator('.mu-inline-image img').last()
+    await selectImageAction(app, target, 'Embed this image')
+    await expect(page.locator('.mu-embedded-image img')).toHaveCount(2)
+    await expect(page.locator('.mu-embedded-image img').last()).toHaveAttribute('width', '93')
+    await clickMenuById(app, 'fileSaveMenuItem')
+    const saved = () => readFileSync(filePath, 'utf8')
+    await expect.poll(saved).toContain(`<img src="${src}" width="93" alt="second" title="Leaf title" />`)
+    expect(saved()).toContain(`![first](${local})`)
+    await clickMenuById(app, 'undoMenuItem')
+    await expect(page.locator('.mu-inline-image')).toHaveCount(2)
+  } finally {
+    await app.close()
+  }
+})
+
+test('hover resizing a reference image keeps the shared definition for other uses', async() => {
+  const filePath = test.info().outputPath('references.md')
+  writeFileSync(test.info().outputPath('leaf.png'), Buffer.from(png, 'base64'))
+  writeFileSync(filePath, '![first][leaf] ![second][leaf]\n\n[leaf]: leaf.png "Caption"')
+  const { app, page } = await launchWithDoc(filePath)
+  try {
+    const pictures = page.locator('.mu-image-marked-text + img')
+    await expect(pictures).toHaveCount(2)
+    await pictures.last().hover()
+    const handle = page.locator('.mu-transformer .right')
+    await expect(handle).toBeVisible()
+    const box = await handle.boundingBox()
+    if (!box) throw new Error('Missing reference image handle')
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 60, y, { steps: 4 })
+    await page.mouse.up()
+    await expect(page.locator('.mu-inline-image img[alt="second"]')).toHaveAttribute('width', '76')
+    await expect(pictures).toHaveCount(1)
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('width="76"')
+    const saved = readFileSync(filePath, 'utf8')
+    expect(saved).toContain('![first][leaf]')
+    expect(saved).toContain('[leaf]: leaf.png "Caption"')
+  } finally {
+    await app.close()
+  }
+})
+
+async function expectPaintedImageCaret(caret: Locator) {
+  await expect(caret).toHaveCount(1)
+  await expect.poll(() => caret.evaluate(el => {
+    const style = getComputedStyle(el, '::after')
+    return style.width === '2px' && Number.parseFloat(style.height) >= 10 && style.backgroundColor !== 'rgba(0, 0, 0, 0)'
+  })).toBe(true)
+}
+
+test('paints the insertion caret and types on both sides of the final picture', async() => {
+  const { app, page } = await launchWithMarkdown(`![embedded](${src})![last](${src})`)
+  try {
+    const paragraph = page.locator('.mu-paragraph-content').first()
+    const pictures = paragraph.locator('.mu-embedded-image')
+    await expect(pictures).toHaveCount(2)
+    for (const edge of ['end', 'start']) {
+      await paragraph.evaluate((node, side) => {
+        const picture = node.querySelectorAll('.mu-embedded-image')[1]
+        const range = document.createRange()
+        if (side === 'start') range.setStartBefore(picture)
+        else range.setStartAfter(picture)
+        range.collapse(true)
+        ;(node as HTMLElement).focus()
+        const selection = document.getSelection()!
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }, edge)
+      const caret = pictures.last().locator(`xpath=self::*[@data-mu-image-caret="${edge}"]`)
+      await expectPaintedImageCaret(caret)
+      await page.keyboard.type(edge === 'start' ? 'between' : 'after')
+    }
+    expect((await getMarkdownContent(page, app)).trim()).toBe(`![embedded](${src})between![last](${src})after`)
+  } finally {
+    await app.close()
+  }
+})
+
+test('moves from a selected local picture to a visible, editable boundary beside an embedded picture', async() => {
+  const file = test.info().outputPath('leaf.png')
+  writeFileSync(file, Buffer.from(png, 'base64'))
+  const local = pathToFileURL(file).href
+  const { app, page } = await launchWithMarkdown(`![first](${src})![last](${local})`)
+  try {
+    const last = page.locator('.mu-inline-image img')
+    for (const [key, edge, text] of [['ArrowLeft', 'start', 'between'], ['ArrowRight', 'end', 'after']] as const) {
+      await last.click()
+      await page.keyboard.press(key)
+      const caret = page.locator(`.mu-image-container[data-mu-image-caret="${edge}"]`)
+      await expectPaintedImageCaret(caret)
+      await page.keyboard.type(text)
+    }
+    expect((await getMarkdownContent(page, app)).trim()).toBe(`![first](${src})between![last](${local})after`)
+  } finally {
+    await app.close()
+  }
+})
+
+for (const mode of ['wysiwyg', 'source']) {
+  test(`embeds all document images in one undo step in ${mode}`, async() => {
+    const markdown = `![first](leaf.png "note")\n\n![again](leaf.png)\n\n![inline](${src})\n\nKeep \`![code](leaf.png)\`\n`
+    const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { language: 'en' } })
+    try {
+      writeFileSync(join(dirname(filePath), 'leaf.png'), Buffer.from(png, 'base64'))
+      if (mode === 'source') await enterSourceMode(page, app)
+      const status = page.locator('.image-status-button')
+      await expect(status).toHaveAttribute('aria-label', '2 images to embed')
+      await status.click()
+      await expect(page.locator('.image-details:visible')).toContainText('Embedded: 1 · Not embedded: 2')
+      await expect(page.locator('.image-details:visible')).not.toContainText('leaf.png')
+      if (mode === 'source') {
+        await page.getByRole('button', { name: 'Embed all document images (2)' }).click()
+      } else {
+        await status.click()
+        await app.evaluate(({ ipcMain }) => {
+          ipcMain.removeAllListeners('mt::menu::popup')
+          ipcMain.on('mt::menu::popup', (event, template: MenuTemplate) => {
+            const item = template.find(item => item.id?.startsWith('embedDocumentImages-') && item.enabled)
+            if (item) event.sender.send('mt::menu::click', { id: item.id })
+            event.sender.send('mt::menu::closed', {})
+          })
+        })
+        await page.locator('.mu-editor').dispatchEvent('contextmenu', { bubbles: true, cancelable: true })
+      }
+      await expect(status).toHaveAttribute('aria-label', 'All images embedded')
+      await status.click()
+      await expect(page.locator('.image-details:visible')).toHaveText('Document imagesEmbedded: 3 · Not embedded: 0')
+      await status.click()
+      await clickMenuById(app, 'fileSaveMenuItem')
+      await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(`![first](${src} "note")`)
+      expect(readFileSync(filePath, 'utf8')).toContain('`![code](leaf.png)`')
+      await clickMenuById(app, 'undoMenuItem')
+      await expect(status).toHaveAttribute('aria-label', '2 images to embed')
+    } finally {
+      await app.close()
+    }
+  })
 }
 
 test('saves the original local image from the preview menu', async() => {

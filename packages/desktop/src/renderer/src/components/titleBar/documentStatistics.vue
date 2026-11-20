@@ -2,7 +2,7 @@
   <el-popover
     v-model:visible="visible"
     trigger="hover"
-    placement="bottom-end"
+    placement="top-end"
     :width="280"
     :show-arrow="false"
     popper-class="document-statistics-popover"
@@ -10,13 +10,13 @@
   >
     <template #reference>
       <el-button
-        class="word-count document-statistics-trigger title-no-drag"
+        class="document-statistics-trigger"
         text
         :aria-label="t('titleBar.documentStatistics.open')"
-        @click.stop="handleMetricClick"
+        @click.stop="visible = true"
       >
-        <span class="document-statistics-trigger__label">{{ triggerLabel }}</span>{{ ' ' }}
-        <span class="document-statistics-trigger__value">{{ triggerCount }}</span>
+        <span class="word-count">{{ t('documentImages.words', { count: countPair('word') }) }}</span>
+        <span>{{ t('documentImages.paragraphs', { count: countPair('paragraph') }) }}</span>
       </el-button>
     </template>
 
@@ -106,7 +106,7 @@ import { useI18n } from 'vue-i18n'
 import { Calendar, Clock, Lock } from '@element-plus/icons-vue'
 import type { FileWordCount } from '@shared/types/files'
 import { formatCountPair, formatTimestamp } from './documentStatisticsFormat'
-import { loadStatMetric, saveStatMetric, type StatMetric } from './documentStatisticsPersistence'
+import type { StatMetric } from './documentStatisticsPersistence'
 
 const props = defineProps<{
   pathname?: string
@@ -132,7 +132,6 @@ interface MetricConfig {
 }
 
 const METRIC_KEYS: readonly StatMetric[] = ['word', 'character', 'paragraph', 'all']
-const METRIC_CYCLE: readonly StatMetric[] = ['word', 'paragraph', 'character', 'all']
 const METRIC_CONFIG: Record<StatMetric, MetricConfig> = {
   word: {
     labelKey: 'menu.counter.words'
@@ -149,7 +148,6 @@ const METRIC_CONFIG: Record<StatMetric, MetricConfig> = {
 }
 
 const visible = ref(false)
-const activeMetric = ref<StatMetric>(loadStatMetric())
 const fileInfo = ref<{ createdAt: number | null; modifiedAt: number | null } | null>(null)
 let fileInfoRequest = 0
 
@@ -164,19 +162,8 @@ const metricRows = computed(() => {
   }))
 })
 
-const triggerLabel = computed(() => t(METRIC_CONFIG[activeMetric.value].labelKey))
-const triggerCount = computed(() =>
-  formatCountPair(
-    props.wordCount?.[activeMetric.value] ?? 0,
-    props.selectionWordCount?.[activeMetric.value],
-    locale.value
-  )
-)
-
-const handleMetricClick = (): void => {
-  const index = METRIC_CYCLE.indexOf(activeMetric.value)
-  activeMetric.value = METRIC_CYCLE[(index + 1) % METRIC_CYCLE.length]!
-}
+const countPair = (metric: StatMetric) =>
+  formatCountPair(props.wordCount?.[metric] ?? 0, props.selectionWordCount?.[metric], locale.value)
 
 const createdText = computed(
   () =>
@@ -209,8 +196,6 @@ const refreshFileInfo = async (): Promise<void> => {
   }
 }
 
-watch(activeMetric, saveStatMetric)
-
 watch(
   () => props.pathname,
   () => {
@@ -231,11 +216,11 @@ watch(
 .document-statistics-trigger {
   -webkit-app-region: no-drag;
   height: 24px;
-  margin-right: 10px;
+  margin: 0;
   padding: 0 8px;
   border-radius: 6px;
-  color: var(--editorColor50);
-  font-size: 13px;
+  color: var(--editorColor80);
+  font-size: 12px;
   line-height: 24px;
   transition: background-color 0.2s ease-in-out;
 }
@@ -262,14 +247,11 @@ watch(
   outline-offset: 1px;
 }
 
-.document-statistics-trigger__label {
-  margin-right: 6px;
+.document-statistics-trigger :deep(> span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
-
-.document-statistics-trigger__value {
-  color: inherit;
-}
-
 .document-statistics {
   color: var(--editorColor);
 }
@@ -378,8 +360,8 @@ watch(
 .document-statistics__file-value {
   flex: none;
   margin-left: auto;
-  color: var(--editorColor50);
-  font-size: 13px;
+  color: var(--editorColor80);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -391,6 +373,7 @@ watch(
 </style>
 
 <style>
+.document-image-popover.el-popover.el-popper,
 .document-statistics-popover.el-popover.el-popper {
   padding: 18px;
   border: 1px solid var(--floatBorderColor);

@@ -119,6 +119,9 @@ export const ru = {
         'HTML': 'HTML',
         'Rich Text': 'С форматированием',
         // imageToolbar
+        'Same width': 'Та же ширина',
+        'Same height': 'Та же высота',
+        'Embedded in this document': 'Встроено в документ',
         'Edit Image': 'Изменить изображение',
         'Inline Image': 'Встроенное изображение',
         'Remove Image': 'Удалить изображение',

@@ -22,6 +22,9 @@ function documentImageSource(src: string): string {
   }
 }
 
+export const embedLinkedImage = (src: string, documentPath?: string | null) =>
+  embedImage(documentImageSource(src), documentPath)
+
 export async function embedDocumentImages(sources: string[], tab: { id: string; pathname?: string | null }) {
   const counts = new Map<string, number>()
   for (const src of sources) counts.set(src, (counts.get(src) ?? 0) + 1)
@@ -34,7 +37,7 @@ export async function embedDocumentImages(sources: string[], tab: { id: string; 
   async function worker() {
     for (const [src, count] of pending) {
       try {
-        const data = await embedImage(documentImageSource(src), path)
+        const data = await embedLinkedImage(src, path)
         converted.set(src, data)
       } catch {
         job.failed += count

@@ -30,7 +30,7 @@ import { moveImageToFolder } from './fileSystem'
 import { diskVideoPath, documentVideos } from './videoAttachments'
 import { diskVideoInfo } from '@shared/diskVideo'
 
-export type EmbeddedTab = 'preview' | 'source'
+export type EmbeddedTab = 'preview' | 'source' | 'size'
 
 export function imageFromTransfer(data: DataTransfer | null) {
   if (!data) return null
@@ -258,6 +258,7 @@ export async function showImageMenu(
           }
         ]),
       { label: label('saveAs'), click: action(() => saveImage(image)) },
+      ...(image.size && !image.readOnly ? [{ label: t('embeddedImage.setSize'), click: action(() => open('size')) }] : []),
       {
         label: video && !isVideoData(image.src) ? t('video.toEmbedded') : label('convert'),
         enabled: !image.readOnly,

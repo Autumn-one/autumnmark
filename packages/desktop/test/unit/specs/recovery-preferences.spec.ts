@@ -16,6 +16,18 @@ afterEach(() =>
 )
 
 describe('tolerant preference persistence', () => {
+  it.each(['compactImageMaxHeight', 'compactVideoMaxHeight', 'compactCodeMaxLines'] as const)(
+    'persists zero for %s independently of the other compact limits',
+    key => {
+      const directory = profile()
+      const file = new PreferenceFile(directory)
+      const expected = { ...file.get(), [key]: 0 }
+      expect(file.update({ [key]: 0 }).status).toBe('persisted')
+      expect(file.update({ [key]: -1 }).status).toBe('failed')
+      expect(new PreferenceFile(directory).get()).toEqual(expected)
+    }
+  )
+
   it('defaults CJK compatibility on for existing profiles and persists opting out', () => {
     const directory = profile()
     writeFileSync(join(directory, 'preferences.json'), JSON.stringify({ autoSave: true }))

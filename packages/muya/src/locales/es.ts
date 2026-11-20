@@ -119,6 +119,9 @@ export const es = {
         'HTML': 'HTML',
         'Rich Text': 'Texto enriquecido',
         // imageToolbar
+        'Same width': 'Misma anchura',
+        'Same height': 'Misma altura',
+        'Embedded in this document': 'Incrustada en este documento',
         'Edit Image': 'Editar imagen',
         'Inline Image': 'Imagen en línea',
         'Remove Image': 'Eliminar imagen',

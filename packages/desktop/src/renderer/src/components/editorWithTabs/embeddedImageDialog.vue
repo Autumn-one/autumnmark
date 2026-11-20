@@ -7,6 +7,7 @@
     :title="label('title')"
     :show-close="false"
     width="min(92vw, 1560px)"
+    @opened="focusSizeEntry"
     @close="emit('close')"
   >
     <div
@@ -124,7 +125,7 @@
             :alt="image.name || label('title')"
             :draggable="!pannable"
             @dragstart.prevent="dragOut"
-            @load="fit"
+            @load="imageLoaded"
             @error="error = label('invalid')"
           >
           <span
@@ -132,6 +133,14 @@
             class="drop-hint"
           >{{ label('drop') }}</span>
         </div>
+        <embedded-picture-size
+          v-if="image.size && !image.readOnly"
+          :key="src"
+          ref="sizeEntry"
+          :dimensions="image.size"
+          :natural="natural"
+          @apply="applySize"
+        />
         <footer>
           <span
             v-if="!image.readOnly"
@@ -242,7 +251,8 @@ import {
   RefreshLeft,
   Upload
 } from '@element-plus/icons-vue'
-import type { IEmbeddedImageEdit } from '@muyajs/core'
+import type { IEmbeddedImageEdit, IImageDimensions } from '@muyajs/core'
+import EmbeddedPictureSize from './embeddedPictureSize.vue'
 import { isVideoData, videoPlaybackUrl } from '@/util/video'
 import { diskVideoInfo } from '@shared/diskVideo'
 import { documentVideos } from '@/util/videoAttachments'
@@ -269,7 +279,9 @@ const label = (key: string, values: Record<string, string> = {}) =>
   t((isVideo.value ? 'video.' : 'embeddedImage.') + key, values)
 const tabs = ['preview', 'source'] as const
 const modifier = isMac ? '⌘' : 'Ctrl'
-const tab = ref(props.initialTab)
+const tab = ref(props.initialTab === 'size' ? 'preview' : props.initialTab)
+const sizeEntry = ref<InstanceType<typeof EmbeddedPictureSize>>()
+const natural = ref({ width: 0, height: 0 })
 const src = ref(props.image.src)
 const editorStore = useEditorStore()
 const playbackUrl = computed(() => {
@@ -329,6 +341,19 @@ function switchTab() {
 function fit() {
   controller?.fit()
 }
+function imageLoaded() {
+  const img = picture.value
+  if (img) natural.value = { width: img.naturalWidth, height: img.naturalHeight }
+  fit()
+}
+function focusSizeEntry() {
+  if (props.initialTab === 'size') sizeEntry.value?.focusWidth()
+}
+function applySize(dimensions: IImageDimensions) {
+  if (props.image.readOnly || !props.image.size || !props.image.matches(src.value)) return
+  props.image.size.apply(dimensions, src.value)
+  emit('close')
+}
 function dragOut() {
   dragOriginal(src.value, props.image.name, props.image.kind)
 }
@@ -350,12 +375,12 @@ function undo() {
 }
 function menuHistory(event: Event) {
   const command = (event as CustomEvent<string>).detail
-  if (document.activeElement instanceof HTMLTextAreaElement) document.execCommand(command)
+  if (document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLInputElement) document.execCommand(command)
   else if (command === 'undo') undo()
 }
 function onKey(event: KeyboardEvent) {
   if (
-    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement ||
     !(event.ctrlKey || event.metaKey) ||
     event.shiftKey
   )
@@ -406,7 +431,8 @@ function showPreviewMenu(event: MouseEvent) {
     }
   }
   void showImageMenu(target, event, (selected) => {
-    tab.value = selected
+    tab.value = selected === 'size' ? 'preview' : selected
+    if (selected === 'size') void nextTick(() => sizeEntry.value?.focusWidth())
   }).catch((reason) => reportImageError(reason, props.image.kind))
 }
 
@@ -442,7 +468,7 @@ function pasteFromClipboard() {
   void replace(readClipboardImage(props.image.kind))
 }
 function paste(event: ClipboardEvent) {
-  if (tab.value !== 'preview' || props.image.readOnly) return
+  if (tab.value !== 'preview' || props.image.readOnly || event.target instanceof HTMLInputElement) return
   event.preventDefault()
   event.stopPropagation()
   const input = isVideo.value

@@ -3,13 +3,43 @@
 }
 
 @media screen {
-    .mu-compact-mode .mu-container video {
+    .mu-embedded-picture-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+
+        display: grid;
+        width: min(17px, 45%);
+        max-height: 75%;
+
+        color: var(--editor-color);
+
+        background: var(--editor-bg-color);
+        border-radius: 3px;
+        box-shadow: 0 0 0 1px var(--editor-color-10);
+        opacity: 0.86;
+
+        aspect-ratio: 1;
+        place-items: center;
+    }
+
+    .mu-embedded-picture-badge::before {
+        width: 80%;
+        height: 80%;
+
+        background: currentcolor;
+
+        content: '';
+        mask: url('../icons/embedded-picture.svg') center / contain no-repeat;
+    }
+
+    .mu-compact-mode.mu-compact-video-limit .mu-container video {
         max-width: 100%;
         max-height: var(--mu-compact-video-height, 320px);
         object-fit: contain;
     }
 
-    .mu-compact-mode .mu-container video[height] {
+    .mu-compact-mode.mu-compact-video-limit .mu-container video[height] {
         width: auto;
     }
 

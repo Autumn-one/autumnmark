@@ -119,6 +119,9 @@ export const ja = {
         'HTML': 'HTML',
         'Rich Text': 'リッチテキスト',
         // imageToolbar
+        'Same width': '同じ幅',
+        'Same height': '同じ高さ',
+        'Embedded in this document': 'この文書に埋め込み済み',
         'Edit Image': '画像を編集する',
         'Inline Image': '行内画像',
         'Remove Image': '画像を削除する',

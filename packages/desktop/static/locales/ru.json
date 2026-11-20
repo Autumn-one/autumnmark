@@ -585,6 +585,7 @@
         "autoCheck": "Связать отметки родительских и дочерних задач",
         "autoNormalizeLineEndings": "Автонормализация концов строк в LF при открытии",
         "compactMode": "Компактный режим",
+        "compactLimitHint": "Значение 0 отключает компактный режим для этого типа.",
         "compactImageMaxHeight": "Максимальная высота изображения (пикс.)",
         "compactVideoMaxHeight": "Максимальная высота видео (пикс.)",
         "compactCodeMaxLines": "Максимум видимых строк кода",
@@ -979,7 +980,24 @@
     "toEmbedded": "Встроить видео в Markdown",
     "copy": "Копировать видеофайл"
   },
+  "documentImages": {
+    "words": "Слов: {count}",
+    "paragraphs": "Абзацев: {count}",
+    "title": "Изображения документа",
+    "noImages": "Нет изображений",
+    "allEmbedded": "Все изображения встроены",
+    "pending": "Осталось встроить: {count}",
+    "convertAll": "Встроить все изображения документа ({count})",
+    "summary": "Встроено: {embedded} · Не встроено: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Настроить размер…",
+    "width": "Ширина",
+    "height": "Высота",
+    "lockAspect": "Сохранять пропорции",
+    "autoSize": "Восстановить авторазмер",
+    "auto": "Авто",
+    "toEmbedded": "Встроить это изображение",
     "pasteProgress": "Встраивание изображений {completed}/{total}",
     "pasteFailed": "Сохранены исходные ссылки для {failed} из {total} изображений",
     "preview": "Просмотр изображения",

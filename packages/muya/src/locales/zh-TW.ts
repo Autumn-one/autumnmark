@@ -119,6 +119,9 @@ export const zhTW = {
         'HTML': 'HTML',
         'Rich Text': '富文本',
         // imageToolbar
+        'Same width': '等寬',
+        'Same height': '等高',
+        'Embedded in this document': '已嵌入文件',
         'Edit Image': '編輯圖片',
         'Inline Image': '行內圖片',
         'Remove Image': '刪除圖片',

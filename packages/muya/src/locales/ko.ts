@@ -119,6 +119,9 @@ export const ko = {
         'HTML': 'HTML',
         'Rich Text': '서식 있는 텍스트',
         // imageToolbar
+        'Same width': '같은 너비',
+        'Same height': '같은 높이',
+        'Embedded in this document': '이 문서에 포함됨',
         'Edit Image': '이미지 편집',
         'Inline Image': '인라인 이미지',
         'Remove Image': '이미지 삭제',

@@ -119,6 +119,9 @@ export const it = {
         'HTML': 'HTML',
         'Rich Text': 'RTF',
         // imageToolbar
+        'Same width': 'Stessa larghezza',
+        'Same height': 'Stessa altezza',
+        'Embedded in this document': 'Incorporata nel documento',
         'Edit Image': 'Modifica immagine',
         'Inline Image': 'Immagine in linea',
         'Remove Image': 'Rimuovi immagine',

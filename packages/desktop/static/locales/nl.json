@@ -585,6 +585,7 @@
         "autoCheck": "Bovenliggende taken en subtaken koppelen",
         "autoNormalizeLineEndings": "Regeleindes automatisch normaliseren naar LF bij openen",
         "compactMode": "Compacte modus",
+        "compactLimitHint": "Stel een limiet in op 0 om de compacte modus voor dat type uit te schakelen.",
         "compactImageMaxHeight": "Maximale afbeeldingshoogte (px)",
         "compactVideoMaxHeight": "Maximale videohoogte (px)",
         "compactCodeMaxLines": "Maximaal aantal zichtbare coderegels",
@@ -979,7 +980,24 @@
     "toEmbedded": "Video insluiten in Markdown",
     "copy": "Videobestand kopiëren"
   },
+  "documentImages": {
+    "words": "{count} woorden",
+    "paragraphs": "{count} alinea’s",
+    "title": "Documentafbeeldingen",
+    "noImages": "Geen afbeeldingen",
+    "allEmbedded": "Alle afbeeldingen zijn ingesloten",
+    "pending": "Nog {count} afbeeldingen in te sluiten",
+    "convertAll": "Alle documentafbeeldingen insluiten ({count})",
+    "summary": "Ingesloten: {embedded} · Niet ingesloten: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Afbeeldingsgrootte instellen…",
+    "width": "Breedte",
+    "height": "Hoogte",
+    "lockAspect": "Verhouding behouden",
+    "autoSize": "Automatische grootte herstellen",
+    "auto": "Automatisch",
+    "toEmbedded": "Deze afbeelding insluiten",
     "pasteProgress": "Afbeeldingen insluiten {completed}/{total}",
     "pasteFailed": "Originele links behouden voor {failed} van {total} afbeeldingen",
     "preview": "Afbeeldingsvoorbeeld",

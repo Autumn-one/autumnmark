@@ -37,9 +37,9 @@ export function resolveEndpoint(node: Node, offset: number): IAnchorFocusInfo | 
         return null;
 
     const element = node instanceof Element ? node : node.parentElement;
-    const atom = element?.closest('.mu-embedded-image');
-    const raw = atom ? embeddedImageSource.get(atom) : undefined;
-    if (atom && raw !== undefined) {
+    const atom = element?.closest('.mu-embedded-image, .mu-inline-image');
+    const raw = atom ? embeddedImageSource.get(atom) ?? atom.getAttribute('data-raw') : undefined;
+    if (atom && raw != null) {
         const start = getOffsetOfParagraph(atom, contentDOM);
         return { offset: start + (offset > 0 ? raw.length : 0), block, path: block.path };
     }
@@ -61,7 +61,7 @@ export function resolveEndpoint(node: Node, offset: number): IAnchorFocusInfo | 
     // A selection anchored to an element carries a child index in `offset`,
     // not a character offset (#5239).
     const base = getOffsetOfParagraph(node, contentDOM);
-    const within = node === contentDOM || (node instanceof Element && node.querySelector('.mu-embedded-image'))
+    const within = node instanceof Element
         ? textLengthBeforeChild(node, offset)
         : offset;
 
@@ -274,32 +274,8 @@ export function getNodeAndOffset(
                     };
                 }
 
-                if (count + textLength === offset) {
-                    if (child.nextElementSibling) {
-                        return {
-                            node: child.nextElementSibling,
-                            offset: 0,
-                        };
-                    }
-                    else {
-                        return {
-                            node: imageContainer,
-                            offset: 1,
-                        };
-                    }
-                }
-                else if (count === offset && count === 0) {
-                    return {
-                        node: imageContainer,
-                        offset: 0,
-                    };
-                }
-                else {
-                    return {
-                        node: child,
-                        offset: 0,
-                    };
-                }
+                // A range inside contenteditable=false has no editable insertion point.
+                return { node, offset: i + (offset === count ? 0 : 1) };
             }
             else {
                 return getNodeAndOffset(child, offset - count);

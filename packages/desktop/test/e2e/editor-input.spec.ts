@@ -52,19 +52,7 @@ test.describe('Editor input and source-mode roundtrip', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Coverage backfill (checklist item 24). The desktop title-bar word/character/
-// paragraph counter lives in
-// packages/desktop/src/renderer/src/components/titleBar/documentStatistics.vue:
-// the trigger renders the localized metric label and value, and the popover's
-// radio rows change which metric the trigger shows. The counter value flows from
-// editor.vue json-change -> LISTEN_FOR_CONTENT_CHANGE -> store/editor.ts tab
-// wordCount -> app.vue currentFile.wordCount -> the title-bar `word-count` prop.
-// The engine wordCount algorithm itself is unit-covered in
-// packages/muya/src/utils/__tests__/wordCount.spec.ts; this spec only locks the
-// desktop title-bar wiring (the value tracks edits + follows the active mode).
-// ---------------------------------------------------------------------------
-
-const WORD_COUNT_TEXT = '.document-statistics-trigger'
+const WORD_COUNT_TEXT = '.document-status .word-count'
 
 const counterText = (page: Page): Promise<string> =>
   page.locator(WORD_COUNT_TEXT).innerText()
@@ -138,34 +126,12 @@ test.describe('Title-bar word counter (item 24)', () => {
       .toBe(expectedCount(markdown).word)
   })
 
-  test('the counter follows the metric selected in the statistics panel', async() => {
-    // Seed a deterministic two-paragraph document via source mode so each mode
-    // reads a known value independent of earlier typing in this shared app.
+  test('shows both word and paragraph totals in the floating statistics', async() => {
     await setSourceMarkdown(page, app, 'alpha beta\n\ngamma 字数\n')
-    await page.waitForTimeout(400)
-
     const markdown = await getMarkdownContent(page, app)
     const expected = expectedCount(markdown)
-
-    const counter = page.locator(WORD_COUNT_TEXT)
-
-    await expect.poll(() => counterText(page)).toMatch(/^Words\s+/)
     await expect.poll(() => counterValue(page)).toBe(expected.word)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Paragraphs\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.paragraph)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Characters\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.character)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Characters \(with spaces\)\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.all)
-    await expect
-      .poll(() => page.evaluate(() => localStorage.getItem('document-statistics-metric')))
-      .toBe('all')
+    await expect(page.locator('.document-statistics-trigger')).toContainText('Paragraphs ' + expected.paragraph)
   })
 })
 

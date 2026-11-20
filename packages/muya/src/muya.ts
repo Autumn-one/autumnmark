@@ -1627,8 +1627,10 @@ function applyAppearance(domNode: HTMLElement, options: Partial<IMuyaOptions>) {
     const { style } = domNode;
     if ('compactMode' in options)
         domNode.classList.toggle('mu-compact-mode', !!options.compactMode);
-    if (typeof options.compactVideoMaxHeight === 'number')
+    if (typeof options.compactVideoMaxHeight === 'number') {
+        domNode.classList.toggle('mu-compact-video-limit', options.compactVideoMaxHeight > 0);
         style.setProperty('--mu-compact-video-height', `${options.compactVideoMaxHeight}px`);
+    }
     if (typeof options.fontSize === 'number')
         style.setProperty('--mu-font-size', `${options.fontSize}px`);
     if (typeof options.lineHeight === 'number')

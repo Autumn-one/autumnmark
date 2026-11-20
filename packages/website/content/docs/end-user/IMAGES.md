@@ -34,6 +34,12 @@ In this mode, inserting a local image or a screenshot stores its bytes as a data
 
 Pasting Markdown such as `![map](images/map.png)` or `<img src="images/map.png" width="240">` also embeds the images in both editing modes. Relative paths use the folder of the Markdown file you are editing. You can continue typing while web images download. Longer pastes show an image count in the bottom corner. If an image cannot be read, its original link stays in the document.
 
+Embedded pictures have a small document badge in the upper-right corner. To embed existing pictures, right-click one linked picture and choose **Embed this image**, or right-click the document background and choose **Embed all document images**. You can also start a batch conversion from the image count in the bottom-right corner.
+
+Hover over a picture in the visual editor and drag either side handle. The readout shows the display width and height in pixels. Hold **Shift** near another picture's width or height on the same row to match it. For exact dimensions, right-click an embedded picture and choose **Set image size…**. Enter the width and height, choose whether to lock the aspect ratio, then apply. **Restore automatic size** clears the explicit dimensions when applied.
+
+Compact mode limits the preview height of a tall picture in its own paragraph. Expand it to see the whole picture. Pictures on the same row keep their individual sizes. In the editor preferences, enter **0** for the image height, video height, or code line limit to disable compact mode for that type.
+
 Click an embedded image to open **Image preview**. Scroll to zoom, drag to pan when zoomed in, or select **Fit to window**. Drop or paste an image into the preview to replace it. The **Embedded source** tab lets you copy or edit the data URL. Select **Apply changes** to update the image. Each replacement can be undone, including after the preview closes.
 
 Right-click the image in either editor to copy it as PNG, JPEG, or a data URL. **Save image as…** exports a copy. **Convert to local image** writes the original bytes into the configured relative assets folder and updates the document reference. Undo restores the embedded reference and keeps the saved file.

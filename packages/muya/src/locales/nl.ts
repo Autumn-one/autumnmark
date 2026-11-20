@@ -114,6 +114,9 @@ export const nl = {
         'HTML': 'HTML',
         'Rich Text': 'Opgemaakte tekst',
         // imageToolbar
+        'Same width': 'Gelijke breedte',
+        'Same height': 'Gelijke hoogte',
+        'Embedded in this document': 'Ingesloten in dit document',
         'Edit Image': 'Afbeelding bewerken',
         'Inline Image': 'Inline afbeelding',
         'Remove Image': 'Afbeelding verwijderen',

@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { embeddedImageDestination, findPastedImageSources } from '../pastedImageSources';
+import { embeddedImageDestination, findDocumentImages, findPastedImageSources } from '../pastedImageSources';
 
 describe('pasted image destinations', () => {
+    it('resolves repeated and shortcut references without changing a shared link definition', () => {
+        const markdown = '![picture][a] ![A][] ![A] [original][a]\n\n[A]: <my pic.png> "Caption"';
+        const images = findDocumentImages(markdown);
+        expect(images.map(image => image.src)).toEqual(Array.from({ length: 3 }).fill('my pic.png'));
+        let output = markdown;
+        for (const image of images.reverse())
+            output = output.slice(0, image.start) + embeddedImageDestination(image, 'data:image/png;base64,AA==') + output.slice(image.end);
+        expect(output).toContain('![A](data:image/png;base64,AA== "Caption") [original][a]');
+        expect(output).toContain('[A]: <my pic.png> "Caption"');
+    });
+
+    it('retains UTF-16 destination offsets after large embedded images and skips code samples', () => {
+        const markdown = `![🍂](data:image/png;base64,${'A'.repeat(100_000)})\n\n\`![code](example.png)\`\n\n<img src=leaf.png>`;
+        const images = findDocumentImages(markdown);
+        expect(images).toHaveLength(2);
+        expect(markdown.slice(images[1].start, images[1].end)).toBe('leaf.png');
+    });
+
     it('preserves Markdown delimiters and HTML attributes and decodes sources for loading', () => {
         const markdown = [
             '[![a [map]](<a map(1).png> "a map(1).png")](https://example.org)',

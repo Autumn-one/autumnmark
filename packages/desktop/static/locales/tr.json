@@ -585,6 +585,7 @@
         "autoCheck": "Üst ve alt görevlerin işaretlerini bağla",
         "autoNormalizeLineEndings": "Açılışta satır sonlarını LF'ye otomatik normalleştir",
         "compactMode": "Kompakt mod",
+        "compactLimitHint": "Bir tür için sınırı 0 yaparsanız o türde kompakt mod kapanır.",
         "compactImageMaxHeight": "En fazla görsel yüksekliği (px)",
         "compactVideoMaxHeight": "En fazla video yüksekliği (px)",
         "compactCodeMaxLines": "Görünür kod satırı sınırı",
@@ -979,7 +980,24 @@
     "toEmbedded": "Videoyu Markdown içine göm",
     "copy": "Video dosyasını kopyala"
   },
+  "documentImages": {
+    "words": "{count} sözcük",
+    "paragraphs": "{count} paragraf",
+    "title": "Belge görselleri",
+    "noImages": "Görsel yok",
+    "allEmbedded": "Tüm görseller gömülü",
+    "pending": "Gömülecek görsel sayısı: {count}",
+    "convertAll": "Tüm belge görsellerini göm ({count})",
+    "summary": "Gömülü: {embedded} · Gömülmemiş: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Görsel boyutunu ayarla…",
+    "width": "Genişlik",
+    "height": "Yükseklik",
+    "lockAspect": "En boy oranını kilitle",
+    "autoSize": "Otomatik boyuta dön",
+    "auto": "Otomatik",
+    "toEmbedded": "Bu görseli göm",
     "pasteProgress": "Görseller gömülüyor {completed}/{total}",
     "pasteFailed": "{total} görselden {failed} tanesi için özgün bağlantılar korundu",
     "preview": "Görüntü önizlemesi",

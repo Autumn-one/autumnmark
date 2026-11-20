@@ -119,6 +119,9 @@ export const tr = {
         'HTML': 'HTML',
         'Rich Text': 'Zengin Metin',
         // imageToolbar
+        'Same width': 'Aynı genişlik',
+        'Same height': 'Aynı yükseklik',
+        'Embedded in this document': 'Bu belgeye gömülü',
         'Edit Image': 'Görseli Düzenle',
         'Inline Image': 'Satır İçi Görsel',
         'Remove Image': 'Görseli Kaldır',

@@ -119,6 +119,9 @@ export const zhCN = {
         'HTML': 'HTML',
         'Rich Text': '富文本',
         // imageToolbar
+        'Same width': '等宽',
+        'Same height': '等高',
+        'Embedded in this document': '已内嵌到文档',
         'Edit Image': '编辑图片',
         'Inline Image': '行内图片',
         'Remove Image': '删除图片',

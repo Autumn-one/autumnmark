@@ -585,6 +585,7 @@
         "autoCheck": "상위·하위 작업 체크 연동",
         "autoNormalizeLineEndings": "열 때 줄 바꿈을 자동으로 LF로 정규화",
         "compactMode": "간결 모드",
+        "compactLimitHint": "값을 0으로 설정하면 해당 유형에 간결 모드를 적용하지 않습니다.",
         "compactImageMaxHeight": "이미지 최대 높이(px)",
         "compactVideoMaxHeight": "동영상 최대 높이(px)",
         "compactCodeMaxLines": "표시할 최대 코드 줄 수",
@@ -979,7 +980,24 @@
     "toEmbedded": "Markdown에 동영상 삽입",
     "copy": "동영상 파일 복사"
   },
+  "documentImages": {
+    "words": "{count}단어",
+    "paragraphs": "{count}문단",
+    "title": "문서 이미지",
+    "noImages": "이미지 없음",
+    "allEmbedded": "모든 이미지가 포함됨",
+    "pending": "포함할 이미지 {count}개",
+    "convertAll": "문서의 모든 이미지 포함 ({count}개)",
+    "summary": "포함됨 {embedded}개 · 포함되지 않음 {pending}개"
+  },
   "embeddedImage": {
+    "setSize": "이미지 크기 설정…",
+    "width": "너비",
+    "height": "높이",
+    "lockAspect": "가로세로 비율 고정",
+    "autoSize": "자동 크기로 복원",
+    "auto": "자동",
+    "toEmbedded": "이 이미지 포함",
     "pasteProgress": "이미지 포함 중 {completed}/{total}",
     "pasteFailed": "이미지 {total}개 중 {failed}개는 원본 링크를 유지했습니다",
     "preview": "이미지 미리보기",

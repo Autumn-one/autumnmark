@@ -1,8 +1,10 @@
+import type Content from '../block/base/content';
 import type { HTMLTagToken, ImageToken, Token } from '../inline/model/types';
 import { DATA_URL_REG, IMAGE_EXT_REG, isWin, URL_REG } from '../config/index';
 import { parseInline } from '../inline/parser/lexer';
 import { findContentDOM, getOffsetOfParagraph } from '../selection/dom';
 import { ABSOLUTE_LOCAL_REG, encodeDirnameForUrl, localPathToFileUrl, resolveRelativePath } from './fileUrl';
+import { escapeHTML } from './index';
 import { encodeLinkTitle, escapeLinkAttribute } from './markdownEscape';
 
 export type TSelectableImageToken = ImageToken | (HTMLTagToken & { tag: 'img'; kind?: 'tag' });
@@ -187,6 +189,26 @@ export function encodeImageSrc(src: string): string {
 export function imageToMarkdown({ src, alt = '', title = '' }: { src: string; alt?: string; title?: string }): string {
     const caption = title ? ` "${encodeLinkTitle(title)}"` : '';
     return `![${alt}](${encodeImageSrc(src)}${caption})`;
+}
+
+export function replaceImageMarkup(block: Content, start: number, expected: string, replacement: string) {
+    const { muya } = block;
+    if (muya.isReadOnly || !muya.isBlockInDocument(block) || !block.text.startsWith(expected, start))
+        return;
+    muya.editor.history.cutoff();
+    muya.transact(() => {
+        block.text = block.text.slice(0, start) + replacement + block.text.slice(start + expected.length);
+        block.update();
+    });
+    muya.editor.history.cutoff();
+}
+
+export function imageToHtml(attrs: Record<string, string | null>) {
+    const attributes = Object.entries(attrs).map(([name, attr]) => {
+        const value = name === 'src' && attr ? correctImageSrc(attr) : String(attr);
+        return `${name}="${escapeHTML(value)}"`;
+    });
+    return `<img ${attributes.join(' ')} />`;
 }
 
 export function correctImageSrc(src: string) {

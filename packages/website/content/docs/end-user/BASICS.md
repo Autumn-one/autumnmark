@@ -79,7 +79,7 @@ Find in files searches across available roots. When Opened Files is expanded and
 
 ### Reading Mode
 
-Since 0.23.0, Reading Mode applies to each document tab separately. Toggle it from the View menu or the switch in the title-bar document statistics popover. Use <kbd>Control</kbd>+<kbd>Command</kbd>+<kbd>R</kbd> on macOS or <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> on Linux and Windows.
+Since 0.23.0, Reading Mode applies to each document tab separately. Toggle it from the View menu or the switch in the document statistics popover in the bottom-right corner. Use <kbd>Control</kbd>+<kbd>Command</kbd>+<kbd>R</kbd> on macOS or <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> on Linux and Windows.
 
 Reading Mode allows selection, copying and navigation while preventing document edits. Enabling it keeps unsaved changes in memory and pauses autosave for that tab; return to Edit Mode to continue editing and saving. It does not change the file's permissions on disk.
 
@@ -87,7 +87,7 @@ Set `defaultOpenMode` in Preferences → General to `read` to open existing docu
 
 ### Document statistics
 
-Hover over the title-bar counter to see words, paragraphs, characters, and characters including spaces, along with file creation and modification times when available. With a selection, counts show the selection followed by the whole document. Click the counter to cycle the metric displayed in the title bar.
+The bottom-right counter shows words and paragraphs. Hover over it for character counts, file creation and modification times, and the Reading Mode switch. With a selection, counts show the selection followed by the whole document. Click the picture icon beside the counter to see how many images are embedded and how many still use links.
 
 ## Themes
 

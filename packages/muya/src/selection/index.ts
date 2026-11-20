@@ -18,6 +18,7 @@ import { getImageInfo } from '../utils/image';
 import { buildAffiliation, buildSelectionAffiliation, endpointBlockInfo } from './affiliation';
 import { getCursorCoords, getCursorYOffset, getSelectionStart } from './cursorCoords';
 import { getOffsetOfParagraph } from './dom';
+import { imageCaret } from './imageCaret';
 import ImageSelection from './ImageSelection';
 import {
     comparePaths,
@@ -46,6 +47,7 @@ class Selection {
     private _frame: number | null = null;
     private _docChanged = false;
     private _lastPublished = '';
+    private _caretImage: HTMLElement | null = null;
 
     constructor(private _muya: Muya) {
         this._text = new TextSelection(_muya, this);
@@ -297,6 +299,18 @@ class Selection {
         }
     }
 
+    private _updateImageCaret(selection: TSelection | null) {
+        const content = selection?.kind === SelectionType.TEXT && selection.context.isCollapsed && !this._muya.isReadOnly
+            ? selection.context.anchorBlock.domNode
+            : null;
+        const caret = content ? imageCaret(content) : null;
+        if (this._caretImage && this._caretImage !== caret?.element)
+            delete this._caretImage.dataset.muImageCaret;
+        this._caretImage = caret?.element ?? null;
+        if (caret && caret.element.dataset.muImageCaret !== caret.edge)
+            caret.element.dataset.muImageCaret = caret.edge;
+    }
+
     flush() {
         if (!this._canNotify)
             return;
@@ -304,6 +318,7 @@ class Selection {
             cancelAnimationFrame(this._frame);
         this._frame = null;
         const selection = this.getSelection();
+        this._updateImageCaret(selection);
         if (!selection && this._state) {
             this._setting = true;
             try {

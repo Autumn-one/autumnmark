@@ -9,6 +9,8 @@ interface IImageProbe {
 }
 
 function codeHeightLimit(viewport: HTMLElement, body: HTMLElement, lines: number): number | null {
+    if (lines === 0)
+        return null;
     const limit = Number.parseFloat(getComputedStyle(body).lineHeight) * lines;
     if (body.clientHeight <= Math.round(limit))
         return null;
@@ -117,6 +119,10 @@ export class CompactBlocks {
                 continue;
             if (viewport.classList.contains('mu-code')) {
                 heights.set(viewport, codeHeightLimit(viewport, body, compactCodeMaxLines ?? 12));
+                continue;
+            }
+            if (imageLimit === 0) {
+                heights.set(viewport, null);
                 continue;
             }
             const image = body.querySelector('img');

@@ -1,9 +1,10 @@
 import type Content from '../block/base/content';
 import type { IEmbeddedImage } from '../utils/embeddedImage';
 import { getOffsetOfParagraph } from '../selection/dom';
-import { bindEmbeddedImageEvents, embeddedImageSource, findEmbeddedMedia, replaceEmbeddedImage } from '../utils/embeddedImage';
+import { bindEmbeddedImageEvents, embeddedImageSource, embeddedImageWidths, findEmbeddedMedia, replaceEmbeddedImage } from '../utils/embeddedImage';
 import { resolveVideoSource } from '../utils/fileUrl';
-import { isImageToken } from '../utils/image';
+import { imageToHtml, isImageToken, replaceImageMarkup } from '../utils/image';
+import { embeddedPictureSize } from './imageDimensions';
 import { parseInline } from './parser/lexer';
 
 function stopEditorEvent(event: Event) {
@@ -41,6 +42,9 @@ export function openEmbeddedMedia(block: Content, image: IEmbeddedImage, raw: st
         kind: image.kind,
         name,
         readOnly: block.muya.isReadOnly,
+        size: embeddedPictureSize(raw, image, (markup, expected) => {
+            replaceImageMarkup(block, start, replaceEmbeddedImage(raw, image, expected), markup);
+        }),
         matches,
         undo: () => block.muya.undo(),
         apply: (src, expected = image.src) => {
@@ -57,6 +61,31 @@ export function openEmbeddedMedia(block: Content, image: IEmbeddedImage, raw: st
             block.muya.editor.history.cutoff();
         },
     }, event instanceof MouseEvent ? event : undefined);
+}
+
+function imagePreview(block: Content, node: HTMLElement, image: IEmbeddedImage, raw: string) {
+    const img = document.createElement('img');
+    img.src = image.src;
+    const token = parseInline(replaceEmbeddedImage(raw, image, 'image.png'))[0];
+    node.classList.add('mu-embedded-picture');
+    if (isImageToken(token)) {
+        const align = token.attrs['data-align'];
+        if (align && ['left', 'center', 'right', 'inline'].includes(align))
+            node.classList.add(align);
+        embeddedImageWidths.set(img, (width, height) => {
+            if (!node.isConnected)
+                return;
+            const start = getOffsetOfParagraph(node, block.domNode!);
+            const resized = imageToHtml({ ...token.attrs, src: image.src, width: String(width), ...(height === undefined ? {} : { height: String(height) }) });
+            replaceImageMarkup(block, start, raw, resized);
+        });
+        for (const attr of ['alt', 'title', 'width', 'height'] as const) {
+            const value = token.attrs[attr];
+            if (value)
+                img.setAttribute(attr, value);
+        }
+    }
+    return img;
 }
 
 /** Only the display copy goes through the inline lexer and syntax highlighter. */
@@ -127,19 +156,18 @@ export function projectEmbeddedImages(block: Content) {
             }
         }
         else if (preview && image.preview) {
-            const img = document.createElement('img');
-            img.src = image.src;
-            const token = parseInline(raw.replace(image.src, 'image.png'))[0];
-            if (isImageToken(token)) {
-                for (const attr of ['alt', 'title', 'width', 'height'] as const) {
-                    const value = token.attrs[attr];
-                    if (value)
-                        img.setAttribute(attr, value);
-                }
-            }
+            const img = imagePreview(block, node, image, raw);
             name = img.alt || name;
             img.draggable = false;
-            node.prepend(img);
+            const surface = document.createElement('span');
+            surface.className = 'mu-embedded-picture-surface';
+            const badge = document.createElement('span');
+            badge.className = 'mu-embedded-picture-badge mu-copy-remove mu-output-remove';
+            badge.title = block.muya.i18n.t('Embedded in this document');
+            badge.setAttribute('aria-hidden', 'true');
+            surface.append(img, badge);
+            node.replaceChildren(surface);
+            node.setAttribute('aria-label', [name || block.muya.i18n.t('Edit Image'), badge.title].join(', '));
         }
         node.tabIndex = 0;
         node.setAttribute('role', 'button');

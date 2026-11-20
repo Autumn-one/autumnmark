@@ -15,15 +15,22 @@ export interface IEmbeddedImageEdit {
     src: string;
     name: string;
     readOnly: boolean;
+    size?: IImageDimensions & { apply: (dimensions: IImageDimensions, expected: string) => void };
     matches: (expected: string) => boolean;
     apply: (src: string | null, expected?: string) => void;
     undo: () => void;
+}
+
+export interface IImageDimensions {
+    width?: number;
+    height?: number;
 }
 
 const dataImage = /data:image\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={0,2}/gi;
 // A host may replace the Base64 payload with a private-use attachment reference while editing.
 const videoData = /data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,(?:[a-z\d+/]+={0,2}|\uE200[\uE300-\uE3FF]{16}\uE201)/gi;
 
+export const embeddedImageWidths = new WeakMap<HTMLImageElement, (width: number, height?: number) => void>();
 export const embeddedImageSource = new WeakMap<Node, string>();
 
 /** A native file drag can end in a click on the originating editor widget. */

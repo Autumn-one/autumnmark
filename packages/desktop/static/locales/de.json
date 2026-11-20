@@ -585,6 +585,7 @@
         "autoCheck": "Über- und Unteraufgaben gemeinsam markieren",
         "autoNormalizeLineEndings": "Zeilenenden beim Öffnen automatisch auf LF normalisieren",
         "compactMode": "Kompaktmodus",
+        "compactLimitHint": "Mit 0 deaktivieren Sie den Kompaktmodus für den jeweiligen Typ.",
         "compactImageMaxHeight": "Maximale Bildhöhe (px)",
         "compactVideoMaxHeight": "Maximale Videohöhe (px)",
         "compactCodeMaxLines": "Maximal sichtbare Codezeilen",
@@ -979,7 +980,24 @@
     "toEmbedded": "Video in Markdown einbetten",
     "copy": "Videodatei kopieren"
   },
+  "documentImages": {
+    "words": "{count} Wörter",
+    "paragraphs": "{count} Absätze",
+    "title": "Dokumentbilder",
+    "noImages": "Keine Bilder",
+    "allEmbedded": "Alle Bilder eingebettet",
+    "pending": "Noch {count} Bilder einzubetten",
+    "convertAll": "Alle Dokumentbilder einbetten ({count})",
+    "summary": "Eingebettet: {embedded} · Nicht eingebettet: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Bildgröße einstellen…",
+    "width": "Breite",
+    "height": "Höhe",
+    "lockAspect": "Seitenverhältnis sperren",
+    "autoSize": "Automatische Größe wiederherstellen",
+    "auto": "Automatisch",
+    "toEmbedded": "Dieses Bild einbetten",
     "pasteProgress": "Bilder einbetten {completed}/{total}",
     "pasteFailed": "Originallinks für {failed} von {total} Bildern beibehalten",
     "preview": "Bildvorschau",

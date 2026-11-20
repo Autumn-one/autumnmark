@@ -585,6 +585,7 @@
         "autoCheck": "Link parent and child tasks",
         "autoNormalizeLineEndings": "Auto-normalize line endings to LF on open",
         "compactMode": "Compact mode",
+        "compactLimitHint": "Set a limit to 0 to turn off compact mode for that type.",
         "compactImageMaxHeight": "Maximum image height (px)",
         "compactVideoMaxHeight": "Maximum video height (px)",
         "compactCodeMaxLines": "Maximum visible code lines",
@@ -979,7 +980,24 @@
     "toEmbedded": "Embed video in Markdown",
     "copy": "Copy video file"
   },
+  "documentImages": {
+    "words": "Words {count}",
+    "paragraphs": "Paragraphs {count}",
+    "title": "Document images",
+    "noImages": "No images",
+    "allEmbedded": "All images embedded",
+    "pending": "{count} images to embed",
+    "convertAll": "Embed all document images ({count})",
+    "summary": "Embedded: {embedded} · Not embedded: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Set image size…",
+    "width": "Width",
+    "height": "Height",
+    "lockAspect": "Lock aspect ratio",
+    "autoSize": "Restore automatic size",
+    "auto": "Auto",
+    "toEmbedded": "Embed this image",
     "pasteProgress": "Embedding images {completed}/{total}",
     "pasteFailed": "Kept original links for {failed} of {total} images",
     "preview": "Image preview",

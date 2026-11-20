@@ -1,3 +1,11 @@
+## AutumnMark 0.24.14
+
+- See the filename and save indicator in the title bar, and word count, paragraph count, and embedded-image totals in a floating panel at the bottom right.
+- Embed one linked image from its context menu, or embed all images from the document background menu. Conversion reports progress and keeps links that could not be read.
+- Linked and embedded pictures align along their top edges. Embedded pictures have a small document badge. Hover over either kind to resize it, see its dimensions in pixels, and hold Shift to match another picture's width or height on the same row.
+- Set an embedded picture's exact width and height in either editing mode, lock its aspect ratio, or restore automatic sizing. The insertion caret is visible between adjacent pictures and after the last one.
+- Compact mode crops the preview of tall standalone pictures while keeping the resize handles accessible. Set the image, video, or code-block limit to zero to turn off compact mode for just that type.
+
 ## AutumnMark 0.24.13
 
 - Paste Markdown or HTML with image links to embed the images in both editing modes. You can keep editing while images load. The editor shows progress for longer pastes and keeps the original links for images it cannot load.

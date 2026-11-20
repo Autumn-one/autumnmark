@@ -1,12 +1,8 @@
 <template>
   <div class="editor-container">
     <title-bar
-      :project="projectTree"
-      :pathname="pathname"
       :filename="filename"
       :active="windowActive"
-      :word-count="wordCount"
-      :selection-word-count="selectionWordCount"
       :platform="platform"
       :is-saved="isSaved"
     />
@@ -76,8 +72,7 @@ const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
-const { projectTree } = storeToRefs(projectStore)
-const { currentFile, selectionWordCount } = storeToRefs(editorStore)
+const { currentFile } = storeToRefs(editorStore)
 
 watch(
   () => [currentFile.value?.id, currentFile.value?.readOnly],
@@ -91,7 +86,6 @@ watch(
   { immediate: true }
 )
 
-const pathname = computed(() => currentFile.value?.pathname)
 const filename = computed(() => currentFile.value?.filename)
 const isSaved = computed(() => currentFile.value?.isSaved)
 // `markdown` is read by `<editor-with-tabs>` whose prop is `required: true`.
@@ -100,7 +94,6 @@ const isSaved = computed(() => currentFile.value?.isSaved)
 // type is `string`. The `<editor-with-tabs>` mount is still gated.
 const markdown = computed<string>(() => currentFile.value?.markdown ?? '')
 const cursor = computed(() => currentFile.value?.cursor)
-const wordCount = computed(() => currentFile.value?.wordCount)
 // `muyaIndexCursor` is loosely typed as `unknown` on the editor store; the
 // downstream prop expects `Object | undefined`. Cast at the boundary.
 const muyaIndexCursor = computed<Record<string, unknown> | undefined>(

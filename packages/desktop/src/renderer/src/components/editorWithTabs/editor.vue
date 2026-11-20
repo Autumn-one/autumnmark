@@ -90,6 +90,7 @@ import {
   Muya,
   getStateSections,
   headingLinkAt,
+  linkedImageAt,
   CodeBlockLanguageSelector,
   EmojiSelector,
   FootnoteTool,
@@ -136,7 +137,8 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath, copyImageToClipboard, readImagePng, clipboardImagePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { embedImage } from '@/util/embedImage'
-import { embedDocumentImages } from '@/services/pastedImages'
+import { reportImageError } from '@/util/embeddedImageActions'
+import { embedDocumentImages, embedLinkedImage } from '@/services/pastedImages'
 import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
 import type { IEmbeddedImageEdit } from '@muyajs/core'
@@ -156,7 +158,8 @@ import {
   registerDocumentView,
   pruneSourceHistory
 } from '../../services/documentMode'
-import { popupContextMenu } from '../../contextMenu/popupMenu'
+import { imageDestinationEdits } from '@/util/documentImages'
+import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
 import { getFileLocationMenuItems } from '../../contextMenu/fileLocation'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
@@ -175,6 +178,7 @@ const STANDAR_Y = 320
 
 const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit, event?: MouseEvent]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
+  imageMenuItem: ContextMenuItem
   markdown?: string
   cursor?: unknown
   textDirection: string
@@ -302,19 +306,68 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
     ...(href ? [{ label: t('readingMode.copyLink'), click: () => window.electron.clipboard.writeText(href) }] : []),
     ...(image ? [{ label: t('readingMode.viewImage'), click: () => mediaViewer.value?.openImage(image) }] : [])
   ]
-  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getFileLocationMenuItems(tab)] : []
+  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getFileLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem] : []
   popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
 }
 
+function applyDocumentImages(id: string, converted: ReadonlyMap<string, string>) {
+  const muya = editor.value
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return
+  muya.flush()
+  const markdown = muya.getMarkdown()
+  const edits = imageDestinationEdits(markdown, converted)
+  if (!edits.length) return
+  const parts: string[] = []
+  let offset = 0
+  for (const edit of edits) {
+    parts.push(markdown.slice(offset, edit.start), edit.text)
+    offset = edit.end
+  }
+  parts.push(markdown.slice(offset))
+  const folds = muya.getHeadingFoldState()
+  const expanded = muya.editor.compactBlocks.expandedPaths()
+  muya.replaceContent(parts.join(''))
+  muya.setHeadingFoldState(folds)
+  muya.editor.compactBlocks.restoreExpandedPaths(expanded)
+}
+
+defineExpose({ applyDocumentImages })
+
 const showDocumentBackgroundMenu = (event: MouseEvent): void => {
   const tab = currentFile.value
-  if (event.defaultPrevented || !tab || !isDocumentBackground(event)) return
+  if (event.defaultPrevented || !tab) return
+  const muya = editor.value
+  const linked = muya && event.target instanceof Element ? linkedImageAt(muya, event.target) : undefined
+  if (linked && !tab.readOnly) {
+    event.preventDefault()
+    const { id, pathname } = tab
+    const current = () => currentFile.value?.id === id && currentFile.value.pathname === pathname &&
+      !currentFile.value.readOnly && !sourceCode.value && linked.current()
+    popupContextMenu([{ type: 'separator' }, {
+      id: 'embedLinkedImage',
+      label: t('embeddedImage.toEmbedded'),
+      click: async() => {
+        if (!current()) return
+        try {
+          const data = await embedLinkedImage(linked.src, pathname)
+          if (current()) linked.embed(data)
+        } catch (error) {
+          if (current()) reportImageError(error)
+        }
+      }
+    }], {
+      x: event.clientX, y: event.clientY,
+      editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+    })
+    return
+  }
+  if (!isDocumentBackground(event)) return
   event.preventDefault()
   if (tab.readOnly) {
     showReadingContextMenu({ event })
     return
   }
-  popupContextMenu([{ type: 'separator' }, ...getFileLocationMenuItems(tab)], {
+  popupContextMenu([{ type: 'separator' }, ...getFileLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem], {
     x: event.clientX,
     y: event.clientY,
     editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }

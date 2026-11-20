@@ -1,5 +1,5 @@
 import type CodeMirror from 'codemirror'
-import { bindEmbeddedImageEvents, findEmbeddedMedia, replaceEmbeddedImage, type IEmbeddedImageEdit } from '@muyajs/core'
+import { bindEmbeddedImageEvents, embeddedPictureSize, findEmbeddedMedia, replaceEmbeddedImage, type IEmbeddedImageEdit } from '@muyajs/core'
 
 export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbeddedImageEdit, event?: MouseEvent) => void, compact: (text: string) => string) {
   const widgets = new WeakSet<CodeMirror.TextMarker>()
@@ -38,6 +38,10 @@ export function installEmbeddedImages(cm: CodeMirror.Editor, edit: (image: IEmbe
             readOnly: !!cm.getOption('readOnly'),
             name: image.name ?? /^!\[([^\]]*)\]/.exec(raw)?.[1] ?? '',
             matches,
+            size: embeddedPictureSize(raw, image, (markup, expected) => {
+              if (cm.getOption('readOnly') || !matches(expected)) return
+              cm.replaceRange(markup, from, end(replaceEmbeddedImage(raw, image, expected)), 'embedded-image-size')
+            }),
             undo: () => cm.undo(),
             apply: (src, expected = image.src) => {
               if (cm.getOption('readOnly') || !matches(expected)) return

@@ -585,6 +585,7 @@
         "autoCheck": "親子タスクのチェックを連動",
         "autoNormalizeLineEndings": "開くときに改行コードを自動的に LF へ統一",
         "compactMode": "コンパクトモード",
+        "compactLimitHint": "上限を 0 にすると、その種類のコンパクトモードが無効になります。",
         "compactImageMaxHeight": "画像の最大高さ（px）",
         "compactVideoMaxHeight": "動画の最大高さ（px）",
         "compactCodeMaxLines": "コードブロックの最大表示行数",
@@ -979,7 +980,24 @@
     "toEmbedded": "Markdown に動画を埋め込む",
     "copy": "動画ファイルをコピー"
   },
+  "documentImages": {
+    "words": "{count} 語",
+    "paragraphs": "{count} 段落",
+    "title": "文書内の画像",
+    "noImages": "画像はありません",
+    "allEmbedded": "すべての画像が埋め込み済みです",
+    "pending": "未埋め込みの画像は {count} 枚です",
+    "convertAll": "文書内のすべての画像を埋め込む（{count} 枚）",
+    "summary": "埋め込み済み {embedded} 枚 · 未埋め込み {pending} 枚"
+  },
   "embeddedImage": {
+    "setSize": "画像サイズを設定…",
+    "width": "幅",
+    "height": "高さ",
+    "lockAspect": "縦横比を固定",
+    "autoSize": "自動サイズに戻す",
+    "auto": "自動",
+    "toEmbedded": "この画像を埋め込む",
     "pasteProgress": "画像を埋め込み中 {completed}/{total}",
     "pasteFailed": "{total} 枚中 {failed} 枚は元のリンクを保持しました",
     "preview": "画像プレビュー",

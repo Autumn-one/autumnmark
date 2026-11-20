@@ -585,6 +585,7 @@
         "autoCheck": "Vincular tareas principales y subtareas",
         "autoNormalizeLineEndings": "Normalizar automáticamente los finales de línea a LF al abrir",
         "compactMode": "Modo compacto",
+        "compactLimitHint": "Un límite de 0 desactiva el modo compacto para ese tipo.",
         "compactImageMaxHeight": "Altura máxima de imagen (px)",
         "compactVideoMaxHeight": "Altura máxima de vídeo (px)",
         "compactCodeMaxLines": "Máximo de líneas de código visibles",
@@ -979,7 +980,24 @@
     "toEmbedded": "Incrustar vídeo en Markdown",
     "copy": "Copiar archivo de vídeo"
   },
+  "documentImages": {
+    "words": "{count} palabras",
+    "paragraphs": "{count} párrafos",
+    "title": "Imágenes del documento",
+    "noImages": "Sin imágenes",
+    "allEmbedded": "Todas las imágenes están incrustadas",
+    "pending": "Imágenes por incrustar: {count}",
+    "convertAll": "Incrustar todas las imágenes del documento ({count})",
+    "summary": "Incrustadas: {embedded} · Sin incrustar: {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Ajustar tamaño…",
+    "width": "Anchura",
+    "height": "Altura",
+    "lockAspect": "Mantener proporciones",
+    "autoSize": "Restaurar tamaño automático",
+    "auto": "Automático",
+    "toEmbedded": "Incrustar esta imagen",
     "pasteProgress": "Incrustando imágenes {completed}/{total}",
     "pasteFailed": "Se conservaron los enlaces originales de {failed} de {total} imágenes",
     "preview": "Vista previa",

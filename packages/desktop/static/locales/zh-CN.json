@@ -585,6 +585,7 @@
         "autoCheck": "联动勾选父子任务",
         "autoNormalizeLineEndings": "打开时自动将行尾规范化为 LF",
         "compactMode": "紧凑模式",
+        "compactLimitHint": "设为 0 表示该类型不使用紧凑模式。",
         "compactImageMaxHeight": "图片最大高度（px）",
         "compactVideoMaxHeight": "视频最大高度（px）",
         "compactCodeMaxLines": "代码块最多显示行数",
@@ -979,7 +980,24 @@
     "toEmbedded": "转换为内嵌视频",
     "copy": "复制视频文件"
   },
+  "documentImages": {
+    "words": "{count} 字",
+    "paragraphs": "{count} 段",
+    "title": "文档图片",
+    "noImages": "本文没有图片",
+    "allEmbedded": "图片已全部内嵌",
+    "pending": "还有 {count} 张图片待内嵌",
+    "convertAll": "内嵌当前文档的所有图片（{count} 张）",
+    "summary": "已内嵌 {embedded} 张 · 未内嵌 {pending} 张"
+  },
   "embeddedImage": {
+    "setSize": "设置尺寸…",
+    "width": "宽度",
+    "height": "高度",
+    "lockAspect": "锁定宽高比",
+    "autoSize": "恢复自动尺寸",
+    "auto": "自动",
+    "toEmbedded": "转换为内嵌图片",
     "pasteProgress": "正在内嵌图片 {completed}/{total}",
     "pasteFailed": "{total} 张图片中有 {failed} 张未能内嵌，已保留原链接",
     "preview": "图片预览",

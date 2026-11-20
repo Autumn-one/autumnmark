@@ -433,36 +433,76 @@ blockquote .mu-hide.mu-math > .mu-math-render {
 
 /* inline image and <img> image */
 .mu-inline-image,
+.mu-embedded-picture,
 .mu-image-container {
     font-size: 0;
     line-height: 0;
 }
 
-.mu-inline-image {
+.mu-inline-image,
+.mu-embedded-picture {
     position: relative;
 
     display: inline-block;
+    max-width: 100%;
 
-    background: var(--code-block-bg-color);
+    vertical-align: top;
+
     border-radius: 2px;
 }
 
-.mu-inline-image.left,
-.mu-inline-image.center,
-.mu-inline-image.right {
+.mu-inline-image {
+    background: var(--code-block-bg-color);
+}
+
+.mu-embedded-picture {
+    cursor: pointer;
+}
+
+.mu-editor:focus-within .mu-content:has([data-mu-image-caret]) {
+    caret-color: transparent;
+}
+
+.mu-editor:focus-within [data-mu-image-caret] {
+    position: relative;
+}
+
+.mu-editor:focus-within [data-mu-image-caret]::after {
+    position: absolute;
+    bottom: 0;
+    z-index: 1;
+
+    width: 2px;
+    height: calc(var(--mu-font-size, 16px) * 1.2);
+
+    background: var(--editor-color);
+
+    content: '';
+    pointer-events: none;
+}
+
+.mu-editor:focus-within [data-mu-image-caret="start"]::after {
+    inset-inline-start: 0;
+}
+
+.mu-editor:focus-within [data-mu-image-caret="end"]::after {
+    inset-inline-end: 0;
+}
+
+:is(.mu-inline-image, .mu-embedded-picture):is(.left, .center, .right) {
     display: block;
     margin: 30px auto 40px;
 }
 
-.mu-inline-image.left {
+:is(.mu-inline-image, .mu-embedded-picture).left {
     text-align: left;
 }
 
-.mu-inline-image.right {
+:is(.mu-inline-image, .mu-embedded-picture).right {
     text-align: right;
 }
 
-.mu-inline-image.center {
+:is(.mu-inline-image, .mu-embedded-picture).center {
     text-align: center;
 }
 
@@ -478,13 +518,26 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     display: inline-block;
     max-width: 100%;
     margin: 0 auto;
+
+    vertical-align: top;
 }
 
+.mu-embedded-picture-surface {
+    position: relative;
+
+    display: inline-block;
+    max-width: 100%;
+
+    vertical-align: top;
+}
+
+.mu-embedded-picture-surface > img,
 .mu-inline-image .mu-image-container img {
     max-width: 100%;
 }
 
-.mu-inline-image.mu-image-success {
+.mu-inline-image.mu-image-success,
+.mu-embedded-picture {
     background: transparent;
 }
 

@@ -585,6 +585,7 @@
         "autoCheck": "Lier les tâches parentes et leurs sous-tâches",
         "autoNormalizeLineEndings": "Normaliser automatiquement les fins de ligne en LF à l'ouverture",
         "compactMode": "Mode compact",
+        "compactLimitHint": "Une limite de 0 désactive le mode compact pour ce type.",
         "compactImageMaxHeight": "Hauteur maximale des images (px)",
         "compactVideoMaxHeight": "Hauteur maximale des vidéos (px)",
         "compactCodeMaxLines": "Nombre maximal de lignes de code visibles",
@@ -979,7 +980,24 @@
     "toEmbedded": "Intégrer la vidéo au Markdown",
     "copy": "Copier le fichier vidéo"
   },
+  "documentImages": {
+    "words": "{count} mots",
+    "paragraphs": "{count} paragraphes",
+    "title": "Images du document",
+    "noImages": "Aucune image",
+    "allEmbedded": "Toutes les images sont intégrées",
+    "pending": "Images à intégrer : {count}",
+    "convertAll": "Intégrer toutes les images du document ({count})",
+    "summary": "Intégrées : {embedded} · Non intégrées : {pending}"
+  },
   "embeddedImage": {
+    "setSize": "Régler les dimensions…",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "lockAspect": "Conserver les proportions",
+    "autoSize": "Rétablir la taille automatique",
+    "auto": "Auto",
+    "toEmbedded": "Intégrer cette image",
     "pasteProgress": "Intégration des images {completed}/{total}",
     "pasteFailed": "Liens d’origine conservés pour {failed} images sur {total}",
     "preview": "Aperçu",
