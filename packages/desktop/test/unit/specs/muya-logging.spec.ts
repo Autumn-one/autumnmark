@@ -3,10 +3,6 @@ import muyaLogger from '../../../../muya/src/utils/logger'
 import log from 'electron-log/renderer'
 import bootstrapRenderer from '@/bootstrap'
 
-vi.mock('@muyajs/core', async() => ({
-  logger: (await import('../../../../muya/src/utils/logger')).default
-}))
-
 vi.mock('electron-log/renderer', () => ({
   default: {
     transports: { console: { level: 'info' } },

@@ -1,3 +1,10 @@
+## AutumnMark 0.24.15
+
+- The custom title bar uses the Windows 11 Mica backdrop while the window has focus. It returns to the theme color when the window loses focus. Requires Windows 11 22H2 or later.
+- Convert linked or embedded images and videos in a Markdown file or across a folder from the file sidebar. The conversion dialog shows the counts for each media type before you start.
+- Open Settings faster. The app prepares the settings window in the background and reuses it when you reopen Settings.
+- Dismiss image previews by clicking outside the image. Drag to pan a zoomed image and use the context menu to copy it.
+
 ## AutumnMark 0.24.14
 
 - See the filename and save indicator in the title bar, and word count, paragraph count, and embedded-image totals in a floating panel at the bottom right.

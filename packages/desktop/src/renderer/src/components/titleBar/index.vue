@@ -1,7 +1,10 @@
 <template>
   <header
     class="title-bar-editor-bg"
-    :class="{ 'tabs-visible': showTabBar }"
+    :class="{
+      'tabs-visible': showTabBar,
+      'mica-title-bar': micaTitleBar && showCustomTitleBar && active
+    }"
   >
     <div
       class="title-bar"
@@ -147,6 +150,7 @@ const updates = useAutoUpdatesStore()
 const { t } = useI18n()
 
 const isOsx = isOsxPlatform
+const micaTitleBar = window.marktext?.env?.micaTitleBar
 const windowIconMinimize = minimizePath
 const windowIconRestore = restorePath
 const windowIconMaximize = maximizePath
@@ -306,6 +310,10 @@ onBeforeUnmount(() => {
     color-mix(in srgb, var(--sideBarBgColor), var(--editorBgColor)),
     var(--editorColor) 7%
   );
+}
+.title-bar-editor-bg.mica-title-bar,
+.mica-title-bar .has-menubar {
+  background: transparent;
 }
 .has-menubar :deep(.application-menubar) {
   width: max-content;

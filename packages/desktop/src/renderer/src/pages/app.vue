@@ -13,6 +13,7 @@
       <div class="editor-middle">
         <recent v-if="!hasCurrentFile && init" />
         <editor-with-tabs
+          ref="editorView"
           v-if="hasCurrentFile && init"
           :markdown="markdown"
           :cursor="cursor"
@@ -27,6 +28,12 @@
         <export-setting-dialog />
         <rename />
         <import-modal />
+        <batch-media-dialog
+          v-if="batchMediaTarget"
+          :target="batchMediaTarget"
+          :edit="editMedia"
+          @close="batchMediaTarget = null"
+        />
       </div>
     </div>
   </div>
@@ -39,6 +46,10 @@ import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
+import BatchMediaDialog from '@/components/batchMediaDialog.vue'
+import { batchMediaTarget } from '@/contextMenu/batchMedia'
+import type { MediaEditor } from '@/services/batchMedia'
+import { t } from '@/i18n'
 import TitleBar from '@/components/titleBar/index.vue'
 import SideBar from '@/components/sideBar/index.vue'
 import AboutDialog from '@/components/about/index.vue'
@@ -59,6 +70,11 @@ import { startWindowSession } from '@/services/windowSession'
 import { videoMime } from '@shared/embeddedImage'
 
 const mainStore = useMainStore()
+const editorView = ref<InstanceType<typeof EditorWithTabs>>()
+const editMedia: MediaEditor = (id, prepare) => {
+  if (!editorView.value) throw new Error(t('batchMedia.changed'))
+  editorView.value.applyMediaEdits(id, prepare)
+}
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
@@ -173,6 +189,7 @@ function handleDocumentDrop(event: DragEvent) {
 let stopSidebarContextMenu: (() => void) | undefined
 let stopWindowSession: (() => void) | undefined
 let stopEditListener: (() => void) | undefined
+let stopViewListener: (() => void) | undefined
 onUnmounted(() => {
   window.removeEventListener('dragover', handleWindowDragOver)
   window.removeEventListener('drop', handleDocumentDrop, true)
@@ -180,6 +197,7 @@ onUnmounted(() => {
   stopSidebarContextMenu?.()
   stopWindowSession?.()
   stopEditListener?.()
+  stopViewListener?.()
 })
 
 onMounted(async () => {
@@ -191,7 +209,7 @@ onMounted(async () => {
   await commandCenterStore.LISTEN_COMMAND_CENTER_BUS()
   layoutStore.LISTEN_FOR_LAYOUT()
   stopEditListener = listenForMainStore.LISTEN_FOR_EDIT()
-  preferencesStore.LISTEN_FOR_VIEW()
+  stopViewListener = listenForMainStore.LISTEN_FOR_VIEW()
   listenForMainStore.LISTEN_FOR_SHOW_DIALOG()
   listenForMainStore.LISTEN_FOR_PANDOC_EXPORT()
   listenForMainStore.LISTEN_FOR_PARAGRAPH_INLINE_STYLE()
@@ -199,7 +217,6 @@ onMounted(async () => {
   projectStore.LISTEN_FOR_LOAD_PROJECT()
   stopSidebarContextMenu = projectStore.LISTEN_FOR_SIDEBAR_CONTEXT_MENU()
   preferencesStore.ASK_FOR_USER_PREFERENCE()
-  preferencesStore.LISTEN_TOGGLE_VIEW()
   editorStore.LISTEN_SCREEN_SHOT()
   editorStore.LISTEN_FOR_READING_MODE()
   editorStore.LISTEN_FOR_SAVE_AS()
@@ -262,6 +279,8 @@ onMounted(async () => {
   display: flex;
   flex: 1;
   min-height: 0;
+  /* Translucent sidebar themes need an opaque surface over the window backdrop. */
+  background: var(--editorBgColor);
 }
 
 .editor-middle {
@@ -270,6 +289,5 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   position: relative;
-  background: var(--editorBgColor);
 }
 </style>

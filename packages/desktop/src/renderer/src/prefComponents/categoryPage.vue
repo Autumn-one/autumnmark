@@ -43,15 +43,17 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { generalGroups, editorGroups, type PreferenceCategoryId } from './categories'
 import GeneralSettings from './general/index.vue'
-import EditorSettings from './editor/index.vue'
-import ThemeSettings from './theme/index.vue'
-import SpellcheckerSettings from './spellchecker/index.vue'
-import ImageSettings from './image/index.vue'
 import Bool from './common/bool/index.vue'
 import { usePreferencesStore } from '@/store/preferences'
+
+const EditorSettings = defineAsyncComponent(() => import('./editor/index.vue'))
+const ThemeSettings = defineAsyncComponent(() => import('./theme/index.vue'))
+const SpellcheckerSettings = defineAsyncComponent(() => import('./spellchecker/index.vue'))
+const ImageSettings = defineAsyncComponent(() => import('./image/index.vue'))
 
 defineProps<{ category: PreferenceCategoryId }>()
 const { t } = useI18n()

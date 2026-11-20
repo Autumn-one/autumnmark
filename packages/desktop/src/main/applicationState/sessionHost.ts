@@ -1126,6 +1126,22 @@ export class SessionHost {
     }
   }
 
+  async isDocumentOpen(pathname: string): Promise<boolean> {
+    const location = createFileLocation(pathname)
+    const windows = this._owner().getState().session.windows
+    if (windows.some(win => !!findFileTab(win, location))) return true
+    const info = await stat(pathname, { bigint: true })
+    if (!info.ino || info.nlink < 2n) return false
+    for (const win of windows) {
+      for (const { resource } of win.documents) {
+        if (resource.kind !== 'file') continue
+        const other = await stat(resource.location.path, { bigint: true }).catch(() => null)
+        if (other && info.dev === other.dev && info.ino === other.ino) return true
+      }
+    }
+    return false
+  }
+
   moveSidebarItem(windowId: string, request: SidebarMoveRequest): Promise<SidebarMoveResult> {
     return this._enqueueWindowOperation(windowId, async() => {
       const root = this._editors.get(windowId)?.projectRoots.roots.find(root => root.key === request.rootKey)

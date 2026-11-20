@@ -440,6 +440,7 @@ const open = async (
     // The toolbar and the close control are layered over the stage, and are
     // where the pointer sits after using them.
     wheelSurface: rootRef.value ?? undefined,
+    onBackdropClick: close,
     onChange: (state) => {
       scale.value = state.scale
       if (!fitting) touched.value = true

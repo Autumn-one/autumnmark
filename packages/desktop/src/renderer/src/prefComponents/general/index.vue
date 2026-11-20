@@ -148,9 +148,8 @@
         />
 
         <exclude-patterns
-          v-if="recoveryPreferences"
           id="setting-treePathExcludePatterns"
-          :value="recoveryPreferences.treePathExcludePatterns"
+          :value="preferenceStore.treePathExcludePatterns"
           :update="updateExcludePatterns"
           @persisted="acceptRecoveryPreferences"
         />
@@ -173,8 +172,8 @@
     </compound>
 
     <recovery-settings
-      v-if="show('recovery') && recoveryPreferences"
-      :value="recoveryPreferences"
+      v-if="show('recovery')"
+      :value="preferenceStore"
       :update="updateRecoveryPreferences"
       :choose-directory="chooseRecoveryDirectory"
       @persisted="acceptRecoveryPreferences"
@@ -208,7 +207,7 @@
 <script setup lang="ts">
 import { preferenceLabel, preferenceNotes } from '@/prefComponents/registry'
 
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import RecoverySettings from './recoverySettings.vue'
 import ExcludePatterns from './excludePatterns.vue'
 import type { UserPreferences, RecoveryPreferences } from '@shared/types/preferences'
@@ -242,16 +241,12 @@ const show = (group: string): boolean => props.groups.includes('all') || props.g
 
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
-const recoveryPreferences = ref<UserPreferences | null>(null)
 const acceptRecoveryPreferences = (preferences: UserPreferences): void => {
-  recoveryPreferences.value = preferences
   preferenceStore.SET_USER_PREFERENCE({ ...preferences })
 }
 const updateRecoveryPreferences = (patch: Partial<RecoveryPreferences>) => window.electron.ipcRenderer.invoke('mt::preferences::update', patch)
 const updateExcludePatterns = (patch: Pick<UserPreferences, 'treePathExcludePatterns'>) => window.electron.ipcRenderer.invoke('mt::preferences::update', patch)
 const chooseRecoveryDirectory = () => window.electron.ipcRenderer.invoke('mt::preferences::choose-directory')
-let stopRecoveryPreferences: (() => void) | undefined
-onUnmounted(() => stopRecoveryPreferences?.())
 
 const {
   defaultOpenMode,
@@ -307,10 +302,6 @@ const probePandoc = async (): Promise<void> => {
 }
 
 onMounted(async () => {
-  if (show('recovery') || show('navigation')) {
-    acceptRecoveryPreferences(await window.electron.ipcRenderer.invoke('mt::preferences::get'))
-    stopRecoveryPreferences = window.electron.ipcRenderer.on('mt::preferences::changed', (_event, preferences) => acceptRecoveryPreferences(preferences))
-  }
   if (show('pandoc')) await probePandoc()
 })
 

@@ -980,6 +980,20 @@
     "toEmbedded": "Video insluiten in Markdown",
     "copy": "Videobestand kopiëren"
   },
+  "batchMedia": {
+    "title": "Afbeeldingen en video's in bulk insluiten",
+    "images": "Afbeeldingen ({count})",
+    "videos": "Video's ({count})",
+    "scanning": "Documenten doorzoeken ({current}/{total})…",
+    "pending": "Documenten met in te sluiten media: {count}",
+    "convert": "Selectie insluiten ({count})",
+    "converting": "Documenten omzetten ({current}/{total})…",
+    "done": "Ingesloten mediaverwijzingen: {count}",
+    "issues": "Problemen ({count})",
+    "locked": "Dit document is alleen-lezen.",
+    "changed": "Het document is gewijzigd of in gebruik. Zoek opnieuw.",
+    "saveFailed": "Het omgezette document kon niet worden opgeslagen."
+  },
   "documentImages": {
     "words": "{count} woorden",
     "paragraphs": "{count} alinea’s",

@@ -66,7 +66,8 @@ import { embedDocumentImages, imagePasteJobs } from '@/services/pastedImages'
 import { t } from '@/i18n'
 import DocumentStatistics from '../titleBar/documentStatistics.vue'
 import DocumentImageStatus from './documentImageStatus.vue'
-import { isInlineImage } from '@/util/documentImages'
+import { imageDestinationEdits, isInlineImage } from '@/util/documentImages'
+import type { MediaEditor } from '@/services/batchMedia'
 import { findDocumentImages, type IEmbeddedImageEdit } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
 import { documentVideos } from '@/util/videoAttachments'
@@ -105,6 +106,12 @@ const headingLink = shallowRef<HeadingLinkRequest | null>(null)
 const store = useEditorStore()
 const sourceEditor = ref<InstanceType<typeof SourceCode> | null>(null)
 const renderedEditor = ref<InstanceType<typeof Editor> | null>(null)
+const applyMediaEdits: MediaEditor = (id, prepare) => {
+  const view = props.sourceCode ? sourceEditor.value : renderedEditor.value
+  if (!view) throw new Error(t('batchMedia.changed'))
+  view.applyMediaEdits(id, prepare)
+}
+defineExpose({ applyMediaEdits })
 const imageCounts = shallowRef({ embedded: 0, pending: 0 })
 watch([() => store.currentFile?.id, () => props.markdown], ([id, markdown], previous, onCleanup) => {
   const refresh = () => {
@@ -154,7 +161,9 @@ watch([() => store.currentFile, () => props.sourceCode ? sourceEditor.value : re
   () => store.currentFile && ready.get(store.currentFile.id)], ([tab, view, result]) => {
   if (!tab || !view || !result) return
   ready.delete(tab.id)
-  if (!tab.readOnly && !tab.modeChanging && tab.pathname === result.pathname) view.applyDocumentImages(tab.id, result.converted)
+  if (!tab.readOnly && !tab.modeChanging && tab.pathname === result.pathname) {
+    view.applyMediaEdits(tab.id, markdown => imageDestinationEdits(markdown, result.converted))
+  }
 }, { flush: 'post' })
 watch(() => store.tabs.map(tab => tab.id), ids => {
   for (const id of ready.keys()) if (!ids.includes(id)) ready.delete(id)

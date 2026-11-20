@@ -1,7 +1,9 @@
 import path from 'path'
+import { pathToFileURL } from 'node:url'
 import { app, type BrowserWindow } from 'electron'
 import { TypedEmitter } from '@shared/types/typedEmitter'
 import type Accessor from '../app/accessor'
+import type { UserPreferences } from '@shared/types/preferences'
 import { getThemeBackgroundColor } from '../../common/theme'
 
 
@@ -30,18 +32,7 @@ export interface BaseWindowEvents {
   'window-closed': []
 }
 
-export interface PreferenceLike {
-  getAll(): {
-    codeFontFamily?: string
-    codeFontSize?: number
-    hideScrollbar?: boolean
-    theme?: string
-    titleBarStyle?: string
-    [key: string]: unknown
-  }
-}
-
-export interface EnvLike {
+interface EnvLike {
   debug: boolean
   paths: { userDataPath: string }
 }
@@ -97,21 +88,20 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
   protected _buildUrlWithSettings(
     windowId: number | null,
     env: EnvLike,
-    userPreference: PreferenceLike
+    preferences: UserPreferences
   ): URL {
     // NOTE: Only send absolutely necessary values. Full settings are delay loaded.
     const { type } = this
     const { debug, paths } = env
-    const { codeFontFamily, codeFontSize, hideScrollbar, theme, titleBarStyle } =
-      userPreference.getAll()
+    const { codeFontFamily, codeFontSize, hideScrollbar, theme, titleBarStyle } = preferences
 
     // Decided at build time: a NODE_ENV inherited from the user's environment
     // must not point a built app at the dev server URL (#5053).
-    const baseUrl = import.meta.env.DEV
-      ? process.env['ELECTRON_RENDERER_URL']!
-      : `file://${path.join(__dirname, '../renderer/index.html')}`
+    const entry = type === WindowType.SETTINGS ? 'settings.html' : 'index.html'
+    const url = import.meta.env.DEV
+      ? new URL(entry, process.env['ELECTRON_RENDERER_URL']!)
+      : pathToFileURL(path.join(__dirname, '../renderer', entry))
 
-    const url = new URL(baseUrl)
     url.searchParams.set('udp', paths.userDataPath)
     url.searchParams.set('debug', debug ? '1' : '0')
     url.searchParams.set('wid', String(windowId))
@@ -124,16 +114,6 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
     url.searchParams.set('tbs', titleBarStyle ?? '')
 
     return url
-  }
-
-  protected _buildUrlString(
-    windowId: number | null,
-    env: EnvLike,
-    userPreference: PreferenceLike,
-
-    _category?: string | null
-  ): string {
-    return this._buildUrlWithSettings(windowId, env, userPreference).toString()
   }
 
   protected _getPreferredBackgroundColor(theme: string | undefined): string {

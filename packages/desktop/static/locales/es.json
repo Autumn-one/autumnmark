@@ -980,6 +980,20 @@
     "toEmbedded": "Incrustar vídeo en Markdown",
     "copy": "Copiar archivo de vídeo"
   },
+  "batchMedia": {
+    "title": "Incrustar imágenes y vídeos en lote",
+    "images": "Imágenes ({count})",
+    "videos": "Vídeos ({count})",
+    "scanning": "Analizando documentos ({current}/{total})…",
+    "pending": "Documentos con medios por incrustar: {count}",
+    "convert": "Incrustar selección ({count})",
+    "converting": "Convirtiendo documentos ({current}/{total})…",
+    "done": "Referencias multimedia incrustadas: {count}",
+    "issues": "Problemas ({count})",
+    "locked": "Este documento es de solo lectura.",
+    "changed": "El documento ha cambiado o está en uso. Vuelve a analizarlo.",
+    "saveFailed": "No se pudo guardar el documento convertido."
+  },
   "documentImages": {
     "words": "{count} palabras",
     "paragraphs": "{count} párrafos",

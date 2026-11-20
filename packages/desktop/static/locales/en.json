@@ -980,6 +980,20 @@
     "toEmbedded": "Embed video in Markdown",
     "copy": "Copy video file"
   },
+  "batchMedia": {
+    "title": "Batch embed images and videos",
+    "images": "Images ({count})",
+    "videos": "Videos ({count})",
+    "scanning": "Scanning documents ({current}/{total})…",
+    "pending": "Documents with media to embed: {count}",
+    "convert": "Embed selected ({count})",
+    "converting": "Converting documents ({current}/{total})…",
+    "done": "Media references embedded: {count}",
+    "issues": "Issues ({count})",
+    "locked": "This document is read-only.",
+    "changed": "The document changed or is in use. Scan again.",
+    "saveFailed": "The converted document could not be saved."
+  },
   "documentImages": {
     "words": "Words {count}",
     "paragraphs": "Paragraphs {count}",

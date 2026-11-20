@@ -2,21 +2,23 @@ import path from 'path'
 import { BrowserWindow, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { electronLocalshortcut } from 'common/localShortcut'
-import BaseWindow, { WindowLifecycle, WindowType, type EnvLike, type PreferenceLike } from './base'
+import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
 import { centerWindowOptions } from './utils'
 import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx } from '../config'
 import log from 'electron-log'
 
 class SettingWindow extends BaseWindow {
+  private pendingCategory?: string
+
   constructor(accessor: Accessor) {
     super(accessor)
     this.type = WindowType.SETTINGS
   }
 
   createWindow(category: string | null = null): BrowserWindow {
-    const { menu: appMenu, env, keybindings, preferences } = this._accessor
-    const winOptions: BrowserWindowConstructorOptions = Object.assign({}, preferencesWinOptions)
+    const { env, keybindings, preferences } = this._accessor
+    const winOptions: BrowserWindowConstructorOptions = { ...preferencesWinOptions }
     centerWindowOptions(
       winOptions as BrowserWindowConstructorOptions & {
         width: number
@@ -36,7 +38,8 @@ class SettingWindow extends BaseWindow {
     // setting a fixed window size.
     winOptions.resizable = true
 
-    const { titleBarStyle, theme } = preferences.getAll()
+    const initialPreferences = preferences.getAll()
+    const { titleBarStyle, theme } = initialPreferences
     if (!isOsx) {
       winOptions.titleBarStyle = 'default'
       if (titleBarStyle === 'native') {
@@ -56,10 +59,15 @@ class SettingWindow extends BaseWindow {
 
     this.id = win.id
 
-    appMenu.addSettingMenu(win)
-
-    win.once('ready-to-show', () => {
+    win.webContents.on('did-navigate', () => {
+      this.lifecycle = WindowLifecycle.LOADING
+    })
+    win.webContents.ipc.on('mt::settings-ready', () => {
       this.lifecycle = WindowLifecycle.READY
+      if (this.pendingCategory) {
+        win.webContents.send('settings::change-tab', this.pendingCategory)
+        this.pendingCategory = undefined
+      }
       this.emit('window-ready')
     })
 
@@ -80,13 +88,6 @@ class SettingWindow extends BaseWindow {
       win.removeListener('blur', onBlur)
     })
 
-    win.on('close', (event) => {
-      this.emit('window-close')
-
-      event.preventDefault()
-      ipcMain.emit('window-close-by-id', win.id)
-    })
-
     win.on('closed', () => {
       this.emit('window-closed')
 
@@ -94,7 +95,11 @@ class SettingWindow extends BaseWindow {
     })
 
     this.lifecycle = WindowLifecycle.LOADING
-    win.loadURL(this._buildUrlString(this.id, env, preferences, category))
+    const url = this._buildUrlWithSettings(this.id, env, initialPreferences)
+    if (category) url.searchParams.set('type', `${WindowType.SETTINGS}/${category}`)
+    void win.loadURL(url.toString()).catch(error => {
+      if (!win.isDestroyed()) log.error(error)
+    })
     win.setSheetOffset(TITLE_BAR_HEIGHT)
 
     const devToolsAccelerator = keybindings.getAccelerator('view.toggle-dev-tools')
@@ -106,18 +111,27 @@ class SettingWindow extends BaseWindow {
     return win
   }
 
-  protected override _buildUrlString(
-    windowId: number | null,
-    env: EnvLike,
-    userPreference: PreferenceLike,
-    category?: string | null
-  ): string {
-    const url = this._buildUrlWithSettings(windowId, env, userPreference)
-    if (category) {
-      url.searchParams.set('type', `${WindowType.SETTINGS}/${category}`)
-    }
-    return url.toString()
+  open(): void {
+    const win = this.browserWindow
+    if (!win) return
+    this._accessor.menu.addSettingMenu(win)
+    this._accessor.windowManager.add(this)
+    win.on('close', event => {
+      this.emit('window-close')
+      event.preventDefault()
+      ipcMain.emit('window-close-by-id', win.id)
+    })
+    win.show()
   }
+
+  selectCategory(category: string): void {
+    if (this.lifecycle === WindowLifecycle.READY) {
+      this.browserWindow?.webContents.send('settings::change-tab', category)
+    } else {
+      this.pendingCategory = category
+    }
+  }
+
 }
 
 export default SettingWindow

@@ -76,6 +76,7 @@ if (!process.mas && !import.meta.env.DEV) {
 }
 
 registerSandboxIpcHandlers({
+  isDocumentOpen: async pathname => accessor.sessionHost?.isDocumentOpen(pathname) ?? false,
   moveInProject: (sender, request) => {
     const editor = accessor.windowManager.getEditorForWebContents(sender)
     if (!accessor.sessionHost || !editor?.sessionStateId) {

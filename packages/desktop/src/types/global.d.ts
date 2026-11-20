@@ -212,7 +212,7 @@ declare global {
     // Set by the legacy editor store at runtime; consumed by muya internals.
     DIRNAME: string
     marktext?: {
-      env?: { windowId: number; [key: string]: unknown }
+      env?: { windowId: number; type?: string | null; micaTitleBar?: boolean; [key: string]: unknown }
       initialState?: {
         codeFontFamily?: string | null
         codeFontSize?: string | null

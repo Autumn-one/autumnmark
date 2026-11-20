@@ -27,6 +27,62 @@ const preferences = async(app: ElectronApplication): Promise<Record<string, unkn
   return JSON.parse(readFileSync(join(directory, 'preferences.json'), 'utf8'))
 }
 
+test('the settings button reveals the prepared window without stealing focus on hover', async() => {
+  const { app, page } = await launchWithMarkdown('# Preferences\n', {
+    windowLayout: { showSideBar: true },
+    preferences: { language: 'zh-CN' },
+    suppressErrorDialog: true
+  })
+  try {
+    const gear = page.locator('.settings-button')
+    const editor = await app.browserWindow(page)
+    await editor.evaluate(win => win.focus())
+    const prepared = app.waitForEvent('window')
+    await gear.hover()
+    const settings = await prepared
+    const native = await app.browserWindow(settings)
+    await expect(settings.locator('.pref-general h4')).toHaveText('通用')
+    expect(await native.evaluate(win => win.isVisible())).toBe(false)
+    expect(await editor.evaluate(win => win.isFocused())).toBe(true)
+    await gear.click()
+    await expect.poll(() => native.evaluate(win => win.isVisible())).toBe(true)
+    await settings.locator('.pref-sidebar input').fill('autoSave')
+    await expect(settings.locator('.pref-autocomplete li').first()).toBeVisible()
+    expect(app.windows()).toHaveLength(2)
+    await closeSettings(app, settings)
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('opening settings after a preference change uses a fresh window and the requested category', async() => {
+  const { app, page } = await launchWithMarkdown('# Preferences\n', {
+    windowLayout: { showSideBar: true },
+    preferences: { language: 'en', autoSave: false },
+    suppressErrorDialog: true
+  })
+  try {
+    const editor = await app.browserWindow(page)
+    await editor.evaluate(win => win.focus())
+    const prepared = app.waitForEvent('window')
+    await page.locator('.settings-button').focus()
+    const oldSettings = await prepared
+    await expect(oldSettings.locator('.pref-general h4')).toHaveText('General')
+    const closed = oldSettings.waitForEvent('close')
+    await page.evaluate(() => window.electron.ipcRenderer.send('mt::set-user-preference', { autoSave: true }))
+    await closed
+
+    const opened = app.waitForEvent('window')
+    await app.evaluate(({ ipcMain }) => ipcMain.emit('app-create-settings-window', 'files'))
+    const settings = await opened
+    await expect(settings.getByRole('switch', { name: 'Auto save', exact: true })).toBeChecked()
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
 test('the full settings window indexes searchable controls without renderer exceptions', async() => {
   const { app, page } = await launchWithMarkdown('# Preferences\n', {
     preferences: { language: 'en', autoSave: false },

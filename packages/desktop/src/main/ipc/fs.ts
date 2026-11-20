@@ -10,7 +10,9 @@ import { hasMarkdownExtension } from 'common/filesystem/paths'
 import type { SerializedStat } from '@shared/types/files'
 import type { SidebarMoveRequest, SidebarMoveResult } from '@shared/types/project'
 import { copyFileWithContentHash } from '../filesystem'
-import { loadMarkdownFile } from '../filesystem/markdown'
+import { loadMarkdownFile, readMarkdownSource, writeMarkdownFile } from '../filesystem/markdown'
+import { applyMarkdownEdits, type MarkdownEdit } from '@shared/markdownEdits'
+import { listMediaDocuments, mediaFileKey } from '../filesystem/mediaDocuments'
 
 const serializeStat = (stats: Stats): SerializedStat => ({
   size: stats.size,
@@ -39,10 +41,39 @@ const toBuffer = (data: unknown): unknown => {
 }
 
 export interface FileOperations {
+  isDocumentOpen(pathname: string): Promise<boolean>
   move(sender: WebContents, src: string, dest: string, write: () => Promise<void>): Promise<void>
   moveInProject(sender: WebContents, request: SidebarMoveRequest): Promise<SidebarMoveResult>
 }
 export const registerFsHandlers = (operations?: FileOperations): void => {
+  const updating = new Set<string>()
+  ipcMain.handle('mt::media::list-documents', (_event, target: string, directory: boolean, excludes: string[], openPaths: string[]) =>
+    listMediaDocuments(target, directory, excludes, openPaths))
+  ipcMain.handle('mt::media::read-document', async(_event, pathname: string, guessEncoding: boolean) => {
+    if (!hasMarkdownExtension(pathname)) throw new Error('Expected a Markdown document')
+    const target = await fs.realpath(pathname)
+    const key = mediaFileKey(await fs.stat(target, { bigint: true }), target)
+    const source = await readMarkdownSource(target, guessEncoding, true)
+    return { markdown: source.markdown, hash: key + '/' + source.rawBaseline.rawSha256 }
+  })
+  ipcMain.handle('mt::media::update-document', async(_event, pathname: string, guessEncoding: boolean, hash: string, edits: MarkdownEdit[]) => {
+    if (!hasMarkdownExtension(pathname)) throw new Error('Expected a Markdown document')
+    const target = await fs.realpath(pathname)
+    const key = mediaFileKey(await fs.stat(target, { bigint: true }), target)
+    if (updating.has(key)) return 'changed'
+    updating.add(key)
+    try {
+      const opened = await operations?.isDocumentOpen(target)
+      if (opened) return 'changed'
+      const source = await readMarkdownSource(target, guessEncoding, true)
+      if (key + '/' + source.rawBaseline.rawSha256 !== hash) return 'changed'
+      const markdown = applyMarkdownEdits(source.markdown, edits)
+      await writeMarkdownFile(target, markdown, { encoding: source.encoding, adjustLineEndingOnSave: false, lineEnding: 'lf' })
+      return 'saved'
+    } finally {
+      updating.delete(key)
+    }
+  })
   ipcMain.handle('mt::read-heading-link-document', async(_event, pathname: string, guessEncoding: boolean) => {
     if (!hasMarkdownExtension(pathname) || !commonIsFile(pathname)) return null
     return (await loadMarkdownFile(pathname, 'lf', guessEncoding)).markdown

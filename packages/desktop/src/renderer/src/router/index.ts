@@ -1,9 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
-import App from '@/pages/app.vue'
 import Preference from '@/pages/preference.vue'
 import CategoryPage from '@/prefComponents/categoryPage.vue'
-import Markdown from '@/prefComponents/markdown/index.vue'
-import Keybindings from '@/prefComponents/keybindings/index.vue'
 import { preferenceCategories } from '@/prefComponents/categories'
 
 const parseSettingsPage = (type: string | null | undefined): string => {
@@ -14,9 +11,8 @@ const parseSettingsPage = (type: string | null | undefined): string => {
 const routes = (type: string | null | undefined): RouteRecordRaw[] => [
   {
     path: '/',
-    redirect: type === 'editor' ? '/editor' : parseSettingsPage(type)
+    redirect: parseSettingsPage(type)
   },
-  { path: '/editor', component: App },
   {
     path: '/preference',
     component: Preference,
@@ -25,7 +21,9 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
       ...preferenceCategories.map(category => ({
         path: category.id,
         name: category.id,
-        component: category.id === 'markdown' ? Markdown : category.id === 'keybindings' ? Keybindings : CategoryPage,
+        component: category.id === 'markdown'
+          ? () => import('@/prefComponents/markdown/index.vue')
+          : category.id === 'keybindings' ? () => import('@/prefComponents/keybindings/index.vue') : CategoryPage,
         props: { category: category.id }
       }))
     ]

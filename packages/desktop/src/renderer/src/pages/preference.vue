@@ -19,14 +19,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, onMounted, nextTick } from 'vue'
+import { computed, watch } from 'vue'
 import { usePreferencesStore } from '@/store/preferences'
 import { storeToRefs } from 'pinia'
 import TitleBar from '@/prefComponents/common/titlebar.vue'
 import SideBar from '@/prefComponents/sideBar/index.vue'
 import { addThemeStyle } from '@/util/theme'
 import { useSettingLocation } from '@/prefComponents/settingLocation'
-import { DEFAULT_STYLE } from '@/config'
 import { isMac } from '@/util'
 
 useSettingLocation()
@@ -36,20 +35,7 @@ const { theme, titleBarStyle } = storeToRefs(preferencesStore)
 
 const showCustomTitleBar = computed(() => !isMac && titleBarStyle.value === 'custom')
 
-watch(theme, (newValue, oldValue) => {
-  if (newValue !== oldValue) {
-    addThemeStyle(newValue)
-  }
-})
-
-onMounted(() => {
-  nextTick(() => {
-    const state = window.marktext?.initialState ?? DEFAULT_STYLE
-    addThemeStyle(state.theme ?? DEFAULT_STYLE.theme)
-
-    preferencesStore.ASK_FOR_USER_PREFERENCE()
-  })
-})
+watch(theme, addThemeStyle, { immediate: true })
 </script>
 
 <style>

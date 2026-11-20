@@ -34,7 +34,10 @@ test('opens a compact portrait image from either side of the picture', async() =
       await viewport.click({ position: { x: expanded ? width - 5 : 5, y: 40 } })
       await expect(preview).toBeVisible()
       await expect(preview).toHaveAttribute('src', source)
-      await page.keyboard.press('Escape')
+      await preview.click()
+      await expect(preview).toBeVisible()
+      const backdrop = expanded ? '.el-overlay-dialog:has(.embedded-image-dialog)' : '.embedded-image-dialog .image-stage'
+      await page.locator(backdrop).click({ position: { x: 2, y: expanded ? 100 : 2 } })
       await expect(preview).toBeHidden()
       await toggle.click()
     }

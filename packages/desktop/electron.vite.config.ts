@@ -49,6 +49,15 @@ export default defineConfig({
     }
   },
   renderer: {
+    build: {
+      minify: true,
+      rolldownOptions: {
+        input: {
+          editor: resolve(__dirname, 'src/renderer/index.html'),
+          settings: resolve(__dirname, 'src/renderer/settings.html')
+        }
+      }
+    },
     // The sandboxed renderer accesses Node only through preload and IPC.
     assetsInclude: ['**/*.md'],
     // Some browser dependencies reference Node’s global; map it to globalThis before imports run.

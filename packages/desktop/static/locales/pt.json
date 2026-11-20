@@ -980,6 +980,20 @@
     "toEmbedded": "Incorporar vídeo no Markdown",
     "copy": "Copiar arquivo de vídeo"
   },
+  "batchMedia": {
+    "title": "Incorporar imagens e vídeos em lote",
+    "images": "Imagens ({count})",
+    "videos": "Vídeos ({count})",
+    "scanning": "Analisando documentos ({current}/{total})…",
+    "pending": "Documentos com mídia para incorporar: {count}",
+    "convert": "Incorporar seleção ({count})",
+    "converting": "Convertendo documentos ({current}/{total})…",
+    "done": "Referências de mídia incorporadas: {count}",
+    "issues": "Problemas ({count})",
+    "locked": "Este documento é somente leitura.",
+    "changed": "O documento foi alterado ou está em uso. Analise novamente.",
+    "saveFailed": "Não foi possível salvar o documento convertido."
+  },
   "documentImages": {
     "words": "{count} palavras",
     "paragraphs": "{count} parágrafos",

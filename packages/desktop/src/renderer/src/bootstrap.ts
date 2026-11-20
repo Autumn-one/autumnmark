@@ -1,5 +1,5 @@
 import log from 'electron-log/renderer'
-import { logger as muyaLogger } from '@muyajs/core'
+import muyaLogger from '@muyajs/core/utils/logger'
 import RendererPaths from './node/paths'
 
 let exceptionLogger: (s: unknown) => void = (s) => console.error(s)
@@ -20,6 +20,7 @@ interface UrlArgs {
   debug: boolean
   userDataPath: string | null
   windowId: number
+  micaTitleBar: boolean
   initialState: {
     codeFontFamily: string | null
     codeFontSize: string | null
@@ -50,6 +51,7 @@ const parseUrlArgs = (): UrlArgs => {
     debug,
     userDataPath,
     windowId,
+    micaTitleBar: params.get('micaTitleBar') === '1',
     initialState: {
       codeFontFamily,
       codeFontSize,
@@ -100,7 +102,7 @@ const bootstrapRenderer = (): void => {
   window.addEventListener('error', handleRendererError)
   window.addEventListener('unhandledrejection', handleRendererError)
 
-  const { debug, initialState, userDataPath, windowId, type } = parseUrlArgs()
+  const { debug, initialState, userDataPath, windowId, type, micaTitleBar } = parseUrlArgs()
   // RendererPaths throws when userDataPath is missing; preserve that runtime check.
   const paths = new RendererPaths(userDataPath as string)
   const marktext = {
@@ -109,7 +111,8 @@ const bootstrapRenderer = (): void => {
       debug,
       paths,
       windowId,
-      type
+      type,
+      micaTitleBar
     },
     paths
   }

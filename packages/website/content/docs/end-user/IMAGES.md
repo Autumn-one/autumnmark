@@ -36,6 +36,8 @@ Pasting Markdown such as `![map](images/map.png)` or `<img src="images/map.png" 
 
 Embedded pictures have a small document badge in the upper-right corner. To embed existing pictures, right-click one linked picture and choose **Embed this image**, or right-click the document background and choose **Embed all document images**. You can also start a batch conversion from the image count in the bottom-right corner.
 
+To convert media across a saved Markdown file or folder, right-click it in the sidebar and choose a batch media action. Select the available image and video types to convert. The dialog shows how many items it found before you apply the conversion.
+
 Hover over a picture in the visual editor and drag either side handle. The readout shows the display width and height in pixels. Hold **Shift** near another picture's width or height on the same row to match it. For exact dimensions, right-click an embedded picture and choose **Set image size…**. Enter the width and height, choose whether to lock the aspect ratio, then apply. **Restore automatic size** clears the explicit dimensions when applied.
 
 Compact mode limits the preview height of a tall picture in its own paragraph. Expand it to see the whole picture. Pictures on the same row keep their individual sizes. In the editor preferences, enter **0** for the image height, video height, or code line limit to disable compact mode for that type.

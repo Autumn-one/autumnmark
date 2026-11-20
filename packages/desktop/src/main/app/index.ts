@@ -48,6 +48,7 @@ class App {
   private _windowManager: WindowManager
   private _themeListenerRegistered: boolean
   private _initialArgumentsConsumed = false
+  private _preparedSettings?: { window: SettingWindow; detach: () => void }
 
   constructor(accessor: Accessor, args: Partial<CliArgs>) {
     this._accessor = accessor
@@ -390,13 +391,36 @@ class App {
     return editor
   }
 
-  private _createSettingWindow(category?: string | null): void {
-    const setting = new SettingWindow(this._accessor)
-    const nativeWindow = setting.createWindow(category ?? null)
-    this._windowManager.add(setting)
-    if (this._windowManager.windowCount === 1) {
-      this._accessor.menu.setActiveWindow(nativeWindow.id)
+  private _prepareSettingsWindow(owner: BrowserWindow): void {
+    if (this._preparedSettings || this._windowManager.getWindowsByType(WindowType.SETTINGS).length) return
+    const window = new SettingWindow(this._accessor)
+    const native = window.createWindow()
+    const contents = native.webContents
+    const discard = (): void => {
+      detach()
+      window.destroy()
     }
+    // A pointer passing over the button should not retain a renderer or keep the app alive.
+    const timer = setTimeout(discard, 10_000)
+    const detach = (): void => {
+      clearTimeout(timer)
+      owner.off('blur', discard)
+      owner.off('closed', discard)
+      app.off('before-quit', discard)
+      ipcMain.off('broadcast-preferences-changed', discard)
+      native.off('closed', detach)
+      contents.off('render-process-gone', discard)
+      contents.off('did-fail-load', discard)
+      this._preparedSettings = undefined
+    }
+    owner.once('blur', discard)
+    owner.once('closed', discard)
+    app.once('before-quit', discard)
+    ipcMain.once('broadcast-preferences-changed', discard)
+    native.once('closed', detach)
+    contents.once('render-process-gone', discard)
+    contents.once('did-fail-load', discard)
+    this._preparedSettings = { window, detach }
   }
 
   private _openFilesToOpen(): void {
@@ -530,16 +554,21 @@ class App {
   private _openSettingsWindow(category?: string | null): void {
     const settingWins = this._windowManager.getWindowsByType(WindowType.SETTINGS)
     if (settingWins.length >= 1) {
-      const browserSettingWindow = settingWins[0].win.browserWindow!
-      browserSettingWindow.webContents.send('settings::change-tab', category)
-      if (isLinux) {
-        browserSettingWindow.focus()
-      } else {
-        browserSettingWindow.moveTop()
-      }
+      const settings = settingWins[0].win as SettingWindow
+      if (category) settings.selectCategory(category)
+      settings.bringToFront()
       return
     }
-    this._createSettingWindow(category)
+    const prepared = this._preparedSettings
+    if (prepared) {
+      prepared.detach()
+      if (category) prepared.window.selectCategory(category)
+      prepared.window.open()
+      return
+    }
+    const settings = new SettingWindow(this._accessor)
+    settings.createWindow(category)
+    settings.open()
   }
 
   private _listenForIpcMain(): void {
@@ -676,6 +705,10 @@ class App {
       ipcMain.emit('app-open-directory-by-id', windowId, dirPath)
     })
 
+    ipcMain.on('mt::prepare-setting-window', event => {
+      const owner = this._windowManager.getEditorForWebContents(event.sender)?.browserWindow
+      if (owner?.isFocused()) this._prepareSettingsWindow(owner)
+    })
     ipcMain.on('mt::open-setting-window', () => {
       this._openSettingsWindow()
     })

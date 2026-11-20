@@ -1,4 +1,5 @@
 import type { ProjectRootsSnapshot, ProjectTreeEvent, SidebarMoveRequest, SidebarMoveResult } from './project'
+import type { MarkdownEdit } from '../markdownEdits'
 /**
  * Cross-process IPC contract: invoke returns a Promise, send is fire-and-forget,
  * sync returns directly, and main events push payloads to renderer listeners.
@@ -71,6 +72,9 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   }
   'mt::get-recently-used-documents': { args: []; ret: RecentDocument[] }
   'mt::read-heading-link-document': { args: [pathname: string, guessEncoding: boolean]; ret: string | null }
+  'mt::media::read-document': { args: [pathname: string, guessEncoding: boolean]; ret: { markdown: string; hash: string } }
+  'mt::media::list-documents': { args: [target: string, directory: boolean, excludes: string[], openPaths: string[]]; ret: { files: string[][]; issues: string[] } }
+  'mt::media::update-document': { args: [pathname: string, guessEncoding: boolean, hash: string, edits: MarkdownEdit[]]; ret: 'saved' | 'changed' }
   'mt::project-remove-root': { args: [key: string]; ret: boolean }
   'mt::project-retry-root': { args: [key: string]; ret: boolean }
   'mt::project-open-containing-folder': { args: [documentId: string]; ret: string | null }
@@ -199,6 +203,8 @@ export interface IpcSendChannels {
   'mt::open-directory-by-window-id': [windowId: number, dirPath: string]
   'mt::open-keybindings-config': []
   'mt::open-setting-window': []
+  'mt::prepare-setting-window': []
+  'mt::settings-ready': []
   'mt::rename': [
     payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }
   ]

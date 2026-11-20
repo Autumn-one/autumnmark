@@ -45,7 +45,7 @@ import bus from '../../bus'
 import { t } from '@/i18n'
 import { getFileLocationMenuItems } from '@/contextMenu/fileLocation'
 import { isDocumentBackground } from '@/contextMenu/documentBackground'
-import { imageDestinationEdits } from '@/util/documentImages'
+import type { MediaEditor } from '@/services/batchMedia'
 import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
 import { oneDarkThemes, railscastsThemes } from '@/config'
 
@@ -237,10 +237,10 @@ function dropEmbeddedImage(event: DragEvent) {
   else if (image) void insertEmbeddedImage(image, position)
 }
 
-function applyDocumentImages(id: string, converted: ReadonlyMap<string, string>) {
+const applyMediaEdits: MediaEditor = (id, prepare) => {
   const cm = editor.value
-  if (!cm || tabId.value !== id || currentTab.value?.readOnly) return
-  const edits = imageDestinationEdits(cm.getValue(), converted)
+  if (!cm || tabId.value !== id || currentTab.value?.readOnly) throw new Error(t('batchMedia.changed'))
+  const edits = prepare(cm.getValue())
   cm.operation(() => {
     for (const edit of edits.reverse()) {
       cm.replaceRange(edit.text, cm.posFromIndex(edit.start), cm.posFromIndex(edit.end), 'embed-document-images')
@@ -249,7 +249,7 @@ function applyDocumentImages(id: string, converted: ReadonlyMap<string, string>)
   saveContent(cm)
 }
 
-defineExpose({ applyDocumentImages })
+defineExpose({ applyMediaEdits })
 
 const showContextMenu = (event: MouseEvent): void => {
   const cm = editor.value

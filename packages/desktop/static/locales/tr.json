@@ -980,6 +980,20 @@
     "toEmbedded": "Videoyu Markdown içine göm",
     "copy": "Video dosyasını kopyala"
   },
+  "batchMedia": {
+    "title": "Resimleri ve videoları topluca göm",
+    "images": "Resimler ({count})",
+    "videos": "Videolar ({count})",
+    "scanning": "Belgeler taranıyor ({current}/{total})…",
+    "pending": "Gömülecek medya içeren belge sayısı: {count}",
+    "convert": "Seçilenleri göm ({count})",
+    "converting": "Belgeler dönüştürülüyor ({current}/{total})…",
+    "done": "Gömülen medya başvurusu: {count}",
+    "issues": "Sorunlar ({count})",
+    "locked": "Bu belge salt okunur.",
+    "changed": "Belge değişti veya kullanımda. Yeniden tarayın.",
+    "saveFailed": "Dönüştürülen belge kaydedilemedi."
+  },
   "documentImages": {
     "words": "{count} sözcük",
     "paragraphs": "{count} paragraf",

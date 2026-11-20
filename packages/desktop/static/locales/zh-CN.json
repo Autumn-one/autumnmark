@@ -980,6 +980,20 @@
     "toEmbedded": "转换为内嵌视频",
     "copy": "复制视频文件"
   },
+  "batchMedia": {
+    "title": "批量内嵌图片和视频",
+    "images": "图片（{count}）",
+    "videos": "视频（{count}）",
+    "scanning": "正在扫描文档（{current}/{total}）…",
+    "pending": "有 {count} 篇文档包含待内嵌的媒体",
+    "convert": "开始转换（{count}）",
+    "converting": "正在转换文档（{current}/{total}）…",
+    "done": "已内嵌 {count} 处媒体引用",
+    "issues": "查看问题（{count}）",
+    "locked": "此文档为只读。",
+    "changed": "文档已更改或正在使用，请重新扫描。",
+    "saveFailed": "转换后的文档未能保存。"
+  },
   "documentImages": {
     "words": "{count} 字",
     "paragraphs": "{count} 段",

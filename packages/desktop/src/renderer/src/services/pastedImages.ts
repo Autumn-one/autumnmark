@@ -11,7 +11,7 @@ interface PasteProgress {
 
 export const imagePasteJobs = reactive(new Set<PasteProgress>())
 
-function documentImageSource(src: string): string {
+export function documentMediaSource(src: string): string {
   if (src.startsWith('//')) return 'https:' + src
   if (/^(?:https?|file):/i.test(src)) return src
   const path = src.split(/[?#]/, 1)[0]
@@ -23,7 +23,7 @@ function documentImageSource(src: string): string {
 }
 
 export const embedLinkedImage = (src: string, documentPath?: string | null) =>
-  embedImage(documentImageSource(src), documentPath)
+  embedImage(documentMediaSource(src), documentPath)
 
 export async function embedDocumentImages(sources: string[], tab: { id: string; pathname?: string | null }) {
   const counts = new Map<string, number>()

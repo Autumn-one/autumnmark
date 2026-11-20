@@ -43,6 +43,13 @@ jobs:
           }
           NODE
 
+  verify:
+    name: Verify release code
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
       - uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
@@ -119,9 +126,32 @@ jobs:
           python-version: '3.12'
 
       - name: Setup pnpm + Node + dependencies
+        if: matrix.name != 'windows-arm64'
         uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
+
+      - name: Set up Windows ARM64 Node.js
+        if: matrix.name == 'windows-arm64'
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24.14.1'
+          architecture: arm64
+          package-manager-cache: false
+
+      - name: Install pnpm for Windows ARM64
+        if: matrix.name == 'windows-arm64'
+        uses: pnpm/action-setup@v6.1.0
+
+      - name: Restore Windows ARM64 pnpm store
+        if: matrix.name == 'windows-arm64'
+        uses: ./.github/actions/restore-desktop-pnpm-store
+
+      - name: Install Windows ARM64 desktop build dependencies
+        if: matrix.name == 'windows-arm64'
+        run: pnpm --filter . --filter 'marktext...' install --frozen-lockfile --ignore-scripts --prefer-offline
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       # Cache Electron binary; key on package.json so it busts when Electron version changes.
       - name: Cache Electron binary
@@ -242,7 +272,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [verify, build]
     runs-on: ubuntu-latest
     # Per-job permissions REPLACE workflow-level ones, so re-declare
     # both: contents:write to publish the release, actions:read for

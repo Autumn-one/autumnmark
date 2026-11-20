@@ -19,26 +19,28 @@ export function embeddedImageDestination(image: IPastedImageSource, dataUrl: str
     return image.unquotedAttribute ? `"${dataUrl}"` : dataUrl;
 }
 
-function htmlImages(html: string, offset: number, images: IPastedImageSource[]) {
-    if (!/<img\b/i.test(html))
+function htmlMedia(html: string, offset: number, images: IPastedImageSource[], videos?: IPastedImageSource[], inlineVideo = false) {
+    if (!/<(?:img|video|source)\b/i.test(html))
         return;
-    function visit(node: DefaultTreeAdapterTypes.Node) {
-        if ('tagName' in node && node.tagName === 'img') {
+    function visit(node: DefaultTreeAdapterTypes.Node, inVideo: boolean) {
+        const tag = 'tagName' in node ? node.tagName : '';
+        const targets = tag === 'img' ? images : tag === 'video' || (inVideo && tag === 'source') ? videos : undefined;
+        if (targets && 'tagName' in node) {
             const attr = node.sourceCodeLocation?.attrs?.src;
             const src = node.attrs.find(attr => attr.name === 'src')?.value;
-            if (!attr || !src)
-                return;
-            const raw = html.slice(attr.startOffset, attr.endOffset);
-            const prefix = /^src\s*=\s*(["']?)/i.exec(raw);
-            if (prefix)
-                images.push({ src, start: offset + attr.startOffset + prefix[0].length, end: offset + attr.endOffset - prefix[1].length, unquotedAttribute: !prefix[1] });
+            if (attr && src) {
+                const raw = html.slice(attr.startOffset, attr.endOffset);
+                const prefix = /^src\s*=\s*(["']?)/i.exec(raw);
+                if (prefix)
+                    targets.push({ src, start: offset + attr.startOffset + prefix[0].length, end: offset + attr.endOffset - prefix[1].length, unquotedAttribute: !prefix[1] });
+            }
         }
-        else if ('childNodes' in node) {
+        if ('childNodes' in node) {
             for (const child of node.childNodes)
-                visit(child);
+                visit(child, tag ? tag === 'video' : inVideo);
         }
     }
-    visit(parseFragment(html, { sourceCodeLocationInfo: true }));
+    visit(parseFragment(html, { sourceCodeLocationInfo: true }), inlineVideo);
 }
 
 interface IImageUse {
@@ -116,50 +118,66 @@ function readDefinition(events: IterableIterator<ReturnType<typeof postprocess>[
     return { key, src, title };
 }
 
+type TMediaToken = ReturnType<typeof postprocess>[number][1];
+
 /** Reference images are rewritten at the use site because ordinary links can share their definition. */
-export function findDocumentImages(markdown: string): IPastedImageSource[] {
-    if (!/!\[|<img\b|data:image\//i.test(markdown))
-        return [];
-    const { text, original } = compactImagePayloads(markdown);
+function finishImageUse(owners: IImageUse[], end: number, references: { key: string; image: IPastedImageSource }[]) {
+    const owner = owners.pop();
+    if (owner?.type === 'image' && !owner.hasResource) {
+        references.push({
+            key: referenceKey(owner.reference || owner.label),
+            image: { src: '', start: owner.labelEnd, end },
+        });
+    }
+}
+
+function documentSources(markdown: string, includeVideos: boolean) {
     const images: IPastedImageSource[] = [];
+    const videos: IPastedImageSource[] = [];
+    if (!/!\[|<img\b|data:image\//i.test(markdown) && !(includeVideos && /<video\b/i.test(markdown)))
+        return { images, videos };
+    const { text, original } = compactImagePayloads(markdown);
+    let inlineVideo = false;
     const owners: IImageUse[] = [];
     const definitions = new Map<string, { src: string; title: string }>();
     const references: { key: string; image: IPastedImageSource }[] = [];
     const events = postprocess(parse().document().write(preprocess()(text, undefined, true))).values();
-    for (const [event, token] of events) {
+    function collect(token: TMediaToken) {
         const { type, start, end } = token;
         const raw = () => text.slice(start.offset, end.offset);
         const owner = owners.at(-1);
+        if (type === 'definition') {
+            const definition = readDefinition(events, text);
+            if (!definitions.has(definition.key))
+                definitions.set(definition.key, definition);
+        }
+        else if (type === 'data' && !owner) {
+            for (const image of findEmbeddedImages(raw()))
+                images.push({ src: image.src, start: start.offset + image.start, end: start.offset + image.end });
+        }
+        else if (type === 'htmlText' || type === 'htmlFlow') {
+            const html = raw();
+            htmlMedia(html, start.offset, images, includeVideos ? videos : undefined, type === 'htmlText' && inlineVideo);
+            if (type === 'htmlText' && /^<\/?video\b/i.test(html))
+                inlineVideo = html[1] !== '/';
+        }
+        else if (owner?.type === 'image') {
+            collectImageToken(owner, type, raw, start.offset, end.offset, images);
+        }
+    }
+    for (const [event, token] of events) {
+        const { type, start, end } = token;
         if (type === 'image' || type === 'link') {
-            if (event === 'enter') {
+            if (event === 'enter')
                 owners.push({ type, label: '', labelEnd: start.offset });
-            }
-            else {
-                if (owner?.type === 'image' && !owner.hasResource) {
-                    references.push({
-                        key: referenceKey(owner.reference || owner.label),
-                        image: { src: '', start: owner.labelEnd, end: end.offset },
-                    });
-                }
-                owners.pop();
-            }
+            else
+                finishImageUse(owners, end.offset, references);
         }
         else if (event === 'enter') {
-            if (type === 'definition') {
-                const definition = readDefinition(events, text);
-                if (!definitions.has(definition.key))
-                    definitions.set(definition.key, definition);
-            }
-            else if (type === 'data' && !owner) {
-                for (const image of findEmbeddedImages(raw()))
-                    images.push({ src: image.src, start: start.offset + image.start, end: start.offset + image.end });
-            }
-            else if (type === 'htmlText' || type === 'htmlFlow') {
-                htmlImages(raw(), start.offset, images);
-            }
-            else if (owner?.type === 'image') {
-                collectImageToken(owner, type, raw, start.offset, end.offset, images);
-            }
+            collect(token);
+        }
+        else if (type === 'paragraph') {
+            inlineVideo = false;
         }
     }
     for (const { key, image } of references) {
@@ -167,14 +185,29 @@ export function findDocumentImages(markdown: string): IPastedImageSource[] {
         if (def)
             images.push({ ...image, src: def.src, referenceTitle: def.title });
     }
-    return images.sort((a, b) => a.start - b.start).map(image => ({
+    const restoreOffsets = (sources: IPastedImageSource[]) => sources.sort((a, b) => a.start - b.start).map(image => ({
         ...image,
         start: original(image.start),
         end: original(image.end),
     }));
+    return { images: restoreOffsets(images), videos: restoreOffsets(videos) };
+}
+
+export function findDocumentImages(markdown: string): IPastedImageSource[] {
+    return documentSources(markdown, false).images;
+}
+
+export function findLinkedDocumentMedia(markdown: string) {
+    const { images, videos } = documentSources(markdown, true);
+    const media = [...images.map(image => ({ ...image, kind: 'image' as const })), ...videos.map(video => ({ ...video, kind: 'video' as const }))];
+    return media.filter(({ src }) => isLinkedSource(src)).sort((a, b) => a.start - b.start);
+}
+
+function isLinkedSource(src: string) {
+    return src && !src.startsWith('#')
+        && (!/^[a-z][\w+.-]*:/i.test(src) || /^(?:https?:\/\/|file:\/\/|[a-z]:[\\/])/i.test(src));
 }
 
 export function findPastedImageSources(markdown: string): IPastedImageSource[] {
-    return findDocumentImages(markdown).filter(({ src, referenceTitle }) => referenceTitle === undefined && src && !src.startsWith('#')
-        && (!/^[a-z][\w+.-]*:/i.test(src) || /^(?:https?:\/\/|file:\/\/|[a-z]:[\\/])/i.test(src)));
+    return findDocumentImages(markdown).filter(({ src, referenceTitle }) => referenceTitle === undefined && isLinkedSource(src));
 }

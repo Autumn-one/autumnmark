@@ -101,6 +101,8 @@
           type="button"
           class="plain-button settings-button"
           :aria-label="t('sideBar.icons.settings')"
+          @pointerenter="prepareSettings"
+          @focus="prepareSettings"
           @click="projectStore.OPEN_SETTING_WINDOW()"
         >
           <Setting aria-hidden="true" />
@@ -148,6 +150,9 @@ import { storeToRefs } from 'pinia'
 import bus from '@/bus'
 
 const { t } = useI18n()
+const prepareSettings = (): void => {
+  window.electron.ipcRenderer.send('mt::prepare-setting-window')
+}
 const searchButton = ref<HTMLButtonElement | null>(null)
 const layoutStore = useLayoutStore()
 const projectStore = useProjectStore()

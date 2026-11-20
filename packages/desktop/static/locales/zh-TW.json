@@ -980,6 +980,20 @@
     "toEmbedded": "轉換為內嵌影片",
     "copy": "複製影片檔案"
   },
+  "batchMedia": {
+    "title": "批次內嵌圖片和影片",
+    "images": "圖片（{count}）",
+    "videos": "影片（{count}）",
+    "scanning": "正在掃描文件（{current}/{total}）…",
+    "pending": "有 {count} 份文件包含待內嵌的媒體",
+    "convert": "開始轉換（{count}）",
+    "converting": "正在轉換文件（{current}/{total}）…",
+    "done": "已內嵌 {count} 處媒體參照",
+    "issues": "檢視問題（{count}）",
+    "locked": "此文件為唯讀。",
+    "changed": "文件已變更或正在使用，請重新掃描。",
+    "saveFailed": "無法儲存轉換後的文件。"
+  },
   "documentImages": {
     "words": "{count} 字",
     "paragraphs": "{count} 段",

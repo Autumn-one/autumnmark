@@ -980,6 +980,20 @@
     "toEmbedded": "Video in Markdown einbetten",
     "copy": "Videodatei kopieren"
   },
+  "batchMedia": {
+    "title": "Bilder und Videos gesammelt einbetten",
+    "images": "Bilder ({count})",
+    "videos": "Videos ({count})",
+    "scanning": "Dokumente werden durchsucht ({current}/{total})…",
+    "pending": "Dokumente mit einzubettenden Medien: {count}",
+    "convert": "Auswahl einbetten ({count})",
+    "converting": "Dokumente werden konvertiert ({current}/{total})…",
+    "done": "Eingebettete Medienverweise: {count}",
+    "issues": "Probleme ({count})",
+    "locked": "Dieses Dokument ist schreibgeschützt.",
+    "changed": "Das Dokument wurde geändert oder wird verwendet. Erneut durchsuchen.",
+    "saveFailed": "Das konvertierte Dokument konnte nicht gespeichert werden."
+  },
   "documentImages": {
     "words": "{count} Wörter",
     "paragraphs": "{count} Absätze",

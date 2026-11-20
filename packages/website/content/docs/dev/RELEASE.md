@@ -1,6 +1,6 @@
 # Releasing AutumnMark
 
-The release pipeline is triggered by pushing a `v*` tag. The `Release AutumnMark` workflow (`.github/workflows/release.yml`) then runs **validate → build (6-platform matrix) → publish** and creates a GitHub Release with installers and `SHA256SUMS.txt`.
+The release pipeline is triggered by pushing a `v*` tag. The `Release AutumnMark` workflow (`.github/workflows/release.yml`) validates the tag and application version, then verifies the code and builds the six-platform matrix in parallel. Once both jobs succeed, it publishes a GitHub Release with installers and `SHA256SUMS.txt`.
 
 Release notes explicitly compare against the highest published stable `vX.Y.Z` version below the new version, selected from all release pages by `scripts/select-release-base.py`. Drafts, prereleases, and the current version are excluded. RCs compare against the previous stable cycle; hotfixes exclude newer versions. For example, `v0.22.0` compares against `v0.21.2` even if that tag is on a separate release branch. A repository with no published stable releases may publish its first release cycle without a comparison base. Otherwise, the workflow fails if no earlier stable release exists. Verify the `Full Changelog` link during release review.
 
@@ -71,7 +71,7 @@ gh run list --workflow=release.yml --limit 3
 gh run watch <run-id> --exit-status
 ```
 
-Approximate timing: validate ~30 s · build matrix ~15–30 min (6 platforms in parallel) · publish ~1 min.
+The build matrix and code verification overlap. To warm the Windows ARM64 pnpm store ahead of a release, run **Warm Windows ARM64 release cache** on `develop` with the matching lockfile. The cache also warms automatically when dependency configuration changes on `develop`.
 
 ## 7. Verify the published release
 

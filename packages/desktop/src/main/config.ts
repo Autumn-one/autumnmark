@@ -48,7 +48,7 @@ export const preferencesWinOptions: Readonly<BrowserWindowConstructorOptions> = 
   fullscreen: false,
   minimizable: false,
   useContentSize: true,
-  show: true,
+  show: false,
   frame: false,
   titleBarStyle: 'hiddenInset',
   thickFrame: !isOsx,

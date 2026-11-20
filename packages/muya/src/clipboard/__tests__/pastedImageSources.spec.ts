@@ -1,7 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { embeddedImageDestination, findDocumentImages, findPastedImageSources } from '../pastedImageSources';
+import { embeddedImageDestination, findDocumentImages, findLinkedDocumentMedia, findPastedImageSources } from '../pastedImageSources';
 
 describe('pasted image destinations', () => {
+    it('finds linked media in document order without including code, audio or embedded sources', () => {
+        const markdown = [
+            `![existing](data:image/png;base64,${'A'.repeat(2000)})`,
+            '![leaf][art]',
+            '[art]: a.png "Caption"',
+            '<video title="clip"><source src=v.webm><source src="clip.mp4?a=1&amp;b=2"></video>',
+            'Inline <video src="local.mp4"></video> and <video><source src="alt.mp4"></video>.',
+            '<audio><source src="music.ogg"></audio>',
+            '<video src="data:video/mp4;base64,AA=="></video>',
+            '~~~html\n<video src="example.mp4"></video>\n~~~',
+        ].join('\r\n\r\n');
+        const media = findLinkedDocumentMedia(markdown);
+        expect(media.map(({ kind, src }) => [kind, src])).toEqual([
+            ['image', 'a.png'],
+            ['video', 'v.webm'],
+            ['video', 'clip.mp4?a=1&b=2'],
+            ['video', 'local.mp4'],
+            ['video', 'alt.mp4'],
+        ]);
+        expect(media.map(item => markdown.slice(item.start, item.end))).toEqual(['[art]', 'v.webm', 'clip.mp4?a=1&amp;b=2', 'local.mp4', 'alt.mp4']);
+        expect(embeddedImageDestination(media[1], 'data:video/webm;base64,AA==')).toBe('"data:video/webm;base64,AA=="');
+    });
+
     it('resolves repeated and shortcut references without changing a shared link definition', () => {
         const markdown = '![picture][a] ![A][] ![A] [original][a]\n\n[A]: <my pic.png> "Caption"';
         const images = findDocumentImages(markdown);

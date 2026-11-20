@@ -352,7 +352,8 @@ const handleRootContextMenu = (
     },
     () => {
       void window.electron.ipcRenderer.invoke('mt::project-retry-root', root.key)
-    }
+    },
+    root.tree
   )
 }
 

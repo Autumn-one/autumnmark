@@ -11,6 +11,7 @@ import { useEditorStore } from '@/store/editor'
 import { t } from '../../i18n'
 import { popupContextMenu } from '../popupMenu'
 import { getFileLocationMenuItems } from '../fileLocation'
+import { batchMediaMenuItem } from '../batchMedia'
 
 type MenuItemShape = {
   type?: string
@@ -65,5 +66,6 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
     { ...getCopyPath(), enabled }
   ].map((item) => wrapClick(item as MenuItemShape, tab.id))
 
-  popupContextMenu([...items, ...getFileLocationMenuItems(tab)], { x: event.clientX, y: event.clientY })
+  const media = tab.pathname ? [{ ...batchMediaMenuItem({ pathname: tab.pathname }), enabled: !tab.readOnly && !tab.modeChanging }] : []
+  popupContextMenu([...items, ...media, ...getFileLocationMenuItems(tab)], { x: event.clientX, y: event.clientY })
 }

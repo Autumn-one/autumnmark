@@ -134,7 +134,7 @@
   background-color: #f3f3f3;
 }
 
-.title-bar-editor-bg.tabs-visible {
+.title-bar-editor-bg.tabs-visible:not(.mica-title-bar) {
   background: #f3f3f3 !important;
 }
 

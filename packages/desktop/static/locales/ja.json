@@ -980,6 +980,20 @@
     "toEmbedded": "Markdown に動画を埋め込む",
     "copy": "動画ファイルをコピー"
   },
+  "batchMedia": {
+    "title": "画像と動画を一括で埋め込む",
+    "images": "画像（{count}）",
+    "videos": "動画（{count}）",
+    "scanning": "文書を検索中（{current}/{total}）…",
+    "pending": "埋め込み対象のメディアを含む文書：{count} 件",
+    "convert": "選択した項目を埋め込む（{count}）",
+    "converting": "文書を変換中（{current}/{total}）…",
+    "done": "埋め込んだメディア参照：{count} 件",
+    "issues": "問題（{count}）",
+    "locked": "この文書は読み取り専用です。",
+    "changed": "文書が変更されたか、使用中です。もう一度検索してください。",
+    "saveFailed": "変換した文書を保存できませんでした。"
+  },
   "documentImages": {
     "words": "{count} 語",
     "paragraphs": "{count} 段落",

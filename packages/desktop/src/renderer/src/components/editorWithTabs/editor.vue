@@ -158,7 +158,8 @@ import {
   registerDocumentView,
   pruneSourceHistory
 } from '../../services/documentMode'
-import { imageDestinationEdits } from '@/util/documentImages'
+import { applyMarkdownEdits } from '@shared/markdownEdits'
+import type { MediaEditor } from '@/services/batchMedia'
 import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
 import { getFileLocationMenuItems } from '../../contextMenu/fileLocation'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
@@ -310,28 +311,21 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
   popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
 }
 
-function applyDocumentImages(id: string, converted: ReadonlyMap<string, string>) {
+const applyMediaEdits: MediaEditor = (id, prepare) => {
   const muya = editor.value
-  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) throw new Error(t('batchMedia.changed'))
   muya.flush()
   const markdown = muya.getMarkdown()
-  const edits = imageDestinationEdits(markdown, converted)
+  const edits = prepare(markdown)
   if (!edits.length) return
-  const parts: string[] = []
-  let offset = 0
-  for (const edit of edits) {
-    parts.push(markdown.slice(offset, edit.start), edit.text)
-    offset = edit.end
-  }
-  parts.push(markdown.slice(offset))
   const folds = muya.getHeadingFoldState()
   const expanded = muya.editor.compactBlocks.expandedPaths()
-  muya.replaceContent(parts.join(''))
+  muya.replaceContent(applyMarkdownEdits(markdown, edits))
   muya.setHeadingFoldState(folds)
   muya.editor.compactBlocks.restoreExpandedPaths(expanded)
 }
 
-defineExpose({ applyDocumentImages })
+defineExpose({ applyMediaEdits })
 
 const showDocumentBackgroundMenu = (event: MouseEvent): void => {
   const tab = currentFile.value

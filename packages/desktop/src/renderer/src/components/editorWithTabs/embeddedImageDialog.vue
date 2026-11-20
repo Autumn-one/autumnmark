@@ -311,6 +311,7 @@ watch(
     if (!viewport || !img) return
     controller = new ZoomPanController(viewport, img, {
       canPan: () => pannable.value,
+      onBackdropClick: () => emit('close'),
       onChange: (state) => {
         const ratio = img.naturalWidth ? img.offsetWidth / img.naturalWidth : 1
         percent.value = Math.round(ratio * state.scale * 100)
