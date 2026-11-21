@@ -199,7 +199,8 @@ export class Muya {
         this.hideAllFloatTools();
         this.editor.selection.clearImage();
         this.editor.selection.table.clear();
-        this._refreshReadingPresentation();
+        this._refreshReadingPresentation(true);
+        this.editor.compactBlocks.refresh();
         this.eventCenter.emit('read-only-changed', readOnly);
     }
 
@@ -214,7 +215,7 @@ export class Muya {
         this._cancelReadingLink = attachReadingEvents(this);
     }
 
-    private _refreshReadingPresentation(): void {
+    private _refreshReadingPresentation(modeChanged = false): void {
         const { domNode, isReadOnly } = this;
         const contentEditable = String(!isReadOnly);
         // Reassigning editability on a connected tree makes Chromium revisit every descendant (#5860).
@@ -230,7 +231,7 @@ export class Muya {
             if (node.isContent()) {
                 if (node.domNode?.getAttribute('contenteditable') !== contentEditable)
                     node.domNode?.setAttribute('contenteditable', contentEditable);
-                if (isReadOnly)
+                if (isReadOnly || (modeChanged && node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block'))
                     node.update({});
             }
         });

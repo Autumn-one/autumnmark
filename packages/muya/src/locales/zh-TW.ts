@@ -1,6 +1,8 @@
 export const zhTW = {
     name: 'zh-TW',
     resource: {
+        'Expand all': '展開全部',
+        'Plain text': '純文字',
         'Resize code block': '調整程式碼區塊高度',
         'Drag to resize, double-click to follow compact mode': '拖曳調整高度，按兩下恢復跟隨精簡模式',
         'Rows: {n}': '{n} 行',

@@ -1,6 +1,8 @@
 export const pt = {
     name: 'pt',
     resource: {
+        'Expand all': 'Expandir tudo',
+        'Plain text': 'Texto simples',
         'Resize code block': 'Ajustar altura do bloco de código',
         'Drag to resize, double-click to follow compact mode': 'Arraste para redimensionar ou clique duas vezes para seguir o modo compacto',
         'Rows: {n}': 'Linhas: {n}',

@@ -1,6 +1,8 @@
 export const ko = {
     name: 'ko',
     resource: {
+        'Expand all': '모두 펼치기',
+        'Plain text': '일반 텍스트',
         'Resize code block': '코드 블록 높이 조절',
         'Drag to resize, double-click to follow compact mode': '드래그하여 높이를 조절하거나 두 번 클릭하여 간결 모드 설정을 따릅니다',
         'Rows: {n}': '{n}줄',

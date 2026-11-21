@@ -1,6 +1,8 @@
 export const ja = {
     name: 'ja',
     resource: {
+        'Expand all': 'すべて展開',
+        'Plain text': 'プレーンテキスト',
         'Resize code block': 'コードブロックの高さを変更',
         'Drag to resize, double-click to follow compact mode': 'ドラッグで高さを変更、ダブルクリックでコンパクトモードの設定に戻す',
         'Rows: {n}': '{n} 行',

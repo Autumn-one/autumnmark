@@ -1,3 +1,12 @@
+## AutumnMark 0.24.21
+
+- Open **View → Show Developer Tools** in the editor to inspect elements and try CSS rules. Save your rules in **Preferences → Theme → Custom CSS**.
+
+## AutumnMark 0.24.20
+
+- Reading mode shows the code language, expand and collapse control, and copy button together above each code preview. Long lines wrap with their original indentation, and the mouse wheel scrolls the document over code.
+- Expand a preview to read the whole block in place, or copy its complete original source directly from the collapsed preview.
+
 ## AutumnMark 0.24.19
 
 - Keep the document in place when pasting long code into a height-limited code block. The caret stays visible inside the block so you can continue typing.

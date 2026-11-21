@@ -1,6 +1,8 @@
 export const zhCN = {
     name: 'zh-CN',
     resource: {
+        'Expand all': '展开全部',
+        'Plain text': '纯文本',
         'Resize code block': '调整代码块高度',
         'Drag to resize, double-click to follow compact mode': '拖动调整高度，双击恢复跟随紧凑模式',
         'Rows: {n}': '{n} 行',

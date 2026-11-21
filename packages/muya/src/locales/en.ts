@@ -1,6 +1,8 @@
 export const en = {
     name: 'en',
     resource: {
+        'Expand all': 'Expand all',
+        'Plain text': 'Plain text',
         'Resize code block': 'Resize code block',
         'Drag to resize, double-click to follow compact mode': 'Drag to resize, double-click to follow compact mode',
         'Rows: {n}': 'Rows: {n}',
