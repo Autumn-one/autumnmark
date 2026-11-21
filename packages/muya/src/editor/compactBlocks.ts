@@ -191,7 +191,8 @@ export class CompactBlocks {
 
     private _updateButton(viewport: HTMLElement, button: HTMLButtonElement): void {
         const expanded = viewport.classList.contains('mu-compact-expanded');
-        const label = this._muya.i18n.t(expanded ? 'Collapse' : 'Expand');
+        const readingCode = this._muya.isReadOnly && viewport.classList.contains('mu-code');
+        const label = this._muya.i18n.t(expanded ? 'Collapse' : readingCode ? 'Expand all' : 'Expand');
         button.setAttribute('aria-expanded', String(expanded));
         button.setAttribute('aria-label', label);
         button.title = label;

@@ -1,6 +1,8 @@
 export const ru = {
     name: 'ru',
     resource: {
+        'Expand all': 'Развернуть всё',
+        'Plain text': 'Обычный текст',
         'Resize code block': 'Изменить высоту блока кода',
         'Drag to resize, double-click to follow compact mode': 'Перетащите для изменения высоты или дважды щёлкните для возврата к компактному режиму',
         'Rows: {n}': 'Строк: {n}',

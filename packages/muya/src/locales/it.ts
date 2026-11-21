@@ -1,6 +1,8 @@
 export const it = {
     name: 'it',
     resource: {
+        'Expand all': 'Espandi tutto',
+        'Plain text': 'Testo semplice',
         'Resize code block': 'Regola l’altezza del blocco di codice',
         'Drag to resize, double-click to follow compact mode': 'Trascina per ridimensionare o fai doppio clic per seguire la modalità compatta',
         'Rows: {n}': 'Righe: {n}',

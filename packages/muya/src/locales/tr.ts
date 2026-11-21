@@ -1,6 +1,8 @@
 export const tr = {
     name: 'tr',
     resource: {
+        'Expand all': 'Tümünü genişlet',
+        'Plain text': 'Düz metin',
         'Resize code block': 'Kod bloğunun yüksekliğini ayarla',
         'Drag to resize, double-click to follow compact mode': 'Boyutlandırmak için sürükleyin, kompakt mod ayarına dönmek için çift tıklayın',
         'Rows: {n}': 'Satır sayısı: {n}',

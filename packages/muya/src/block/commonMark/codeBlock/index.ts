@@ -7,7 +7,7 @@ import { diffToTextOp } from '../../../utils';
 import { codeFenceLanguage, parseCodeFenceAnnotations, replaceCodeFenceMaxLines } from '../../../utils/codeFenceAnnotations';
 import { operateClassName } from '../../../utils/dom';
 import logger from '../../../utils/logger';
-import { loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
+import { languageTitle, loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
 import { createCodeResizeHandle } from './resizeHandle';
@@ -140,6 +140,8 @@ class CodeBlock extends Parent {
         if (info === this._annotationInfo)
             return;
         this._annotationInfo = info;
+        const language = codeFenceLanguage(info);
+        this.domNode!.dataset.readingLanguage = language ? languageTitle(language) : this.muya.i18n.t('Plain text');
         const previous = this.annotations;
         const next = parseCodeFenceAnnotations(info);
         this.annotations = next;

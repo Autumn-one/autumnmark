@@ -21,6 +21,7 @@ import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../.
 import { tabText } from '../../../utils/tab';
 import Content from '../../base/content';
 import { ScrollPage } from '../../scrollPage';
+import { indentReadingLines } from './readingLines';
 
 function checkAutoIndent(text: string, offset: number) {
     const pairStr = text.substring(offset - 1, offset + 1);
@@ -180,6 +181,12 @@ class CodeBlockContent extends Content {
             ? `<span class="${CLASS_NAMES.MU_TRAILING_BREAK}"><br></span>`
             : '';
 
+        const indentWrappedLines = this.muya.isReadOnly && parentCode?.parent?.blockName === 'code-block' && /^[\t ]/m.test(text);
+        const renderCode = (html: string) => {
+            replaceIfChanged(domNode, (indentWrappedLines ? indentReadingLines(html) : html) + trailingBreak);
+            projection?.mount(domNode, false);
+        };
+
         if (
             fullLengthLang
             && /\S/.test(code)
@@ -189,13 +196,11 @@ class CodeBlockContent extends Content {
             wrapper.classList.add(`language-${fullLengthLang}`);
             wrapper.innerHTML = code;
             prism.highlightElement(wrapper, false, function (this: HTMLElement) {
-                replaceIfChanged(domNode, this.innerHTML + trailingBreak);
-                projection?.mount(domNode, false);
+                renderCode(this.innerHTML);
             });
         }
         else {
-            replaceIfChanged(domNode, code + trailingBreak);
-            projection?.mount(domNode, false);
+            renderCode(code);
         }
 
         // Caret restoration can scroll the document before ResizeObserver caps newly pasted lines.

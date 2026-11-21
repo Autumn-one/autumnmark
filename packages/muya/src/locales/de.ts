@@ -1,6 +1,8 @@
 export const de = {
     name: 'de',
     resource: {
+        'Expand all': 'Alles ausklappen',
+        'Plain text': 'Klartext',
         'Resize code block': 'Höhe des Codeblocks ändern',
         'Drag to resize, double-click to follow compact mode': 'Zum Anpassen ziehen, für den Kompaktmodus doppelklicken',
         'Rows: {n}': 'Zeilen: {n}',

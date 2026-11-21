@@ -1,6 +1,8 @@
 export const nl = {
     name: 'nl',
     resource: {
+        'Expand all': 'Alles uitvouwen',
+        'Plain text': 'Platte tekst',
         'Resize code block': 'Hoogte van het codeblok aanpassen',
         'Drag to resize, double-click to follow compact mode': 'Sleep om de hoogte te wijzigen of dubbelklik om de compacte modus te volgen',
         'Rows: {n}': 'Regels: {n}',

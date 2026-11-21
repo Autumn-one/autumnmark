@@ -49,6 +49,11 @@ for (const name of Object.keys(languages)) {
 
 const loadLanguage = initLoadLanguage(Prism);
 
+export function languageTitle(language: string): string {
+    const entry = languages[transformAliasToOrigin([language.toLowerCase()])[0]];
+    return (typeof entry === 'string' ? entry : entry?.title) || language;
+}
+
 function search(text: string) {
     if (!text || typeof text !== 'string')
         return [];
