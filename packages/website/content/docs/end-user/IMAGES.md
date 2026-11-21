@@ -42,7 +42,7 @@ Hover over a picture in the visual editor and drag either side handle. The reado
 
 By default, compact mode limits code blocks to 12 lines. Set a positive image height to limit the preview height of a tall picture in its own paragraph. Expand it to see the whole picture. Pictures on the same row keep their individual sizes. In the editor preferences, enter **0** for the image height, video height, or code line limit to disable compact mode for that type.
 
-Click an embedded image to open **Image preview**. Scroll to zoom, drag to pan when zoomed in, or select **Fit to window**. Drop or paste an image into the preview to replace it. The **Embedded source** tab lets you copy or edit the data URL. Select **Apply changes** to update the image. Each replacement can be undone, including after the preview closes.
+Click an embedded image to open **Image preview**. Scroll to zoom, drag the image to pan at any zoom level, or select **Fit to window**. Drop or paste an image into the preview to replace it. The **Embedded source** tab lets you copy or edit the data URL. Select **Apply changes** to update the image. Each replacement can be undone, including after the preview closes.
 
 Right-click the image in either editor to copy it as PNG, JPEG, or a data URL. **Save image as…** exports a copy. **Convert to local image** writes the original bytes into the configured relative assets folder and updates the document reference. Undo restores the embedded reference and keeps the saved file.
 

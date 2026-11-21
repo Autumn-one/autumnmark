@@ -12,6 +12,32 @@ import { clickMenuById, enterSourceMode, exitSourceMode, getMarkdownContent, lau
 const png = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAAdSURBVDhPY5Cb8P8/JZgBXYBUPGrAqAGjBgwWAwAsZKwfgyie3AAAAABJRU5ErkJggg=='
 const src = 'data:image/png;base64,' + png
 
+test('dragging a fitted preview image pans it inside the dialog', async() => {
+  const { app, page } = await launchWithMarkdown(`![square](${src})`)
+  try {
+    await page.locator('.mu-embedded-image').click()
+    const preview = page.locator('.embedded-image-preview')
+    await expect(preview).toHaveJSProperty('naturalWidth', 16)
+    await preview.hover()
+    const box = await preview.boundingBox()
+    if (!box) throw new Error('Missing preview image')
+    const x = Math.round(box.x + box.width / 2)
+    const y = Math.round(box.y + box.height / 2)
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 60, y + 35, { steps: 6 })
+    await expect(page.locator('.drop-hint')).toBeHidden()
+    await page.mouse.up()
+    await expect.poll(() => preview.evaluate(element => {
+      const { m41, m42 } = new DOMMatrixReadOnly(getComputedStyle(element).transform)
+      return [m41, m42]
+    })).toEqual([60, 35])
+    await expect(preview).toHaveAttribute('src', src)
+  } finally {
+    await app.close()
+  }
+})
+
 test('opens a compact portrait image from either side of the picture', async() => {
   const portrait = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="800"><rect width="180" height="800" fill="navy"/></svg>')
   const source = 'data:image/svg+xml;base64,' + portrait.toString('base64')

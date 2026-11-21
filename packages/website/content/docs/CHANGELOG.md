@@ -1,3 +1,7 @@
+## AutumnMark 0.24.18
+
+- Drag an embedded image to pan its preview at any zoom level, including when it fits inside the window.
+
 ## AutumnMark 0.24.17
 
 - Drag the bottom edge of a code block to set how many rows are visible. The height is saved in Markdown and overrides compact mode for that block.

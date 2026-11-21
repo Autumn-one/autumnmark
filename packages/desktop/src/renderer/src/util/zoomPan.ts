@@ -74,7 +74,6 @@ export function wheelZoomFactor(event: WheelEvent): number {
 
 export interface ZoomPanOptions {
   onChange?: (state: ZoomState) => void
-  canPan?: () => boolean
   onBackdropClick?: () => void
   /**
    * Where wheel events are listened for. Defaults to the viewport, which is
@@ -119,7 +118,7 @@ export class ZoomPanController {
       this._backdropPress = event.button === 0 && event.target === viewport
         ? { x: event.clientX, y: event.clientY }
         : undefined
-      if (event.button !== 0 || this.options.canPan?.() === false) return
+      if (event.button !== 0) return
       this._dragging = true
       this._originX = event.clientX - this._state.x
       this._originY = event.clientY - this._state.y

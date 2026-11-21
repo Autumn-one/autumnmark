@@ -107,7 +107,7 @@
         <div
           ref="stage"
           class="image-stage"
-          :class="{ dropping, pannable }"
+          :class="{ dropping }"
           @contextmenu.prevent.stop="showPreviewMenu"
         >
           <video
@@ -126,8 +126,7 @@
             class="embedded-image-preview"
             :src="src"
             :alt="image.name || label('title')"
-            :draggable="!pannable"
-            @dragstart.prevent="dragOut"
+            draggable="false"
             @load="imageLoaded"
             @error="error = label('invalid')"
           >
@@ -303,7 +302,6 @@ const workspace = ref<HTMLElement>()
 const picture = ref<HTMLImageElement>()
 const picker = ref<HTMLInputElement>()
 const dropping = ref(false)
-const pannable = ref(false)
 const percent = ref(100)
 let controller: ZoomPanController | undefined
 let generation = 0
@@ -313,14 +311,10 @@ watch(
   ([viewport, img], _, cleanup) => {
     if (!viewport || !img) return
     controller = new ZoomPanController(viewport, img, {
-      canPan: () => pannable.value,
       onBackdropClick: () => emit('close'),
       onChange: (state) => {
         const ratio = img.naturalWidth ? img.offsetWidth / img.naturalWidth : 1
         percent.value = Math.round(ratio * state.scale * 100)
-        pannable.value =
-          img.offsetWidth * state.scale > viewport.clientWidth + 1 ||
-          img.offsetHeight * state.scale > viewport.clientHeight + 1
       }
     })
     const observer = new ResizeObserver(() => {
@@ -651,13 +645,15 @@ button:disabled {
   object-fit: contain;
   background: #202421;
 }
+.image-stage:has(.embedded-image-preview) {
+  cursor: grab;
+}
 .embedded-image-preview {
   display: block;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   user-select: none;
-  cursor: grab;
   box-shadow: 0 1px 5px #0002;
 }
 .dropping {
