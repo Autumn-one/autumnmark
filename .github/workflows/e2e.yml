@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.24]
+    branches: [release/v0.24.25]
   workflow_dispatch:
     inputs:
       platform:
@@ -71,6 +71,7 @@ jobs:
               test/e2e/editor-selection-scroll.spec.ts \
               test/e2e/code-block-typing.spec.ts \
               test/e2e/code-block-wrap.spec.ts
+            pnpm -C packages/desktop exec playwright test test/e2e/reading-mode.spec.ts --grep 'the reading notice can be dismissed'
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")

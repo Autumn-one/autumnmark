@@ -28,25 +28,27 @@
         />
       </div>
     </div>
-    <tab-notifications />
-    <div v-if="store.currentFile" class="document-status">
-      <document-statistics
-        :pathname="store.currentFile.pathname"
-        :word-count="store.currentFile.wordCount"
-        :selection-word-count="store.selectionWordCount"
-        :is-saved="store.currentFile.isSaved"
-        :read-only="store.currentFile.readOnly"
-        :mode-changing="store.currentFile.modeChanging"
-        @toggle-reading="store.SET_READ_ONLY(store.currentFile.id, $event)"
-      />
-      <document-image-status
-        :key="store.currentFile.id"
-        :embedded="imageCounts.embedded"
-        :pending="imageCounts.pending"
-        :progress="progress"
-        :menu-item="imageMenuItem"
-        @convert="convertCurrentImages"
-      />
+    <div class="editor-footer">
+      <tab-notifications />
+      <div v-if="store.currentFile" class="document-status">
+        <document-statistics
+          :pathname="store.currentFile.pathname"
+          :word-count="store.currentFile.wordCount"
+          :selection-word-count="store.selectionWordCount"
+          :is-saved="store.currentFile.isSaved"
+          :read-only="store.currentFile.readOnly"
+          :mode-changing="store.currentFile.modeChanging"
+          @toggle-reading="store.SET_READ_ONLY(store.currentFile.id, $event)"
+        />
+        <document-image-status
+          :key="store.currentFile.id"
+          :embedded="imageCounts.embedded"
+          :pending="imageCounts.pending"
+          :progress="progress"
+          :menu-item="imageMenuItem"
+          @convert="convertCurrentImages"
+        />
+      </div>
     </div>
     <heading-link-picker v-if="headingLink" :request="headingLink" @close="headingLink = null" />
     <embedded-image-dialog
@@ -186,10 +188,16 @@ watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentF
 </script>
 
 <style scoped>
+.editor-footer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
 .document-status {
   position: absolute;
   inset-inline-end: 16px;
-  bottom: 14px;
+  bottom: calc(100% + 14px);
   z-index: 2;
   display: flex;
   align-items: center;

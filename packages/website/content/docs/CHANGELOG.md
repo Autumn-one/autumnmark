@@ -1,3 +1,8 @@
+## AutumnMark 0.24.25
+
+- The word count and image status now sit above the reading-mode notice, keeping its close button accessible even when the notice wraps in a narrow window.
+- Includes the scrollable code previews and full-width bottom-edge expand and collapse control in both editing and reading modes.
+
 ## AutumnMark 0.24.24
 
 - Code previews in editing and reading modes now show scrollbars when code overflows. Turn off **Wrap Code Blocks** to scroll long lines horizontally.

@@ -144,6 +144,31 @@ test('a locked file retains rendering, refuses edits and saves, and follows exte
   }
 })
 
+test('the reading notice can be dismissed beside the document status at different window sizes', async() => {
+  const { app, page } = await launchWithMarkdown('original\n', {
+    windowLayout: { showSideBar: true },
+    preferences: { autoSave: false }
+  })
+  try {
+    const win = await app.browserWindow(page)
+    await win.evaluate(window => window.setContentSize(1200, 700))
+    await typeIntoEditor(page, ' retained edit')
+    await toggleReadingMode(page)
+
+    const notice = page.locator('.editor-notifications')
+    const closeButton = notice.getByRole('button')
+    await closeButton.click({ trial: true })
+    await win.evaluate(window => window.setContentSize(550, 700))
+    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBeLessThanOrEqual(560)
+    await page.locator('.image-status-button').click({ trial: true })
+    await closeButton.click()
+    await expect(notice).toBeHidden()
+    await expect(page.locator('.mu-read-only')).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
 test('dirty buffers survive locking and other tabs stay editable', async() => {
   const { app, page, filePath } = await launchWithMarkdown('original\n')
   try {
