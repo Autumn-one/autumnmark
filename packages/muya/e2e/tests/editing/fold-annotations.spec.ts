@@ -7,6 +7,32 @@ const fence = '```js title="request.js" {2-3,5}';
 const body = 'start()\nconfigure()\nconnect()\n\nfinish()';
 const source = ['<!-- fold -->', '', '### Retry steps', '', fence, body, '```', '', '<!-- /fold -->', ''].join('\n');
 
+test('centers the title text against the whole code block on screen and in print and HTML', async ({ page }) => {
+    const markdown = ['~~~typescript title="示例.ts"', 'run()', '~~~'].join('\n');
+    const centerOffset = (title: Element) => {
+        const range = document.createRange();
+        range.selectNodeContents(title);
+        const text = range.getBoundingClientRect();
+        const block = title.parentElement!.getBoundingClientRect();
+        return Math.abs((text.left + text.right - block.left - block.right) / 2);
+    };
+    await page.setViewportSize({ width: 540, height: 720 });
+    await loadMarkdown(page, markdown);
+    const title = page.locator('.mu-code-block-title');
+    for (const codeBlockLineNumbers of [false, true]) {
+        await page.evaluate(value => window.muya!.setOptions({ codeBlockLineNumbers: value }), codeBlockLineNumbers);
+        await expect.poll(() => title.evaluate(centerOffset)).toBeLessThan(1);
+    }
+    await page.evaluate(() => window.muya!.setReadOnly(true));
+    await expect.poll(() => title.evaluate(centerOffset)).toBeLessThan(1);
+    await page.emulateMedia({ media: 'print' });
+    await expect.poll(() => title.evaluate(centerOffset)).toBeLessThan(1);
+
+    const html = await page.evaluate(md => new window.MarkdownToHtml!(md).generate(), markdown);
+    await page.setContent(html);
+    expect(await page.locator('.mu-export-code figcaption').evaluate(centerOffset)).toBeLessThan(1);
+});
+
 test('renders code annotations inside a fold with an independent saved default', async ({ page }) => {
     await loadMarkdown(page, source);
     const toggle = page.getByRole('button', { name: 'Retry steps', exact: true });

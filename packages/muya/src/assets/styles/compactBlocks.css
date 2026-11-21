@@ -335,9 +335,8 @@
 
     .mu-editor .mu-code-block > .mu-code-block-title {
         grid-area: 1 / 1 / 2 / -1;
-        justify-self: center;
-        max-width: 40%;
-        margin: 0;
+        min-width: 0;
+        margin: 0 max(30%, 30px);
         padding: 0;
         overflow: hidden;
         font-size: 13px;

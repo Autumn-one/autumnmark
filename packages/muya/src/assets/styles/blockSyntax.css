@@ -296,13 +296,14 @@
 .mu-code-block-title {
     display: block;
     margin: -1em -1em 0.65em calc(-1 * var(--mu-code-caption-inset));
-    padding: 0.45em 36px 0.45em 1em;
+    padding: 0.45em 1em;
 
     color: var(--editor-color-80);
     font-weight: 600;
     font-family: var(--mu-font-family, 'Open Sans', 'Clear Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif);
     line-height: 1.4;
     white-space: pre-wrap;
+    text-align: center;
     overflow-wrap: anywhere;
 
     background-color: var(--float-hover-color);

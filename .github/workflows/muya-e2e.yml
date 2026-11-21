@@ -4,6 +4,8 @@ name: Muya E2E
 # Firefox/WebKit have local exclusions described in packages/muya/e2e/README.md.
 
 on:
+  push:
+    branches: [release/v0.24.32]
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
@@ -33,7 +35,12 @@ jobs:
       - name: Install Playwright browser (${{ matrix.project }})
         run: pnpm -C packages/muya/e2e exec playwright install --with-deps ${{ matrix.project }}
 
+      - name: Verify code block titles before tagging
+        if: github.event_name == 'push'
+        run: pnpm -C packages/muya/e2e exec playwright test --project=chromium tests/editing/fold-annotations.spec.ts
+
       - name: Run Playwright (${{ matrix.project }})
+        if: github.event_name == 'pull_request'
         run: pnpm -C packages/muya/e2e exec playwright test --project=${{ matrix.project }}
 
       - name: Upload report on failure

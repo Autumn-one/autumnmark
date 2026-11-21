@@ -1,3 +1,7 @@
+## AutumnMark 0.24.32
+
+- Code block titles align with the horizontal center of the full block, including when line numbers are shown. Titles also appear centered in reading mode, printed documents, and HTML exports.
+
 ## AutumnMark 0.24.31
 
 - Code block titles now sit in the center of the toolbar, between the language and the copy button. Click the title or language to edit the full Markdown fence information. The title reappears when you return to the code.
