@@ -5,15 +5,24 @@ import { join } from 'node:path'
 
 const executable = process.env.AUTUMNMARK_PACKAGED_EXE
 const fullWidth = '.mu-table-inner { width: 100%; }'
+const plainTable = '| First column | Last column |\n| --- | --- |\n| Notes | Details |\n'
+const sizedTable = '<!-- table-layout: col-widths="1:395,2:240,3:100%" row-min-heights="1:52" -->\n\n' +
+  '| | | |\n| --- | --- | --- |\n| | | |\n| | | |\n| | | |\n'
 
-for (const css of ['', fullWidth]) {
-  test(`packaged table resize with ${css ? 'full-width custom CSS' : 'default CSS'}`, async({ playwright }, info) => {
+for (const [title, css, markdown] of [
+  ['default CSS', '', plainTable],
+  ['full-width custom CSS', fullWidth, plainTable],
+  ['a saved fill column and full-width custom CSS', fullWidth, sizedTable]
+]) {
+  test(`packaged table resize with ${title}`, async({ playwright }, info) => {
     test.skip(!executable, 'Requires the Windows release executable')
     const profile = info.outputPath('profile')
     mkdirSync(profile, { recursive: true })
-    writeFileSync(join(profile, 'preferences.json'), JSON.stringify({ customCss: css }))
+    writeFileSync(join(profile, 'preferences.json'), JSON.stringify({
+      customCss: css, autoSave: true, autoSaveDelay: 1000
+    }))
     const file = info.outputPath('table.md')
-    writeFileSync(file, '| First column | Last column |\n| --- | --- |\n| Notes | Details |\n')
+    writeFileSync(file, markdown)
     const proc = spawn(executable!, ['--user-data-dir', profile, '--remote-debugging-port=0', file], { stdio: 'ignore' })
     try {
       const portFile = join(profile, 'DevToolsActivePort')
@@ -40,14 +49,18 @@ for (const css of ['', fullWidth]) {
         const y = start.y + start.height / 2
         await page.mouse.move(x, y)
         await page.mouse.down()
-        await page.mouse.move(x - 24, y, { steps: 5 })
+        const delta = Math.min(24, Math.floor(start.width) - 36)
+        expect(delta).toBeGreaterThan(0)
+        await page.mouse.move(x - delta, y, { steps: 5 })
         const during = await last.boundingBox()
         if (!during) throw new Error('Lost table during resize')
-        expect(Math.abs(during.x + during.width - (start.x + start.width - 24))).toBeLessThanOrEqual(1)
+        expect(Math.abs(during.x + during.width - (start.x + start.width - delta))).toBeLessThanOrEqual(1)
         expect(Math.abs(during.x - start.x)).toBeLessThanOrEqual(1)
         await page.mouse.up()
-        await page.keyboard.press('Control+s')
-        await expect.poll(() => readFileSync(file, 'utf8')).toContain('<!-- table-layout:')
+        const count = await grid.locator('tr').first().locator('td').count()
+        await expect.poll(() => readFileSync(file, 'utf8'), { timeout: 10000 }).toContain(`${count}:${Math.round(start.width) - delta}"`)
+        await page.reload()
+        await expect(last).toBeVisible()
         const end = await last.boundingBox()
         expect(Math.abs(end!.x - during.x)).toBeLessThanOrEqual(1)
         expect(Math.abs(end!.width - during.width)).toBeLessThanOrEqual(1)
