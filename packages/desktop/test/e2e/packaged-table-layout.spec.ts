@@ -37,7 +37,7 @@ for (const [title, css, markdown] of [
         const last = grid.locator('tr').first().locator('td').last()
         await expect(last).toBeVisible()
         expect(page.url()).toContain('app.asar')
-        if (css) await expect(page.locator('#custom-styles')).toHaveText(css)
+        if (css) await expect(page.locator('#custom-styles')).toHaveJSProperty('textContent', css)
         const start = await last.boundingBox()
         if (!start) throw new Error('Missing last column')
         if (css) {
