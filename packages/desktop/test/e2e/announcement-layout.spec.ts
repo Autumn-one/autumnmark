@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { launchElectron } from './helpers'
 
-test('shows live About information below announcements and stacks donation codes on the right', async () => {
+test('shows live About information below announcements and stacks donation codes on the right', async() => {
   const { app, page } = await launchElectron()
   try {
     await app.evaluate(({ ipcMain }) => {
