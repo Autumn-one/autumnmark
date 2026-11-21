@@ -4,12 +4,13 @@ import type { ICodeFenceAnnotations } from '../../../utils/codeFenceAnnotations'
 import type { TBlockPath } from '../../types';
 import diff from 'fast-diff';
 import { diffToTextOp } from '../../../utils';
-import { codeFenceLanguage, parseCodeFenceAnnotations } from '../../../utils/codeFenceAnnotations';
+import { codeFenceLanguage, parseCodeFenceAnnotations, replaceCodeFenceMaxLines } from '../../../utils/codeFenceAnnotations';
 import { operateClassName } from '../../../utils/dom';
 import logger from '../../../utils/logger';
 import { loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
+import { createCodeResizeHandle } from './resizeHandle';
 
 const debug = logger('codeblock:');
 
@@ -48,6 +49,7 @@ class CodeBlock extends Parent {
         codeBlock.append(langInput);
         codeBlock.append(code);
         muya.editor.compactBlocks.track(code.domNode!, code.lastContentInDescendant()!.domNode!);
+        codeBlock.domNode!.append(createCodeResizeHandle(codeBlock, code.domNode!));
         const copyButton = (code as { copyButton?: HTMLButtonElement | null }).copyButton;
         if (copyButton)
             codeBlock.domNode!.appendChild(copyButton);
@@ -105,6 +107,34 @@ class CodeBlock extends Parent {
         this._renderLanguage();
     }
 
+    setMaxLines(lines: ICodeFenceAnnotations['maxLines']): void {
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const info = replaceCodeFenceMaxLines(this.lang, lines);
+        if (info === this.lang) {
+            const viewport = this.lastChild!.domNode!;
+            viewport.classList.remove('mu-compact-expanded');
+            this.muya.editor.compactBlocks.setCodeLimit(viewport, lines);
+            return;
+        }
+        this.muya.transact(() => {
+            if (this.meta.type === 'indented') {
+                // Replacing the block lets undo restore its original indentation and fence-free state.
+                const state = this.getState();
+                state.meta = { ...state.meta, type: 'fenced', fenceChar: '`', lang: info };
+                const selection = this.muya.getSelectionState();
+                this.replaceWith(CodeBlock.create(this.muya, state));
+                if (selection)
+                    this.muya.setSelection(selection);
+                return;
+            }
+            const input = this.firstContentInDescendant()!;
+            input.text = info;
+            this.meta.lang = info;
+            input.update();
+        });
+    }
+
     refreshAnnotations(): void {
         const info = this.meta.lang ?? '';
         if (info === this._annotationInfo)
@@ -113,6 +143,11 @@ class CodeBlock extends Parent {
         const previous = this.annotations;
         const next = parseCodeFenceAnnotations(info);
         this.annotations = next;
+        if (previous.maxLines !== next.maxLines) {
+            const viewport = this.lastChild!.domNode!;
+            viewport.classList.remove('mu-compact-expanded');
+            this.muya.editor.compactBlocks.setCodeLimit(viewport, next.maxLines);
+        }
         this.domNode!.classList.toggle('mu-code-block-annotated', !!next.title || next.ranges.length > 0);
         if (next.title) {
             if (!this._titleNode) {

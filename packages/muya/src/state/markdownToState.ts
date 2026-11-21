@@ -467,15 +467,14 @@ export class MarkdownToState {
         trimUnnecessaryCodeBlockEmptyLines: boolean,
     ): TState {
         const { codeBlockStyle, text, lang: infoString = '', raw = '' } = token;
-        // marked >=17 appends a trailing newline to indented code text
-        // (fenced text has none); strip it so indented blocks round-trip.
+        // Marked includes the final line terminator for indented code.
         const codeText = codeBlockStyle === 'indented' ? text.replace(/\n$/, '') : text;
         // Read the opening fence itself so its character (` or ~) and
         // run length both survive the round trip (CommonMark §4.5).
         const fence = parseFenceLine(raw);
         const { fenceLength, fenceChar } = fence ?? {};
         // Preserve info-string attributes; diagram detection uses only the first word.
-        const info = (infoString || '').trim();
+        const info = (fence?.info ?? infoString).trim();
         const lang = codeFenceLanguage(info);
 
         let value = codeText;

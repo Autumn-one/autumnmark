@@ -2,7 +2,7 @@ import type { MarkedExtension } from 'marked';
 import type { ICodeLineRange } from '../../codeFenceAnnotations';
 import { codeFenceLanguage, parseCodeFenceAnnotations } from '../../codeFenceAnnotations';
 import { diagramTypeOfLang } from '../../diagram/fence';
-import { escapeHTML } from '../../index';
+import { escapeHTML, parseFenceLine } from '../../index';
 
 // Prism spans can cross a logical line; close and reopen them inside each line's wrapper.
 function renderAnnotatedLines(html: string, ranges: ICodeLineRange[]): string {
@@ -37,19 +37,22 @@ export default function codeFenceAnnotationsExtension(): MarkedExtension {
     return {
         renderer: {
             code(token) {
-                const info = token.lang ?? '';
+                const info = parseFenceLine(token.raw)?.info.trim() ?? token.lang ?? '';
                 const { title, ranges } = parseCodeFenceAnnotations(info);
-                if (!title && !ranges.length)
-                    return false;
                 const language = codeFenceLanguage(info);
+                const heightWithoutLanguage = info.startsWith('max-lines=');
+                if (!title && !ranges.length && !heightWithoutLanguage)
+                    return false;
                 if (token.codeBlockStyle === 'indented' || diagramTypeOfLang(language))
                     return false;
 
                 const classAttribute = language ? ` class="language-${escapeHTML(language)}"` : '';
-                const text = ranges.length ? token.text : token.text.replace(/\n$/, '');
+                const text = ranges.length || heightWithoutLanguage ? token.text : token.text.replace(/\n$/, '');
                 const html = token.escaped ? text : escapeHTML(text);
                 const code = ranges.length ? renderAnnotatedLines(html, ranges) : `${html}\n`;
                 const block = `<pre><code${classAttribute}>${code}</code></pre>`;
+                if (!title && !ranges.length)
+                    return `${block}\n`;
                 const caption = title ? `<figcaption>${escapeHTML(title)}</figcaption>\n` : '';
                 return `<figure class="mu-export-code">${caption}${block}</figure>\n`;
             },

@@ -1,6 +1,11 @@
 export const fr = {
     name: 'fr',
     resource: {
+        'Resize code block': 'Ajuster la hauteur du bloc de code',
+        'Drag to resize, double-click to follow compact mode': 'Faites glisser pour redimensionner ou double-cliquez pour suivre le mode compact',
+        'Rows: {n}': 'Lignes : {n}',
+        'Follow compact mode': 'Suivre le mode compact',
+        'Always show full code': 'Toujours afficher le code en entier',
         'Expand': 'Développer',
         'Collapse': 'Replier',
         'Add tab': 'Ajouter un onglet',

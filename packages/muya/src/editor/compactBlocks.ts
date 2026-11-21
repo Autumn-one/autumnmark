@@ -1,4 +1,5 @@
 import type { Muya } from '../muya';
+import type { ICodeFenceAnnotations } from '../utils/codeFenceAnnotations';
 import { findScrollContainer, getBlock } from '../utils/dom';
 
 interface IImageProbe {
@@ -30,6 +31,7 @@ function measureUncappedImages(probes: IImageProbe[], limit: number, heights: Ma
 }
 
 export class CompactBlocks {
+    private _codeLimits = new WeakMap<HTMLElement, number>();
     private _bodies = new Map<HTMLElement, HTMLElement>();
     private _observer?: ResizeObserver;
     private _pending = new Set<HTMLElement>();
@@ -100,25 +102,30 @@ export class CompactBlocks {
         this._measure(this._bodies.keys());
     }
 
+    setCodeLimit(viewport: HTMLElement, lines: ICodeFenceAnnotations['maxLines']): void {
+        if (lines === undefined)
+            this._codeLimits.delete(viewport);
+        else
+            this._codeLimits.set(viewport, lines === 'none' ? 0 : lines);
+        if (viewport.isConnected)
+            this._measure([viewport]);
+    }
+
     private _measure(viewports: Iterable<HTMLElement>): void {
         const { compactMode, compactImageMaxHeight, compactCodeMaxLines } = this._muya.options;
-        if (!compactMode) {
-            for (const viewport of viewports)
-                this._clear(viewport);
-            return;
-        }
         // Image loads and window resizes arrive in batches. Finish geometry reads
         // before changing any cap, since one cap can invalidate the whole editor's layout.
         const heights = new Map<HTMLElement, number | null>();
         const probes: IImageProbe[] = [];
-        const imageLimit = compactImageMaxHeight ?? 0;
+        const imageLimit = compactMode ? compactImageMaxHeight ?? 0 : 0;
+        const defaultLines = compactMode ? compactCodeMaxLines ?? 12 : 0;
         const roundedLimit = Math.round(imageLimit);
         for (const viewport of viewports) {
             const body = this._bodies.get(viewport);
             if (!body)
                 continue;
             if (viewport.classList.contains('mu-code')) {
-                heights.set(viewport, codeHeightLimit(viewport, body, compactCodeMaxLines ?? 12));
+                heights.set(viewport, codeHeightLimit(viewport, body, this._codeLimits.get(viewport) ?? defaultLines));
                 continue;
             }
             if (imageLimit === 0) {

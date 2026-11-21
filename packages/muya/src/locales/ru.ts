@@ -1,6 +1,11 @@
 export const ru = {
     name: 'ru',
     resource: {
+        'Resize code block': 'Изменить высоту блока кода',
+        'Drag to resize, double-click to follow compact mode': 'Перетащите для изменения высоты или дважды щёлкните для возврата к компактному режиму',
+        'Rows: {n}': 'Строк: {n}',
+        'Follow compact mode': 'Использовать настройки компактного режима',
+        'Always show full code': 'Всегда показывать код полностью',
         'Expand': 'Развернуть',
         'Collapse': 'Свернуть',
         'Add tab': 'Добавить вкладку',

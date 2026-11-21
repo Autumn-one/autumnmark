@@ -817,6 +817,17 @@ The title and line selection can be used independently. Line numbers start at
 commas can combine ranges and individual lines. The code block keeps its usual
 syntax highlighting and the extra fence metadata is saved with the Markdown.
 
+Drag the bottom edge of a code block to set the maximum number of visible rows.
+For example, `max-lines=18` on the opening fence keeps up to 18 rows visible,
+including wrapped rows. This overrides compact mode for that block. Shorter
+blocks fit their content. The expand button shows the full block temporarily.
+
+Right-click the bottom edge to open the block menu.
+Double-click the edge or choose **Follow compact mode** in the menu
+to remove the override. **Always show full code** writes `max-lines=none`.
+Adjusting an indented code block converts it to a fenced block. Copying code,
+printing and exporting to PDF include the full contents.
+
 ### GitHub Alerts
 
 Since 0.22.0, MarkText supports GitHub-style alert blocks when **GitHub Alerts** is enabled in Preferences → Markdown (`githubAlerts`, off by default).

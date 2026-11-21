@@ -1,6 +1,11 @@
 export const de = {
     name: 'de',
     resource: {
+        'Resize code block': 'Höhe des Codeblocks ändern',
+        'Drag to resize, double-click to follow compact mode': 'Zum Anpassen ziehen, für den Kompaktmodus doppelklicken',
+        'Rows: {n}': 'Zeilen: {n}',
+        'Follow compact mode': 'Kompaktmodus übernehmen',
+        'Always show full code': 'Code immer vollständig anzeigen',
         'Expand': 'Ausklappen',
         'Collapse': 'Einklappen',
         'Add tab': 'Registerkarte hinzufügen',

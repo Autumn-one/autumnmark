@@ -1,3 +1,8 @@
+## AutumnMark 0.24.17
+
+- Drag the bottom edge of a code block to set how many rows are visible. The height is saved in Markdown and overrides compact mode for that block.
+- Double-click the bottom edge to follow compact mode again, or right-click it and choose **Always show full code**. Copying code and exporting to PDF include the complete code.
+
 ## AutumnMark 0.24.16
 
 - Image previews open faster in long documents. The embedded image dialog uses a smaller default size and closes when you click the backdrop, including the area over the window title bar.

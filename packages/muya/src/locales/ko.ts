@@ -1,6 +1,11 @@
 export const ko = {
     name: 'ko',
     resource: {
+        'Resize code block': '코드 블록 높이 조절',
+        'Drag to resize, double-click to follow compact mode': '드래그하여 높이를 조절하거나 두 번 클릭하여 간결 모드 설정을 따릅니다',
+        'Rows: {n}': '{n}줄',
+        'Follow compact mode': '간결 모드 설정 따르기',
+        'Always show full code': '항상 전체 코드 표시',
         'Expand': '펼치기',
         'Collapse': '접기',
         'Add tab': '탭 추가',

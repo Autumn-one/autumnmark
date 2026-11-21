@@ -1,6 +1,11 @@
 export const en = {
     name: 'en',
     resource: {
+        'Resize code block': 'Resize code block',
+        'Drag to resize, double-click to follow compact mode': 'Drag to resize, double-click to follow compact mode',
+        'Rows: {n}': 'Rows: {n}',
+        'Follow compact mode': 'Follow compact mode',
+        'Always show full code': 'Always show full code',
         'Expand': 'Expand',
         'Collapse': 'Collapse',
         'Add tab': 'Add tab',

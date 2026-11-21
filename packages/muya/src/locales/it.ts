@@ -1,6 +1,11 @@
 export const it = {
     name: 'it',
     resource: {
+        'Resize code block': 'Regola l’altezza del blocco di codice',
+        'Drag to resize, double-click to follow compact mode': 'Trascina per ridimensionare o fai doppio clic per seguire la modalità compatta',
+        'Rows: {n}': 'Righe: {n}',
+        'Follow compact mode': 'Segui la modalità compatta',
+        'Always show full code': 'Mostra sempre tutto il codice',
         'Expand': 'Espandi',
         'Collapse': 'Comprimi',
         'Add tab': 'Aggiungi scheda',

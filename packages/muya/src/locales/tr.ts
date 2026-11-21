@@ -1,6 +1,11 @@
 export const tr = {
     name: 'tr',
     resource: {
+        'Resize code block': 'Kod bloğunun yüksekliğini ayarla',
+        'Drag to resize, double-click to follow compact mode': 'Boyutlandırmak için sürükleyin, kompakt mod ayarına dönmek için çift tıklayın',
+        'Rows: {n}': 'Satır sayısı: {n}',
+        'Follow compact mode': 'Kompakt mod ayarını kullan',
+        'Always show full code': 'Her zaman tüm kodu göster',
         'Expand': 'Genişlet',
         'Collapse': 'Daralt',
         'Add tab': 'Sekme ekle',
