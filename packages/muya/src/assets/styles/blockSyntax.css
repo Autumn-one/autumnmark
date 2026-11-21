@@ -763,6 +763,11 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     max-width: var(--mu-cell-width);
 }
 
+/* Explicit document widths take precedence over a theme's default table width. */
+.mu-table-inner:has([style*='--mu-cell-width']) {
+    width: auto;
+}
+
 .mu-table-inner:has(.mu-table-cell-fill) {
     width: 100%;
 }

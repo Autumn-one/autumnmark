@@ -1,3 +1,7 @@
+## AutumnMark 0.24.36
+
+- Fixed table resizing when custom CSS makes tables full width. Dragging the outer edge now changes the table width and keeps the internal dividers in place. Tables with automatic sizing still follow the theme, and columns saved as `100%` still fill the available space.
+
 ## AutumnMark 0.24.35
 
 - Fixed table resizing when the table fills the editing area. Dragging its right edge now resizes the last column and keeps earlier dividers in place. The layout is preserved when you save and reopen the document.

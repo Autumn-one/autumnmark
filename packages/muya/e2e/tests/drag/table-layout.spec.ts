@@ -44,6 +44,31 @@ for (const leadingWidth of ['auto', '100%']) {
     });
 }
 
+test('a theme can fill automatic tables and double-click restores that default', async ({ page }) => {
+    await page.addStyleTag({ content: 'figure.mu-table { width: 800px; } .mu-table-inner { width: 100%; }' });
+    const source = '<!-- table-layout: col-widths="1:395,2:240,3:100%" row-min-heights="1:52" -->\n\n' + table;
+    await page.evaluate(md => window.muya!.setContent(md), source);
+    const before = await edges(page);
+    const last = await box(page, 0, 2);
+    const x = last.x + last.width - 1;
+    const y = last.y + last.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 24, y, { steps: 5 });
+    const expected = [before[0], before[1], before[2] - 24];
+    expect(await edges(page)).toEqual(expected);
+    await page.mouse.up();
+    const saved = await getMarkdown(page);
+    await page.evaluate(md => window.muya!.setContent(md), saved);
+    expect(await edges(page)).toEqual(expected);
+    for (const index of [2, 1, 0]) {
+        const cell = await box(page, 0, index);
+        await page.mouse.dblclick(cell.x + cell.width - 1, y);
+    }
+    expect(await getMarkdown(page)).not.toContain('col-widths=');
+    expect((await edges(page))[2]).toBe(before[2]);
+});
+
 test('a middle divider follows the pointer when saved widths exceed the available space', async ({ page }) => {
     const source = '<!-- table-layout: col-widths="1:250,2:300,3:350" -->\n\n' + table;
     await page.evaluate(md => window.muya!.setContent(md), source);
