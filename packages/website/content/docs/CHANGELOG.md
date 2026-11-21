@@ -1,6 +1,7 @@
 ## AutumnMark 0.24.21
 
 - Open **View → Show Developer Tools** in the editor to inspect elements and try CSS rules. Save your rules in **Preferences → Theme → Custom CSS**.
+- This release includes the recent code block updates. In reading mode, expand a preview or copy its full source from the toolbar. When editing, pasting long code or selecting a block preserves your reading position.
 
 ## AutumnMark 0.24.20
 

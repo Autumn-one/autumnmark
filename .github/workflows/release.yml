@@ -125,6 +125,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
+          desktop-only: 'true'
 
       # Cache Electron binary; key on package.json so it busts when Electron version changes.
       - name: Cache Electron binary
@@ -229,6 +230,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         with:
           name: autumnmark-${{ matrix.name }}
+          compression-level: 0
           retention-days: 7
           if-no-files-found: error
           path: |

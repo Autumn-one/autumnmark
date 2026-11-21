@@ -56,10 +56,6 @@ jobs:
             os: windows-latest
             platform: windows
             command: build:win:x64
-          - name: windows-arm64
-            os: windows-11-arm
-            platform: windows
-            command: build:win:arm64
           - name: macos-x64
             os: macos-15-intel
             platform: macos
@@ -99,6 +95,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
+          desktop-only: 'true'
 
       - name: Install optional binaries for both host and target architectures
         if: matrix.name == 'macos-arm64'
@@ -184,6 +181,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         with:
           name: autumnmark-${{ matrix.name }}-preview
+          compression-level: 0
           retention-days: 30
           if-no-files-found: error
           path: |

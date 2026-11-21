@@ -6,6 +6,9 @@ inputs:
     description: Node.js version to install
     required: false
     default: '22.21.1'
+  desktop-only:
+    description: Install workspace tooling and the desktop package with its dependencies
+    default: 'false'
 
 runs:
   using: composite
@@ -20,7 +23,15 @@ runs:
         cache: 'pnpm'
 
     - name: Install Dependencies
+      if: inputs.desktop-only != 'true'
       shell: bash
       run: pnpm install --frozen-lockfile --ignore-scripts
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Install desktop build dependencies
+      if: inputs.desktop-only == 'true'
+      shell: bash
+      run: pnpm --filter . --filter 'marktext...' install --frozen-lockfile --ignore-scripts --prefer-offline
       env:
         GITHUB_TOKEN: ${{ github.token }}
