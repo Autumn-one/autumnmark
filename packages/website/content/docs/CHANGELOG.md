@@ -1,3 +1,7 @@
+## AutumnMark 0.24.31
+
+- Code block titles now sit in the center of the toolbar, between the language and the copy button. Click the title or language to edit the full Markdown fence information. The title reappears when you return to the code.
+
 ## AutumnMark 0.24.30
 
 - Closing the last tab now shows the purple AutumnMark logo and “秋笺 AutumnMark” centered above the **New File** button. Open a document to return to the editor with the small logo beside its filename.

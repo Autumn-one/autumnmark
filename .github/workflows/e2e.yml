@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.30]
+    branches: [release/v0.24.31]
   workflow_dispatch:
     inputs:
       platform:
@@ -74,11 +74,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test \
-              test/e2e/titlebar-application-menu.spec.ts \
-              test/e2e/native-titlebar-word-count.spec.ts \
-              test/e2e/tabs.spec.ts \
-              --grep 'Closing the last tab|Persistent title bar menus|Native title bar'
+            pnpm -C packages/desktop exec playwright test test/e2e/code-block-height.spec.ts
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")

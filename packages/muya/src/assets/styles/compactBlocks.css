@@ -222,7 +222,7 @@
         --mu-code-edge-height: 14px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-rows: minmax(34px, auto) auto auto;
+        grid-template-rows: minmax(34px, auto) auto;
         align-items: center;
         column-gap: 6px;
         padding: 0 1em max(1em, var(--mu-code-edge-height));
@@ -238,6 +238,11 @@
         text-overflow: ellipsis;
         user-select: none;
         content: '‹›  ' attr(data-reading-language);
+    }
+
+    .mu-editor .mu-code-block:has(> .mu-code-block-title)::before {
+        grid-column: 1 / -1;
+        max-width: calc(30% - 6px);
     }
 
     .mu-editor .mu-code-block::after {
@@ -260,12 +265,15 @@
         opacity: 0;
     }
 
-    .mu-code-block.mu-active:not(:has(> .mu-code.mu-active)) > .mu-language-input {
-        opacity: 1;
-    }
+    .mu-editor:focus-within:not(.mu-read-only) .mu-code-block.mu-active:not(:has(> .mu-code.mu-active)) {
+        & > .mu-language-input {
+            opacity: 1;
+        }
 
-    .mu-code-block.mu-active:not(:has(> .mu-code.mu-active))::before {
-        visibility: hidden;
+        &::before,
+        & > .mu-code-block-title {
+            visibility: hidden;
+        }
     }
 
     .mu-code-block > .mu-language-input:empty::after {
@@ -326,14 +334,23 @@
     }
 
     .mu-editor .mu-code-block > .mu-code-block-title {
-        grid-area: 2 / 1 / 3 / -1;
-        margin: 0.8em 0 0;
+        grid-area: 1 / 1 / 2 / -1;
+        justify-self: center;
+        max-width: 40%;
+        margin: 0;
         padding: 0;
+        overflow: hidden;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
         background: transparent;
+        pointer-events: none;
+        user-select: none;
     }
 
     .mu-editor .mu-code-block > .mu-code {
-        grid-area: 3 / 1 / 4 / -1;
+        grid-area: 2 / 1 / 3 / -1;
         min-width: 0;
         margin-top: 0.85em;
     }

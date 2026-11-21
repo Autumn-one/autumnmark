@@ -121,6 +121,56 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
   }
 })
 
+test('centers the code title and edits the full fence from either header label', async() => {
+  const info = 'ts title="main.cs" {2}'
+  const renamed = 'js title="tasks.js" {2}'
+  const markdown = ['Before.', '', '~~~' + info, 'first()', 'second()', '~~~', ''].join('\n')
+  const { app, page, filePath } = await launchWithMarkdown(markdown)
+  try {
+    const block = page.locator('.mu-code-block')
+    const title = block.locator('.mu-code-block-title')
+    const input = block.locator('.mu-language-input')
+    const body = block.locator('.mu-codeblock-content')
+    const copy = block.locator('.mu-code-copy')
+    await body.click()
+    await expect(title).toBeVisible()
+    const frame = (await block.boundingBox())!
+    const caption = (await title.boundingBox())!
+    const button = (await copy.boundingBox())!
+    const centerX = caption.x + caption.width / 2
+    const centerY = caption.y + caption.height / 2
+    expect(Math.abs(centerX - frame.x - frame.width / 2)).toBeLessThan(1)
+    expect(Math.abs(centerY - button.y - button.height / 2)).toBeLessThan(1)
+
+    await page.mouse.click(centerX, centerY)
+    await expect(title).toBeHidden()
+    await expect(input).toHaveCSS('opacity', '1')
+    await expect(input).toHaveText(info)
+    await page.keyboard.press('Enter')
+    await expect(block.locator('.mu-code')).toHaveClass(/mu-active/)
+    await expect(title).toBeVisible()
+
+    await input.click({ position: { x: 8, y: 8 } })
+    await expect(title).toBeHidden()
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.insertText(renamed)
+    await page.getByText('Before.', { exact: true }).click()
+    await expect(title).toBeVisible()
+    await expect(title).toHaveText('tasks.js')
+    await expect(block).toHaveAttribute('data-reading-language', 'JavaScript')
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n')).toContain('~~~' + renamed)
+    await toggleReadingMode(page)
+    await expect(title).toBeVisible()
+    await expect(input).toBeHidden()
+    await copy.click()
+    await expect.poll(async() => (await app.evaluate(({ clipboard }) => clipboard.readText())).replace(/\r\n/g, '\n')).toBe('first()\nsecond()')
+  } finally {
+    await app.close()
+  }
+})
+
 test('reading code previews wrap, expand and copy the complete source', async() => {
   const code = ['function sample() {', `    const value = "${'x'.repeat(260)}"`, '    return value', '}'].join('\n')
   const markdown = `~~~ts max-lines=3\n${code}\n~~~\n\n~~~\nshort\n~~~\n\n${'Paragraph.\n\n'.repeat(60)}`
