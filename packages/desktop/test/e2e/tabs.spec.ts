@@ -97,7 +97,7 @@ test.describe('Tab management', () => {
     test(`Closing the last tab with the ${closeWith} returns to the initial page`, async() => {
       const launched = await launchWithMarkdown('# Last tab\n', {
         windowLayout: { showTabBar: true },
-        preferences: { language: 'en' }
+        preferences: { language: closeWith === 'button' ? 'zh-CN' : 'en' }
       })
       const lastApp = launched.app
       const lastPage = launched.page
@@ -109,9 +109,12 @@ test.describe('Tab management', () => {
           await sendIpcToRenderer(lastApp, 'mt::editor-close-tab')
         }
         await expect(lastPage.locator(tabSelector)).toHaveCount(0)
-        await expect(lastPage.locator('.recent-files-projects')).toContainText(
-          'You have no tabs open.'
-        )
+        const welcome = lastPage.locator('.recent-files-projects')
+        await expect(welcome.getByRole('heading', { name: '秋笺 AutumnMark' })).toBeVisible()
+        const logo = welcome.locator('img')
+        await expect(logo).toHaveCSS('width', '48px')
+        await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
+        await expect(lastPage.locator('.title-brand img')).toHaveCount(0)
         await expect(lastPage.locator('.editor-with-tabs')).toHaveCount(0)
         expect(lastApp.windows()).toHaveLength(1)
 
@@ -119,7 +122,8 @@ test.describe('Tab management', () => {
         await expect(lastPage.locator('.recent-files-projects')).toBeVisible()
         await expect(lastPage.locator(tabSelector)).toHaveCount(0)
 
-        await lastPage.getByRole('button', { name: 'New File', exact: true }).click()
+        const newFileLabel = closeWith === 'button' ? '新建文件' : 'New File'
+        await welcome.getByRole('button', { name: newFileLabel, exact: true }).click()
         await expect(lastPage.locator(tabSelector)).toHaveCount(1)
         await expect(lastPage.locator('.recent-files-projects')).toHaveCount(0)
         await typeIntoEditor(lastPage, 'After closing the last tab')

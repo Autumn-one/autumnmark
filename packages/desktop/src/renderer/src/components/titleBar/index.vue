@@ -23,7 +23,7 @@
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
         <span class="title-brand" :class="{ 'with-filename': filename }">
-          <img :src="AppLogo" alt="" width="16" height="16" draggable="false" />
+          <img v-if="filename" :src="AppLogo" alt="" width="16" height="16" draggable="false" />
           <span class="brand-name">{{ APP_NAME }}</span>
         </span>
         <template v-if="filename">
