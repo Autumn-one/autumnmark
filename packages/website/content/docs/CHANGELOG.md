@@ -1,3 +1,8 @@
+## AutumnMark 0.24.22
+
+- Code blocks in editing mode now use the same top toolbar as reading mode. Edit the language, expand or collapse long code, and copy the full source from the top of the block.
+- Scrolling over code moves the document. The caret stays visible when typing or pasting into a collapsed block, and dragging its bottom edge still sets the preview height.
+
 ## AutumnMark 0.24.21
 
 - Open **View → Show Developer Tools** in the editor to inspect elements and try CSS rules. Save your rules in **Preferences → Theme → Custom CSS**.

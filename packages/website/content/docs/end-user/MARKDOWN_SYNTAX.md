@@ -822,9 +822,11 @@ For example, `max-lines=18` on the opening fence keeps up to 18 rows visible,
 including wrapped rows. This overrides compact mode for that block. Shorter
 blocks fit their content. The expand button shows the full block temporarily.
 
-In reading mode, **Expand all** and **Copy** appear beside the language at the
-top of the block. Long lines wrap with their indentation. Scroll over either a
-preview or an expanded block to move through the document.
+In editing and reading modes, **Expand all** and **Copy** appear beside the
+language at the top of the block. Scroll over a preview or an expanded block
+to move through the document. Click the language in editing mode to change it.
+Editing uses your **Wrap Code Blocks** preference. Reading mode wraps long
+lines with their indentation.
 
 Right-click the bottom edge to open the block menu.
 Double-click the edge or choose **Follow compact mode** in the menu

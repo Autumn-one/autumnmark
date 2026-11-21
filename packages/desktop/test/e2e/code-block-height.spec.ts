@@ -2,6 +2,69 @@ import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { clickMenuById, launchWithDoc, launchWithMarkdown, toggleReadingMode } from './helpers'
 
+test('editing code uses the top toolbar while typing, scrolling and changing language', async() => {
+  const source = [
+    'function complete(id: number) {',
+    '  const todo = todos.find(item => item.id === id)',
+    '  if (!todo) return false',
+    '  todo.complete()',
+    '  return true',
+    '}',
+    '',
+    `// ${'long line '.repeat(50)}`
+  ].join('\n')
+  const markdown = `# Tasks\n\n~~~ts\n${source}\n~~~\n\n${'Paragraph.\n\n'.repeat(45)}`
+  const { app, page } = await launchWithMarkdown(markdown, {
+    preferences: { compactCodeMaxLines: 6, language: 'zh-CN' }
+  })
+  try {
+    const editor = page.locator('.editor-component')
+    await expect(editor).toHaveAttribute('contenteditable', 'true')
+    const block = editor.locator('.mu-code-block')
+    const code = block.locator('.mu-code')
+    const content = code.locator('.mu-codeblock-content')
+    const expand = block.getByRole('button', { name: '展开全部' })
+    const copy = block.locator('.mu-code-copy')
+    await content.click({ position: { x: 5, y: 8 } })
+    await expect(code).toHaveClass(/mu-active/)
+    await expect(block).toHaveAttribute('data-reading-language', 'TypeScript')
+    await expect(expand).toHaveAttribute('aria-expanded', 'false')
+    const buttonBox = (await expand.boundingBox())!
+    const copyBox = (await copy.boundingBox())!
+    expect(Math.abs(buttonBox.y - copyBox.y)).toBeLessThan(4)
+    expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(copyBox.x)
+    expect(buttonBox.y + buttonBox.height).toBeLessThan((await code.boundingBox())!.y)
+    await expect(code).toHaveCSS('scrollbar-width', 'none')
+    expect(await block.locator('.mu-code-resize').evaluate(el => getComputedStyle(el, '::before').opacity)).toBe('0')
+    await block.screenshot({ path: test.info().outputPath('editing-code-preview.png') })
+    const top = await editor.evaluate(el => el.scrollTop)
+    await code.hover()
+    await page.mouse.wheel(0, 160)
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBeGreaterThan(top)
+    expect(await code.evaluate(el => el.scrollTop)).toBe(0)
+    await copy.click()
+    await expect.poll(async() => (await app.evaluate(({ clipboard }) => clipboard.readText())).replace(/\r\n/g, '\n')).toBe(source)
+    await expand.click()
+    await expect.poll(() => code.evaluate(el => el.clientHeight >= el.scrollHeight)).toBe(true)
+    await block.getByRole('button', { name: '收起' }).press('Enter')
+    await expect(expand).toHaveAttribute('aria-expanded', 'false')
+
+    const language = block.locator('.mu-language-input')
+    await language.click()
+    await expect(language).toHaveCSS('opacity', '1')
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.insertText('js')
+    await content.click({ position: { x: 4, y: 6 } })
+    await expect(block).toHaveAttribute('data-reading-language', 'JavaScript')
+    await page.keyboard.press('Home')
+    await page.keyboard.insertText('// ')
+    await expect(content).toHaveJSProperty('textContent', '// ' + source)
+  } finally {
+    await app.close()
+  }
+})
+
 test('reading code previews wrap, expand and copy the complete source', async() => {
   const code = ['function sample() {', `    const value = "${'x'.repeat(260)}"`, '    return value', '}'].join('\n')
   const markdown = `~~~ts max-lines=3\n${code}\n~~~\n\n~~~\nshort\n~~~\n\n${'Paragraph.\n\n'.repeat(60)}`

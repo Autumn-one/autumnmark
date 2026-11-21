@@ -46,7 +46,7 @@ test('saves a drag as one edit, reloads it and resets to the current default', a
     await page.evaluate(() => window.muya!.setOptions({ compactMode: false, compactCodeMaxLines: 5 }));
     await expect.poll(() => rows(first)).toBe(7);
     await expect.poll(() => rows(other)).toBe(3);
-    await first.getByRole('button', { name: 'Expand', exact: true }).click();
+    await first.getByRole('button', { name: 'Expand all', exact: true }).click();
     await expect.poll(() => rows(first)).toBe(30);
     await first.getByRole('button', { name: 'Collapse' }).click();
     await expect.poll(() => rows(first)).toBe(7);
@@ -94,7 +94,7 @@ test('canceling a drag restores the temporary expansion without editing the docu
     const original = code('max-lines=4');
     await loadMarkdown(page, original);
     const block = page.locator('.mu-code-block');
-    await block.getByRole('button', { name: 'Expand', exact: true }).click();
+    await block.getByRole('button', { name: 'Expand all', exact: true }).click();
     const handle = block.locator('.mu-code-resize');
     await handle.scrollIntoViewIfNeeded();
     const box = (await handle.boundingBox())!;

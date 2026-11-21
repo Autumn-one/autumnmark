@@ -9,14 +9,11 @@ interface IImageProbe {
     left: number;
 }
 
-function codeHeightLimit(viewport: HTMLElement, body: HTMLElement, lines: number): number | null {
+function codeHeightLimit(body: HTMLElement, lines: number): number | null {
     if (lines === 0)
         return null;
     const limit = Number.parseFloat(getComputedStyle(body).lineHeight) * lines;
-    if (body.clientHeight <= Math.round(limit))
-        return null;
-    // A horizontal scrollbar takes up space below the requested rows.
-    return limit + viewport.offsetHeight - viewport.clientHeight;
+    return body.clientHeight > Math.round(limit) ? limit : null;
 }
 
 // A scrollbar may be the only reason a responsive image fits. Check borderline
@@ -125,7 +122,7 @@ export class CompactBlocks {
             if (!body)
                 continue;
             if (viewport.classList.contains('mu-code')) {
-                heights.set(viewport, codeHeightLimit(viewport, body, this._codeLimits.get(viewport) ?? defaultLines));
+                heights.set(viewport, codeHeightLimit(body, this._codeLimits.get(viewport) ?? defaultLines));
                 continue;
             }
             if (imageLimit === 0) {
@@ -191,8 +188,8 @@ export class CompactBlocks {
 
     private _updateButton(viewport: HTMLElement, button: HTMLButtonElement): void {
         const expanded = viewport.classList.contains('mu-compact-expanded');
-        const readingCode = this._muya.isReadOnly && viewport.classList.contains('mu-code');
-        const label = this._muya.i18n.t(expanded ? 'Collapse' : readingCode ? 'Expand all' : 'Expand');
+        const expandLabel = viewport.classList.contains('mu-code') ? 'Expand all' : 'Expand';
+        const label = this._muya.i18n.t(expanded ? 'Collapse' : expandLabel);
         button.setAttribute('aria-expanded', String(expanded));
         button.setAttribute('aria-label', label);
         button.title = label;

@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.21]
+    branches: [hotfix/v0.24.22]
   workflow_dispatch:
     inputs:
       platform:
@@ -69,7 +69,8 @@ jobs:
             pnpm -C packages/desktop exec playwright test \
               test/e2e/code-block-height.spec.ts \
               test/e2e/editor-selection-scroll.spec.ts \
-              test/e2e/issue-5407-debug-mode.spec.ts
+              test/e2e/code-block-typing.spec.ts \
+              test/e2e/code-block-wrap.spec.ts
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
@@ -78,3 +79,11 @@ jobs:
           else
             "${tests[@]}"
           fi
+
+      - name: Upload editing-mode preview
+        if: github.event_name == 'push' && !cancelled()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: editing-code-preview
+          path: packages/desktop/test-results/**/editing-code-preview.png
+          retention-days: 7

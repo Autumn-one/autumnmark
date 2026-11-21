@@ -383,24 +383,6 @@ code.mu-code .mu-code-copy:hover {
     filter: drop-shadow(16px 0 var(--icon-color));
 }
 
-.mu-fenced-code.mu-active .mu-code::after {
-    content: 'fenced';
-}
-
-.mu-indented-code.mu-active .mu-code::after {
-    content: 'indented';
-}
-
-.mu-fenced-code.mu-active .mu-code::after,
-.mu-indented-code.mu-active .mu-code::after {
-    position: absolute;
-    right: 0.5em;
-    bottom: 0;
-    z-index: 1;
-
-    color: var(--editor-color-30);
-}
-
 /* code block line numbers (option: codeBlockLineNumbers) */
 .mu-code-block:has(.mu-line-numbers-rows) {
     --mu-code-caption-inset: 2.5em;
@@ -447,37 +429,6 @@ code.mu-code .mu-code-copy:hover {
     transform: scale(0.8);
 
     content: counter(mu-linenumber);
-}
-
-span.mu-language-input {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-
-    min-width: 20em;
-
-    font-weight: 600;
-    font-size: 0.8em;
-
-    opacity: 0;
-}
-
-.mu-code-block.mu-active .mu-language-input {
-    top: -1.8em;
-    z-index: initial;
-
-    opacity: 1;
-}
-
-.mu-code-block.mu-active .mu-language-input:empty::after {
-    color: var(--editor-color-10);
-
-    content: attr(hint);
-}
-
-.mu-code-block.mu-fenced-code.mu-active .mu-language-input {
-    left: 30px;
 }
 
 /* loose tight list */
@@ -1065,17 +1016,9 @@ pre.mu-active[data-role='vega-lite']::before {
     content: '``` vega-lite';
 }
 
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after {
     content: '```';
-}
-
-/* A tilde-fenced code block draws its own fence character in the marker. */
-pre.mu-active.mu-fenced-code.mu-tilde-fence::before,
-pre.mu-active.mu-fenced-code.mu-tilde-fence::after {
-    content: '~~~';
 }
 
 pre.mu-active.mu-frontmatter::before,
@@ -1084,8 +1027,6 @@ pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::before,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
 pre.mu-active.mu-math-container::before,
 pre.mu-active.mu-math-container::after {
     position: absolute;
@@ -1098,16 +1039,14 @@ pre.mu-active.mu-math-container::after {
 pre.mu-active.mu-frontmatter::before,
 pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='vega-lite']::before,
-pre.mu-active.mu-math-container::before,
-pre.mu-active.mu-fenced-code::before {
+pre.mu-active.mu-math-container::before {
     top: -20px;
 }
 
 pre.mu-active.mu-frontmatter::after,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-math-container::after,
-pre.mu-active.mu-fenced-code::after {
+pre.mu-active.mu-math-container::after {
     bottom: -23px;
 }
 
