@@ -73,17 +73,9 @@ jobs:
             os: ubuntu-22.04
             platform: linux
             arch: x64
-          - name: linux-arm64
-            os: ubuntu-22.04-arm
-            platform: linux
-            arch: arm64
           - name: windows-x64
             os: windows-latest
             platform: windows
-            arch: x64
-          - name: macos-x64
-            os: macos-15-intel
-            platform: macos
             arch: x64
           - name: macos-arm64
             os: macos-15-intel
@@ -174,17 +166,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Mac builds are unsigned (no Developer ID); see release notes for the
-      # user-side xattr/codesign workaround. Per-arch script: electron-builder's
-      # --arm64/--x64 flags are additive over the config's arch list, so
-      # electron-builder.yml must not pin mac.target arches for the flag to
-      # actually restrict the build to a single arch.
-      - name: build-mac
-        if: matrix.name == 'macos-x64'
-        run: pnpm run build:mac:${{ matrix.arch }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Cross-compile Apple Silicon native modules and packages
         if: matrix.name == 'macos-arm64'
         env:
@@ -269,7 +250,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Merge architecture-specific update metadata
+      - name: Verify and collect release assets
         run: |
           python -m pip install PyYAML==6.0.3
           python scripts/merge-release-artifacts.py artifacts dist "${GITHUB_REF_NAME#v}"

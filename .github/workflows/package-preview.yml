@@ -48,18 +48,10 @@ jobs:
             os: ubuntu-22.04
             platform: linux
             command: build:linux:x64
-          - name: linux-arm64
-            os: ubuntu-22.04-arm
-            platform: linux
-            command: build:linux:arm64
           - name: windows-x64
             os: windows-latest
             platform: windows
             command: build:win:x64
-          - name: macos-x64
-            os: macos-15-intel
-            platform: macos
-            command: build:mac:x64
           - name: macos-arm64
             os: macos-15-intel
             platform: macos

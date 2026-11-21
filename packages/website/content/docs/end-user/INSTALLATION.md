@@ -62,7 +62,7 @@ pnpm install
 pnpm run build:linux:x64
 ```
 
-This example packages Linux x64. On another host or architecture, choose the matching `build:win:x64`, `build:mac:x64`, `build:mac:arm64` or `build:linux:arm64` script. Installers land in the repository's `dist/` folder; `pnpm run build` alone only compiles the application.
+This example packages Linux x64. On another host or architecture, choose the matching `build:win:x64` or `build:mac:arm64` script. Installers land in the repository's `dist/` folder; `pnpm run build` alone only compiles the application.
 
 ## Updating
 
