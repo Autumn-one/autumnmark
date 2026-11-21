@@ -1,6 +1,7 @@
-## AutumnMark 0.24.29
+## AutumnMark 0.24.30
 
 - Closing the last tab now shows the purple AutumnMark logo and “秋笺 AutumnMark” centered above the **New File** button. Open a document to return to the editor with the small logo beside its filename.
+- **New File** uses the signature purple in the default light theme and the theme’s primary button colors in other themes.
 
 ## AutumnMark 0.24.28
 

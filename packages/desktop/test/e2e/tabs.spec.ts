@@ -97,7 +97,11 @@ test.describe('Tab management', () => {
     test(`Closing the last tab with the ${closeWith} returns to the initial page`, async() => {
       const launched = await launchWithMarkdown('# Last tab\n', {
         windowLayout: { showTabBar: true },
-        preferences: { language: closeWith === 'button' ? 'zh-CN' : 'en' }
+        preferences: {
+          language: closeWith === 'button' ? 'zh-CN' : 'en',
+          theme: closeWith === 'button' ? 'light' : 'dark',
+          followSystemTheme: false
+        }
       })
       const lastApp = launched.app
       const lastPage = launched.page
@@ -123,7 +127,11 @@ test.describe('Tab management', () => {
         await expect(lastPage.locator(tabSelector)).toHaveCount(0)
 
         const newFileLabel = closeWith === 'button' ? '新建文件' : 'New File'
-        await welcome.getByRole('button', { name: newFileLabel, exact: true }).click()
+        const newFileButton = welcome.getByRole('button', { name: newFileLabel, exact: true })
+        if (closeWith === 'button') {
+          await expect(newFileButton).toHaveCSS('background-color', 'rgb(101, 71, 184)')
+        }
+        await newFileButton.click()
         await expect(lastPage.locator(tabSelector)).toHaveCount(1)
         await expect(lastPage.locator('.recent-files-projects')).toHaveCount(0)
         await typeIntoEditor(lastPage, 'After closing the last tab')

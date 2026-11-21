@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.29]
+    branches: [release/v0.24.30]
   workflow_dispatch:
     inputs:
       platform:
@@ -63,6 +63,10 @@ jobs:
       - name: Check release code before tagging
         if: github.event_name == 'push'
         run: pnpm check
+
+      - name: Verify empty-state button contrast across themes
+        if: github.event_name == 'push'
+        run: pnpm -C packages/desktop exec vitest run test/unit/specs/empty-state-button-contrast.spec.ts
 
       - name: Run E2E Tests
         shell: bash
