@@ -34,6 +34,7 @@ async function dragHorizontalScrollbar(page: Page, viewport: Locator) {
 }
 
 async function captureHoveredBlock(app: ElectronApplication, page: Page, block: Locator, state: string) {
+  await block.scrollIntoViewIfNeeded()
   await block.locator('.mu-code').hover()
   const handle = block.locator('.mu-code-resize')
   const grip = await handle.evaluate(el => {
@@ -43,10 +44,12 @@ async function captureHoveredBlock(app: ElectronApplication, page: Page, block: 
   expect(grip.visibility).toBe('visible')
   expect(grip.opacity).toBeGreaterThan(0)
   expect(grip.width).toBe(32)
-  expect(await handle.evaluate(el => {
+  const hit = await handle.evaluate(el => {
     const bounds = el.getBoundingClientRect()
-    return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.bottom - 2) === el
-  })).toBe(true)
+    const target = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.bottom - 2)
+    return target?.className ?? 'outside viewport'
+  })
+  expect(hit).toContain('mu-code-resize')
   const box = (await block.boundingBox())!
   const rect = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) }
   // Capture the currently painted Electron surface without scrolling the hovered block again.
