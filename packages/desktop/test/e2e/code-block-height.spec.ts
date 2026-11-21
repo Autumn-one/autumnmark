@@ -36,10 +36,13 @@ async function dragHorizontalScrollbar(page: Page, viewport: Locator) {
 async function checkResizeGripOnHover(block: Locator) {
   await block.locator('.mu-code').hover()
   const handle = block.locator('.mu-code-resize')
-  expect(await handle.evaluate(el => {
-    const grip = getComputedStyle(el, '::before')
-    return grip.visibility === 'visible' && Number(grip.opacity) > 0
-  })).toBe(true)
+  const grip = await handle.evaluate(el => {
+    const style = getComputedStyle(el, '::before')
+    return { visibility: style.visibility, opacity: Number(style.opacity), width: parseFloat(style.width) }
+  })
+  expect(grip.visibility).toBe('visible')
+  expect(grip.opacity).toBeGreaterThan(0)
+  expect(grip.width).toBeGreaterThan(52)
 }
 
 test('editing code scrolls inside the preview and expands from its bottom edge', async() => {
