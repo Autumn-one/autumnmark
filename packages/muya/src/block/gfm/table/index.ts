@@ -131,8 +131,8 @@ class Table extends Parent {
     }
 
     setSize(axis: 'column' | 'row', index: number, pixels?: number): void;
-    setSize(axis: 'column', index: number, width?: TTableColumnWidth): void;
-    setSize(axis: 'column' | 'row', index: number, size?: TTableColumnWidth) {
+    setSize(axis: 'column', index: number, width?: TTableColumnWidth, anchoredWidths?: ReadonlyMap<number, number>): void;
+    setSize(axis: 'column' | 'row', index: number, size?: TTableColumnWidth, anchoredWidths?: ReadonlyMap<number, number>) {
         if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
             return;
         const state = this.getState();
@@ -141,6 +141,10 @@ class Table extends Parent {
             for (const row of state.children) {
                 if (previousFill >= 0)
                     delete row.children[previousFill].meta.width;
+                if (anchoredWidths) {
+                    for (const [column, width] of anchoredWidths)
+                        row.children[column].meta.width = width;
+                }
                 if (size)
                     row.children[index].meta.width = size;
                 else

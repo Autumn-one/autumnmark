@@ -12,6 +12,56 @@ async function box(page: Page, row: number, col: number) {
     return rect;
 }
 
+async function edges(page: Page) {
+    return page.locator('.mu-table-inner tr').first().locator('td').evaluateAll(cells =>
+        cells.map(cell => Math.round(cell.getBoundingClientRect().right)));
+}
+
+for (const leadingWidth of ['auto', '100%']) {
+    test(`dragging the outside edge in a full table with a ${leadingWidth} first column follows the pointer`, async ({ page }) => {
+        const widths = leadingWidth === 'auto' ? '3:140' : '1:100%,3:140';
+        const source = `<!-- table-layout: col-widths="${widths}" -->\n\n${table.replace('first', 'Long text '.repeat(50))}`;
+        await page.evaluate(md => window.muya!.setContent(md), source);
+        await page.addStyleTag({ content: 'figure.mu-table { width: 440px; }' });
+        const before = await edges(page);
+        const last = await box(page, 0, 2);
+        const y = last.y + last.height / 2;
+        const x = last.x + last.width - 1;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        for (const delta of [-18, -42, -27]) {
+            await page.mouse.move(x + delta, y, { steps: 3 });
+            expect(await edges(page)).toEqual([before[0], before[1], before[2] + delta]);
+        }
+        await page.mouse.up();
+        const after = await edges(page);
+        expect(after).toEqual([before[0], before[1], before[2] - 27]);
+        const saved = await getMarkdown(page);
+        await page.evaluate(() => window.muya!.undo());
+        expect(await edges(page)).toEqual(before);
+        await page.evaluate(md => window.muya!.setContent(md), saved);
+        expect(await edges(page)).toEqual(after);
+    });
+}
+
+test('a middle divider follows the pointer when saved widths exceed the available space', async ({ page }) => {
+    const source = '<!-- table-layout: col-widths="1:250,2:300,3:350" -->\n\n' + table;
+    await page.evaluate(md => window.muya!.setContent(md), source);
+    await page.addStyleTag({ content: 'figure.mu-table { width: 440px; }' });
+    const before = await edges(page);
+    const middle = await box(page, 0, 1);
+    const y = middle.y + middle.height / 2;
+    const x = middle.x + middle.width - 1;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 24, y, { steps: 4 });
+    const during = await edges(page);
+    expect(Math.abs(during[0] - before[0])).toBeLessThanOrEqual(1);
+    expect(Math.abs(during[1] - (before[1] - 24))).toBeLessThanOrEqual(1);
+    await page.mouse.up();
+    expect(await edges(page)).toEqual(during);
+});
+
 test('saves a boundary drag as 100% and follows the container after reopening', async ({ page }) => {
     const source = '<!-- table-layout: col-widths="2:120" -->\n\n' + table.replace('q', 'longword'.repeat(80));
     await page.evaluate(md => window.muya!.setContent(md), source);
@@ -79,15 +129,19 @@ test('dragging another column to the limit transfers the remaining space', async
     await page.evaluate(md => window.muya!.setContent(md), '<!-- table-layout: col-widths="1:100%,2:120" -->\n\n' + table);
     await page.addStyleTag({ content: 'figure.mu-table { width: 400px; }' });
     const before = await getMarkdown(page);
+    const originalEdges = await edges(page);
+    const first = await box(page, 0, 0);
     const third = await box(page, 0, 2);
     const y = third.y + third.height / 2;
     await page.mouse.move(third.x + third.width - 1, y);
     await page.mouse.down();
     await page.mouse.move(third.x + 500, y, { steps: 4 });
     await page.mouse.up();
-    expect(await getMarkdown(page)).toContain('col-widths="2:120,3:100%"');
-    expect((await box(page, 0, 2)).width).toBeGreaterThan(third.width);
+    expect(await getMarkdown(page)).toContain(`col-widths="1:${Math.round(first.width)},2:120,3:100%"`);
+    expect(await edges(page)).toEqual(originalEdges);
     expect((await box(page, 0, 1)).width).toBeCloseTo(120, 0);
+    await page.locator('figure.mu-table').evaluate(el => el.style.width = '500px');
+    expect((await box(page, 0, 2)).width).toBeCloseTo(third.width + 100, 0);
     await page.evaluate(() => window.muya!.undo());
     expect(await getMarkdown(page)).toBe(before);
 });
@@ -118,8 +172,12 @@ test('keeps intrinsically wide tables scrollable inside their figure', async ({ 
     await page.mouse.move(cell.x + cell.width - 1, y);
     await page.mouse.down();
     await page.mouse.move(cell.x + cell.width - 11, y, { steps: 3 });
+    const preview = await box(page, 0, 3);
+    expect(preview.x).toBe(cell.x);
+    expect(preview.width).toBeCloseTo(cell.width - 10, 0);
     await page.mouse.up();
     expect(await figure.evaluate(el => el.scrollLeft)).toBe(100);
+    expect(await box(page, 0, 3)).toEqual(preview);
     expect(await getMarkdown(page)).toContain(`col-widths="4:${Math.round(cell.width) - 10}"`);
 });
 

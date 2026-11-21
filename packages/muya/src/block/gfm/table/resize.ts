@@ -2,7 +2,7 @@ import type Table from '.';
 import type { TTableColumnWidth } from '../../../state/types';
 import type TableBodyCell from './cell';
 import { BLOCK_DOM_PROPERTY } from '../../../config';
-import { displayColumnWidth } from './cell';
+import { ColumnResize } from './columnResize';
 
 interface IEdge {
     axis: 'column' | 'row';
@@ -14,29 +14,9 @@ interface IResizeGesture {
     pointer: number;
     start: number;
     extent: number;
-    reservedWidth: number;
+    column?: ColumnResize;
     original?: TTableColumnWidth;
     size?: TTableColumnWidth;
-    targets: HTMLElement[];
-    previousFill: HTMLElement[];
-}
-
-function reservedColumnWidth(grid: HTMLTableElement, index: number) {
-    const cells = Array.from(grid.rows[0].cells);
-    const widths = cells.map(cell => cell.getBoundingClientRect().width);
-    const previousWidth = grid.style.width;
-    // Automatic columns may wrap down to their intrinsic minimum. Keep manually sized neighbours at their visible width.
-    grid.style.width = 'min-content';
-    const minimum = grid.getBoundingClientRect().width;
-    const minima = cells.map(cell => cell.getBoundingClientRect().width);
-    grid.style.width = previousWidth;
-    let reserved = minimum - minima[index];
-    for (const [i, cell] of cells.entries()) {
-        if (i !== index && cell.style.getPropertyValue('--mu-cell-width'))
-            reserved += widths[i] - minima[i];
-    }
-    const style = getComputedStyle(grid.parentElement!);
-    return reserved + Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
 }
 
 function edgeAt(event: MouseEvent): IEdge | undefined {
@@ -87,16 +67,11 @@ export function attachTableResize(table: Table) {
     }
 
     function preview(size?: TTableColumnWidth) {
-        const { edge, targets, previousFill } = drag!;
-        if (edge.axis === 'column') {
-            for (const cell of previousFill)
-                cell.classList.toggle('mu-table-cell-fill', size !== '100%');
-            for (const cell of targets)
-                displayColumnWidth(cell, size);
-        }
-        else {
-            targets[0].style.height = size ? `${size}px` : '';
-        }
+        const { column, edge } = drag!;
+        if (column)
+            column.preview(size);
+        else
+            edge.cell.row.domNode!.style.height = size ? `${size}px` : '';
     }
 
     function update(event: PointerEvent) {
@@ -107,8 +82,8 @@ export function attachTableResize(table: Table) {
         const start = Math.round(drag.extent);
         let pixels = Math.max(column ? 36 : 1, Math.round(drag.extent + delta));
         let fill = false;
-        if (column) {
-            const available = Math.floor(figure.clientWidth - drag.reservedWidth);
+        if (drag.column) {
+            const available = Math.floor(figure.clientWidth - drag.column.reservedWidth);
             fill = delta > 0 && pixels >= available && available >= start - 1;
             // A table wider than the viewport at its intrinsic minimum can still be shrunk.
             pixels = Math.min(pixels, Math.max(start, available));
@@ -124,16 +99,18 @@ export function attachTableResize(table: Table) {
         if (!drag || event.pointerId !== drag.pointer)
             return;
         const { edge, original, size, pointer } = drag;
+        const changed = commit && original !== size && table.muya.isBlockInDocument(edge.cell);
+        const anchoredWidths = changed ? drag.column?.widthsForCommit() : undefined;
         preview(original);
         drag = undefined;
         hideGuide();
         const capture = edge.cell.domNode!;
         if (capture.hasPointerCapture(pointer))
             capture.releasePointerCapture(pointer);
-        if (!commit || original === size || !table.muya.isBlockInDocument(edge.cell))
+        if (!changed)
             return;
         if (edge.axis === 'column')
-            table.setSize('column', edge.cell.columnOffset, size);
+            table.setSize('column', edge.cell.columnOffset, size, anchoredWidths);
         else if (typeof size === 'number')
             table.setSize('row', edge.cell.rowOffset, size);
     }
@@ -173,9 +150,7 @@ export function attachTableResize(table: Table) {
             pointer: event.pointerId,
             start: column ? event.clientX : event.clientY,
             extent: column ? box.width : box.height,
-            reservedWidth: column ? reservedColumnWidth(grid, index) : 0,
-            targets: column ? Array.from(grid.rows, row => row.cells[index]) : [cell.row.domNode!],
-            previousFill: column && original !== '100%' ? Array.from(grid.querySelectorAll('.mu-table-cell-fill')) : [],
+            column: column ? new ColumnResize(grid, index) : undefined,
         };
         showGuide(edge);
         cell.domNode!.setPointerCapture(event.pointerId);

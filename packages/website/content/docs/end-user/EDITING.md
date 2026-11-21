@@ -76,7 +76,7 @@ Drag the handle below a column or to the right of a body row. The line marks whe
 
 **Resize rows and columns**
 
-Drag a cell’s right edge to set the column width, or its bottom edge to set the row’s minimum height. Column dragging stops when the table fills the content area. Rows grow to fit wrapped text. Double-click an edge to restore automatic sizing.
+Drag a cell’s right edge to set the column width, or its bottom edge to set the row’s minimum height. Dragging the table’s outer right edge resizes the last column and keeps the dividers to its left in place. If automatic sizing would shift a divider when the document reopens, the editor also saves the column width needed to hold its position. Column dragging stops when the table fills the content area. Rows grow to fit wrapped text. Double-click an edge to restore automatic sizing.
 
 Custom sizes are saved above the table in an HTML comment such as `<!-- table-layout: col-widths="1:100%,3:240" row-min-heights="2:64" -->`. Positions start at 1 and include the header as row 1. Dragging a column to its limit saves `100%` for that column, so it fills the space left by the others as the content area changes. Dragging a different column to its limit transfers that behavior to it. Other sizes are saved in CSS pixels. Omitted positions use automatic sizing.
 

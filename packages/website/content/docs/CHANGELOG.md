@@ -1,3 +1,8 @@
+## AutumnMark 0.24.35
+
+- Fixed table resizing when the table fills the editing area. Dragging its right edge now resizes the last column and keeps earlier dividers in place. The layout is preserved when you save and reopen the document.
+- Internal dividers now follow the pointer when saved column widths exceed the available space, including in horizontally scrolled tables.
+
 ## AutumnMark 0.24.34
 
 - Drag cell edges to resize table columns and rows. Double-click an edge to restore automatic sizing. Markdown saves custom sizes, including a responsive 100% width when a drag fills the content area.
