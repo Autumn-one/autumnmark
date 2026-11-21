@@ -1,3 +1,7 @@
+## AutumnMark 0.24.28
+
+- The editor title bar now centers the AutumnMark logo and name to the left of the filename. In narrow windows, the logo stays visible and the app name folds away to make room for the filename.
+
 ## AutumnMark 0.24.27
 
 - Hover over a code block in editing mode to see a single centered height-adjustment grip. Drag the short line to resize the block, or click the arrow above it to expand or collapse.

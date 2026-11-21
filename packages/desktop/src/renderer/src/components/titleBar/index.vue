@@ -22,10 +22,14 @@
         class="title"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
-        <span v-if="filename" class="save-dot" :class="{ show: !isSaved }" />
-        <bdi v-if="filename" class="filename" :class="{ isOsx }" :title="filename" @click="rename">{{ filename }}</bdi>
-        <span v-if="filename" class="title-suffix"> - {{ APP_NAME }}</span>
-        <span v-else>{{ APP_NAME }}</span>
+        <span class="title-brand" :class="{ 'with-filename': filename }">
+          <img :src="AppLogo" alt="" width="16" height="16" draggable="false" />
+          <span class="brand-name">{{ APP_NAME }}</span>
+        </span>
+        <template v-if="filename">
+          <span class="save-dot" :class="{ show: !isSaved }" />
+          <bdi class="filename" :class="{ isOsx }" :title="filename" @click="rename">{{ filename }}</bdi>
+        </template>
       </div>
       <div class="title-actions">
         <div :class="showCustomTitleBar ? 'statistics-toolbar title-no-drag' : 'right-toolbar'">
@@ -134,6 +138,7 @@ import { CircleCheck, Download, Warning } from '@element-plus/icons-vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import ApplicationMenu from './applicationMenu.vue'
 import AnnouncementBell from './announcementBell.vue'
+import AppLogo from '@/assets/images/logo.png'
 import { APP_NAME } from '@shared/brand'
 
 const props = defineProps<{
@@ -278,7 +283,22 @@ onBeforeUnmount(() => {
   padding-inline: 8px;
   height: 100%;
   font-size: 14px;
-  white-space: pre;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.title-brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  line-height: 16px;
+}
+.title-brand.with-filename {
+  padding-inline-end: 8px;
+  border-inline-end: 1px solid var(--editorColor30);
+}
+.title-bar.isOsx .title {
+  margin-inline: 90px;
 }
 .filename {
   overflow: hidden;
@@ -289,7 +309,7 @@ onBeforeUnmount(() => {
 .title-actions { display: flex; justify-content: flex-end; align-items: center; height: 100%; }
 .save-dot {
   flex: none;
-  margin-right: 0.25rem;
+  margin-inline: 4px;
   width: 8px;
   height: 8px;
   display: inline-block;
@@ -349,6 +369,11 @@ onBeforeUnmount(() => {
 }
 @media (max-width: 900px) {
   .update-trigger > span { display: none; }
+}
+@media (max-width: 760px) {
+  .title-brand.with-filename { padding-inline-end: 0; border: 0; }
+  .title-brand.with-filename .brand-name { display: none; }
+  .has-menubar :deep(.application-menubar) { max-width: 48vw; }
 }
 .right-toolbar {
   height: 100%;

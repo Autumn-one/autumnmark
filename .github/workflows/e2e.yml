@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.27]
+    branches: [release/v0.24.28]
   workflow_dispatch:
     inputs:
       platform:
@@ -71,12 +71,8 @@ jobs:
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
             pnpm -C packages/desktop exec playwright test \
-              test/e2e/code-block-height.spec.ts \
-              test/e2e/editor-selection-scroll.spec.ts \
-              test/e2e/code-block-typing.spec.ts \
-              test/e2e/code-block-wrap.spec.ts
-            pnpm -C packages/desktop exec playwright test test/e2e/reading-mode.spec.ts \
-              --grep 'the reading notice can be dismissed' --output=test-results/reading-notice
+              test/e2e/titlebar-application-menu.spec.ts \
+              test/e2e/native-titlebar-word-count.spec.ts
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
@@ -85,11 +81,3 @@ jobs:
           else
             "${tests[@]}"
           fi
-
-      - name: Upload code block previews
-        if: github.event_name == 'push' && !cancelled()
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: code-block-previews
-          path: packages/desktop/test-results/**/code-edge-*.png
-          retention-days: 7

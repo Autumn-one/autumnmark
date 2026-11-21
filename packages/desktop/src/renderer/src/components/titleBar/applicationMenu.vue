@@ -145,4 +145,10 @@ const handleKeydown = (event: KeyboardEvent, index: number): void => {
     padding: 0 6px;
   }
 }
+
+@media (max-width: 650px) {
+  .application-menubar__item {
+    padding-inline: 3px;
+  }
+}
 </style>
