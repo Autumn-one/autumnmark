@@ -1,6 +1,6 @@
 # Releasing AutumnMark
 
-For stable releases and release candidates, pushing the version tag triggers `Release AutumnMark` (`.github/workflows/release.yml`). It validates the tag and application version, then verifies the code and builds Windows x64, macOS x64 and ARM64, and Linux x64 and ARM64 in parallel. Publication waits for verification and all five builds.
+For stable releases and release candidates, pushing the version tag triggers `Release AutumnMark` (`.github/workflows/release.yml`). It validates the tag and application version, then verifies the code and builds Windows x64, macOS ARM64 (Apple Silicon), and Linux x64 in parallel. Publication waits for verification and all three builds.
 
 All pre-release testing takes place on GitHub-hosted runners. During release preparation, do not run local tests of any kind, including unit, conformance, smoke and end-to-end tests. This policy also applies to hotfixes and previews.
 
@@ -92,13 +92,11 @@ gh release view vX.Y.Z-rc.N
 Confirm:
 
 - `Pre-release` badge on the release page (RC only)
-- **26 assets**:
+- **17 assets**:
   - **Linux x64** (5): `AppImage`, `deb`, `rpm`, `snap`, `tar.gz`
-  - **Linux arm64** (4): `AppImage`, `deb`, `rpm`, `tar.gz`
   - **macOS arm64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
-  - **macOS x64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
   - **Windows x64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
-  - **Auto-updater metadata** (4): `autumnmark.yml`, `autumnmark-mac.yml`, `autumnmark-linux.yml`, `autumnmark-linux-arm64.yml`
+  - **Auto-updater metadata** (3): `autumnmark.yml`, `autumnmark-mac.yml`, `autumnmark-linux.yml`
   - **Build diagnostics** (1): `builder-debug.yml`
   - **Checksums** (1): `SHA256SUMS.txt`
 - Auto-generated release notes compare against the selected previous stable release

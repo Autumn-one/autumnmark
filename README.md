@@ -2,7 +2,7 @@
 
 <h1 align="center">AutumnMark · 秋笺</h1>
 
-AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的桌面 Markdown 编辑器。Windows 提供 x64 安装包，macOS 和 Linux 提供 x64 和 ARM64 安装包。可以在可视化编辑与源码编辑之间切换，适合写技术笔记、教程和项目文档。
+AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的桌面 Markdown 编辑器。Windows 和 Linux 提供 x64 安装包，macOS 提供适用于 Apple 芯片的 ARM64 安装包。可以在可视化编辑与源码编辑之间切换，适合写技术笔记、教程和项目文档。
 
 [下载 AutumnMark 正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布说明](https://github.com/Autumn-one/autumnmark/releases) · [MIT 许可证](LICENSE)
 
