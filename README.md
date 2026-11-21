@@ -1,123 +1,93 @@
-<p align="center"><img src="docs/assets/logo-small.png" alt="AutumnMark" width="100" height="100"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="" width="80" height="80"></p>
 
 <h1 align="center">AutumnMark · 秋笺</h1>
 
-AutumnMark（秋笺）是基于 [MarkText](https://github.com/marktext/marktext) 的桌面 Markdown 编辑器，支持 Windows、macOS 和 Linux。可以在可视化编辑与源码编辑之间切换，适合写技术笔记、教程和项目文档。
+秋笺是一款开源桌面 Markdown 编辑器。写教程时，可以让读者切换不同平台的步骤，把补充说明折起来，在代码里点出关键几行。插图也能直接存进同一份 `.md`，离线打开或发给别人都不需要图床。
 
-[下载 AutumnMark 正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布说明](https://github.com/Autumn-one/autumnmark/releases) · [MIT 许可证](LICENSE)
+[访问官网](https://autumn-one.github.io/autumnmark/) · [下载正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布记录](https://github.com/Autumn-one/autumnmark/releases)
 
-## 内容选项卡
+![秋笺编辑《雾岭山脊观测手记》：左侧是文档大纲，正文中有内嵌海拔图、三个地点的选项卡、折叠的观测说明和带高亮行的 Python 代码。](docs/assets/autumnmark-ridge-notes.webp)
 
-把不同平台的安装步骤或不同语言的代码示例放进同一组选项卡。读者点击标签就能切换内容。在编辑器里输入 `/tabs` 插入选项卡组，点击 `+` 添加标签。
+[查看截图中的示例 Markdown](docs/examples/ridge-notes.md) · [在官网切换浅色、源码和深色视图](https://autumn-one.github.io/autumnmark/#preview)
+
+## 同一份 Markdown，在其他编辑器里怎样显示？
+
+四项扩展都支持**渐进回退**。秋笺把交互加在 Markdown 的标题、段落、图片和代码围栏上。用其他编辑器打开同一份文件，阅读效果取决于该编辑器支持的语法。
+
+| 功能           | 在秋笺里                                                        | 在其他 Markdown 编辑器里                                                                                                        |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 多选项卡       | 点击「杉林口」「听风垭」「望云台」，切换到对应的观测记录。      | 三个地点以带 `\|` 的小标题依次出现，每一段记录都能读到。                                                                        |
+| 单文件内嵌图片 | 粘贴海拔图后，图片数据随 `.md` 一起保存。分享时只需这一个文件。 | 允许 `data:` 图片的阅读器可直接离线显示。遇到过滤内嵌图片的平台，可在秋笺中右键「转换为本地图片」，把生成的图片与文档一起发布。 |
+| 折叠块         | 点开「为什么在垭口多停五分钟？」查看说明，再点一次收起。        | 折叠标记是 HTML 注释，标题和整段说明按原顺序显示。                                                                              |
+| 代码块标注     | 在代码上方显示文件名，高亮指定行，还能限制长代码的预览高度。    | 阅读器按普通围栏代码块显示完整源码。标题、行高亮和预览高度取决于阅读器支持。                                                    |
+
+## 自己写一段试试
+
+### 多选项卡
+
+输入 `/tabs` 插入一组内容选项卡，用 `+` 添加标签。也可以直接写 Markdown。组内以 `| ` 开头的标题就是标签名，后面的段落、列表或代码属于这个标签。
 
 ```markdown
 <!-- tabs -->
 
-#### | Windows
+#### | 杉林口
 
-双击安装包，按向导完成安装。
+06:40，杉林里仍有薄雾。
 
-#### | macOS
+#### | 听风垭
 
-打开 DMG，将应用拖到「应用程序」。
+07:25，西侧山脊已经见光。
 
 <!-- /tabs -->
 ```
 
-开头和结尾的注释各占一行。组内标题的文字以 `| ` 开头时，会创建一个新选项卡。
+### 单文件内嵌图片
 
-普通 Markdown 阅读器会按顺序显示所有标题和正文，标题保留 `|`。HTML、PDF 导出和打印会展开全部选项卡。 [完整语法与键盘操作](https://github.com/Autumn-one/autumnmark/blob/v0.24.4/packages/website/content/docs/end-user/MARKDOWN_SYNTAX.md#content-tabs)
-
-## v0.24.4 新增的三项语法
+在「偏好设置 → 图片与导出」选择「嵌入 Markdown（Base64）」，然后粘贴截图或插入图片。图片仍使用 `![图片说明](图片地址)` 的写法，地址里存着图片本身。上图的海拔剖面就保存在示例文件里，断开网络也能查看。
 
 ### 折叠块
 
-把练习答案、排查日志和补充说明放到可展开的标题下面。在编辑器中输入 `/折叠` 可以插入。
+输入 `/折叠`，或用两行独立注释包住标题和正文。默认收起。想让读者先看到正文，可把开头改为 `<!-- fold open -->`。
 
 ```markdown
 <!-- fold -->
 
-### 查看重试步骤
+### 为什么在垭口多停五分钟？
 
-收到 `429` 时，按 `Retry-After` 指示等待后再请求。
+间隔一分钟拍一张照片，就能看出雾线移动的方向。
 
 <!-- /fold -->
 ```
 
-`<!-- fold -->` 默认收起，`<!-- fold open -->` 默认展开。普通 Markdown 阅读器可以直接显示标题和完整正文。HTML 导出可交互展开，PDF 和打印会显示全部正文。
+### 代码块标题、行高亮与预览高度
 
-### 代码块标题
-
-在围栏语言后加 `title="request.ts"`，代码块上方会显示文件名或示例名称。教程里的多个代码片段可以各自标明出处。
-
-### 行范围高亮
-
-用 `{2-3,5}` 强调第 2、3、5 行。逗号可以组合单行和范围，范围包含起止行。行号从源码第 1 行开始计。
+在围栏首行写 `title="ridge.py"` 指定文件名，用 `{2-3}` 高亮第 2、3 行，`max-lines=4` 让代码块先显示四行。滚动或展开即可读完，复制代码会得到整个片段。
 
 ````markdown
-```ts title="request.ts" {2-3,5}
-const timeout = 5000
-const signal = AbortSignal.timeout(timeout)
-const response = await fetch('/api/items', { signal })
+```python title="ridge.py" {2-3} max-lines=4
+heights = [720, 1160, 1380]
+start, summit = heights[0], heights[-1]
+rise = summit - start
+direction = "上升" if rise > 0 else "下降"
 
-console.log(response.status)
+print(f"{direction} {abs(rise)} 米")
 ```
 ````
 
-## 开发
+[完整扩展语法](https://github.com/Autumn-one/autumnmark/blob/v0.24.28/packages/website/content/docs/end-user/MARKDOWN_SYNTAX.md#content-tabs) · [图片嵌入与转换](https://github.com/Autumn-one/autumnmark/blob/v0.24.28/packages/website/content/docs/end-user/IMAGES.md#embed-in-markdown-base64)
 
-从仓库根目录运行 `pnpm install` 安装依赖，再用 `pnpm run dev` 启动桌面端。Windows x64 安装包可用 `pnpm run build:win:x64` 构建。
+## 下载与开发
 
-## 上游资料与致谢
+正式版提供 Windows x64、macOS ARM64（Apple 芯片）和 Linux x64 安装包。编辑器支持可视化和源码编辑、数学公式、Mermaid 图表，以及 HTML 和 PDF 导出。[下载安装包](https://github.com/Autumn-one/autumnmark/releases/latest)
 
-以下网站、安装说明、社区和赞助信息属于 MarkText 上游。
+从仓库根目录运行 `pnpm install` 安装依赖，再用 `pnpm run dev` 启动桌面端。Windows x64 安装包可用 `pnpm run build:win:x64` 构建。[贡献指南](.github/CONTRIBUTING.md)
 
-<div align="center">
-  <sub>Translations:</sub>
-  <a href="docs/i18n/README-zh_cn.md#readme">
-    <span>:cn:</span>
-  </a>
-  <a href="docs/i18n/README-zh_tw.md#readme">
-    <span>:taiwan:</span>
-  </a>
-  <a href="docs/i18n/README-jp.md#readme">
-    <span>:jp:</span>
-  </a>
-  <a href="docs/i18n/README-fr.md#readme">
-    <span>:fr:</span>
-  </a>
-  <a href="docs/i18n/README-tr.md#readme">
-    <span>:tr:</span>
-  </a>
-  <a href="docs/i18n/README-es.md#readme">
-    <span>:es:</span>
-  </a>
-  <a href="docs/i18n/README-pt.md#readme">
-    <span>:portugal:</span>
-  </a>
-  <a href="docs/i18n/README-kr.md#readme">
-    <span>:kr:</span>
-  </a>
-  <a href="docs/i18n/README-bn.md#readme">
-    <span>:bangladesh:</span>
-  </a>
-</div>
+## 上游与许可
 
-<div align="center">
-  <sub>This Markdown editor that could. Built with ❤︎ by
-    <a href="https://github.com/Jocs">Jocs</a> and
-    <a href="https://github.com/marktext/marktext/graphs/contributors">
-      contributors
-    </a>
-    .
-  </sub>
-</div>
+秋笺基于 MarkText 构建，感谢上游作者和贡献者。项目采用 MIT 许可证。[MarkText](https://github.com/marktext/marktext) · [上游贡献者](https://github.com/marktext/marktext/graphs/contributors) · [上游 README 译本](docs/i18n/) · [MIT 许可证](LICENSE)
 
-<br />
-
-<h2 align="center">Sponsors</h2>
-
-MarkText is an open-source Markdown editor powered by the support of its community. If MarkText improves your workflow, please consider [sponsoring the project](https://github.com/sponsors/marktext). Thank you to all the sponsors ❤️
+<details>
+<summary>MarkText 上游赞助信息</summary>
 
 **Special Sponsor**
 
@@ -138,86 +108,4 @@ Only active, public GitHub sponsors are listed here. Thank you to our private sp
 
 <!-- current-sponsors:end -->
 
-## Screenshot
-
-![](docs/assets/marktext.png?raw=true)
-
-## Features
-
-- Realtime preview (WYSIWYG) and a clean and simple interface to get a distraction-free writing experience.
-- Support [CommonMark Spec](https://spec.commonmark.org), [GitHub Flavored Markdown Spec](https://github.github.com/gfm/) and selective support [Pandoc markdown](https://pandoc.org/MANUAL.html#pandocs-markdown).
-- Markdown extensions such as math expressions (KaTeX), front matter and emojis.
-- Support paragraphs and inline style shortcuts to improve your writing efficiency.
-- Output **HTML** and **PDF** files.
-- Various [themes](https://marktext.me/docs/themes): **Cadmium Light**, **Material Dark** etc.
-- Various editing modes: **Source Code mode**, **Typewriter mode**, **Focus mode**.
-- Paste images directly from clipboard.
-
-## Download and Installation
-
-![platform](https://img.shields.io/static/v1.svg?label=Platform&message=Linux%20x64%2Farm64%20|%20macOS%20x64%2Farm64%20|%20Windows%20x64%2Farm64&style=for-the-badge)
-
-|               ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)               |               ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)               |              ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)              |
-| :-----------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------------------: |
-| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/marktext/marktext/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/marktext/marktext/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/marktext/marktext/releases/latest) |
-
-Want to see new features of the latest version? Please refer to [CHANGELOG](https://marktext.me/docs/changelog).
-
-#### macOS
-
-Requires macOS 13 (Ventura) or later. Universal builds aren't published — pick the matching `arm64` or `x64` installer.
-
-You can either download the latest `marktext-mac-(arm64|x64)-%version%.dmg` from the [release page](https://github.com/marktext/marktext/releases/latest) or install MarkText using [**homebrew cask**](https://github.com/caskroom/homebrew-cask). To use Homebrew-Cask you just need to have [Homebrew](https://brew.sh/) installed.
-
-```bash
-brew install --cask mark-text
-```
-
-#### Windows
-
-Requires Windows 10 or 11. Both x64 and arm64 installers are published — pick the architecture that matches your machine.
-
-Simply download and install MarkText via the setup wizard (`marktext-win-(x64|arm64)-%version%-setup.exe`) and choose whether to install per-user or machine wide. Alternatively, install MarkText using a package manager such as [Chocolatey](https://chocolatey.org/) or [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/).
-
-To use Chocolatey, you need to have [Chocolatey](https://chocolatey.org/install) installed:
-
-```bash
-choco install marktext
-```
-
-To use Winget, you need to have [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/#install-winget) installed:
-
-```bash
-winget install marktext
-```
-
-#### Linux
-
-Please follow the [Linux installation instructions](https://marktext.me/docs/installation).
-
-#### Other
-
-All binaries for Linux, macOS and Windows can be downloaded from the [release page](https://github.com/marktext/marktext/releases/latest). If a version is unavailable for your system, then please open an [issue](https://github.com/marktext/marktext/issues).
-
-## Development
-
-If you wish to build MarkText yourself, please check out our [build instructions](https://marktext.me/docs/dev/build).
-
-- [User documentation](https://marktext.me/docs/introduction)
-- [Developer documentation](https://marktext.me/docs/dev/overview)
-
-If you have any questions regarding MarkText, you are welcome to write an issue. When doing so please use the default format found when opening an issue. Of course, if you submit a PR directly, it will be greatly appreciated.
-
-## Contribution
-
-MarkText is in development, please make sure to read the [Contributing Guide](.github/CONTRIBUTING.md) before making a pull request. Want to add some features to MarkText? Refer to our [roadmap](https://github.com/marktext/marktext/projects) and open issues.
-
-## Contributors
-
-Thank you to all the people who have already contributed to MarkText[[contributors](https://github.com/marktext/marktext/graphs/contributors)].
-
-<a href="https://github.com/marktext/marktext/graphs/contributors"><img src="https://opencollective.com/marktext/contributors.svg?width=890" /></a>
-
-## License
-
-[**MIT**](LICENSE).
+</details>
