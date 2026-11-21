@@ -105,7 +105,7 @@ section[id] { scroll-margin-top: 6rem; }
 
 .hero {
   overflow: clip;
-  padding: clamp(4rem, 7vw, 6rem) 0 clamp(2.5rem, 6vw, 5rem);
+  padding: clamp(2.5rem, 4.5vw, 4rem) 0 clamp(2.5rem, 6vw, 5rem);
   background:
     radial-gradient(ellipse at 50% 20%, #eee5ff 0%, #f8f3ff 42%, transparent 74%),
     linear-gradient(#faf7ff, #f3ecff 82%, var(--paper));
@@ -269,6 +269,8 @@ h2 { font-size: clamp(2.1rem, 4.15vw, 3.6rem); line-height: 1.2; font-weight: 78
 
 .feature-grid, .download-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.125rem; margin-top: 2rem; }
 
+.feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 .feature-card {
   min-width: 0;
   overflow: hidden;
@@ -279,6 +281,10 @@ h2 { font-size: clamp(2.1rem, 4.15vw, 3.6rem); line-height: 1.2; font-weight: 78
 
 .feature-example { min-height: 10rem; display: grid; align-items: center; padding: clamp(0.8rem, 2vw, 1.5rem); }
 .example-tabs { background: linear-gradient(145deg, #f0e9ff, #f7f2ff); }
+.example-image { background: #edf1e9; }
+.image-example { overflow: hidden; border-radius: 0.75rem; background: white; border: 1px solid #345c5129; }
+.image-example img { width: 100%; height: auto; }
+.image-example figcaption { padding: 0.45rem 0.7rem; font-weight: 500; color: #36594d; }
 .example-fold { background: linear-gradient(145deg, #e7f7f0, #f0faf6); }
 .example-code { background: linear-gradient(145deg, #eee5fb, #f7edf9); }
 
@@ -326,9 +332,12 @@ details > p { border-top: 1px solid #e3eee8; }
 .code-window i { color: #bcecb6; font-style: normal; }
 
 .feature-copy { padding: 1.25rem; }
+.feature-copy code { font-size: 0.9em; overflow-wrap: anywhere; }
 .feature-copy h3, .download-card h3 { font-size: 1.22rem; font-weight: 770; letter-spacing: -0.02em; }
 .feature-copy p { margin-top: 0.45rem; color: var(--muted); font-size: 0.9rem; line-height: 1.75; }
 
+.feature-copy .fallback { border-top: 1px solid var(--line); margin-top: 0.85rem; padding-top: 0.75rem; }
+.fallback strong { color: var(--purple-deep); margin-right: 0.25em; }
 .capabilities {
   display: flex;
   flex-wrap: wrap;

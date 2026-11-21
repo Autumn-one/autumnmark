@@ -74,7 +74,7 @@ function enhanceDownload(card, assets) {
   if (urls.size === 0) return
 
   if (!urls.has(select.value)) select.value = urls.keys().next().value
-  select.hidden = false
+  select.hidden = urls.size === 1
 
   function updateLink() {
     const architecture = select.selectedOptions[0]?.textContent
