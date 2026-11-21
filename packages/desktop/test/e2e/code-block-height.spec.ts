@@ -19,12 +19,12 @@ async function checkBottomEdge(block: Locator) {
 }
 
 async function dragHorizontalScrollbar(page: Page, viewport: Locator) {
-  const { x, y, width } = await viewport.evaluate(el => {
+  const { x, y, gutter } = await viewport.evaluate(el => {
     const box = el.getBoundingClientRect()
-    const gutter = el.offsetHeight - el.clientHeight
-    return { x: box.left + 6, y: box.bottom - gutter / 2, width: gutter }
+    const gutter = box.height - el.clientHeight
+    return { x: box.left + 6, y: box.bottom - gutter / 2, gutter }
   })
-  expect(width).toBeGreaterThan(0)
+  expect(gutter).toBeGreaterThan(1)
   await page.mouse.move(x, y)
   await page.mouse.down()
   await page.mouse.move(x + 80, y, { steps: 5 })

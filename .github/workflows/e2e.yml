@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.23]
+    branches: [release/v0.24.24]
   workflow_dispatch:
     inputs:
       platform:
