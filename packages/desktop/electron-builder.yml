@@ -95,7 +95,9 @@ win:
   artifactName: 'autumnmark-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
+      arch: [x64]
     - target: 'zip'
+      arch: [x64]
   icon: static/icon.ico
 nsis:
   artifactName: 'autumnmark-win-${arch}-${version}-setup.${ext}'

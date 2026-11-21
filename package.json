@@ -21,7 +21,6 @@
     "build:unpack": "pnpm --filter marktext build:unpack",
     "build:win": "pnpm --filter marktext build:win",
     "build:win:x64": "pnpm --filter marktext build:win:x64",
-    "build:win:arm64": "pnpm --filter marktext build:win:arm64",
     "build:mac": "pnpm --filter marktext build:mac",
     "build:mac:x64": "pnpm --filter marktext build:mac:x64",
     "build:mac:arm64": "pnpm --filter marktext build:mac:arm64",

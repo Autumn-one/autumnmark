@@ -96,12 +96,13 @@ jobs:
             const { data } = await github.rest.actions.listWorkflowRunArtifacts({
               ...repo, run_id: selected.id, per_page: 100
             });
-            const platforms = ['windows-x64', 'windows-arm64', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64'];
-            for (const platform of platforms) {
+            const platforms = ['windows-x64', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64'];
+            const artifactIds = platforms.map(platform => {
               const name = 'autumnmark-' + platform + '-preview';
               const artifact = data.artifacts.find(item => item.name === name && !item.expired);
               if (!artifact) throw new Error('Missing or expired platform artifact: ' + name);
-            }
+              return artifact.id;
+            });
             const tag = 'v' + version;
             const { data: releases } = await github.rest.repos.listReleases({ ...repo, per_page: 100 });
             const release = releases.find(item => item.tag_name === tag);
@@ -121,6 +122,7 @@ jobs:
             if (changes) throw new Error('The release target contains different application sources');
             writeFileSync('release-assets.json', JSON.stringify(release.assets));
             core.setOutput('run-id', String(selected.id));
+            core.setOutput('artifact-ids', artifactIds.join(','));
             core.setOutput('version', version);
             core.setOutput('tag', tag);
             core.info('Attaching all platform packages from ' + selected.html_url);
@@ -128,7 +130,7 @@ jobs:
       - name: Download all platform packages
         uses: actions/download-artifact@v8.0.2
         with:
-          pattern: autumnmark-*-preview
+          artifact-ids: ${{ steps.source.outputs.artifact-ids }}
           merge-multiple: true
           path: dist
           run-id: ${{ steps.source.outputs.run-id }}
@@ -150,9 +152,9 @@ jobs:
           const { execFileSync } = require('node:child_process')
           const version = process.env.VERSION
           const expected = [
+            'autumnmark-win-x64-' + version + '-setup.exe',
+            'autumnmark-win-x64-' + version + '.zip',
             ...['x64', 'arm64'].flatMap(arch => [
-              'autumnmark-win-' + arch + '-' + version + '-setup.exe',
-              'autumnmark-win-' + arch + '-' + version + '.zip',
               'autumnmark-mac-' + arch + '-' + version + '.dmg',
               'autumnmark-mac-' + arch + '-' + version + '.zip'
             ]),

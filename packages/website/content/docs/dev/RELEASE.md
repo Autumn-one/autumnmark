@@ -1,6 +1,8 @@
 # Releasing AutumnMark
 
-The release pipeline is triggered by pushing a `v*` tag. The `Release AutumnMark` workflow (`.github/workflows/release.yml`) validates the tag and application version, then verifies the code and builds the six-platform matrix in parallel. Once both jobs succeed, it publishes a GitHub Release with installers and `SHA256SUMS.txt`.
+For stable releases and release candidates, pushing the version tag triggers `Release AutumnMark` (`.github/workflows/release.yml`). It validates the tag and application version, then verifies the code and builds Windows x64, macOS x64 and ARM64, and Linux x64 and ARM64 in parallel. Publication waits for verification and all five builds.
+
+All pre-release testing takes place on GitHub-hosted runners. During release preparation, do not run local tests of any kind, including unit, conformance, smoke and end-to-end tests. This policy also applies to hotfixes and previews.
 
 Release notes explicitly compare against the highest published stable `vX.Y.Z` version below the new version, selected from all release pages by `scripts/select-release-base.py`. Drafts, prereleases, and the current version are excluded. RCs compare against the previous stable cycle; hotfixes exclude newer versions. For example, `v0.22.0` compares against `v0.21.2` even if that tag is on a separate release branch. A repository with no published stable releases may publish its first release cycle without a comparison base. Otherwise, the workflow fails if no earlier stable release exists. Verify the `Full Changelog` link during release review.
 
@@ -28,7 +30,7 @@ Reuse the same branch for every RC of that minor version (`rc.1`, `rc.2`, …) *
 
 Set the same `version` in the root `package.json` and `packages/desktop/package.json`. The desktop package determines the installer and application version. Muya and the website keep their independent package versions.
 
-Update `packages/website/content/docs/CHANGELOG.md` with the release highlights. Check lockfile consistency with `pnpm install --lockfile-only --ignore-scripts`, then run lint, typecheck, unit tests, build, and relevant E2E tests before pushing the release tag.
+Update `packages/website/content/docs/CHANGELOG.md` with the release highlights. If dependencies changed, update and commit the lockfile. The tag workflow checks the frozen lockfile, runs lint, typecheck and unit tests, and builds the installers on GitHub-hosted runners.
 
 | Stage             | Version string                  |
 | ----------------- | ------------------------------- |
@@ -42,6 +44,14 @@ git add package.json packages/desktop/package.json packages/website/content/docs
 git commit -m "chore(release): vX.Y.Z[-rc.N]"
 git push -u origin release/vX.Y.0
 ```
+
+For desktop UI changes, check the hosted E2E result from the PR covering the change. If an interaction still needs testing, dispatch `E2E Test` on the pushed release branch and wait for it to pass before tagging. For example, this runs the clipboard tests on a virtual display:
+
+```bash
+gh workflow run e2e.yml --ref release/vX.Y.0 -f grep=clipboard
+```
+
+Omit `-f grep=clipboard` to run the full desktop suite. Add `-f platform=windows` for Windows-specific behavior such as the NSIS updater. Both runners use their own windows and clipboard.
 
 ## 4. Tag and push
 
@@ -71,7 +81,7 @@ gh run list --workflow=release.yml --limit 3
 gh run watch <run-id> --exit-status
 ```
 
-The build matrix and code verification overlap. To warm the Windows ARM64 pnpm store ahead of a release, run **Warm Windows ARM64 release cache** on `develop` with the matching lockfile. The cache also warms automatically when dependency configuration changes on `develop`.
+If a runner fails transiently, use `gh run rerun <run-id> --failed` to retry the failed jobs for that tag.
 
 ## 7. Verify the published release
 
@@ -82,13 +92,12 @@ gh release view vX.Y.Z-rc.N
 Confirm:
 
 - `Pre-release` badge on the release page (RC only)
-- **29 assets**:
+- **26 assets**:
   - **Linux x64** (5): `AppImage`, `deb`, `rpm`, `snap`, `tar.gz`
   - **Linux arm64** (4): `AppImage`, `deb`, `rpm`, `tar.gz`
   - **macOS arm64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
   - **macOS x64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
   - **Windows x64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
-  - **Windows arm64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
   - **Auto-updater metadata** (4): `autumnmark.yml`, `autumnmark-mac.yml`, `autumnmark-linux.yml`, `autumnmark-linux-arm64.yml`
   - **Build diagnostics** (1): `builder-debug.yml`
   - **Checksums** (1): `SHA256SUMS.txt`
