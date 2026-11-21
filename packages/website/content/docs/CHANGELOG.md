@@ -2,6 +2,7 @@
 
 - Open **View → Show Developer Tools** in the editor to inspect elements and try CSS rules. Save your rules in **Preferences → Theme → Custom CSS**.
 - This release includes the recent code block updates. In reading mode, expand a preview or copy its full source from the toolbar. When editing, pasting long code or selecting a block preserves your reading position.
+- Downloads are available for Windows x64, Linux x64 and Apple Silicon Macs (ARM64).
 
 ## AutumnMark 0.24.20
 
