@@ -319,8 +319,6 @@
 
 /* wrapCodeBlocks → `.mu-code-wrap`; wraps long lines (overrides prism's `pre`). */
 .mu-code-wrap .mu-code-block .mu-code {
-    overflow: hidden;
-
     white-space: pre-wrap;
     overflow-wrap: break-word;
 }
@@ -328,7 +326,21 @@
 .mu-code-block .mu-code::-webkit-scrollbar {
     display: block;
     height: 6px;
-    width: 3px;
+    width: 6px;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar-track {
+    background: var(--editor-color-10);
+    border-radius: 3px;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar-thumb {
+    background: var(--editor-color-30);
+    border-radius: 3px;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar-thumb:hover {
+    background: var(--editor-color-50);
 }
 
 .mu-code-block .mu-content {

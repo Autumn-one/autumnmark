@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.22]
+    branches: [release/v0.24.23]
   workflow_dispatch:
     inputs:
       platform:
@@ -80,10 +80,10 @@ jobs:
             "${tests[@]}"
           fi
 
-      - name: Upload editing-mode preview
+      - name: Upload code block previews
         if: github.event_name == 'push' && !cancelled()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: editing-code-preview
-          path: packages/desktop/test-results/**/editing-code-preview.png
+          name: code-block-previews
+          path: packages/desktop/test-results/**/code-edge-*.png
           retention-days: 7

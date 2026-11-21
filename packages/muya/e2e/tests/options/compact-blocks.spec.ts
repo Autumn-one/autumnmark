@@ -5,7 +5,7 @@ import { loadMarkdown } from '../helpers/keyboard';
 const fence = '```';
 const lines = Array.from({ length: 48 }, (_, i) => 'line ' + (i + 1));
 
-test('passes the wheel to the document and keeps line numbers aligned with the code', async ({ page }) => {
+test('scrolls the code and gutter together and passes the wheel to the document at the end', async ({ page }) => {
     const markdown = [fence, ...lines, fence, '', ...lines.map(line => line + '\n')].join('\n');
     await loadMarkdown(page, markdown);
     const block = page.locator('.mu-code-block');
@@ -25,16 +25,17 @@ test('passes the wheel to the document and keeps line numbers aligned with the c
     });
     expect(copied).toBe(lines.join('\n'));
     await viewport.hover();
-    const top = await page.evaluate(() => window.scrollY);
     await page.mouse.wheel(0, 180);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(top);
-    expect(await viewport.evaluate(el => el.scrollTop)).toBe(0);
-    await viewport.evaluate(el => { el.scrollTop = 60; });
+    await expect.poll(() => viewport.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
     await expect.poll(() => viewport.evaluate(el => {
         const content = el.querySelector('.mu-codeblock-content')!;
         const row = el.parentElement!.querySelector('.mu-line-numbers-rows > span')!;
         return Math.abs(content.getBoundingClientRect().top - row.getBoundingClientRect().top);
     })).toBeLessThan(2);
+    await viewport.evaluate(el => { el.scrollTop = el.scrollHeight; });
+    const top = await page.evaluate(() => window.scrollY);
+    await page.mouse.wheel(0, 180);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(top);
     await toggle.click();
     await expect(block.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-expanded', 'true');
     expect(await viewport.evaluate(el => el.clientHeight >= el.scrollHeight)).toBe(true);

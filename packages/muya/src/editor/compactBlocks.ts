@@ -9,11 +9,19 @@ interface IImageProbe {
     left: number;
 }
 
-function codeHeightLimit(body: HTMLElement, lines: number): number | null {
+function codeHeightLimit(viewport: HTMLElement, body: HTMLElement, lines: number): number | null {
     if (lines === 0)
         return null;
     const limit = Number.parseFloat(getComputedStyle(body).lineHeight) * lines;
-    return body.clientHeight > Math.round(limit) ? limit : null;
+    if (body.clientHeight <= Math.round(limit))
+        return null;
+    // The requested rows occupy the client area above a classic horizontal scrollbar.
+    return limit + viewport.offsetHeight - viewport.clientHeight;
+}
+
+function toggleContainer(viewport: HTMLElement): HTMLElement | null {
+    const owner = viewport.parentElement;
+    return viewport.classList.contains('mu-code') ? owner?.querySelector<HTMLElement>(':scope > .mu-code-edge') ?? null : owner;
 }
 
 // A scrollbar may be the only reason a responsive image fits. Check borderline
@@ -122,7 +130,7 @@ export class CompactBlocks {
             if (!body)
                 continue;
             if (viewport.classList.contains('mu-code')) {
-                heights.set(viewport, codeHeightLimit(body, this._codeLimits.get(viewport) ?? defaultLines));
+                heights.set(viewport, codeHeightLimit(viewport, body, this._codeLimits.get(viewport) ?? defaultLines));
                 continue;
             }
             if (imageLimit === 0) {
@@ -149,7 +157,7 @@ export class CompactBlocks {
     }
 
     private _applyLimit(viewport: HTMLElement, height: number): void {
-        const owner = viewport.parentElement;
+        const owner = toggleContainer(viewport);
         if (!owner)
             return;
         viewport.style.setProperty('--mu-compact-height', `${height}px`);
@@ -200,7 +208,7 @@ export class CompactBlocks {
             return;
         viewport.classList.remove('mu-compact-limited');
         viewport.style.removeProperty('--mu-compact-height');
-        viewport.parentElement?.querySelector(':scope > .mu-compact-toggle')?.remove();
+        toggleContainer(viewport)?.querySelector(':scope > .mu-compact-toggle')?.remove();
     }
 
     expandedPaths(): string[] {

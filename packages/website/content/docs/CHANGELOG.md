@@ -1,3 +1,8 @@
+## AutumnMark 0.24.23
+
+- Code previews in editing and reading modes now show scrollbars when code overflows. Turn off **Wrap Code Blocks** to scroll long lines horizontally.
+- Expand or collapse code with the centered arrow on the shallow, full-width gradient at the bottom edge. Copy stays in the top-right corner. Drag either side of the bottom edge to set the preview height.
+
 ## AutumnMark 0.24.22
 
 - Code blocks in editing mode now use the same top toolbar as reading mode. Edit the language, expand or collapse long code, and copy the full source from the top of the block.

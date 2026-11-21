@@ -50,6 +50,10 @@ class CodeBlock extends Parent {
         codeBlock.append(code);
         muya.editor.compactBlocks.track(code.domNode!, code.lastContentInDescendant()!.domNode!);
         codeBlock.domNode!.append(createCodeResizeHandle(codeBlock, code.domNode!));
+        const edge = codeBlock.domNode!.ownerDocument.createElement('span');
+        edge.className = 'mu-code-edge mu-copy-remove mu-output-remove';
+        edge.contentEditable = 'false';
+        codeBlock.domNode!.append(edge);
         const copyButton = (code as { copyButton?: HTMLButtonElement | null }).copyButton;
         if (copyButton)
             codeBlock.domNode!.appendChild(copyButton);

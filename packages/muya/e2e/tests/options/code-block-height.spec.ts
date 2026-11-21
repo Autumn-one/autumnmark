@@ -8,7 +8,7 @@ const code = (info = '', text = body) => `~~~~${info}\n${text}\n~~~~\n`;
 const rows = (block: Locator) => block.locator('.mu-code').evaluate(el => Math.round(el.clientHeight / Number.parseFloat(getComputedStyle(el).lineHeight)));
 
 async function openFirstBlockMenu(page: Page) {
-    await page.locator('.mu-code-resize').first().click({ button: 'right' });
+    await page.locator('.mu-code-resize').first().click({ button: 'right', position: { x: 10, y: 5 } });
     await expect(page.locator('.mu-front-menu')).toBeInViewport();
 }
 
@@ -25,7 +25,7 @@ test('saves a drag as one edit, reloads it and resets to the current default', a
     await handle.scrollIntoViewIfNeeded();
     const box = (await handle.boundingBox())!;
     const lineHeight = await first.locator('.mu-code').evaluate(el => Number.parseFloat(getComputedStyle(el).lineHeight));
-    const x = box.x + box.width / 2;
+    const x = box.x + box.width / 4;
     const y = box.y + box.height / 2;
     await page.mouse.move(x, y);
     await page.mouse.down();
@@ -51,7 +51,7 @@ test('saves a drag as one edit, reloads it and resets to the current default', a
     await first.getByRole('button', { name: 'Collapse' }).click();
     await expect.poll(() => rows(first)).toBe(7);
     expect(await getMarkdown(page)).toBe(saved);
-    await handle.dblclick();
+    await handle.dblclick({ position: { x: 10, y: 5 } });
     expect(await getMarkdown(page)).toBe(original);
     await expect.poll(() => rows(first)).toBe(30);
     await page.evaluate(() => window.muya!.setOptions({ compactMode: true }));
@@ -98,7 +98,7 @@ test('canceling a drag restores the temporary expansion without editing the docu
     const handle = block.locator('.mu-code-resize');
     await handle.scrollIntoViewIfNeeded();
     const box = (await handle.boundingBox())!;
-    const x = box.x + box.width / 2;
+    const x = box.x + box.width / 4;
     const y = box.y + box.height / 2;
     await page.mouse.move(x, y);
     await page.mouse.down();
