@@ -303,12 +303,15 @@
 
     .mu-code-edge > .mu-compact-toggle::before {
         border-width: 1.5px;
+        pointer-events: none;
     }
 
     .mu-editor:not(.mu-read-only) .mu-code-edge > .mu-compact-toggle {
         /* The last 5px belong to the centered resize grip underneath the arrow. */
         align-self: start;
-        height: calc(100% - 5px);
+        min-height: 0;
+        height: calc(var(--mu-code-edge-height) - 5px);
+        overflow: clip;
     }
 
     .mu-code-edge > .mu-compact-toggle:focus-visible {
