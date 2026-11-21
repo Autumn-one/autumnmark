@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import type { Locator, Page } from 'playwright'
-import { readFileSync } from 'node:fs'
+import type { ElectronApplication, Locator, Page } from 'playwright'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { clickMenuById, launchWithDoc, launchWithMarkdown, toggleReadingMode } from './helpers'
 
 async function checkBottomEdge(block: Locator) {
@@ -33,7 +33,7 @@ async function dragHorizontalScrollbar(page: Page, viewport: Locator) {
   await viewport.evaluate(el => { el.scrollLeft = 0 })
 }
 
-async function checkResizeGripOnHover(block: Locator) {
+async function captureHoveredBlock(app: ElectronApplication, page: Page, block: Locator, state: string) {
   await block.locator('.mu-code').hover()
   const handle = block.locator('.mu-code-resize')
   const grip = await handle.evaluate(el => {
@@ -43,6 +43,12 @@ async function checkResizeGripOnHover(block: Locator) {
   expect(grip.visibility).toBe('visible')
   expect(grip.opacity).toBeGreaterThan(0)
   expect(grip.width).toBeGreaterThan(52)
+  const box = (await block.boundingBox())!
+  const rect = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) }
+  // Capture the currently painted Electron surface without scrolling the hovered block again.
+  const win = await app.browserWindow(page)
+  const png = await win.evaluate(async (window, rect) => (await window.webContents.capturePage(rect)).toPNG(), rect)
+  writeFileSync(test.info().outputPath(`code-edge-${state}.png`), png)
 }
 
 test('editing code scrolls inside the preview and expands from its bottom edge', async() => {
@@ -76,8 +82,7 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
     await expect(block).toHaveAttribute('data-reading-language', 'TypeScript')
     await expect(expand).toHaveAttribute('aria-expanded', 'false')
     await checkBottomEdge(block)
-    await checkResizeGripOnHover(block)
-    await block.screenshot({ path: test.info().outputPath('code-edge-collapsed.png') })
+    await captureHoveredBlock(app, page, block, 'collapsed')
     await dragHorizontalScrollbar(page, code)
     const top = await editor.evaluate(el => el.scrollTop)
     await code.hover()
@@ -89,8 +94,7 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
     await expand.click()
     await expect.poll(() => code.evaluate(el => el.clientHeight >= el.scrollHeight)).toBe(true)
     await checkBottomEdge(block)
-    await checkResizeGripOnHover(block)
-    await block.screenshot({ path: test.info().outputPath('code-edge-expanded.png') })
+    await captureHoveredBlock(app, page, block, 'expanded')
     await block.getByRole('button', { name: '收起' }).press('Enter')
     await expect(expand).toHaveAttribute('aria-expanded', 'false')
 
