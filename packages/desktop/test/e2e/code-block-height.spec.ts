@@ -42,7 +42,11 @@ async function captureHoveredBlock(app: ElectronApplication, page: Page, block: 
   })
   expect(grip.visibility).toBe('visible')
   expect(grip.opacity).toBeGreaterThan(0)
-  expect(grip.width).toBeGreaterThan(52)
+  expect(grip.width).toBe(32)
+  expect(await handle.evaluate(el => {
+    const bounds = el.getBoundingClientRect()
+    return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.bottom - 2) === el
+  })).toBe(true)
   const box = (await block.boundingBox())!
   const rect = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) }
   // Capture the currently painted Electron surface without scrolling the hovered block again.
@@ -180,7 +184,7 @@ test('saves a resized block and reopens it with compact mode disabled', async() 
     await handle.scrollIntoViewIfNeeded()
     const { x, y } = await handle.evaluate(el => {
       const box = el.getBoundingClientRect()
-      return { x: box.x + box.width / 4, y: box.y + box.height / 2 }
+      return { x: box.x + box.width / 2, y: box.bottom - 2 }
     })
     const lineHeight = await block.locator('.mu-code').evaluate(el => parseFloat(getComputedStyle(el).lineHeight))
     await page.mouse.move(x, y)

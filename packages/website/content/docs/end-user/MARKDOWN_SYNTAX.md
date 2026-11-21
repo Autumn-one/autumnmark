@@ -826,8 +826,9 @@ In editing and reading modes, click the arrow in the center of the bottom edge
 to expand or collapse a long block. Scroll within the preview to see more rows.
 With **Wrap Code Blocks** turned off, the horizontal scrollbar lets you read long
 lines in either mode. The copy button above the block copies all of its source.
-In editing mode, click the language to change it or drag the bottom edge on
-either side of the arrow to adjust the preview height.
+In editing mode, click the language to change it. Hover over the code to see
+the single horizontal grip centered on the bottom edge. Drag the grip to
+adjust the preview height, or click the arrow above it to expand or collapse.
 
 To customize the full-width gradient, find `span.mu-code-edge:not(:empty)` in
 DevTools' Elements panel. The arrow is its child button. In **Preferences →

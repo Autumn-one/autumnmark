@@ -48,13 +48,9 @@
         opacity: 0.7;
     }
 
-    .mu-compact-limited ~ .mu-code-resize::before {
-        box-sizing: border-box;
-        width: calc(var(--mu-code-toggle-width) + 44px);
-        max-width: 100%;
-        height: 2px;
-        background: transparent;
-        border-inline: 18px solid currentcolor;
+    .mu-editor:not(.mu-read-only) .mu-compact-limited ~ .mu-code-resize {
+        align-items: end;
+        padding-block-end: 1px;
     }
 
     .mu-code-resize[data-lines]::after {
@@ -224,7 +220,6 @@
 @media screen {
     .mu-editor .mu-code-block {
         --mu-code-edge-height: 14px;
-        --mu-code-toggle-width: 52px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-rows: minmax(34px, auto) auto auto;
@@ -296,7 +291,7 @@
     .mu-code-edge > .mu-compact-toggle {
         position: relative;
         z-index: 2;
-        width: min(var(--mu-code-toggle-width), 100%);
+        width: min(52px, 100%);
         height: 100%;
         margin: 0;
         background: transparent;
@@ -308,6 +303,12 @@
 
     .mu-code-edge > .mu-compact-toggle::before {
         border-width: 1.5px;
+    }
+
+    .mu-editor:not(.mu-read-only) .mu-code-edge > .mu-compact-toggle {
+        /* The last 5px belong to the centered resize grip underneath the arrow. */
+        align-self: start;
+        height: calc(100% - 5px);
     }
 
     .mu-code-edge > .mu-compact-toggle:focus-visible {
