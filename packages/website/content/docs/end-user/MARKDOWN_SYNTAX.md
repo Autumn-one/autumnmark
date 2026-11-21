@@ -829,6 +829,11 @@ lines in either mode. The copy button above the block copies all of its source.
 In editing mode, click the language to change it or drag the bottom edge on
 either side of the arrow to adjust the preview height.
 
+To customize the full-width gradient, find `span.mu-code-edge:not(:empty)` in
+DevTools' Elements panel. The arrow is its child button. In **Preferences →
+Theme → Custom CSS**, set `--mu-code-edge-background` on `.mu-code-block`
+to a CSS color or gradient.
+
 Right-click the bottom edge to open the block menu.
 Double-click the edge or choose **Follow compact mode** in the menu
 to remove the override. **Always show full code** writes `max-lines=none`.

@@ -12,6 +12,25 @@ async function openFirstBlockMenu(page: Page) {
     await expect(page.locator('.mu-front-menu')).toBeInViewport();
 }
 
+test('shows the resize grip when hovering the code in collapsed and expanded blocks', async ({ page }) => {
+    await loadMarkdown(page, code('max-lines=3'));
+    const block = page.locator('.mu-code-block');
+    const handle = block.getByRole('button', { name: 'Resize code block' });
+    const toggle = block.locator('.mu-compact-toggle');
+    for (const expanded of [false, true]) {
+        await expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
+        await block.locator('.mu-code').hover();
+        expect(await handle.evaluate(el => {
+            const grip = getComputedStyle(el, '::before');
+            return grip.visibility === 'visible' && Number(grip.opacity) > 0;
+        })).toBe(true);
+        if (!expanded)
+            await toggle.click();
+    }
+    await page.addStyleTag({ content: '.mu-code-block { --mu-code-edge-background: rgb(230, 240, 250) }' });
+    await expect(block.locator('.mu-code-edge')).toHaveCSS('background-color', 'rgb(230, 240, 250)');
+});
+
 test('saves a drag as one edit, reloads it and resets to the current default', async ({ page }) => {
     const info = 'ts title="example max-lines=4" {2}';
     const original = `${code(info)}\n${code('max-lines=3')}`;

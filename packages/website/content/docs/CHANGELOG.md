@@ -1,3 +1,8 @@
+## AutumnMark 0.24.26
+
+- Hover over a code block in editing mode to see its height-adjustment grips. In collapsed and expanded previews, the grips appear on either side of the bottom arrow.
+- The code block's full-width bottom edge fades from transparent to `#eee`. Set `--mu-code-edge-background` in custom CSS to change it.
+
 ## AutumnMark 0.24.25
 
 - The word count and image status now sit above the reading-mode notice, keeping its close button accessible even when the notice wraps in a narrow window.

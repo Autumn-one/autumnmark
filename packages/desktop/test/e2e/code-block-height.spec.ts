@@ -5,7 +5,7 @@ import { clickMenuById, launchWithDoc, launchWithMarkdown, toggleReadingMode } f
 
 async function checkBottomEdge(block: Locator) {
   const edge = block.locator('.mu-code-edge')
-  await expect(edge).toHaveCSS('background-image', /linear-gradient/)
+  await expect(edge).toHaveCSS('background-image', /^linear-gradient\((?:to bottom, |180deg, )?rgba\(0, 0, 0, 0\), rgb\(238, 238, 238\)\)$/)
   const strip = (await edge.boundingBox())!
   const frame = (await block.boundingBox())!
   const arrow = (await edge.getByRole('button').boundingBox())!
@@ -31,6 +31,15 @@ async function dragHorizontalScrollbar(page: Page, viewport: Locator) {
   await page.mouse.up()
   await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
   await viewport.evaluate(el => { el.scrollLeft = 0 })
+}
+
+async function checkResizeGripOnHover(block: Locator) {
+  await block.locator('.mu-code').hover()
+  const handle = block.locator('.mu-code-resize')
+  expect(await handle.evaluate(el => {
+    const grip = getComputedStyle(el, '::before')
+    return grip.visibility === 'visible' && Number(grip.opacity) > 0
+  })).toBe(true)
 }
 
 test('editing code scrolls inside the preview and expands from its bottom edge', async() => {
@@ -64,6 +73,7 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
     await expect(block).toHaveAttribute('data-reading-language', 'TypeScript')
     await expect(expand).toHaveAttribute('aria-expanded', 'false')
     await checkBottomEdge(block)
+    await checkResizeGripOnHover(block)
     await block.screenshot({ path: test.info().outputPath('code-edge-collapsed.png') })
     await dragHorizontalScrollbar(page, code)
     const top = await editor.evaluate(el => el.scrollTop)
@@ -76,7 +86,7 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
     await expand.click()
     await expect.poll(() => code.evaluate(el => el.clientHeight >= el.scrollHeight)).toBe(true)
     await checkBottomEdge(block)
-    await page.mouse.move(0, 0)
+    await checkResizeGripOnHover(block)
     await block.screenshot({ path: test.info().outputPath('code-edge-expanded.png') })
     await block.getByRole('button', { name: '收起' }).press('Enter')
     await expect(expand).toHaveAttribute('aria-expanded', 'false')
