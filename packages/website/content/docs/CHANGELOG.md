@@ -1,3 +1,7 @@
+## AutumnMark 0.24.33
+
+- The announcement dialog shows live information from About below the announcements. The Alipay and WeChat Pay QR codes are stacked in a sidebar.
+
 ## AutumnMark 0.24.32
 
 - Code block titles align with the horizontal center of the full block, including when line numbers are shown. Titles also appear centered in reading mode, printed documents, and HTML exports.

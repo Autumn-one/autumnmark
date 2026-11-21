@@ -10,9 +10,8 @@
     <div class="payment-options">
       <figure
         v-for="method in paymentMethods"
-        :key="method.name"
+        :key="method.label"
         class="payment-option"
-        :class="method.name"
       >
         <img
           :src="method.image"
@@ -33,83 +32,68 @@ import wechatPayQr from '@/assets/images/donation-wechat-pay.png'
 const { t } = useI18n()
 const titleId = useId()
 const paymentMethods = [
-  { name: 'alipay', label: 'remoteContent.donation.alipay', image: alipayQr },
-  { name: 'wechat-pay', label: 'remoteContent.donation.wechatPay', image: wechatPayQr }
+  { label: 'remoteContent.donation.alipay', image: alipayQr },
+  { label: 'remoteContent.donation.wechatPay', image: wechatPayQr }
 ]
 </script>
 
 <style scoped>
 .announcement-donation {
+  min-width: 0;
   border: 1px solid color-mix(in srgb, #ca7848 27%, var(--floatBgColor));
-  border-radius: 12px;
-  padding: clamp(14px, 4vw, 22px);
+  border-radius: 10px;
+  padding: 12px;
   background: color-mix(in srgb, #ca7848 7%, var(--floatBgColor));
 }
 
 .announcement-donation h3 {
   margin: 0 0 4px;
   color: var(--editorColor80);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
 }
 
 .announcement-donation p {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   color: var(--floatFontColor);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
 .payment-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 162px), 1fr));
+  justify-items: center;
   gap: 12px;
 }
 
 .payment-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 9px;
+  width: min(100%, 144px);
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--payment-accent) 24%, var(--floatBgColor));
-  border-radius: 10px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--payment-accent) 6%, var(--floatBgColor));
+  text-align: center;
 }
 
-.alipay {
-  --payment-accent: #1677ff;
-}
-
-.wechat-pay {
-  --payment-accent: #07a85a;
+.payment-option + .payment-option {
+  border-top: 1px solid var(--floatBorderColor);
+  padding-top: 12px;
 }
 
 .payment-option img {
   box-sizing: border-box;
   display: block;
-  width: min(100%, 190px);
+  width: min(100%, 124px);
   aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0 auto;
+  border: 1px solid var(--floatBorderColor);
   border-radius: 5px;
-  padding: 10px;
+  padding: 3px;
   background: #fff;
 }
 
 .payment-option figcaption {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  margin-top: 5px;
   color: var(--editorColor80);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-}
-
-.payment-option figcaption::before {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--payment-accent);
-  content: '';
 }
 </style>

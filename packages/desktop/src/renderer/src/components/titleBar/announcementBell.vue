@@ -99,7 +99,7 @@
     v-model="visible"
     class="announcement-dialog"
     :title="title"
-    width="min(680px, calc(100vw - 32px))"
+    width="min(760px, calc(100vw - 32px))"
     align-center
     append-to-body
   >
@@ -112,13 +112,22 @@
         {{ title }}
       </h2>
     </template>
-    <remote-content
-      kind="announcement"
-      :active="visible"
-      @displayed="displayedRevision = $event"
-    >
+    <div class="announcement-layout">
+      <div class="announcement-feeds">
+        <remote-content
+          kind="announcement"
+          :active="visible"
+          panel
+          @displayed="displayedRevision = $event"
+        />
+        <remote-content
+          kind="about"
+          :active="visible"
+          panel
+        />
+      </div>
       <announcement-donation />
-    </remote-content>
+    </div>
   </el-dialog>
 </template>
 
@@ -169,8 +178,38 @@ const open = (): void => {
 
 <style scoped>
 :global(.el-dialog.announcement-dialog) {
-  --el-dialog-padding-primary: 22px;
-  border-radius: 16px;
+  --el-dialog-padding-primary: 14px;
+  border-radius: 14px;
+}
+
+:global(.announcement-dialog .el-dialog__header) {
+  margin: 0;
+  border-bottom: 1px solid var(--floatBorderColor);
+  padding: 12px 46px 12px 16px;
+}
+
+.announcement-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(160px, 1fr);
+  gap: 10px;
+  max-height: calc(100dvh - 124px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--editorColor30) transparent;
+}
+
+.announcement-feeds {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (max-width: 550px) {
+  .announcement-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .announcement-title {

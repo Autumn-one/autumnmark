@@ -1,8 +1,14 @@
 <template>
   <section
     :aria-label="t(`remoteContent.${kind}`)"
-    :class="{ 'remote-content--announcement': kind === 'announcement' }"
+    :class="{ 'remote-content-panel': panel, 'remote-content-panel--community': panel && kind === 'about' }"
   >
+    <h3
+      v-if="panel && !html"
+      class="remote-content-title"
+    >
+      {{ t(`remoteContent.${kind}`) }}
+    </h3>
     <!-- eslint-disable vue/no-v-html -- Markdown is sanitized with a feed-specific allowlist before insertion. -->
     <div
       v-if="html"
@@ -24,12 +30,6 @@
         {{ t(failed ? 'remoteContent.retry' : 'remoteContent.refresh') }}
       </el-button>
     </div>
-    <div
-      v-if="$slots.default"
-      class="remote-content-footer"
-    >
-      <slot />
-    </div>
   </section>
 </template>
 
@@ -41,7 +41,7 @@ import type { RemoteContentKind } from '@shared/types/ipc'
 import { useRemoteContentStore } from '@/store/remoteContent'
 import { sanitize } from '@/util/dompurify'
 
-const props = defineProps<{ active: boolean; kind: RemoteContentKind }>()
+const props = defineProps<{ active: boolean; kind: RemoteContentKind; panel?: boolean }>()
 const emit = defineEmits<{ displayed: [revision: string] }>()
 const { t } = useI18n()
 const feed = useRemoteContentStore()
@@ -137,112 +137,91 @@ watchPostEffect(() => {
   margin-top: 12px;
 }
 
-.remote-content--announcement {
-  max-height: calc(100dvh - 120px);
-  overflow-y: auto;
-  padding: 2px;
+.remote-content-panel {
+  min-width: 0;
+  border: 1px solid var(--floatBorderColor);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--editorColor04);
 }
 
-.remote-content--announcement,
-.remote-content--announcement .remote-markdown {
+.remote-content-panel .remote-markdown {
   scrollbar-width: thin;
   scrollbar-color: var(--editorColor30) transparent;
-}
-
-.remote-content--announcement .remote-markdown {
-  max-height: none;
-  overflow: visible;
-  border: 1px solid var(--editorColor10);
-  border-radius: 10px;
-  padding: clamp(14px, 4vw, 24px);
-  background: var(--editorColor04);
   color: var(--editorColor80);
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 13px;
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(h1, h2, h3, h4, h5, h6)) {
-  margin: 1.1em 0 0.5em;
+.remote-content-title,
+.remote-content-panel .remote-markdown :deep(:is(h1, h2, h3, h4, h5, h6)) {
+  margin: 0.8em 0 0.45em;
+  color: var(--editorColor80);
+  font-size: 1.1em;
   font-weight: 650;
   line-height: 1.4;
 }
 
-.remote-content--announcement .remote-markdown :deep(h1) {
-  font-size: 1.55em;
+.remote-content-title,
+.remote-content-panel .remote-markdown :deep(> :is(h1, h2, h3):first-child) {
+  margin-top: 0;
+  font-size: 15px;
 }
 
-.remote-content--announcement .remote-markdown :deep(h2) {
-  font-size: 1.25em;
+.remote-content-panel .remote-markdown :deep(> :last-child) {
+  margin-bottom: 0;
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(h3, h4, h5, h6)) {
-  font-size: 1.08em;
+.remote-content-panel .remote-markdown :deep(> ul) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 186px), 1fr));
+  gap: 0 14px;
+  padding: 0;
+  list-style: none;
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(p, ul, ol, pre, table, blockquote)) {
-  margin: 0.75em 0;
+.remote-content-panel .remote-markdown :deep(> ul > li) {
+  min-width: 0;
+  border-top: 1px solid var(--floatBorderColor);
+  padding: 7px 0;
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(ul, ol)) {
-  padding-inline-start: 1.5em;
+.remote-content-panel--community .remote-markdown :deep(> ul) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
+  gap: 0 10px;
 }
 
-.remote-content--announcement .remote-markdown :deep(li + li) {
-  margin-top: 0.35em;
+.remote-content-panel--community .remote-markdown {
+  max-height: min(26vh, 200px);
 }
 
-.remote-content--announcement .remote-markdown :deep(blockquote) {
+.remote-content-panel .remote-markdown :deep(blockquote) {
   border-inline-start: 3px solid #ca7848;
   padding: 2px 12px;
   background: var(--floatBgColor);
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(pre, td, th)) {
+.remote-content-panel .remote-markdown :deep(:is(pre, td, th)) {
   border: 1px solid var(--editorColor10);
   padding: 6px 10px;
 }
 
-.remote-content--announcement .remote-markdown :deep(:is(pre, th)) {
+.remote-content-panel .remote-markdown :deep(:is(pre, th)) {
   background: var(--floatBgColor);
 }
 
-.remote-content--announcement .remote-markdown :deep(table) {
+.remote-content-panel .remote-markdown :deep(table) {
   display: block;
   overflow-x: auto;
   border-collapse: collapse;
 }
 
-.remote-content--announcement .remote-markdown :deep(> :first-child) {
-  margin-top: 0;
-}
-
-.remote-content--announcement .remote-markdown :deep(> :last-child) {
-  margin-bottom: 0;
-}
-
-.remote-content--announcement .remote-content-status {
-  margin: 6px 0 12px;
+.remote-content-panel .remote-content-status {
+  margin-top: 4px;
   color: var(--floatFontColor);
   font-size: 12px;
 }
 
-.remote-content--announcement .remote-content-status :deep(.el-button) {
+.remote-content-panel .remote-content-status :deep(.el-button) {
   flex-shrink: 0;
-}
-
-@media (min-width: 480px) and (min-height: 680px) {
-  .remote-content--announcement {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .remote-content--announcement .remote-markdown {
-    min-height: 120px;
-    overflow: auto;
-  }
-
-  .remote-content--announcement :is(.remote-content-status, .remote-content-footer) {
-    flex: none;
-  }
 }
 </style>
