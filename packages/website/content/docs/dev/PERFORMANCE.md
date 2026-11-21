@@ -29,7 +29,7 @@ For development profiling with an explicit renderer debugging port:
 pnpm -C packages/desktop exec electron-vite --remoteDebuggingPort 8315
 ```
 
-Attach to the renderer through `chrome://inspect` at `localhost:8315`, then use the Performance panel to record an interaction or reload. Development tools are also available from the View menu in debug mode.
+Attach to the renderer through `chrome://inspect` at `localhost:8315`, then use the Performance panel to record an interaction or reload. You can also open the panel locally through **View → Show Developer Tools**.
 
 For an unpackaged production bundle, build first and forward the debug arguments explicitly:
 

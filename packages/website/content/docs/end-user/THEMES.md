@@ -85,6 +85,8 @@ You can switch themes in several ways:
 
 Use **Custom CSS** in Preferences → Theme to override the active theme's styles. The Theme menu and preferences expose the built-in themes listed above; they do not provide a custom-theme import control.
 
+Open **View → Show Developer Tools** in the editor window. In **Elements**, use the element picker to select part of the editor and try CSS rules in **Styles**. Copy the rules you want to keep into **Preferences → Theme → Custom CSS**.
+
 ## Theme Credits
 
 Many of these themes are inspired by popular color schemes from the developer community:

@@ -20,10 +20,8 @@ const toggleLayout = (win: Win, type: string): void => {
   }
 }
 
-export const debugToggleDevTools = (win: Win): void => {
-  if (win && global.MARKTEXT_DEBUG) {
-    win.webContents.toggleDevTools()
-  }
+export const toggleDevTools = (win: Win): void => {
+  win?.webContents.toggleDevTools()
 }
 
 export const debugReloadWindow = (win: Win): void => {
@@ -86,7 +84,7 @@ export const loadViewCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.VIEW_TYPEWRITER_MODE, toggleTypewriterMode)
 
   commandManager.add(COMMANDS.VIEW_DEV_RELOAD, debugReloadWindow)
-  commandManager.add(COMMANDS.VIEW_TOGGLE_DEV_TOOLS, debugToggleDevTools)
+  commandManager.add(COMMANDS.VIEW_TOGGLE_DEV_TOOLS, toggleDevTools)
 }
 
 
