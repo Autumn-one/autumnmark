@@ -30,7 +30,9 @@ class Parent extends TreeNode {
 
     set active(value) {
         this._active = value && !this.muya.isReadOnly;
-        value = this._active;
+        // Focus styling belongs to blocks. Changing the page class invalidates styles across the whole document.
+        if (this.isScrollPage)
+            return;
 
         if (this.domNode == null) {
             debug.error('domNode is null.');
@@ -38,7 +40,7 @@ class Parent extends TreeNode {
             return;
         }
 
-        if (value)
+        if (this._active)
             operateClassName(this.domNode, 'add', CLASS_NAMES.MU_ACTIVE);
         else
             operateClassName(this.domNode, 'remove', CLASS_NAMES.MU_ACTIVE);

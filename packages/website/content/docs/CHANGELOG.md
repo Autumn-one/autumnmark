@@ -1,3 +1,9 @@
+## AutumnMark 0.24.16
+
+- Image previews open faster in long documents. The embedded image dialog uses a smaller default size and closes when you click the backdrop, including the area over the window title bar.
+- The embedded image badge stays in the top-right corner of tall pictures as you scroll within a compact preview.
+- Compact mode now limits only code blocks by default, showing 12 lines. You can set image and video height limits in Editor preferences.
+
 ## AutumnMark 0.24.15
 
 - The custom title bar uses the Windows 11 Mica backdrop while the window has focus. It returns to the theme color when the window loses focus. Requires Windows 11 22H2 or later.

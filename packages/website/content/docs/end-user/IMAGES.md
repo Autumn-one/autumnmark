@@ -40,7 +40,7 @@ To convert media across a saved Markdown file or folder, right-click it in the s
 
 Hover over a picture in the visual editor and drag either side handle. The readout shows the display width and height in pixels. Hold **Shift** near another picture's width or height on the same row to match it. For exact dimensions, right-click an embedded picture and choose **Set image size…**. Enter the width and height, choose whether to lock the aspect ratio, then apply. **Restore automatic size** clears the explicit dimensions when applied.
 
-Compact mode limits the preview height of a tall picture in its own paragraph. Expand it to see the whole picture. Pictures on the same row keep their individual sizes. In the editor preferences, enter **0** for the image height, video height, or code line limit to disable compact mode for that type.
+By default, compact mode limits code blocks to 12 lines. Set a positive image height to limit the preview height of a tall picture in its own paragraph. Expand it to see the whole picture. Pictures on the same row keep their individual sizes. In the editor preferences, enter **0** for the image height, video height, or code line limit to disable compact mode for that type.
 
 Click an embedded image to open **Image preview**. Scroll to zoom, drag to pan when zoomed in, or select **Fit to window**. Drop or paste an image into the preview to replace it. The **Embedded source** tab lets you copy or edit the data URL. Select **Apply changes** to update the image. Each replacement can be undone, including after the preview closes.
 
@@ -52,7 +52,7 @@ Drag an image from the document into a file manager or an application that accep
 
 Use **Format → Insert video…**, drop a video file into the editor, or paste one from the clipboard. By default the document references the video file. If the clipboard supplies only video data or a temporary copy, choose where to save it so the reference continues to work. Enable **Preferences → Video → Embed videos as Base64** to store new videos inside the Markdown file. This setting applies independently of the image setting.
 
-Hover over a video in the editor to play, pause, seek, or enter fullscreen. In compact mode, **Maximum video height (px)** scales the player proportionally. The default limit is 320 px.
+Hover over a video in the editor to play, pause, seek, or enter fullscreen. In compact mode, **Maximum video height (px)** scales the player proportionally. The default is 0, which shows videos at their normal size.
 
 Click the filename beneath the player to open the preview. The source tab lets you edit Base64 for smaller embedded videos. Right-click to copy the video as a file, save it in its original format, replace it, or switch between an embedded video and a local file reference. Drag the filename, or use **Drag original video out** in the preview, to drop a copy into another application. Playback depends on the codec available in the desktop player.
 

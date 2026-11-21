@@ -80,7 +80,7 @@ test('compact videos scale and play inline while images and code retain their to
   const video = markup.replace('<video ', '<video width="180" height="1800" ')
   const videoBlock = `<video controls width="180" height="1800">\n<source src="${source}">\n</video>`
   const { app, page } = await launchWithMarkdown([paragraphs, image, code, video, videoBlock, paragraphs].join('\n\n'), {
-    preferences: { language: 'en', compactMode: true, compactVideoMaxHeight: 180 }
+    preferences: { language: 'en', compactMode: true, compactImageMaxHeight: 320, compactVideoMaxHeight: 180 }
   })
   try {
     const toggles = page.locator('.editor-component .mu-compact-toggle')
@@ -285,7 +285,7 @@ test('linked by default, video embedding can be enabled independently and persis
 })
 
 test('a native MP4 drag over blank space in an untitled editor inserts a playable file link', async() => {
-  const { app, page, filePath } = await launchWithMarkdown('Start', { preferences: { language: 'en' } })
+  const { app, page, filePath } = await launchWithMarkdown('Start', { preferences: { language: 'en', compactVideoMaxHeight: 320 } })
   try {
     const filename = '#拖入 测试.mp4'
     const path = join(dirname(filePath), filename)

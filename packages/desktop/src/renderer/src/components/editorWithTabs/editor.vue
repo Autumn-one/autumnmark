@@ -1,9 +1,7 @@
 <template>
   <div
     class="editor-wrapper"
-    :class="[
-      { typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }
-    ]"
+    :class="{ typewriter, focus, source: sourceCode }"
     :dir="textDirection"
     @contextmenu="showDocumentBackgroundMenu"
   >
@@ -13,7 +11,7 @@
     />
     <media-viewer
       ref="mediaViewer"
-      @open-change="viewerOpen = $event"
+      @open="editor?.hideAllFloatTools()"
     />
     <el-dialog
       v-model="dialogTableVisible"
@@ -367,7 +365,6 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
     editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
   })
 }
-const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
 
 let printer: Printer | null = null
@@ -827,8 +824,6 @@ watch(currentFile, (value, oldValue) => {
     if (editor.value) {
       editor.value.hideAllFloatTools()
     }
-    // The viewer holds a node from the outgoing document, and keeps the
-    // incoming one at `pointer-events: none` while it is up.
     mediaViewer.value?.close()
   }
 })
@@ -838,8 +833,6 @@ watch(
   (value, oldValue) => {
     if (value && value !== oldValue) {
       if (editor.value?.isReadOnly) return
-      // The viewer holds a rendering of a document that is about to stop being
-      // shown, and holds the editor behind it inert while it is up.
       mediaViewer.value?.close()
       if (editor.value) {
         editor.value.hideAllFloatTools()
@@ -2311,12 +2304,6 @@ onBeforeUnmount(() => {
      ignores stacking, so muya's mousemove-driven float tools (front button/menu,
      table drag/column toolbars, preview toolbar) still re-trigger over the source
      editor. Drop the subtree from hit-testing too so they cannot (#4731). */
-  pointer-events: none;
-}
-
-/* `document.elementsFromPoint` ignores stacking, so muya's mousemove-driven
-   float tools would keep re-triggering under the open viewer (#4731 again). */
-.editor-wrapper.viewer-open .editor-component {
   pointer-events: none;
 }
 

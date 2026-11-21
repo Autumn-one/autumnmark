@@ -8,6 +8,7 @@
       aria-modal="true"
       :aria-label="label"
       tabindex="-1"
+      @mousemove.stop
     >
       <el-tooltip
         :content="t('editor.mediaViewer.close')"
@@ -175,7 +176,7 @@ const TOOLTIP = {
   hideAfter: 0
 } as const
 
-const emit = defineEmits<{ (event: 'openChange', open: boolean): void }>()
+const emit = defineEmits<{ open: [] }>()
 
 const { t } = useI18n()
 
@@ -453,7 +454,7 @@ const open = async (
   // hand focus back to, and closing would then drop focus on the floor.
   if (!reopening) restoreFocusTo = document.activeElement as HTMLElement | null
   visible.value = true
-  emit('openChange', true)
+  emit('open')
   // The overlay is modal, so the keys belong to it wherever focus ended up.
   document.addEventListener('keydown', onKeydown, true)
 
@@ -529,12 +530,10 @@ const close = () => {
   document.removeEventListener('keydown', onKeydown, true)
   visible.value = false
   clearStage()
-  emit('openChange', false)
   restoreFocusTo?.focus()
   restoreFocusTo = null
 }
 
-// Close on unmount too, clearing the parent viewer-open state.
 onBeforeUnmount(close)
 
 defineExpose({ openImage, openDiagram, close })
@@ -543,7 +542,7 @@ defineExpose({ openImage, openDiagram, close })
 <style>
 .image-viewer {
   position: fixed;
-  backdrop-filter: blur(5px);
+  app-region: no-drag;
   top: 0;
   right: 0;
   left: 0;

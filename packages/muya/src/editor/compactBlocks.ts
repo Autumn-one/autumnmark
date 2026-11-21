@@ -111,7 +111,7 @@ export class CompactBlocks {
         // before changing any cap, since one cap can invalidate the whole editor's layout.
         const heights = new Map<HTMLElement, number | null>();
         const probes: IImageProbe[] = [];
-        const imageLimit = compactImageMaxHeight ?? 320;
+        const imageLimit = compactImageMaxHeight ?? 0;
         const roundedLimit = Math.round(imageLimit);
         for (const viewport of viewports) {
             const body = this._bodies.get(viewport);

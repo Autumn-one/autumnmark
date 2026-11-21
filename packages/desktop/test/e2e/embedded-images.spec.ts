@@ -15,11 +15,23 @@ const src = 'data:image/png;base64,' + png
 test('opens a compact portrait image from either side of the picture', async() => {
   const portrait = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="800"><rect width="180" height="800" fill="navy"/></svg>')
   const source = 'data:image/svg+xml;base64,' + portrait.toString('base64')
-  const { app, page } = await launchWithMarkdown(`![Portrait](${source})`, { preferences: { language: 'en' } })
+  const { app, page } = await launchWithMarkdown(`![Portrait](${source})`, { preferences: { language: 'en', compactImageMaxHeight: 320 } })
   try {
     const viewport = page.locator('.mu-paragraph-content.mu-compact-limited')
     const preview = page.locator('.embedded-image-preview')
     const toggle = page.locator('.mu-compact-toggle')
+    const badge = viewport.locator('.mu-embedded-picture-badge')
+    const badgePosition = () => badge.evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      const viewport = el.closest('.mu-paragraph-content')!.getBoundingClientRect()
+      const picture = el.previousElementSibling!.getBoundingClientRect()
+      return [Math.round(rect.top - viewport.top), Math.round(picture.right - rect.right)]
+    })
+    await expect.poll(badgePosition).toEqual([2, 2])
+    await viewport.evaluate(el => { el.scrollTop = el.scrollHeight })
+    await expect.poll(() => viewport.evaluate(el => el.scrollTop)).toBeGreaterThan(200)
+    await expect.poll(badgePosition).toEqual([2, 2])
+    await viewport.evaluate(el => { el.scrollTop = 0 })
     for (const expanded of [false, true]) {
       await expect(toggle).toHaveAttribute('aria-expanded', String(expanded))
       const { left, right, width } = await viewport.evaluate(el => {
@@ -36,8 +48,16 @@ test('opens a compact portrait image from either side of the picture', async() =
       await expect(preview).toHaveAttribute('src', source)
       await preview.click()
       await expect(preview).toBeVisible()
-      const backdrop = expanded ? '.el-overlay-dialog:has(.embedded-image-dialog)' : '.embedded-image-dialog .image-stage'
-      await page.locator(backdrop).click({ position: { x: 2, y: expanded ? 100 : 2 } })
+      if (expanded) {
+        const upperMask = await page.evaluate(() => {
+          const dialog = document.querySelector('.embedded-image-dialog')!.getBoundingClientRect()
+          return { x: Math.round(innerWidth / 2), y: Math.min(12, Math.floor(dialog.top / 2)) }
+        })
+        await expect(page.locator('.embedded-media-overlay')).toHaveCSS('app-region', 'no-drag')
+        await page.mouse.click(upperMask.x, upperMask.y)
+      } else {
+        await page.locator('.image-stage').click({ position: { x: 2, y: 2 } })
+      }
       await expect(preview).toBeHidden()
       await toggle.click()
     }
@@ -533,7 +553,7 @@ for (const mode of ['wysiwyg', 'source']) {
     const { page, app } = await launchWithMarkdown(`![square](${src})`, { preferences: { language: 'en' } })
     try {
       if (mode === 'source') await enterSourceMode(page, app)
-      const atom = page.locator(mode === 'source' ? '.embedded-image-chip' : '.mu-embedded-image')
+      const atom = page.locator(mode === 'source' ? '.CodeMirror-code .embedded-image-chip' : '.mu-embedded-image')
       await selectImageAction(app, atom, 'View embedded source')
       const field = page.getByRole('textbox', { name: 'Base64' })
       await expect(field).toHaveValue(src)

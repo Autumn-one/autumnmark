@@ -35,7 +35,7 @@
 
     .mu-compact-mode.mu-compact-video-limit .mu-container video {
         max-width: 100%;
-        max-height: var(--mu-compact-video-height, 320px);
+        max-height: var(--mu-compact-video-height);
         object-fit: contain;
     }
 
@@ -58,6 +58,21 @@
         background: transparent;
         border: 0;
         cursor: zoom-in;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-surface {
+        display: inline-grid;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-surface > * {
+        grid-area: 1 / 1;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-badge {
+        position: sticky;
+
+        margin: 2px 2px 0 0;
+        place-self: start end;
     }
 
     .mu-code.mu-compact-limited:not(.mu-compact-expanded) {

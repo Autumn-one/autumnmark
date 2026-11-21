@@ -6,8 +6,11 @@
     align-center
     :title="label('title')"
     :show-close="false"
-    width="min(92vw, 1560px)"
-    @opened="focusSizeEntry"
+    modal-class="embedded-media-overlay"
+    :lock-scroll="false"
+    :transition="{ name: 'embedded-media', css: false }"
+    width="min(84vw, 1120px)"
+    @open-auto-focus="focusSizeEntry"
     @close="emit('close')"
   >
     <div
@@ -348,7 +351,8 @@ function imageLoaded() {
   fit()
 }
 function focusSizeEntry() {
-  if (props.initialTab === 'size') sizeEntry.value?.focusWidth()
+  // The dialog's focus trap selects its container in the next Vue tick.
+  if (props.initialTab === 'size') requestAnimationFrame(() => sizeEntry.value?.focusWidth())
 }
 function applySize(dimensions: IImageDimensions) {
   if (props.image.readOnly || !props.image.size || !props.image.matches(src.value)) return
@@ -508,6 +512,9 @@ async function copyDraft() {
 </script>
 
 <style>
+.embedded-media-overlay {
+  app-region: no-drag;
+}
 .el-dialog.embedded-image-dialog {
   padding: 0;
   overflow: hidden;
@@ -525,7 +532,7 @@ async function copyDraft() {
 .embedded-image-workspace {
   display: flex;
   flex-direction: column;
-  height: min(90vh, 1080px);
+  height: min(76vh, 760px);
   color: #25322e;
   background: white;
   outline: none;
@@ -626,7 +633,6 @@ button:disabled {
 }
 .preview-pane {
   background: #f3f5f5;
-  padding-top: 16px;
 }
 .image-stage {
   position: relative;
@@ -635,7 +641,7 @@ button:disabled {
   justify-content: center;
   min-height: 0;
   flex: 1;
-  margin: 0 16px 16px;
+  padding: 16px;
   overflow: hidden;
 }
 .embedded-video-player {

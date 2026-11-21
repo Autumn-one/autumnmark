@@ -5,6 +5,7 @@ import { loadMarkdown } from '../helpers/keyboard';
 test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } });
 
 test('keeps a near-threshold image stable across document selection and resizing', async ({ page }) => {
+    await page.evaluate(() => window.muya!.setOptions({ compactImageMaxHeight: 320 }));
     await page.addStyleTag({ content: `
         .mu-paragraph-content { width: 400px }
         .mu-paragraph-content::-webkit-scrollbar { width: 16px }

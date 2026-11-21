@@ -331,8 +331,8 @@ export const MUYA_DEFAULT_OPTIONS = {
     tabSize: 4,
     codeBlockLineNumbers: false,
     compactMode: true,
-    compactImageMaxHeight: 320,
-    compactVideoMaxHeight: 320,
+    compactImageMaxHeight: 0,
+    compactVideoMaxHeight: 0,
     compactCodeMaxLines: 12,
     wrapCodeBlocks: false,
     // bullet/list marker width + listIndentation, tab or Daring Fireball Markdown (4 spaces) --> list indentation

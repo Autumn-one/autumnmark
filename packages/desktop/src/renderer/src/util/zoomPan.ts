@@ -150,7 +150,8 @@ export class ZoomPanController {
     this.viewport.addEventListener('click', this._onClick)
     // A drag released outside the window still has to finish (#5393): once the
     // pointer hit-tests <html>, `document.body` stops seeing these events.
-    document.addEventListener('mousemove', this._onMouseMove)
+    // The modal stops bubbling mouse moves before they reach editor hover tools.
+    document.addEventListener('mousemove', this._onMouseMove, true)
     document.addEventListener('mouseup', this._onMouseUp)
   }
 
@@ -186,7 +187,7 @@ export class ZoomPanController {
     this._wheelSurface.removeEventListener('wheel', this._onWheel)
     this.viewport.removeEventListener('mousedown', this._onMouseDown)
     this.viewport.removeEventListener('click', this._onClick)
-    document.removeEventListener('mousemove', this._onMouseMove)
+    document.removeEventListener('mousemove', this._onMouseMove, true)
     document.removeEventListener('mouseup', this._onMouseUp)
   }
 

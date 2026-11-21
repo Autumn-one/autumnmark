@@ -86,6 +86,7 @@ test('limits only standalone images and applies height preferences live', async 
     }));
     const image = '![diagram](http://localhost:5174/compact-image.svg)';
     await loadMarkdown(page, [image, '', 'Inline ' + image, '', fence, 'short', fence, ''].join('\n'));
+    await page.evaluate(() => window.muya!.setOptions({ compactImageMaxHeight: 320 }));
     const originalMarkdown = await getMarkdown(page);
     const viewport = page.locator('.mu-paragraph-content').first();
     const pic = viewport.locator('img');

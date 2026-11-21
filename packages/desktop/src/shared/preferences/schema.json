@@ -113,13 +113,13 @@
     "description": "Editor--Maximum image height in pixels in compact mode",
     "type": "integer",
     "minimum": 0,
-    "default": 320
+    "default": 0
   },
   "compactVideoMaxHeight": {
     "description": "Editor--Maximum video height in pixels in compact mode",
     "type": "integer",
     "minimum": 0,
-    "default": 320
+    "default": 0
   },
   "compactCodeMaxLines": {
     "description": "Editor--Maximum number of visible code lines in compact mode",
