@@ -110,10 +110,14 @@ export interface IBulletListState {
 
 export interface ITableRowState {
     name: 'table.row';
+    minHeight?: number;
     children: ITableCellState[];
 }
 
+export type TTableColumnWidth = number | '100%';
+
 export interface ITableCellMeta {
+    width?: TTableColumnWidth;
     align: string; // 'none' | 'left' | 'center' | 'right';
 }
 

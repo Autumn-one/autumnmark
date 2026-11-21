@@ -218,6 +218,7 @@
 
 .markdown-body table {
     display: table;
+    max-width: 100%;
 }
 
 .markdown-body table th,

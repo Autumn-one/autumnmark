@@ -5,7 +5,7 @@ name: Muya E2E
 
 on:
   push:
-    branches: [release/v0.24.32]
+    branches: [release/v0.24.34]
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
@@ -35,9 +35,11 @@ jobs:
       - name: Install Playwright browser (${{ matrix.project }})
         run: pnpm -C packages/muya/e2e exec playwright install --with-deps ${{ matrix.project }}
 
-      - name: Verify code block titles before tagging
+      - name: Verify table layout and code wrapping before tagging
         if: github.event_name == 'push'
-        run: pnpm -C packages/muya/e2e exec playwright test --project=chromium tests/editing/fold-annotations.spec.ts
+        run: |
+          pnpm -C packages/muya exec vitest run src/state/__tests__/tableLayout.spec.ts src/block/gfm/table/__tests__
+          pnpm -C packages/muya/e2e exec playwright test --project=chromium tests/drag/table-layout.spec.ts tests/drag/table-drag-bar.spec.ts tests/drag/table-row-column-menu.spec.ts tests/blocks/table-column-widths-4894.spec.ts tests/options/code-font.spec.ts
 
       - name: Run Playwright (${{ matrix.project }})
         if: github.event_name == 'pull_request'

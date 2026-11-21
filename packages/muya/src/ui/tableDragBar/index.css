@@ -1,7 +1,9 @@
 .mu-table-drag-container {
     border: none;
     box-shadow: none;
-    cursor: pointer;
+    cursor: grab;
+
+    touch-action: none;
 }
 
 .mu-table-drag-bar[data-drag='bottom'] {
@@ -56,25 +58,9 @@
     bottom: 4px;
 }
 
-.mu-cell-transform {
-    transition: transform 0.3s ease-in-out;
-}
-
 .mu-drag-cell {
     z-index: 1;
 
     background: var(--float-bg-color);
     opacity: 0.7;
-
-    transition:
-        left 0.3s ease-in-out,
-        bottom 0.3s ease-in-out;
-}
-
-.mu-drag-cell.ag-drag-right {
-    left: -6px;
-}
-
-.mu-drag-cell.ag-drag-bottom {
-    bottom: -6px;
 }

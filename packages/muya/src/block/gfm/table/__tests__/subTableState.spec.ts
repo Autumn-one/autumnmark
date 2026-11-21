@@ -52,6 +52,43 @@ function cellTexts(state: ITableState): string[][] {
     return state.children.map(row => row.children.map(cell => cell.text));
 }
 
+describe('sparse table sizes', () => {
+    it('keeps the caret in the moved cell after reordering either axis', () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        table.cellAt(1, 1)!.firstContentInDescendant()!.setCursor(1, 1, true);
+        table.move('row', 1, 2);
+        firstTable(muya).move('column', 1, 0);
+        const selection = muya.getSelection();
+        expect(selection?.kind).toBe('text');
+        if (selection?.kind === 'text') {
+            expect(selection.context.anchorBlock.text).toBe('b2');
+            expect(selection.anchor.offset).toBe(1);
+        }
+    });
+
+    it('renumbers sizes across insert and delete, including sub-table copies', () => {
+        const muya = bootMuya(`<!-- table-layout: col-widths="2:120" row-min-heights="3:64" -->\n\n${TABLE_MD}`);
+        const table = firstTable(muya);
+        muya.transact(() => {
+            table.insertRow(1);
+            table.insertColumn(0);
+        });
+        expect(muya.getMarkdown()).toContain('col-widths="3:120" row-min-heights="4:64"');
+        expect(table.cellAt(1, 2)?.meta.width).toBe(120);
+        const subset = table.getSubTableState(2, 1, 3, 2);
+        expect(subset.children[0].children[1].meta.width).toBe(120);
+        expect(subset.children[1].minHeight).toBe(64);
+        muya.transact(() => {
+            table.removeColumn(2);
+            table.removeRow(3);
+        });
+        expect(muya.getMarkdown()).not.toContain('table-layout');
+        muya.undo();
+        expect(muya.getMarkdown()).toContain('col-widths="3:120" row-min-heights="4:64"');
+    });
+});
+
 describe('table.cellAt', () => {
     it('resolves a body cell by (row, column) offsets', () => {
         const table = firstTable(bootMuya(TABLE_MD));

@@ -14,6 +14,7 @@ import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBa
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import referenceDefinitionTabs from './extensions/referenceDefinitionTabs';
 import superSubScriptExtension from './extensions/superSubscript';
+import tableLayoutExtension from './extensions/tableLayout';
 import fm, { frontMatterRender } from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
@@ -27,6 +28,7 @@ export function getClipBoardHtml(src: string, options: ILexOption = {}) {
     // Use a fresh Marked instance; global use() chains hooks and leaks options across renders.
     const marked = new Marked(foldBlocksExtension(true), referenceDefinitionTabs());
     marked.use(codeFenceAnnotationsExtension());
+    marked.use(tableLayoutExtension());
 
     marked.use({
         walkTokens: walkTokens({ texMathDollars, texMathGfm }),

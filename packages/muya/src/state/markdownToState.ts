@@ -1,3 +1,4 @@
+import type { ISizedTableCell } from '../utils/marked/extensions/tableLayout';
 import type { ListItemToken, TBlockToken } from '../utils/marked/types';
 import type {
     IAtxHeadingState,
@@ -439,25 +440,18 @@ export class MarkdownToState {
         // `` `|` `` rather than the escaped `` `\|` `` inside inline code
         // (#4849). `escapeText` re-adds the `\|` escape on serialization,
         // keeping the markdown round-trip intact.
-        tableState.children.push({
-            name: 'table.row',
-            children: header.map((h, i) => ({
-                name: 'table.cell' as const,
-                meta: { align: align[i] || 'none' },
-                text: h.text,
-            })),
-        });
-
-        tableState.children.push(
-            ...rows.map(row => ({
-                name: 'table.row' as const,
-                children: row.map((c, i) => ({
-                    name: 'table.cell' as const,
-                    meta: { align: align[i] || 'none' },
-                    text: c.text,
+        for (const row of [header, ...rows]) {
+            const { minHeight } = row[0] as ISizedTableCell;
+            tableState.children.push({
+                name: 'table.row',
+                ...(minHeight && { minHeight }),
+                children: row.map((cell: ISizedTableCell, i) => ({
+                    name: 'table.cell',
+                    meta: { align: align[i] || 'none', ...(cell.width && { width: cell.width }) },
+                    text: cell.text,
                 })),
-            })),
-        );
+            });
+        }
 
         return tableState;
     }

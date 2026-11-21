@@ -70,9 +70,15 @@ It's sometimes hard to write and manage tables in markdown. In MarkText you can 
 
 You can insert or delete a new row or column by clicking on an existing cell and clicking on the menu on the right side for rows or bottom for columns.
 
-**Move table cells:**
+**Move rows and columns**
 
-You can simply move a row or column by clicking on the cell menu (like above) and dragging it by holding your left mouse button like this:
+Drag the handle below a column or to the right of a body row. The line marks where the column or row will land. The header stays at the top, and column headings move with their columns.
+
+**Resize rows and columns**
+
+Drag a cell’s right edge to set the column width, or its bottom edge to set the row’s minimum height. Column dragging stops when the table fills the content area. Rows grow to fit wrapped text. Double-click an edge to restore automatic sizing.
+
+Custom sizes are saved above the table in an HTML comment such as `<!-- table-layout: col-widths="1:100%,3:240" row-min-heights="2:64" -->`. Positions start at 1 and include the header as row 1. Dragging a column to its limit saves `100%` for that column, so it fills the space left by the others as the content area changes. Dragging a different column to its limit transfers that behavior to it. Other sizes are saved in CSS pixels. Omitted positions use automatic sizing.
 
 ![](../assets/marktext-table_drag_drop.png)
 

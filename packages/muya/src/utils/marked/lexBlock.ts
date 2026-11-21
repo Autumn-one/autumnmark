@@ -8,6 +8,7 @@ import githubAlertsExtension, { normalizeGithubAlertTokens } from './extensions/
 import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBackslashMathExtension } from './extensions/math';
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import referenceDefinitionTabs from './extensions/referenceDefinitionTabs';
+import tableLayoutExtension from './extensions/tableLayout';
 import fm from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import { restoreCodeTabs } from './restoreCodeTabs';
@@ -23,7 +24,7 @@ export function lexSourceBlocks(
     const tokens: (Token | IFrontmatterToken)[] = [];
 
     // Per-call Marked instances prevent enabled extensions leaking into later calls.
-    const m = new Marked(referenceDefinitionTabs());
+    const m = new Marked(referenceDefinitionTabs(), tableLayoutExtension());
 
     if (texMathDollars) {
         m.use(

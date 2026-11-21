@@ -182,7 +182,7 @@ export const usePreferencesStore = defineStore('preferences', {
     compactImageMaxHeight: 0,
     compactVideoMaxHeight: 0,
     compactCodeMaxLines: 12,
-    wrapCodeBlocks: false,
+    wrapCodeBlocks: true,
     editorLineWidth: '',
 
     autoPairBracket: true,

@@ -7,7 +7,7 @@ import { editor, floats } from '../helpers/selectors';
  * end-to-end coverage.
  *
  * Hover outside the table to reveal a row or column handle. A quick click
- * opens the corresponding operations menu; holding for 300 ms arms a drag.
+ * opens the corresponding operations menu.
  * The popup provides row actions on the right handle and column actions on
  * the bottom handle.
  */
@@ -92,10 +92,6 @@ async function revealBottomBar(page: Page, table: ReturnType<Page['locator']>) {
     return page.locator(floats.tableDragBar);
 }
 
-/**
- * Quick-click (mousedown immediately followed by mouseup, well inside the
- * 300ms drag-arming window) on the bar's centre.
- */
 async function quickClickBar(page: Page, bar: ReturnType<Page['locator']>) {
     const box = await bar.boundingBox();
     if (!box)

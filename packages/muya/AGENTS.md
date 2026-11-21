@@ -94,7 +94,7 @@ renders the standalone defaults.
 | `editorFontFamily` (string) | `--mu-font-family` | Open Sans stack | `.mu-editor` base text |
 | `codeFontSize` (number, px) | `--mu-code-font-size` | `90%` | `.mu-code-block` only |
 | `codeFontFamily` (string) | `--mu-code-font-family` | DejaVu Sans Mono stack | inline code and code blocks |
-| `wrapCodeBlocks` (boolean) | — (`.mu-code-wrap` root class) | off (`pre`) | code-block line wrapping |
+| `wrapCodeBlocks` (boolean) | — (`.mu-code-wrap` root class) | on (`pre-wrap`) | code-block line wrapping |
 
 Inline code (`code.mu-inline-rule`) shares `--mu-code-font-family` with code
 blocks but keeps its relative `0.8em` sizing. Editor column width

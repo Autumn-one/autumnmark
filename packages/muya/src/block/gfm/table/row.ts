@@ -11,10 +11,15 @@ import { ScrollPage } from '../../scrollPage';
 class TableRow extends Parent {
     override children: LinkedList<TableBodyCell> = new LinkedList();
 
+    minHeight?: number;
+
     static override blockName = 'table.row';
 
     static create(muya: Muya, state: ITableRowState) {
         const row = new TableRow(muya);
+        row.minHeight = state.minHeight;
+        if (row.minHeight)
+            row.domNode!.style.height = `${row.minHeight}px`;
 
         row.append(
             ...state.children.map(child =>
@@ -43,6 +48,7 @@ class TableRow extends Parent {
     override getState(): ITableRowState {
         const state: ITableRowState = {
             name: 'table.row',
+            ...(this.minHeight && { minHeight: this.minHeight }),
             children: this.map(node => (node as TableBodyCell).getState()),
         };
 

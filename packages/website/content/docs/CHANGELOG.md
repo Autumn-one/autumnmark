@@ -1,3 +1,9 @@
+## AutumnMark 0.24.34
+
+- Drag cell edges to resize table columns and rows. Double-click an edge to restore automatic sizing. Markdown saves custom sizes, including a responsive 100% width when a drag fills the content area.
+- Drag the handles below columns or beside body rows to reorder them. Custom sizes move with their rows and columns, and the header stays at the top.
+- Code blocks wrap long lines by default. Existing preferences are respected.
+
 ## AutumnMark 0.24.33
 
 - The announcement dialog shows live information from About below the announcements. The Alipay and WeChat Pay QR codes are stacked in a sidebar.

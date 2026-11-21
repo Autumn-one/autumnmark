@@ -344,10 +344,6 @@
     background: var(--editor-color-50);
 }
 
-.mu-code-block .mu-content {
-    white-space: inherit;
-}
-
 .mu-code-copy {
     position: absolute;
     top: 0.5em;
@@ -719,11 +715,15 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 
 /* table */
 .mu-table {
+    position: relative;
+
     margin: 0.5em 0 0;
     padding: 0.5em 0;
+    overflow-x: auto;
 }
 
 .mu-table-inner {
+    max-width: 100%;
     padding: 0;
 
     word-break: initial;
@@ -755,6 +755,38 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     text-align: left;
 }
 
+.mu-table-cell[style*='--mu-cell-width'] {
+    box-sizing: border-box;
+    width: var(--mu-cell-width);
+    max-width: var(--mu-cell-width);
+}
+
+.mu-table-inner:has(.mu-table-cell-fill) {
+    width: 100%;
+}
+
+.mu-table-guide {
+    position: absolute;
+    z-index: 3;
+
+    background: var(--theme-color);
+
+    pointer-events: none;
+}
+
+.mu-table[data-resize-axis='column'] .mu-table-cell {
+    cursor: col-resize;
+}
+
+.mu-table[data-resize-axis='row'] .mu-table-cell {
+    cursor: row-resize;
+}
+
+/* Let the filled column take the surplus after pixel widths and intrinsic cell minima. */
+.mu-table-inner:has(.mu-table-cell-fill) .mu-table-cell:not(.mu-table-cell-fill, [style*='--mu-cell-width']) {
+    width: 1px;
+}
+
 .mu-table-inner tr:first-child td {
     font-weight: bold;
 }
@@ -782,6 +814,10 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-inner tr th:last-child,
 .mu-table-inner tr td:last-child {
     margin-bottom: 0;
+}
+
+.mu-table-inner tr > :last-child::before {
+    width: 100%;
 }
 
 .mu-table-inner tr td.mu-table-cell-selected::before {
@@ -1093,6 +1129,10 @@ pre.mu-active.mu-math-container::after {
     outline: none;
 }
 
+.mu-code-block .mu-content {
+    white-space: inherit;
+}
+
 .mu-content:empty::after {
     content: '\200B';
 }
@@ -1123,6 +1163,10 @@ pre.mu-active.mu-math-container::after {
     min-width: 2em;
 
     overflow-wrap: anywhere;
+}
+
+.mu-table-cell[style*='--mu-cell-width'] .mu-table-cell-content {
+    min-width: 0;
 }
 
 /* Footnote definition block — port of marktext's `figure[data-role='FOOTNOTE']`
