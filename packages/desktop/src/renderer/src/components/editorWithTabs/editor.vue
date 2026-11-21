@@ -1206,6 +1206,19 @@ const handleUploadedImage = (url: unknown, deletionUrl?: unknown) => {
 const getScrollContainer = (): HTMLElement | null =>
   (editor.value?.domNode as HTMLElement | undefined) ?? null
 
+const revealCodeCaret = (viewport: HTMLElement, caret: Pick<DOMRect, 'top' | 'bottom'>): number => {
+  const top = viewport.getBoundingClientRect().top + viewport.clientTop
+  const bottom = top + viewport.clientHeight
+  const previous = viewport.scrollTop
+  if (caret.top < top) {
+    viewport.scrollTop += caret.top - top
+  } else if (caret.bottom > bottom) {
+    viewport.scrollTop += caret.bottom - bottom
+  }
+  // Document scrolling uses the caret position after the inner scrollbar has moved.
+  return caret.top - (viewport.scrollTop - previous)
+}
+
 // Viewport-relative caret position for scrolling outside selection-change events.
 const getCursorY = (): number | null => {
   const sel = window.getSelection()
@@ -2153,13 +2166,22 @@ onMounted(() => {
   })
 
   editor.value.on('selection-change', (changes: ISelectionChangePayload) => {
-    const y = (changes.selection?.context.cursorCoords?.y ?? null) as number | null
-    if (y != null && !currentFile.value?.readOnly) {
+    const { selection } = changes
+    const coords = selection?.context.cursorCoords
+    if (coords && !currentFile.value?.readOnly) {
+      const followCaret = selection.kind === SelectionType.TEXT && selection.context.isCollapsed &&
+        !updatingSearchSelection && !revealingAnchor
+      let y = coords.y
+      if (followCaret) {
+        const viewport = selection.context.focusBlock.domNode?.parentElement
+        if (viewport?.classList.contains('mu-code') && viewport.scrollHeight > viewport.clientHeight) {
+          y = revealCodeCaret(viewport, coords)
+        }
+      }
       // Before the scrolling below: a 0-duration `animatedScrollTo` assigns
       // `scrollTop` at once, moving the headings out from under `y`.
       updateActiveHeading(y)
 
-      const followCaret = !updatingSearchSelection && !revealingAnchor
       if (typewriter.value && followCaret) {
         const startPosition = container.scrollTop
         const toPosition = startPosition + y - STANDAR_Y
@@ -2184,7 +2206,6 @@ onMounted(() => {
 
     selectionChange.value = changes
     if (!sourceCode.value && editor.value) {
-      const { selection } = changes
       const hasRange = selection?.kind === SelectionType.TABLE ||
         (selection?.kind === SelectionType.TEXT && !selection.context.isCollapsed)
       setSelectionWordCountFromText(hasRange ? editor.value.getSelectedText() : '')

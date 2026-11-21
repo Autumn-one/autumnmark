@@ -81,10 +81,6 @@ jobs:
             os: windows-latest
             platform: windows
             arch: x64
-          - name: windows-arm64
-            os: windows-11-arm
-            platform: windows
-            arch: arm64
           - name: macos-x64
             os: macos-15-intel
             platform: macos
@@ -126,32 +122,9 @@ jobs:
           python-version: '3.12'
 
       - name: Setup pnpm + Node + dependencies
-        if: matrix.name != 'windows-arm64'
         uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
-
-      - name: Set up Windows ARM64 Node.js
-        if: matrix.name == 'windows-arm64'
-        uses: actions/setup-node@v7.1.0
-        with:
-          node-version: '24.14.1'
-          architecture: arm64
-          package-manager-cache: false
-
-      - name: Install pnpm for Windows ARM64
-        if: matrix.name == 'windows-arm64'
-        uses: pnpm/action-setup@v6.1.0
-
-      - name: Restore Windows ARM64 pnpm store
-        if: matrix.name == 'windows-arm64'
-        uses: ./.github/actions/restore-desktop-pnpm-store
-
-      - name: Install Windows ARM64 desktop build dependencies
-        if: matrix.name == 'windows-arm64'
-        run: pnpm --filter . --filter 'marktext...' install --frozen-lockfile --ignore-scripts --prefer-offline
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       # Cache Electron binary; key on package.json so it busts when Electron version changes.
       - name: Cache Electron binary

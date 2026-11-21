@@ -1,3 +1,8 @@
+## AutumnMark 0.24.19
+
+- Keep the document in place when pasting long code into a height-limited code block. The caret stays visible inside the block so you can continue typing.
+- Keep your reading position when selecting a code block or pressing Select All twice in a paragraph to select the whole document.
+
 ## AutumnMark 0.24.18
 
 - Drag an embedded image to pan its preview at any zoom level, including when it fits inside the window.

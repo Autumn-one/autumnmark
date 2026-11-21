@@ -155,7 +155,7 @@ class CodeBlockContent extends Content {
             (this.outContainer?.attachments?.head as HTMLPreview).update(text);
     }
 
-    override update(_cursor?: IRenderCursor, highlights: IHighlight[] = []) {
+    override update(cursor?: IRenderCursor, highlights: IHighlight[] = []) {
         const { _lang: lang, text } = this;
         const parentCode = this.parent as Code | null;
         if (parentCode?.copyButton && parentCode.parent?.blockName === 'code-block')
@@ -198,6 +198,10 @@ class CodeBlockContent extends Content {
             projection?.mount(domNode, false);
         }
 
+        // Caret restoration can scroll the document before ResizeObserver caps newly pasted lines.
+        const viewport = parentCode?.domNode;
+        if (cursor && viewport && parentCode.parent?.blockName === 'code-block' && !viewport.classList.contains('mu-compact-limited'))
+            this.muya.editor.compactBlocks.refresh([viewport]);
         this._updateCodeDecorations(text);
         // Re-render the math/diagram/html preview too; undo/redo reaches this
         // block only through update(), not inputHandler (#1632).

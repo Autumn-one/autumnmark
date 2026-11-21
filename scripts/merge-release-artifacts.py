@@ -10,7 +10,7 @@ import yaml
 def merge_artifacts(source: Path, destination: Path, version: str) -> None:
     manifests = {}
     for name, count in [
-        ('autumnmark.yml', 2),
+        ('autumnmark.yml', 1),
         ('autumnmark-mac.yml', 2),
         ('autumnmark-linux.yml', 1),
         ('autumnmark-linux-arm64.yml', 1),
@@ -26,6 +26,8 @@ def merge_artifacts(source: Path, destination: Path, version: str) -> None:
     for file in sorted(source.glob('*/*')):
         if file.name in manifests:
             continue
+        if file.name.startswith('autumnmark-win-') and not file.name.startswith('autumnmark-win-x64-'):
+            raise ValueError(f'Unsupported Windows release asset: {file.name}')
         target = destination / file.name
         if target.exists():
             # Each builder emits platform-specific diagnostics under the same name.
@@ -42,6 +44,8 @@ def merge_artifacts(source: Path, destination: Path, version: str) -> None:
         by_url = {file['url']: file for file in files}
         if len(by_url) != len(files):
             raise ValueError(f'{name}: duplicate assets')
+        if name == 'autumnmark.yml' and any(not url.startswith('autumnmark-win-x64-') for url in by_url):
+            raise ValueError(f'{name}: expected Windows x64 release assets')
         if len(documents) == 2:
             for arch in ['arm64', 'x64']:
                 if not any(f'-{arch}-' in url for url in by_url):

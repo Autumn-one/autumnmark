@@ -98,8 +98,8 @@ export class CompactBlocks {
         }
     }
 
-    refresh(): void {
-        this._measure(this._bodies.keys());
+    refresh(viewports: Iterable<HTMLElement> = this._bodies.keys()): void {
+        this._measure(viewports);
     }
 
     setCodeLimit(viewport: HTMLElement, lines: ICodeFenceAnnotations['maxLines']): void {
