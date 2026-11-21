@@ -1,4 +1,4 @@
-## AutumnMark 0.24.26
+## AutumnMark 0.24.27
 
 - Hover over a code block in editing mode to see a single centered height-adjustment grip. Drag the short line to resize the block, or click the arrow above it to expand or collapse.
 - The code block's full-width bottom edge fades from transparent to `#eee`. Set `--mu-code-edge-background` in custom CSS to change it.

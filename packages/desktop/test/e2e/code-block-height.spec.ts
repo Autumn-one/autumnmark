@@ -54,7 +54,7 @@ async function captureHoveredBlock(app: ElectronApplication, page: Page, block: 
   const rect = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) }
   // Capture the currently painted Electron surface without scrolling the hovered block again.
   const win = await app.browserWindow(page)
-  const png = await win.evaluate(async (window, rect) => (await window.webContents.capturePage(rect)).toPNG(), rect)
+  const png = await win.evaluate(async(window, rect) => (await window.webContents.capturePage(rect)).toPNG(), rect)
   writeFileSync(test.info().outputPath(`code-edge-${state}.png`), png)
 }
 
