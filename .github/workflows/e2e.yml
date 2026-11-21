@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.19]
+    branches: [release/v0.24.21]
   workflow_dispatch:
     inputs:
       platform:
@@ -64,7 +64,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test test/e2e/editor-selection-scroll.spec.ts
+            pnpm -C packages/desktop exec playwright test test/e2e/issue-5407-debug-mode.spec.ts
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
