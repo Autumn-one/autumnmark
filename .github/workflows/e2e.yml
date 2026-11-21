@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.35]
+    branches: [hotfix/v0.24.36]
   workflow_dispatch:
     inputs:
       platform:
@@ -67,6 +67,24 @@ jobs:
       - name: Verify empty-state button contrast across themes
         if: github.event_name == 'push'
         run: pnpm -C packages/desktop exec vitest run test/unit/specs/empty-state-button-contrast.spec.ts
+
+      - name: Unpack the affected official Windows release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.24.35 --pattern 'autumnmark-win-x64-0.24.35.zip' --dir $env:RUNNER_TEMP
+          Expand-Archive -LiteralPath "$env:RUNNER_TEMP/autumnmark-win-x64-0.24.35.zip" -DestinationPath "$env:RUNNER_TEMP/autumnmark-baseline"
+          "AUTUMNMARK_PACKAGED_EXE=$env:RUNNER_TEMP/autumnmark-baseline/autumnmark-editor.exe" >> $env:GITHUB_ENV
+
+      - name: Verify shipped executable with default CSS
+        if: github.event_name == 'push'
+        run: pnpm -C packages/desktop exec playwright test packaged-table-layout.spec.ts -g 'default CSS' --reporter=github
+
+      - name: Verify shipped executable with full-width custom CSS
+        if: github.event_name == 'push'
+        run: pnpm -C packages/desktop exec playwright test packaged-table-layout.spec.ts -g 'full-width custom CSS' --reporter=github
 
       - name: Run E2E Tests
         shell: bash
