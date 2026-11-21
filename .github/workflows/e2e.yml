@@ -1,6 +1,8 @@
 name: E2E Test
 
 on:
+  push:
+    branches: [hotfix/v0.24.19]
   workflow_dispatch:
     inputs:
       platform:
@@ -25,7 +27,7 @@ concurrency:
 
 jobs:
   e2e:
-    runs-on: ${{ inputs.platform == 'windows' && 'windows-latest' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || inputs.platform == 'windows') && 'windows-latest' || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -61,6 +63,10 @@ jobs:
         env:
           TEST_GREP: ${{ inputs.grep }}
         run: |
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            pnpm -C packages/desktop exec playwright test test/e2e/editor-selection-scroll.spec.ts
+            exit $?
+          fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
           if [[ "$RUNNER_OS" == Linux ]]; then
             xvfb-run --auto-servernum "${tests[@]}"
