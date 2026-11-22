@@ -725,6 +725,8 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-inner {
     --mu-cell-padding-x: 13px;
     --mu-cell-auto-min-width: calc(2em + 2 * var(--mu-cell-padding-x));
+
+    width: 100%;
     max-width: 100%;
     padding: 0;
 

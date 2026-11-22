@@ -1054,7 +1054,7 @@ export class Muya {
         if (!block?.outMostBlock)
             return;
 
-        const safeRows = Math.max(2, Number.isFinite(rows) ? Math.floor(rows) : 0);
+        const safeRows = Number.isFinite(rows) && rows >= 1 ? Math.floor(rows) : 2;
         const safeColumns = Math.max(1, Number.isFinite(columns) ? Math.floor(columns) : 0);
 
         const makeRow = (): ITableState['children'][number] => ({

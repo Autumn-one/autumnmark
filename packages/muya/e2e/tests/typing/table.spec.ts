@@ -71,6 +71,52 @@ test.describe('table', () => {
         await expect(table.locator('tr').first().locator('td')).toHaveCount(3);
     });
 
+    test('/table accepts arrow keys to choose dimensions and Enter to insert', async ({ page }) => {
+        await page.evaluate(() => window.muya!.setContent(''));
+        await page.locator(editor.paragraph).first().click();
+        await slowType(page, '/table');
+        await page.keyboard.press('Enter');
+
+        const picker = page.locator(floats.tablePicker);
+        const rows = picker.locator('.row-input');
+        const columns = picker.locator('.column-input');
+        await expect(rows).toHaveValue('2');
+        await expect(columns).toHaveValue('1');
+        await expect(page.locator(editor.table)).toHaveCount(0);
+
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('ArrowLeft');
+        await expect(rows).toHaveValue('1');
+        await expect(columns).toHaveValue('1');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('ArrowDown');
+        await expect(rows).toHaveValue('3');
+        await expect(columns).toHaveValue('3');
+        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('ArrowUp');
+        await expect(rows).toHaveValue('2');
+        await expect(columns).toHaveValue('2');
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('ArrowUp');
+        await expect(rows).toHaveValue('1');
+        await expect(picker.locator('.mu-table-picker-cell.selected')).toHaveCount(2);
+
+        await page.keyboard.press('Enter');
+        const table = page.locator(editor.table);
+        await expect(table).toHaveCount(1);
+        await expect(table.locator('tr')).toHaveCount(1);
+        await expect(table.locator('tr').first().locator('td')).toHaveCount(2);
+        await slowType(page, 'header');
+        await expect(table.locator('td').first()).toHaveText('header');
+        const markdown = await getMarkdown(page);
+        await page.evaluate(md => window.muya!.setContent(md), markdown);
+        await expect(table.locator('tr')).toHaveCount(1);
+        await expect(table.locator('td')).toHaveCount(2);
+        await expect(table.locator('td').first()).toHaveText('header');
+    });
+
     test('typing in a table cell reflects in getMarkdown', async ({ page }) => {
         await page.evaluate(() => window.muya!.setContent(''));
         await page.locator(editor.paragraph).first().click();

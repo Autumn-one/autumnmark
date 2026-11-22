@@ -42,10 +42,8 @@ for (const [title, css, markdown] of [
         if (!start) throw new Error('Missing last column')
         const table = await grid.boundingBox()
         if (!table) throw new Error('Missing table')
-        if (css) {
-          const figure = await page.locator('.mu-table').boundingBox()
-          expect(figure?.width).toBeCloseTo(table.width, 0)
-        }
+        const figure = await page.locator('.mu-table').boundingBox()
+        expect(figure?.width).toBeCloseTo(table.width, 0)
         const x = start.x + start.width - 1
         const y = start.y + start.height / 2
         await page.mouse.move(x, y)

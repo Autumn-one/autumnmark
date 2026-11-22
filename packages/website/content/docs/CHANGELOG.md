@@ -1,3 +1,8 @@
+## AutumnMark 0.24.38
+
+- Tables with automatic column widths fill the editing area by default. Saved column widths still apply.
+- Use the arrow keys to choose the number of rows and columns in the `/table` picker, then press Enter to insert the table. The picker also supports tables with just a header row.
+
 ## AutumnMark 0.24.37
 
 - Drag the right or bottom border of a table to resize all columns or rows proportionally.
