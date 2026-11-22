@@ -26,7 +26,9 @@ export const rename = (tabId: string): void => {
   if (tab?.pathname) store.RENAME_FILE(tab)
 }
 
-export const copyPath = (tabId: string): void => {
+export const copyPath = (tabId: string, target: 'file' | 'folder' = 'file'): void => {
   const tab = useEditorStore().tabs.find(file => file.id === tabId)
-  if (tab?.pathname) window.electron.clipboard.writeText(tab.pathname)
+  if (!tab?.pathname) return
+  const pathname = target === 'folder' ? window.path.dirname(tab.pathname) : tab.pathname
+  window.electron.clipboard.writeText(pathname)
 }

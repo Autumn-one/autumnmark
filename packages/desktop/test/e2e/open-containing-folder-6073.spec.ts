@@ -122,9 +122,10 @@ test('reuses an ancestor root and keeps unrelated roots when invoked on a backgr
 })
 
 test('appends file locations to the editor menu on blank lines, line ends and margins', async() => {
-  await app.evaluate(({ ipcMain, Menu, BrowserWindow }) => {
-    const state = { items: [] as string[], count: 0, selected: '', revealedPath: '' }
+  await app.evaluate(({ ipcMain, Menu, BrowserWindow, clipboard }) => {
+    const state = { items: [] as string[], count: 0, selected: '', revealedPath: '', copiedText: '' }
     Object.assign(globalThis, { folderMenuState: state })
+    clipboard.writeText = async(text: string) => { state.copiedText = text }
     ipcMain.removeAllListeners('mt::shell::show-item')
     ipcMain.on('mt::shell::show-item', (_event, pathname: string) => { state.revealedPath = pathname })
     Menu.prototype.popup = function(options) {
@@ -136,33 +137,39 @@ test('appends file locations to the editor menu on blank lines, line ends and ma
     }
   })
   const menuState = () => app.evaluate(() => (globalThis as typeof globalThis & {
-    folderMenuState: { items: string[]; count: number; revealedPath: string }
+    folderMenuState: { items: string[]; count: number; revealedPath: string; copiedText: string }
   }).folderMenuState)
   const selectItem = (id: string) => app.evaluate((_electron, id) => {
     Object.assign((globalThis as typeof globalThis & { folderMenuState: object }).folderMenuState, { selected: id })
   }, id)
-  const locationItems = ['separator', 'Show in folder', 'Open Containing Folder in Side Bar']
+  const backgroundItems = [
+    'separator', 'Show in folder', 'Open Containing Folder in Side Bar',
+    'Copy File Path', 'Copy Containing Folder Path', 'separator', 'No images'
+  ]
   const editorItems = [
     'insertParagraphBeforeMenuItem', 'insertParagraphAfterMenuItem', 'separator',
     'cutMenuItem', 'copyMenuItem', 'pasteMenuItem', 'separator',
     'copyAsRichMenuItem', 'copyAsHtmlMenuItem', 'pasteAsPlainTextMenuItem'
   ]
-  const menuSuffix = [...editorItems, ...locationItems]
+  const menuSuffix = [...editorItems, ...backgroundItems]
   await selectItem('Show in folder')
   await page.locator('.mu-editor').click({ button: 'right', position: { x: 8, y: 8 } })
   await expect.poll(async() => (await menuState()).items.slice(-menuSuffix.length)).toEqual(menuSuffix)
   await expect.poll(async() => (await menuState()).revealedPath).toBe(documentPath)
-  await selectItem('')
+  await selectItem('Copy File Path')
   const paragraph = page.locator('.mu-paragraph').last()
   const end = await paragraph.evaluate(element => ({ x: element.clientWidth - 12, y: Math.floor(element.clientHeight / 2) }))
   await paragraph.click({ button: 'right', position: end })
   await expect.poll(async() => (await menuState()).count).toBe(2)
+  await expect.poll(async() => (await menuState()).copiedText).toBe(documentPath)
   expect((await menuState()).items.slice(-menuSuffix.length)).toEqual(menuSuffix)
+  await selectItem('Copy Containing Folder Path')
   await paragraph.click()
   await page.keyboard.press('End')
   await page.keyboard.press('Enter')
   await page.locator('.mu-paragraph').last().click({ button: 'right', position: { x: 3, y: 4 } })
   await expect.poll(async() => (await menuState()).count).toBe(3)
+  await expect.poll(async() => (await menuState()).copiedText).toBe(path.dirname(documentPath))
   expect((await menuState()).items.slice(-menuSuffix.length)).toEqual(menuSuffix)
 
   const textPoint = await page.getByText('Original text', { exact: true }).first().evaluate(element => {
@@ -177,13 +184,14 @@ test('appends file locations to the editor menu on blank lines, line ends and ma
 
   await toggleReadingMode(page)
   await page.locator('.mu-read-only').click({ button: 'right', position: { x: 8, y: 8 } })
-  await expect.poll(async() => (await menuState()).items.slice(-4)).toEqual(['Select All', ...locationItems])
+  const readingItems = ['Select All', ...backgroundItems]
+  await expect.poll(async() => (await menuState()).items.slice(-readingItems.length)).toEqual(readingItems)
   expect((await menuState()).items).not.toContain('pasteMenuItem')
   await toggleReadingMode(page)
 
   await showOutline(app, page)
   await enterSourceMode(page, app)
-  const sourceItems = ['Cut', 'Copy', 'Paste', ...locationItems]
+  const sourceItems = ['Cut', 'Copy', 'Paste', ...backgroundItems]
   const sourceLine = page.locator('.CodeMirror-code pre.CodeMirror-line').first()
   const sourceEnd = await sourceLine.evaluate(line => ({ x: line.clientWidth - 12, y: Math.floor(line.clientHeight / 2) }))
   await sourceLine.click({ button: 'right', position: sourceEnd })

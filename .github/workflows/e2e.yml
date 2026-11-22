@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.39]
+    branches: [hotfix/v0.24.40]
   workflow_dispatch:
     inputs:
       platform:
@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test test/e2e/table-layout.spec.ts test/e2e/editor-selection-scroll.spec.ts test/e2e/code-block-wrap.spec.ts
+            pnpm -C packages/desktop exec playwright test test/e2e/tabs.spec.ts test/e2e/open-containing-folder-6073.spec.ts --grep='Closing the last tab|appends file locations'
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")

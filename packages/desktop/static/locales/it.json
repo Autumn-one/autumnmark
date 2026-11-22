@@ -188,6 +188,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "Copia il percorso del file",
+    "copyFolderPath": "Copia il percorso della cartella che lo contiene",
     "cut": "Taglia",
     "copy": "Copia",
     "paste": "Incolla",

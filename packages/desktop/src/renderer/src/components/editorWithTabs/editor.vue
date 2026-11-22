@@ -159,7 +159,7 @@ import {
 import { applyMarkdownEdits } from '@shared/markdownEdits'
 import type { MediaEditor } from '@/services/batchMedia'
 import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
-import { getFileLocationMenuItems } from '../../contextMenu/fileLocation'
+import { getDocumentLocationMenuItems } from '../../contextMenu/fileLocation'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -305,7 +305,7 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
     ...(href ? [{ label: t('readingMode.copyLink'), click: () => window.electron.clipboard.writeText(href) }] : []),
     ...(image ? [{ label: t('readingMode.viewImage'), click: () => mediaViewer.value?.openImage(image) }] : [])
   ]
-  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getFileLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem] : []
+  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem] : []
   popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
 }
 
@@ -359,7 +359,7 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
     showReadingContextMenu({ event })
     return
   }
-  popupContextMenu([{ type: 'separator' }, ...getFileLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem], {
+  popupContextMenu([{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem], {
     x: event.clientX,
     y: event.clientY,
     editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }

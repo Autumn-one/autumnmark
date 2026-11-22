@@ -188,6 +188,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "ファイルのパスをコピー",
+    "copyFolderPath": "親フォルダーのパスをコピー",
     "cut": "切り取り",
     "copy": "コピー",
     "paste": "貼り付け",

@@ -126,15 +126,12 @@
       class="empty"
     >
       <div class="no-data">
-        <el-button
+        <EmptyStateButton
           v-if="showNoFolderOpenedMessage"
-          text
-          bg
-          type="primary"
           @click="openFolder"
         >
           {{ t('sideBar.search.openFolder') }}
-        </el-button>
+        </EmptyStateButton>
       </div>
     </div>
   </div>
@@ -156,6 +153,7 @@ import FindWordIcon from '@/assets/icons/searchIcons/iconWord.svg'
 import FindRegexIcon from '@/assets/icons/searchIcons/iconRegex.svg'
 import { Back as BackIcon, VideoPause } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import EmptyStateButton from '@/components/emptyStateButton.vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import type { SearchResult } from './types'
 
@@ -496,16 +494,6 @@ onUnmounted(() => {
   }
   & .no-data .el-button {
     margin-top: 20px;
-  }
-  & .no-data .el-button.is-text.is-has-bg {
-    background-color: var(--buttonPrimaryBgColor);
-    color: var(--buttonPrimaryFontColor);
-    border-color: transparent;
-  }
-  & .no-data .el-button.is-text.is-has-bg:hover,
-  & .no-data .el-button.is-text.is-has-bg:focus {
-    background-color: var(--buttonPrimaryBgColorHover);
-    color: var(--buttonPrimaryFontColorHover);
   }
 }
 </style>

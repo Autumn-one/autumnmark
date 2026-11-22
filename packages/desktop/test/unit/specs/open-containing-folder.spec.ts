@@ -16,6 +16,7 @@ import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
 import { useLayoutStore } from '@/store/layout'
 import { showContextMenu } from '@/contextMenu/tabs'
+import { getDocumentLocationMenuItems } from '@/contextMenu/fileLocation'
 import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
 import type { IFileState } from '@shared/types/files'
 
@@ -76,6 +77,9 @@ describe('open containing folder (#6073)', () => {
     const items = vi.mocked(popupContextMenu).mock.lastCall?.[0] as ContextMenuItem[]
     expect(items.find(item => item.id === 'showInFolder')?.enabled).toBe(false)
     expect(items.find(item => item.id === 'openContainingFolder')?.enabled).toBe(false)
+    const documentItems = getDocumentLocationMenuItems(tab)
+    expect(documentItems.find(item => item.id === 'copyFilePath')?.enabled).toBe(false)
+    expect(documentItems.find(item => item.id === 'copyFolderPath')?.enabled).toBe(false)
     await useProjectStore().OPEN_CONTAINING_FOLDER(tab.id)
     await useProjectStore().OPEN_CONTAINING_FOLDER('closed')
     useEditorStore().currentFile = tab

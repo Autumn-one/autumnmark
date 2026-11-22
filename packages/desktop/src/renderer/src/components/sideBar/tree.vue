@@ -210,14 +210,9 @@
         class="open-project"
       >
         <div class="centered-group">
-          <el-button
-            text
-            bg
-            type="primary"
-            @click="projectStore.ASK_FOR_OPEN_PROJECT()"
-          >
+          <EmptyStateButton @click="projectStore.ASK_FOR_OPEN_PROJECT()">
             {{ t('sideBar.tree.openFolder') }}
-          </el-button>
+          </EmptyStateButton>
         </div>
       </div>
     </div>
@@ -237,6 +232,7 @@ import OpenedFile from './treeOpenedTab.vue'
 import { MIN_VISIBLE_ROWS, useOpenedFilesResize } from './useOpenedFilesResize'
 import { useTabReorder } from '../useTabReorder'
 import { useTreeDragDrop } from './useTreeDragDrop'
+import EmptyStateButton from '@/components/emptyStateButton.vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import bus from '../../bus'
 import { showRootContextMenu } from '../../contextMenu/sideBar'
@@ -818,19 +814,7 @@ onUnmounted(() => {
 .open-project .el-button {
   margin-top: 20px;
 }
-.open-project .el-button.is-text.is-has-bg,
-.empty-project .el-button.is-text.is-has-bg {
-  background-color: var(--buttonPrimaryBgColor);
-  color: var(--buttonPrimaryFontColor);
-  border-color: transparent;
-}
-.open-project .el-button.is-text.is-has-bg:hover,
-.open-project .el-button.is-text.is-has-bg:focus,
-.empty-project .el-button.is-text.is-has-bg:hover,
-.empty-project .el-button.is-text.is-has-bg:focus {
-  background-color: var(--buttonPrimaryBgColorHover);
-  color: var(--buttonPrimaryFontColorHover);
-}
+
 .tree-view :deep(.new-input) {
   outline: none;
   height: 22px;

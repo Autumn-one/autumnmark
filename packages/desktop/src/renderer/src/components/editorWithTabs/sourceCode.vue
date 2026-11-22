@@ -43,7 +43,7 @@ import { adjustCursor, isWindows } from '../../util'
 import { getSourceExtraKeys } from '../../codeMirror/keybindings'
 import bus from '../../bus'
 import { t } from '@/i18n'
-import { getFileLocationMenuItems } from '@/contextMenu/fileLocation'
+import { getDocumentLocationMenuItems } from '@/contextMenu/fileLocation'
 import { isDocumentBackground } from '@/contextMenu/documentBackground'
 import type { MediaEditor } from '@/services/batchMedia'
 import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
@@ -297,7 +297,7 @@ const showContextMenu = (event: MouseEvent): void => {
       }
     },
     { type: 'separator' },
-    ...getFileLocationMenuItems(tab),
+    ...getDocumentLocationMenuItems(tab),
     { type: 'separator' },
     props.imageMenuItem
   ], { x: event.clientX, y: event.clientY })

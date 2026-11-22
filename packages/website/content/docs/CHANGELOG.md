@@ -1,3 +1,8 @@
+## AutumnMark 0.24.40
+
+- The **Open Folder** buttons in the file and search sidebars now match **New File** on the welcome screen.
+- Right-click an empty area in a document to copy its full file path or the path of its containing folder.
+
 ## AutumnMark 0.24.39
 
 - The editor stays at the table when you release a row or column resize, even if the text cursor is elsewhere in the document.

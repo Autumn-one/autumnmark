@@ -188,6 +188,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "파일 경로 복사",
+    "copyFolderPath": "상위 폴더 경로 복사",
     "cut": "잘라내기",
     "copy": "복사",
     "paste": "붙여넣기",

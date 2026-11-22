@@ -188,6 +188,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "Dosya yolunu kopyala",
+    "copyFolderPath": "Üst klasörün yolunu kopyala",
     "cut": "Kes",
     "copy": "Kopyala",
     "paste": "Yapıştır",
