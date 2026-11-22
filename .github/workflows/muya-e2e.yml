@@ -5,7 +5,7 @@ name: Muya E2E
 
 on:
   push:
-    branches: [hotfix/v0.24.38]
+    branches: [hotfix/v0.24.39]
   pull_request:
     types: [opened, synchronize, reopened]
     paths:

@@ -2168,7 +2168,7 @@ onMounted(() => {
   editor.value.on('selection-change', (changes: ISelectionChangePayload) => {
     const { selection } = changes
     const coords = selection?.context.cursorCoords
-    if (coords && !currentFile.value?.readOnly) {
+    if (coords && !changes.preventScroll && !currentFile.value?.readOnly) {
       const followCaret = selection.kind === SelectionType.TEXT && selection.context.isCollapsed &&
         !updatingSearchSelection && !revealingAnchor
       let y = coords.y

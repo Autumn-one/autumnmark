@@ -46,6 +46,7 @@ class Selection {
     private _setting = false;
     private _frame: number | null = null;
     private _docChanged = false;
+    private _preventScroll = false;
     private _lastPublished = '';
     private _caretImage: HTMLElement | null = null;
 
@@ -176,12 +177,13 @@ class Selection {
         return selection?.kind === SelectionType.IMAGE ? selection : null;
     }
 
-    setSelection(state: TSelectionState | null): boolean {
+    setSelection(state: TSelectionState | null, { preventScroll = false } = {}): boolean {
         if (state !== null && !isSelectionState(state))
             return false;
         const selection = state ? this._resolve(state) : null;
         if (state && !selection)
             return false;
+        this._preventScroll = preventScroll;
         this._setting = true;
         try {
             this._state = copySelectionState(state);
@@ -337,13 +339,16 @@ class Selection {
             : [];
         const signature = JSON.stringify([copySelectionState(selection), formats]);
         const docChanged = this._docChanged;
+        const preventScroll = this._preventScroll;
         this._docChanged = false;
+        this._preventScroll = false;
         if (!docChanged && signature === this._lastPublished)
             return;
         this._lastPublished = signature;
         this._muya.eventCenter.emit('selection-change', {
             selection,
             docChanged,
+            ...(preventScroll && { preventScroll }),
         });
     }
 
@@ -352,6 +357,7 @@ class Selection {
             cancelAnimationFrame(this._frame);
         this._frame = null;
         this._docChanged = false;
+        this._preventScroll = false;
         this._lastPublished = '';
     }
 

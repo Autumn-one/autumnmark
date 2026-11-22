@@ -1,3 +1,8 @@
+## AutumnMark 0.24.39
+
+- The editor stays at the table when you release a row or column resize, even if the text cursor is elsewhere in the document.
+- Press Backspace at the start of the paragraph immediately after a table to delete the table and keep the paragraph. Press Up from the blank line below the table to enter its last cell.
+
 ## AutumnMark 0.24.38
 
 - Tables with automatic column widths fill the editing area by default. Saved column widths still apply.

@@ -644,6 +644,15 @@ class ParagraphContent extends Format {
     }
 
     private _handleBackspaceInParagraph(this: ParagraphContent) {
+        const previousBlock = this.parent!.prev;
+        if (previousBlock?.blockName === 'table') {
+            this.muya.transact(() => {
+                previousBlock.remove();
+                this.setCursor(0, 0);
+            });
+            return;
+        }
+
         const previousContentBlock = this.previousContentInContext();
         if (!previousContentBlock)
             return;

@@ -185,7 +185,7 @@ class Table extends Parent {
             this.replaceWith(replacement);
             replacement.domNode!.scrollLeft = scrollLeft;
             if (selection)
-                this.muya.setSelection(selection);
+                this.muya.setSelection(selection, { preventScroll: true });
         });
     }
 

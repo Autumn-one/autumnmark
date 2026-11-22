@@ -672,8 +672,8 @@ export class Muya {
         return this.editor.selection.getSelectionState();
     }
 
-    setSelection(state: TSelectionState | null): boolean {
-        return this.editor.selection.setSelection(state);
+    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean }): boolean {
+        return this.editor.selection.setSelection(state, options);
     }
 
     /**

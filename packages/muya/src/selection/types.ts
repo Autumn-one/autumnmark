@@ -143,4 +143,6 @@ export type TSelection = ITextSelection | IImageSelection | ITableRectSelection;
 export interface ISelectionChangePayload {
     readonly selection: TSelection | null;
     readonly docChanged: boolean;
+    /** The selection was restored for editing continuity. Keep the viewport on the user's operation. */
+    readonly preventScroll?: boolean;
 }

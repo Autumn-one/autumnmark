@@ -1,5 +1,6 @@
 import { expect, test, type Locator } from '@playwright/test'
-import { launchWithMarkdown } from './helpers'
+import { readFileSync } from 'node:fs'
+import { clickMenuById, launchWithMarkdown } from './helpers'
 
 const paragraphs = Array.from({ length: 80 }, (_, i) => `Paragraph ${i + 1}.`).join('\n\n')
 const code = Array.from({ length: 150 }, (_, i) => `const value${i} = ${i}`).join('\n')
@@ -8,6 +9,41 @@ const scrollTopAfterLayout = (element: Locator) => element.evaluate(async el => 
   await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   return el.scrollTop
 })
+
+for (const axis of ['column', 'row'] as const) {
+  test(`resizing a ${axis} in the last table keeps the viewport and the opening caret`, async() => {
+    const layout = '<!-- table-layout: col-widths="1:95,2:81" row-min-heights="1:148,2:76" -->'
+    const { app, page, filePath } = await launchWithMarkdown(`# Start\n\n${paragraphs}\n\n${layout}\n\n| | |\n| --- | --- |\n| | |\n`)
+    try {
+      const editor = page.locator('.editor-component')
+      const title = editor.locator('h1')
+      const caretInTitle = () => title.evaluate(el => el.contains(window.getSelection()?.focusNode ?? null))
+      await expect.poll(caretInTitle).toBe(true)
+      const cell = editor.locator('.mu-table-inner td').first()
+      await cell.evaluate(el => el.scrollIntoView({ block: 'center' }))
+      const before = await scrollTopAfterLayout(editor)
+      expect(before).toBeGreaterThan(100)
+      const box = await cell.boundingBox()
+      if (!box) throw new Error('Missing header cell')
+      const column = axis === 'column'
+      const x = box.x + (column ? box.width - 2 : box.width / 2)
+      const y = box.y + (column ? box.height / 2 : box.height - 2)
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + (column ? 12 : 0), y + (column ? 0 : 12), { steps: 4 })
+      await page.mouse.up()
+      expect(await scrollTopAfterLayout(editor)).toBe(before)
+      expect(await caretInTitle()).toBe(true)
+      await clickMenuById(app, 'fileSaveMenuItem')
+      const expectedSize = column ? 'col-widths="1:107,2:69"' : 'row-min-heights="1:160,2:64"'
+      await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(expectedSize)
+      await page.keyboard.press('ArrowRight')
+      await expect(title).toBeInViewport()
+    } finally {
+      await app.close()
+    }
+  })
+}
 
 test('pasting long code in an empty capped block keeps the code and caret visible', async() => {
   const { app, page } = await launchWithMarkdown(`Heading\n\n~~~js\n~~~\n\n${paragraphs}`)
