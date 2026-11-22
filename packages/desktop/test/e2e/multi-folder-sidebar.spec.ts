@@ -10,6 +10,44 @@ import {
   sendIpcToRenderer
 } from './helpers'
 
+test('dropping native folders onto the window adds them to the current sidebar', async() => {
+  const directories = ['first', 'second.md', 'third'].map(name => test.info().outputPath(name))
+  for (const directory of directories) fs.mkdirSync(directory, { recursive: true })
+  const note = path.join(directories[0], 'note.md')
+  fs.writeFileSync(note, '# Drop test')
+  const { app, page } = await launchElectron([note], {
+    windowLayout: { showSideBar: true },
+    preferences: { openFolderInNewWindow: true }
+  })
+  try {
+    await sendIpcToRenderer(app, 'mt::editor-close-tab')
+    await expect(page.locator('.recent-files-projects')).toBeVisible()
+    const session = await page.context().newCDPSession(page)
+    const drop = async(selector: string, files: string[]) => {
+      const box = await page.locator(selector).boundingBox()
+      if (!box) throw new Error(`Missing drop target ${selector}`)
+      const point = { x: box.x + 20, y: box.y + box.height / 2 }
+      for (const type of ['dragEnter', 'dragOver', 'drop'] as const) {
+        await session.send('Input.dispatchDragEvent', {
+          type, ...point, data: { items: [], files, dragOperationsMask: 1 }
+        })
+      }
+    }
+    const roots = page.locator('.project-root')
+    await drop('.side-bar', [directories[0]])
+    await expect(roots).toHaveText([/first/])
+    await drop('.recent-files-projects', [directories[1], directories[2], note])
+    await expect(roots).toHaveText([/first/, /second\.md/, /third/])
+    await expect(page.locator('.mu-editor')).toContainText('Drop test')
+    await drop('.mu-editor', [directories[0]])
+    await expect(roots.first()).toBeFocused()
+    await expect(roots).toHaveCount(3)
+    expect(app.windows()).toHaveLength(1)
+  } finally {
+    await app.close()
+  }
+})
+
 test('multi-folder sidebar completes add, search, remove and restore (#2222)', async() => {
   test.setTimeout(90000)
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-multi-folder-'))

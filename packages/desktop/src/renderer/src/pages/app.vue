@@ -27,7 +27,7 @@
         <about-dialog />
         <export-setting-dialog />
         <rename />
-        <import-modal />
+        <import-modal v-model="showImport" />
         <batch-media-dialog
           v-if="batchMediaTarget"
           :target="batchMediaTarget"
@@ -84,6 +84,7 @@ const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+const showImport = ref(false)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
@@ -150,38 +151,42 @@ function fileDragKind(data: DataTransfer) {
 function handleWindowDragOver(event: DragEvent) {
   const data = event.dataTransfer
   if (!data?.types.length) return
-  if (currentFile.value?.readOnly && event.target instanceof Element && event.target.closest('.mu-editor')) {
-    event.preventDefault()
-    data.dropEffect = 'none'
-    return
-  }
   if (data.types.includes('Files')) {
     const kind = fileDragKind(data)
-    if (kind === 'document' || (kind === 'unknown' && !currentFile.value)) {
-      event.preventDefault()
+    const overEditor = event.target instanceof Element && event.target.closest('.mu-editor, .source-code')
+    event.preventDefault()
+    if (kind === 'document') {
       if (timer.value) clearTimeout(timer.value)
-      timer.value = setTimeout(() => bus.emit('importDialog', false), 300)
-      bus.emit('importDialog', true)
-    } else if (event.target instanceof Element && event.target.closest('.mu-editor, .source-code')) {
-      event.preventDefault()
+      timer.value = setTimeout(() => { showImport.value = false }, 300)
+      showImport.value = true
     }
-    data.dropEffect = 'copy'
+    data.dropEffect = kind === 'media' && overEditor && currentFile.value?.readOnly ? 'none' : 'copy'
   } else if (!data.types.includes('text/uri-list')) {
     event.stopPropagation()
     data.dropEffect = 'none'
   }
 }
 
-function handleDocumentDrop(event: DragEvent) {
+function handleWindowDrop(event: DragEvent) {
   const data = event.dataTransfer
-  if (!data?.files.length || !currentFile.value || currentFile.value.readOnly ||
-    !(event.target instanceof Element) || !event.target.closest('.mu-editor, .source-code')) return
-  const files = Array.from(data.files)
-  if (files.some(file => /^(image|video)\//.test(file.type) || videoMime(file.name))) return
+  if (!data?.types.includes('Files')) return
+  const items = Array.from(data.items).filter(item => item.kind === 'file')
+  const files = data.files.length
+    ? Array.from(data.files)
+    : items.map(item => item.getAsFile()).filter(file => file !== null)
+  if (!files.length) return
+  const mediaOnly = files.every(file => /^(image|video)\//.test(file.type) || videoMime(file.name))
+  if (mediaOnly && !items.some(item => item.webkitGetAsEntry()?.isDirectory)) {
+    if (!(event.target instanceof Element && event.target.closest('.mu-editor, .source-code'))) {
+      event.preventDefault()
+    }
+    return
+  }
   const paths = files.map(file => window.electron.webUtils.getPathForFile(file)).filter(Boolean)
   if (paths.length) {
     event.preventDefault()
     event.stopPropagation()
+    showImport.value = false
     window.electron.ipcRenderer.send('mt::window::drop', paths)
   }
 }
@@ -192,7 +197,7 @@ let stopEditListener: (() => void) | undefined
 let stopViewListener: (() => void) | undefined
 onUnmounted(() => {
   window.removeEventListener('dragover', handleWindowDragOver)
-  window.removeEventListener('drop', handleDocumentDrop, true)
+  window.removeEventListener('drop', handleWindowDrop, true)
   if (timer.value) clearTimeout(timer.value)
   stopSidebarContextMenu?.()
   stopWindowSession?.()
@@ -243,7 +248,7 @@ onMounted(async () => {
   stopWindowSession = await startWindowSession()
 
   window.addEventListener('dragover', handleWindowDragOver)
-  window.addEventListener('drop', handleDocumentDrop, true)
+  window.addEventListener('drop', handleWindowDrop, true)
 
   nextTick(() => {
     // `initialState` from bootstrap carries nullable URL params (string|null);

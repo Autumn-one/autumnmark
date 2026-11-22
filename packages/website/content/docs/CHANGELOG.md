@@ -1,3 +1,7 @@
+## AutumnMark 0.24.43
+
+- Drag folders from your file manager onto the editor window to add them to the current sidebar. You can drop several folders at once. Dropping a folder again focuses its existing entry.
+
 ## AutumnMark 0.24.42
 
 - The **Open Folder** buttons in the file and search sidebars now match **New File** on the welcome screen.
