@@ -4,29 +4,16 @@
     bg
     type="primary"
     class="empty-state-button"
-    :class="{ 'brand-colors': preferences.theme === 'light' }"
   >
     {{ label }}
   </el-button>
 </template>
 
 <script setup lang="ts">
-import { usePreferencesStore } from '@/store/preferences'
-
 defineProps<{ label: string }>()
-
-const preferences = usePreferencesStore()
 </script>
 
 <style scoped>
-.brand-colors {
-  --buttonPrimaryBgColor: #6547b8;
-  --buttonPrimaryFontColor: #fff;
-  --buttonPrimaryBgColorHover: #573ca2;
-  --buttonPrimaryFontColorHover: #fff;
-  --buttonPrimaryFocusShadow: var(--buttonPrimaryShadow);
-}
-
 .empty-state-button.is-text.is-has-bg {
   padding: 6px 17px;
   border: 0;

@@ -128,7 +128,7 @@ test.describe('Tab management', () => {
 
         const newFileLabel = closeWith === 'button' ? '新建文件' : 'New File'
         const newFileButton = welcome.getByRole('button', { name: newFileLabel, exact: true })
-        const buttonColor = closeWith === 'button' ? 'rgb(101, 71, 184)' : 'rgb(64, 158, 255)'
+        const buttonColor = closeWith === 'button' ? 'rgb(16, 122, 102)' : 'rgb(64, 158, 255)'
         await expect(newFileButton).toHaveCSS('background-color', buttonColor)
         const filesOpenFolder = lastPage.locator('.open-project').getByRole('button')
         await expect(filesOpenFolder).toBeVisible()

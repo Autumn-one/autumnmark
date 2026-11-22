@@ -141,6 +141,10 @@ const extractButtonVars = (
 
 const baseVars = parseVars(readFileSync(BASE_CSS, 'utf8'))
 const themeFiles = readdirSync(THEME_DIR).filter((f) => f.endsWith('.theme.css'))
+const lightVars = {
+  ...baseVars,
+  ...parseVars(readFileSync(resolve(THEME_DIR, 'light.theme.css'), 'utf8'))
+}
 
 const BUTTON_SURFACES = [
   { name: 'Open Folder', surfaceVar: '--sideBarBgColor' },
@@ -157,8 +161,7 @@ describe('empty-state button readability (#4774)', () => {
   for (const { name, surfaceVar } of BUTTON_SURFACES) {
     it(`${name} label is at least as readable as the standard primary button in every theme`, () => {
       const { fgVar, bgVar } = extractButtonVars(BUTTON_COMPONENT)
-      const brandVars = parseVars(readFileSync(BUTTON_COMPONENT, 'utf8'))
-      expect(pairContrast(fgVar, bgVar, surfaceVar, { ...baseVars, ...brandVars })).toBeGreaterThanOrEqual(4.5)
+      expect(pairContrast(fgVar, bgVar, surfaceVar, lightVars)).toBeGreaterThanOrEqual(4.5)
       const failures: string[] = []
 
       for (const file of themeFiles) {

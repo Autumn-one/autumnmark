@@ -1,3 +1,9 @@
+## AutumnMark 0.24.44
+
+- GitBook Teal is the new default light theme, with centered first-level headings, teal second-level headings, and updated typography for prose, lists, and quotes.
+- Second-level headings have 10 pixels of left padding so the text has room inside the teal bar.
+- Images, videos, code blocks, and tables retain their existing styles.
+
 ## AutumnMark 0.24.43
 
 - Drag folders from your file manager onto the editor window to add them to the current sidebar. You can drop several folders at once. Dropping a folder again focuses its existing entry.

@@ -2,6 +2,34 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, clickMenuById, setSourceMarkdown } from './helpers'
 
+test('default light theme styles prose and keeps the table and code typography', async() => {
+  const markdown = [
+    '# Title', '## Section', 'Some **emphasis**', '> Quote', '- [x] Task',
+    '| Column |\n| --- |\n| **Cell** |', '```js\nconst n = 1\n```'
+  ].join('\n\n')
+  const { app, page } = await launchWithMarkdown(markdown, {
+    preferences: { followSystemTheme: false }
+  })
+  try {
+    const editor = page.locator('.mu-container')
+    await expect(editor.locator('h1')).toHaveCSS('text-align', 'center')
+    await expect(editor.locator('h2')).toHaveCSS('background-color', 'rgb(17, 151, 125)')
+    await expect(editor.locator('h2')).toHaveCSS('padding-left', '10px')
+    await expect(editor.locator('.mu-paragraph strong')).toHaveCSS('color', 'rgb(17, 151, 125)')
+    await expect(editor.locator('blockquote')).toHaveCSS('background-color', 'rgb(245, 247, 249)')
+    await expect(editor.locator('td strong')).toHaveCSS('color', 'rgb(77, 77, 77)')
+    await expect(editor.locator('td strong')).toHaveCSS('font-family', /Open Sans/)
+    await expect(editor.locator('.mu-code-block')).toHaveCSS('font-family', /DejaVu Sans Mono/)
+    await expect.poll(() => editor.locator('.mu-checkbox-checked').evaluate(
+      el => getComputedStyle(el, '::before').backgroundColor
+    )).toBe('rgb(21, 172, 142)')
+    await clickMenuById(app, 'graphite')
+    await expect(editor.locator('h1')).not.toHaveCSS('text-align', 'center')
+  } finally {
+    await app.close()
+  }
+})
+
 test.describe('Theme switching', () => {
   let app: ElectronApplication
   let page: Page

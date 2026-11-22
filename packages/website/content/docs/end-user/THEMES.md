@@ -1,17 +1,17 @@
 # Themes
 
-MarkText includes 33 built-in themes organized into Light and Dark categories. Each theme provides a complete color scheme for the editor interface and syntax highlighting.
+AutumnMark includes 33 built-in themes organized into Light and Dark categories. Each theme provides a color scheme for the editor interface.
 
-The names below match the labels shown in the **Theme** menu. The underlying id stored in `preferences.json` under the `theme` field can differ — e.g. _Cadmium Light_ → `light`, _Cadmium Dark_ → `dark`, _Graphite Light_ → `graphite`, _Ulysses Light_ → `ulysses`. The full label↔id mapping lives in `packages/desktop/src/main/menu/templates/theme.ts`.
+The names below match the labels shown in the **Theme** menu. The default light theme, _GitBook Teal_, uses the id `light` in `preferences.json`. The full list of theme names and ids lives in `packages/desktop/src/main/menu/templates/theme.ts`.
 
 ## Light Themes
 
 | Theme                 | Description                                    |
 | --------------------- | ---------------------------------------------- |
 | **Ayu Light**         | Warm, comfortable light theme with soft colors |
-| **Cadmium Light**     | Clean, minimal light theme                     |
 | **Catppuccin Latte**  | Soothing pastel theme with warm tones          |
 | **Everforest Light**  | Nature-inspired green-tinted light theme       |
+| **GitBook Teal**      | Centered titles, teal headings and list markers |
 | **Graphite Light**    | Cool gray-toned light theme                    |
 | **Gruvbox Light**     | Retro groove with warm, earthy colors          |
 | **Rosé Pine Dawn**    | Elegant theme with subtle rose accents         |
@@ -59,9 +59,9 @@ You can switch themes in several ways:
 
 ### Light Themes
 
-| Cadmium Light                                      | Graphite Light                                       |
-| -------------------------------------------------- | ---------------------------------------------------- |
-| ![Cadmium Light](../themeImages/cadmium-light.png) | ![Graphite Light](../themeImages/graphite-light.png) |
+| Graphite Light                                       |
+| ---------------------------------------------------- |
+| ![Graphite Light](../themeImages/graphite-light.png) |
 
 | Ulysses Light                                      | Catppuccin Latte                                         |
 | -------------------------------------------------- | -------------------------------------------------------- |

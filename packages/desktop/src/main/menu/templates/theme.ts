@@ -6,12 +6,12 @@ import type Preference from '../../preferences'
 // [i18nLabelKey, themeId] for each selectable theme. The menu label is
 // `menu.theme.<labelKey>`; `themeId` is both the menu item id and the value
 // passed to `selectTheme` / compared against the saved theme. (A few light
-// themes keep historical ids, e.g. cadmiumLight -> 'light'.)
+// themes keep historical ids, e.g. gitbookTeal -> 'light'.)
 const LIGHT_THEMES: ReadonlyArray<readonly [string, string]> = [
   ['ayuLight', 'ayu-light'],
-  ['cadmiumLight', 'light'],
   ['catppuccinLatte', 'catppuccin-latte'],
   ['everforestLight', 'everforest-light'],
+  ['gitbookTeal', 'light'],
   ['graphiteLight', 'graphite'],
   ['gruvboxLight', 'gruvbox-light'],
   ['rosePineDawn', 'rose-pine-dawn'],

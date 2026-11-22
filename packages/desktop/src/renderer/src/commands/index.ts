@@ -534,7 +534,7 @@ const commands: CommandDescriptor[] = [
     subcommands: [
       {
         id: 'window.change-theme-light',
-        description: 'Cadmium Light',
+        description: 'GitBook Teal',
         value: 'light'
       },
       {
@@ -701,7 +701,7 @@ export const getCommandsWithDescriptions = async(): Promise<CommandDescriptor[]>
         for (const subcommand of subcommands) {
           const { value } = subcommand
           if (value === 'light') {
-            subcommand.description = t('menu.theme.cadmiumLight')
+            subcommand.description = t('menu.theme.gitbookTeal')
           } else if (value === 'dark') {
             subcommand.description = t('menu.theme.dark')
           } else if (value === 'graphite') {

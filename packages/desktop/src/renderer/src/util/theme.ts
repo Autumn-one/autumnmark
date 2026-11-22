@@ -40,6 +40,7 @@ import {
   rosePineDawn
 } from './themeColor'
 import { isLinux } from './index'
+import lightTheme from '../assets/themes/light.theme.css?inline'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ORIGINAL_THEME = '#409EFF'
@@ -67,9 +68,7 @@ export const addThemeStyle = (theme: string): void => {
 
   switch (theme) {
     case 'light':
-      themeStyleEle.innerHTML = patchTheme(
-        ':root {\n  --link-color: var(--linkColor);\n  --blockquote-border-color: var(--blockquoteBorderColor);\n}'
-      )
+      themeStyleEle.innerHTML = patchTheme(lightTheme)
       break
     case 'dark':
       themeStyleEle.innerHTML = patchTheme(dark())

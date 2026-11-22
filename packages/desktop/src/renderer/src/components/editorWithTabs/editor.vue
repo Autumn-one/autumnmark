@@ -1,7 +1,7 @@
 <template>
   <div
     class="editor-wrapper"
-    :class="{ typewriter, focus, source: sourceCode }"
+    :class="{ typewriter, focus, source: sourceCode, 'use-theme-font': !editorFontFamily || editorFontFamily === 'Open Sans' }"
     :dir="textDirection"
     @contextmenu="showDocumentBackgroundMenu"
   >
