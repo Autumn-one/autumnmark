@@ -128,10 +128,9 @@
       <div class="no-data">
         <EmptyStateButton
           v-if="showNoFolderOpenedMessage"
+          :label="t('sideBar.search.openFolder')"
           @click="openFolder"
-        >
-          {{ t('sideBar.search.openFolder') }}
-        </EmptyStateButton>
+        />
       </div>
     </div>
   </div>

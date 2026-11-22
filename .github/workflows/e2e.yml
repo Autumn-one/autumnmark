@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.40]
+    branches: [hotfix/v0.24.41]
   workflow_dispatch:
     inputs:
       platform:
@@ -64,9 +64,9 @@ jobs:
         if: github.event_name == 'push'
         run: pnpm check
 
-      - name: Verify empty-state button contrast across themes
+      - name: Verify button contrast and accessible names
         if: github.event_name == 'push'
-        run: pnpm -C packages/desktop exec vitest run test/unit/specs/empty-state-button-contrast.spec.ts
+        run: pnpm -C packages/desktop exec vitest run test/unit/specs/empty-state-button-contrast.spec.ts test/unit/specs/icon-button-a11y.spec.ts
 
       - name: Verify the packaged Windows app with default and full-width table styles
         if: github.event_name == 'push'

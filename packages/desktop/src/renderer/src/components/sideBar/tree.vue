@@ -210,9 +210,10 @@
         class="open-project"
       >
         <div class="centered-group">
-          <EmptyStateButton @click="projectStore.ASK_FOR_OPEN_PROJECT()">
-            {{ t('sideBar.tree.openFolder') }}
-          </EmptyStateButton>
+          <EmptyStateButton
+            :label="t('sideBar.tree.openFolder')"
+            @click="projectStore.ASK_FOR_OPEN_PROJECT()"
+          />
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-## AutumnMark 0.24.40
+## AutumnMark 0.24.41
 
 - The **Open Folder** buttons in the file and search sidebars now match **New File** on the welcome screen.
 - Right-click an empty area in a document to copy its full file path or the path of its containing folder.

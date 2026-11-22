@@ -6,12 +6,14 @@
     class="empty-state-button"
     :class="{ 'brand-colors': preferences.theme === 'light' }"
   >
-    <slot />
+    {{ label }}
   </el-button>
 </template>
 
 <script setup lang="ts">
 import { usePreferencesStore } from '@/store/preferences'
+
+defineProps<{ label: string }>()
 
 const preferences = usePreferencesStore()
 </script>

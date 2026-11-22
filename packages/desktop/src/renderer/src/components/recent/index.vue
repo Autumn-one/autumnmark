@@ -4,10 +4,9 @@
     <h1><span lang="zh-CN">秋笺</span> {{ APP_NAME }}</h1>
     <EmptyStateButton
       class="new-file"
+      :label="t('recent.newFile')"
       @click="newFile"
-    >
-      {{ t('recent.newFile') }}
-    </EmptyStateButton>
+    />
   </section>
 </template>
 
