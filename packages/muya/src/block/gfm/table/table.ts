@@ -21,7 +21,7 @@ class TableInner extends Parent {
                 ScrollPage.loadBlock('table.row').create(muya, child),
             ),
         );
-
+        table.updateMinWidth();
         return table;
     }
 
@@ -35,6 +35,17 @@ class TableInner extends Parent {
 
         this.classList = ['mu-table-inner'];
         this.createDomNode();
+    }
+
+    updateMinWidth(widths = this.children.head?.children.map(cell => cell.meta.width) ?? []) {
+        const style = this.domNode!.style;
+        if (!widths.length || !widths.every(width => typeof width === 'number')) {
+            style.minWidth = '';
+            return;
+        }
+        // A narrow viewport can compress pixel widths down to the same scrolling threshold as an automatic table.
+        const total = widths.reduce((sum, width) => sum + width, 0);
+        style.minWidth = `min(${total}px, calc(${widths.length} * var(--mu-cell-auto-min-width)))`;
     }
 
     override getState(): ITableState {

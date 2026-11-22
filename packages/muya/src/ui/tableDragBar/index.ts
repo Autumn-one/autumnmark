@@ -1,6 +1,7 @@
 import type Table from '../../block/gfm/table';
 import type TableBodyCell from '../../block/gfm/table/cell';
 import type { Muya } from '../../muya';
+import { BOTTOM_RESIZE_MARGIN } from '../../block/gfm/table/resizeDimensions';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle } from '../../utils';
 import BaseFloat from '../baseFloat';
@@ -34,7 +35,8 @@ export function getIndex(bar: BarType, cell: TableBodyCell) {
 }
 
 function optionsFor(bar: BarType) {
-    return { placement: bar, offsetOptions: { mainAxis: 0, crossAxis: 0, alignmentAxis: 0 }, showArrow: false };
+    const mainAxis = bar === 'bottom' ? BOTTOM_RESIZE_MARGIN : 0;
+    return { placement: bar, offsetOptions: { mainAxis, crossAxis: 0, alignmentAxis: 0 }, showArrow: false };
 }
 
 export class TableDragBar extends BaseFloat {

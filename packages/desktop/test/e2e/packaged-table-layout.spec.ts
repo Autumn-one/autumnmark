@@ -40,10 +40,11 @@ for (const [title, css, markdown] of [
         if (css) await expect(page.locator('#custom-styles')).toHaveJSProperty('textContent', css)
         const start = await last.boundingBox()
         if (!start) throw new Error('Missing last column')
+        const table = await grid.boundingBox()
+        if (!table) throw new Error('Missing table')
         if (css) {
           const figure = await page.locator('.mu-table').boundingBox()
-          const table = await grid.boundingBox()
-          expect(Math.abs(figure!.width - table!.width)).toBeLessThanOrEqual(1)
+          expect(figure?.width).toBeCloseTo(table.width, 0)
         }
         const x = start.x + start.width - 1
         const y = start.y + start.height / 2
@@ -55,15 +56,17 @@ for (const [title, css, markdown] of [
         const during = await last.boundingBox()
         if (!during) throw new Error('Lost table during resize')
         expect(Math.abs(during.x + during.width - (start.x + start.width - delta))).toBeLessThanOrEqual(1)
-        expect(Math.abs(during.x - start.x)).toBeLessThanOrEqual(1)
+        const scale = (table.width - delta) / table.width
+        expect(Math.abs(during.width - start.width * scale)).toBeLessThanOrEqual(1)
         await page.mouse.up()
         const count = await grid.locator('tr').first().locator('td').count()
-        await expect.poll(() => readFileSync(file, 'utf8'), { timeout: 10000 }).toContain(`${count}:${Math.round(start.width) - delta}"`)
+        await expect.poll(() => readFileSync(file, 'utf8'), { timeout: 10000 }).toContain(`${count}:${Math.round(during.width)}"`)
         await page.reload()
         await expect(last).toBeVisible()
         const end = await last.boundingBox()
-        expect(Math.abs(end!.x - during.x)).toBeLessThanOrEqual(1)
-        expect(Math.abs(end!.width - during.width)).toBeLessThanOrEqual(1)
+        if (!end) throw new Error('Missing last column after reload')
+        expect(Math.abs(end.x - during.x)).toBeLessThanOrEqual(1)
+        expect(Math.abs(end.width - during.width)).toBeLessThanOrEqual(1)
       } finally {
         await browser.close()
       }

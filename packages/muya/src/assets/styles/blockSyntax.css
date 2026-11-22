@@ -724,6 +724,7 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 
 .mu-table-inner {
     --mu-cell-padding-x: 13px;
+    --mu-cell-auto-min-width: calc(2em + 2 * var(--mu-cell-padding-x));
     max-width: 100%;
     padding: 0;
 
@@ -759,7 +760,7 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-cell[style*='--mu-cell-width'] {
     box-sizing: border-box;
     width: var(--mu-cell-width);
-    min-width: min(var(--mu-cell-width), calc(2em + 2 * var(--mu-cell-padding-x)));
+    min-width: min(var(--mu-cell-width), var(--mu-cell-auto-min-width));
     max-width: var(--mu-cell-width);
 }
 
@@ -785,6 +786,7 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     cursor: col-resize;
 }
 
+.mu-table[data-resize-axis='row'],
 .mu-table[data-resize-axis='row'] .mu-table-cell {
     cursor: row-resize;
 }

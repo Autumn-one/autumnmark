@@ -43,6 +43,7 @@ interface IFakeRow {
 }
 
 interface IFakeTableInner {
+    updateMinWidth: () => void;
     rows: IFakeRow[];
     firstChild: IFakeRow;
     find: (offset: number) => Nullable<IFakeRow>;
@@ -95,6 +96,7 @@ function makeTableInner(rowCount: number, cellCount: number): IFakeTableInner {
     }
     return {
         rows,
+        updateMinWidth: vi.fn(),
         firstChild: rows[0],
         find: (offset: number) => rows[offset],
         length: () => rows.length,

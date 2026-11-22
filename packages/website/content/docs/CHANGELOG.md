@@ -1,3 +1,8 @@
+## AutumnMark 0.24.37
+
+- Drag the right or bottom border of a table to resize all columns or rows proportionally.
+- Drag an internal divider to transfer space between neighboring columns or rows while keeping the table's overall size fixed. Rows keep enough height for wrapped text.
+
 ## AutumnMark 0.24.36
 
 - Fixed table resizing when custom CSS makes tables full width. Dragging the outer edge now changes the table width and keeps the internal dividers in place. Tables with automatic sizing still follow the theme, and columns saved as `100%` still fill the available space.

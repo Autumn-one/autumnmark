@@ -1,93 +1,134 @@
+import type Table from '.';
 import type { TTableColumnWidth } from '../../../state/types';
-import type TableBodyCell from './cell';
-import { BLOCK_DOM_PROPERTY } from '../../../config';
+import type TableInner from './table';
 import { displayColumnWidth } from './cell';
+import { scaleSizes } from './resizeDimensions';
 
-interface IColumn {
-    header: HTMLTableCellElement;
-    cells?: HTMLTableCellElement[];
-    original?: TTableColumnWidth;
-    width: number;
-}
+const MIN_WIDTH = 36;
+
+type ColumnWidth = TTableColumnWidth | undefined;
 
 export class ColumnResize {
-    readonly reservedWidth: number;
-    private _rows: HTMLTableRowElement[];
-    private _target: IColumn;
-    private _anchors: IColumn[];
-    private _trailingFill?: IColumn;
-    private _preview?: TTableColumnWidth;
+    private _table: TableInner;
+    private _cells: HTMLTableCellElement[][];
+    private _widths: number[];
+    private _minima: number[];
+    private _original: ColumnWidth[];
+    private _displayed: ColumnWidth[];
+    private _total: number;
+    private _available: number;
+    private _index: number;
+    private _previewFill = -1;
 
-    constructor(grid: HTMLTableElement, index: number) {
-        this._rows = Array.from(grid.rows);
-        const header = Array.from(this._rows[0].cells);
-        const left = header[0].getBoundingClientRect().left;
-        let previousEdge = 0;
-        const columns = header.map((cell) => {
-            const edge = Math.round(cell.getBoundingClientRect().right - left);
-            // Round cumulative positions so fractional pixels do not accumulate across a wide table.
-            const width = edge - previousEdge;
-            previousEdge = edge;
-            return {
-                header: cell,
-                original: (cell[BLOCK_DOM_PROPERTY] as TableBodyCell).meta.width,
-                width,
-            };
+    constructor(table: TableInner, index: number) {
+        this._table = table;
+        const grid = table.domNode as HTMLTableElement;
+        const rows = Array.from(grid.rows);
+        const headers = Array.from(rows[0].cells);
+        this._cells = headers.map((_, i) => rows.map(row => row.cells[i]));
+        this._original = table.children.head!.children.map(cell => cell.meta.width);
+        this._displayed = [...this._original];
+        const left = headers[0].getBoundingClientRect().left;
+        let previous = 0;
+        this._widths = headers.map((cell) => {
+            const right = Math.round(cell.getBoundingClientRect().right - left);
+            const width = right - previous;
+            previous = right;
+            return width;
         });
-        this._target = columns[index];
-        this._preview = this._target.original;
-        this._trailingFill = columns.find((column, i) => i > index && column.original === '100%');
-        this._anchors = columns.filter((column, i) => i !== index && column.original !== column.width
-            && (i < index || typeof column.original === 'number'));
-
-        const previousWidth = grid.style.width;
-        grid.style.width = 'min-content';
-        const minimum = grid.getBoundingClientRect().width;
-        const minima = header.map(cell => cell.getBoundingClientRect().width);
-        grid.style.width = previousWidth;
-        let reserved = minimum - minima[index];
-        for (const [i, column] of columns.entries()) {
-            if (i < index || (i > index && typeof column.original === 'number'))
-                reserved += column.width - minima[i];
-        }
-        const style = getComputedStyle(grid.parentElement!);
-        this.reservedWidth = reserved + Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+        this._total = previous;
+        const figure = grid.parentElement!;
+        const style = getComputedStyle(figure);
+        const extra = grid.getBoundingClientRect().width - previous;
+        this._available = Math.round(figure.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight) - extra);
+        this._index = index;
+        // Cell padding and embedded content can impose a higher minimum than the drag handle.
+        const scrollLeft = figure.scrollLeft;
+        this._display(this._widths.map(width => Math.min(width, MIN_WIDTH)));
+        this._minima = headers.map((cell, i) => Math.min(this._widths[i], Math.ceil(cell.getBoundingClientRect().width)));
+        this.restore();
+        figure.scrollLeft = scrollLeft;
     }
 
-    preview(size?: TTableColumnWidth) {
-        if (this._preview === size)
+    preview(delta: number) {
+        const index = this._index;
+        const widths = this._widths;
+        let next: number[];
+        const fill = this._original.indexOf('100%');
+        if (index === widths.length - 1) {
+            const minimum = this._minima.reduce((sum, width) => sum + width, 0);
+            const target = Math.max(minimum, Math.min(this._total + delta, Math.max(this._total, this._available)));
+            const snapToFill = delta > 0 && target === this._available && fill < 0;
+            if (target === this._total && !snapToFill) {
+                this.restore();
+                return;
+            }
+            next = scaleSizes(widths, this._minima, this._total, target);
+            this._previewFill = target === this._available ? (fill < 0 ? index : fill) : -1;
+        }
+        else {
+            const left = widths[index];
+            const right = widths[index + 1];
+            const offset = Math.max(this._minima[index] - left, Math.min(delta, right - this._minima[index + 1]));
+            if (!offset) {
+                this.restore();
+                return;
+            }
+            next = [...widths];
+            next[index] = left + offset;
+            next[index + 1] = right - offset;
+            this._previewFill = fill;
+        }
+        this._display(next);
+    }
+
+    restore() {
+        this._previewFill = -1;
+        this._display(this._original);
+    }
+
+    commit(table: Table) {
+        const preview = this._displayed;
+        // Keep automatic and fill sizing wherever the browser can reproduce the drop with them.
+        const sparse = preview.map((width, i) => {
+            if (i === this._previewFill)
+                return '100%';
+            return width === this._widths[i] && this._original[i] !== '100%' ? this._original[i] : width;
+        });
+        if (sparse.some((width, i) => width !== preview[i])) {
+            const edges = this._cells.map(([cell]) => cell.getBoundingClientRect().right);
+            const matchesPreview = () => this._cells.every(([cell], i) => Math.abs(cell.getBoundingClientRect().right - edges[i]) < 1);
+            this._display(sparse);
+            if (!matchesPreview()) {
+                if (this._previewFill >= 0) {
+                    const filled = [...preview];
+                    filled[this._previewFill] = '100%';
+                    this._display(filled);
+                }
+                if (this._previewFill < 0 || !matchesPreview())
+                    this._display(preview);
+            }
+        }
+        const changes = new Map<number, ColumnWidth>();
+        this._displayed.forEach((width, i) => {
+            if (width !== this._original[i])
+                changes.set(i, width);
+        });
+        this.restore();
+        if (changes.size)
+            table.setColumnWidths(changes);
+    }
+
+    private _display(widths: ColumnWidth[]) {
+        if (widths.every((width, i) => width === this._displayed[i]))
             return;
-        const active = size !== this._target.original;
-        const wasActive = this._preview !== this._target.original;
-        this._preview = size;
-        if (active !== wasActive) {
-            for (const column of this._anchors)
-                this._display(column, active ? column.width : column.original);
-        }
-        if (this._trailingFill)
-            this._display(this._trailingFill, size === '100%' ? undefined : '100%');
-        this._display(this._target, size);
-    }
-
-    /** Keep automatic sizing wherever restoring it reproduces the drop position. */
-    widthsForCommit(): Map<number, number> {
-        const edge = this._target.header.getBoundingClientRect().right;
-        for (const column of this._anchors) {
-            const transferFill = column.original === '100%' && this._preview === '100%';
-            this._display(column, transferFill ? undefined : column.original);
-        }
-        const displaced = (column: IColumn) => Math.abs(column.header.getBoundingClientRect().width - column.width) >= 1;
-        let needed = this._anchors.filter(displaced);
-        for (const column of needed)
-            this._display(column, column.width);
-        if (this._anchors.some(displaced) || Math.abs(this._target.header.getBoundingClientRect().right - edge) >= 1)
-            needed = this._anchors;
-        return new Map(needed.map(column => [column.header.cellIndex, column.width]));
-    }
-
-    private _display(column: IColumn, size?: TTableColumnWidth) {
-        column.cells ??= this._rows.map(row => row.cells[column.header.cellIndex]);
-        for (const cell of column.cells)
-            displayColumnWidth(cell, size);
+        widths.forEach((width, i) => {
+            if (width === this._displayed[i])
+                return;
+            for (const cell of this._cells[i])
+                displayColumnWidth(cell, width);
+        });
+        this._displayed = widths;
+        this._table.updateMinWidth(widths);
     }
 }

@@ -130,32 +130,30 @@ class Table extends Parent {
         });
     }
 
-    setSize(axis: 'column' | 'row', index: number, pixels?: number): void;
-    setSize(axis: 'column', index: number, width?: TTableColumnWidth, anchoredWidths?: ReadonlyMap<number, number>): void;
-    setSize(axis: 'column' | 'row', index: number, size?: TTableColumnWidth, anchoredWidths?: ReadonlyMap<number, number>) {
+    setColumnWidths(widths: ReadonlyMap<number, TTableColumnWidth | undefined>) {
         if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
             return;
         const state = this.getState();
-        if (axis === 'column') {
-            const previousFill = size === '100%' ? state.children[0].children.findIndex(cell => cell.meta.width === '100%') : -1;
-            for (const row of state.children) {
-                if (previousFill >= 0)
-                    delete row.children[previousFill].meta.width;
-                if (anchoredWidths) {
-                    for (const [column, width] of anchoredWidths)
-                        row.children[column].meta.width = width;
-                }
-                if (size)
-                    row.children[index].meta.width = size;
+        for (const row of state.children) {
+            for (const [index, width] of widths) {
+                if (width !== undefined)
+                    row.children[index].meta.width = width;
                 else
                     delete row.children[index].meta.width;
             }
         }
-        else if (typeof size === 'number') {
-            state.children[index].minHeight = size;
-        }
-        else {
-            delete state.children[index].minHeight;
+        this._replaceTable(state, this.muya.getSelectionState());
+    }
+
+    setRowHeights(heights: ReadonlyMap<number, number | undefined>) {
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const state = this.getState();
+        for (const [index, height] of heights) {
+            if (height !== undefined)
+                state.children[index].minHeight = height;
+            else
+                delete state.children[index].minHeight;
         }
         this._replaceTable(state, this.muya.getSelectionState());
     }
@@ -238,6 +236,7 @@ class Table extends Parent {
                 firstCellInNewColumn = cell;
         });
 
+        tableInner.updateMinWidth();
         return firstCellInNewColumn!.firstChild as TableCellContent;
     }
 
@@ -291,6 +290,7 @@ class Table extends Parent {
                 cell.remove();
         });
 
+        table.updateMinWidth();
         return (neighbourCell?.firstChild as TableCellContent | undefined) ?? null;
     }
 

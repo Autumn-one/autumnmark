@@ -1,8 +1,10 @@
 import type Table from '.';
-import type { TTableColumnWidth } from '../../../state/types';
 import type TableBodyCell from './cell';
+import type TableInner from './table';
 import { BLOCK_DOM_PROPERTY } from '../../../config';
 import { ColumnResize } from './columnResize';
+import { BOTTOM_RESIZE_MARGIN } from './resizeDimensions';
+import { RowResize } from './rowResize';
 
 interface IEdge {
     axis: 'column' | 'row';
@@ -13,14 +15,20 @@ interface IResizeGesture {
     edge: IEdge;
     pointer: number;
     start: number;
-    extent: number;
-    column?: ColumnResize;
-    original?: TTableColumnWidth;
-    size?: TTableColumnWidth;
+    sizing: ColumnResize | RowResize;
 }
 
-function edgeAt(event: MouseEvent): IEdge | undefined {
+function edgeAt(event: MouseEvent, table: Table): IEdge | undefined {
     const td = event.target instanceof Element ? event.target.closest('td.mu-table-cell') : null;
+    if (!td && event.target === table.domNode) {
+        const bounds = table.firstChild!.domNode!.getBoundingClientRect();
+        if (event.clientY >= bounds.bottom && event.clientY < bounds.bottom + BOTTOM_RESIZE_MARGIN
+            && event.clientX >= bounds.left && event.clientX <= bounds.right) {
+            const last = table.cellAt(table.rowCount - 1, 0);
+            if (last)
+                return { axis: 'row', cell: last };
+        }
+    }
     const cell = td?.[BLOCK_DOM_PROPERTY] as TableBodyCell | undefined;
     if (!cell || !td)
         return;
@@ -66,53 +74,27 @@ export function attachTableResize(table: Table) {
         figure.dataset.resizeAxis = axis;
     }
 
-    function preview(size?: TTableColumnWidth) {
-        const { column, edge } = drag!;
-        if (column)
-            column.preview(size);
-        else
-            edge.cell.row.domNode!.style.height = size ? `${size}px` : '';
-    }
-
     function update(event: PointerEvent) {
         if (!drag || event.pointerId !== drag.pointer)
             return;
-        const column = drag.edge.axis === 'column';
-        const delta = (column ? event.clientX : event.clientY) - drag.start;
-        const start = Math.round(drag.extent);
-        let pixels = Math.max(column ? 36 : 1, Math.round(drag.extent + delta));
-        let fill = false;
-        if (drag.column) {
-            const available = Math.floor(figure.clientWidth - drag.column.reservedWidth);
-            fill = delta > 0 && pixels >= available && available >= start - 1;
-            // A table wider than the viewport at its intrinsic minimum can still be shrunk.
-            pixels = Math.min(pixels, Math.max(start, available));
-        }
-        drag.size = delta && pixels !== start ? pixels : drag.original;
-        if (fill)
-            drag.size = '100%';
-        preview(drag.size);
+        const position = drag.edge.axis === 'column' ? event.clientX : event.clientY;
+        drag.sizing.preview(Math.round(position - drag.start));
         showGuide(drag.edge);
     }
 
     function finish(event: PointerEvent, commit: boolean) {
         if (!drag || event.pointerId !== drag.pointer)
             return;
-        const { edge, original, size, pointer } = drag;
-        const changed = commit && original !== size && table.muya.isBlockInDocument(edge.cell);
-        const anchoredWidths = changed ? drag.column?.widthsForCommit() : undefined;
-        preview(original);
+        const { edge, sizing, pointer } = drag;
         drag = undefined;
         hideGuide();
         const capture = edge.cell.domNode!;
         if (capture.hasPointerCapture(pointer))
             capture.releasePointerCapture(pointer);
-        if (!changed)
-            return;
-        if (edge.axis === 'column')
-            table.setSize('column', edge.cell.columnOffset, size, anchoredWidths);
-        else if (typeof size === 'number')
-            table.setSize('row', edge.cell.rowOffset, size);
+        if (commit && table.muya.canMutate && table.muya.isBlockInDocument(edge.cell))
+            sizing.commit(table);
+        else
+            sizing.restore();
     }
 
     figure.addEventListener('pointermove', (event) => {
@@ -120,7 +102,7 @@ export function attachTableResize(table: Table) {
             update(event);
             return;
         }
-        const edge = table.muya.canMutate && !event.buttons ? edgeAt(event) : undefined;
+        const edge = table.muya.canMutate && !event.buttons ? edgeAt(event, table) : undefined;
         if (edge)
             showGuide(edge);
         else
@@ -133,24 +115,18 @@ export function attachTableResize(table: Table) {
     figure.addEventListener('pointerdown', (event) => {
         if (event.button !== 0 || !event.isPrimary || !table.muya.canMutate || drag)
             return;
-        const edge = edgeAt(event);
+        const edge = edgeAt(event, table);
         if (!edge)
             return;
         event.preventDefault();
         const { cell, axis } = edge;
         const column = axis === 'column';
-        const box = cell.domNode!.getBoundingClientRect();
-        const original = column ? cell.meta.width : cell.row.minHeight;
-        const grid = table.firstChild!.domNode as HTMLTableElement;
-        const index = cell.columnOffset;
+        const inner = table.firstChild as TableInner;
         drag = {
             edge,
-            original,
-            size: original,
             pointer: event.pointerId,
             start: column ? event.clientX : event.clientY,
-            extent: column ? box.width : box.height,
-            column: column ? new ColumnResize(grid, index) : undefined,
+            sizing: column ? new ColumnResize(inner, cell.columnOffset) : new RowResize(inner, cell.rowOffset),
         };
         showGuide(edge);
         cell.domNode!.setPointerCapture(event.pointerId);
@@ -164,15 +140,15 @@ export function attachTableResize(table: Table) {
     figure.addEventListener('dblclick', (event) => {
         if (!table.muya.canMutate)
             return;
-        const edge = edgeAt(event);
+        const edge = edgeAt(event, table);
         if (!edge)
             return;
         event.preventDefault();
         event.stopPropagation();
         const { cell, axis } = edge;
         if (axis === 'column' && cell.meta.width)
-            table.setSize(axis, cell.columnOffset);
+            table.setColumnWidths(new Map([[cell.columnOffset, undefined]]));
         else if (axis === 'row' && cell.row.minHeight)
-            table.setSize(axis, cell.rowOffset);
+            table.setRowHeights(new Map([[cell.rowOffset, undefined]]));
     });
 }

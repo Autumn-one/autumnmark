@@ -76,9 +76,9 @@ Drag the handle below a column or to the right of a body row. The line marks whe
 
 **Resize rows and columns**
 
-Drag a cell’s right edge to set the column width, or its bottom edge to set the row’s minimum height. Dragging the table’s outer right edge resizes the last column and keeps the dividers to its left in place. If automatic sizing would shift a divider when the document reopens, the editor also saves the column width needed to hold its position. Column dragging stops when the table fills the content area. Rows grow to fit wrapped text. Double-click an edge to restore automatic sizing.
+Drag the table’s right or bottom edge to change its overall width or height. Columns or rows scale in proportion to their starting sizes until they reach their minimum. Drag an internal divider to transfer space between the two adjacent columns or rows while keeping the table’s overall size fixed. Each row needs enough height for its text. If both rows already fit their content tightly, drag the bottom edge down first to make room. Double-click a cell’s right or bottom edge to restore automatic sizing for that column or row.
 
-Custom sizes are saved above the table in an HTML comment such as `<!-- table-layout: col-widths="1:100%,3:240" row-min-heights="2:64" -->`. Positions start at 1 and include the header as row 1. Dragging a column to its limit saves `100%` for that column, so it fills the space left by the others as the content area changes. Dragging a different column to its limit transfers that behavior to it. Other sizes are saved in CSS pixels. Omitted positions use automatic sizing. If your theme makes tables full width, dragging a column overrides that default for the table. Resetting all column widths restores the theme’s default.
+Custom sizes are saved above the table in an HTML comment such as `<!-- table-layout: col-widths="1:100%,3:240" row-min-heights="2:64" -->`. Positions start at 1 and include the header as row 1. Widening the table to fill the content area saves a `100%` column that takes up the remaining space when the editor width changes. Other sizes are saved in CSS pixels. Omitted positions use automatic sizing. Resetting all column widths restores the theme’s default.
 
 ![](../assets/marktext-table_drag_drop.png)
 
