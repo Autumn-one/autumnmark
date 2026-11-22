@@ -168,12 +168,21 @@ jobs:
 
       - name: Cross-compile Apple Silicon native modules and packages
         if: matrix.name == 'macos-arm64'
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_arch: arm64
         run: |
           pnpm -C packages/desktop exec electron-rebuild -f --arch=arm64
           pnpm -C packages/desktop exec electron-vite build
+          build_log=$(mktemp "$RUNNER_TEMP/autumnmark-dmg.XXXXXX")
+          if pnpm -C packages/desktop exec electron-builder --mac --arm64 --publish never 2>&1 | tee "$build_log"; then
+            exit 0
+          fi
+          if ! grep -Eq 'hdiutil:.*Resource busy' "$build_log"; then
+            exit 1
+          fi
+          echo "::warning::Retrying macOS packaging after hdiutil reported a busy disk image"
           pnpm -C packages/desktop exec electron-builder --mac --arm64 --publish never
 
       - name: Verify Apple Silicon binary architectures

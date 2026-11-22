@@ -132,6 +132,7 @@ mac:
       arch: [arm64]
 dmg:
   artifactName: 'autumnmark-mac-${arch}-${version}.${ext}'
+  filesystem: APFS
   contents:
     - x: 410
       y: 240
