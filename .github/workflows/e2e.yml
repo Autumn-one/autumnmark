@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.41]
+    branches: [hotfix/v0.24.43]
   workflow_dispatch:
     inputs:
       platform:
@@ -64,26 +64,13 @@ jobs:
         if: github.event_name == 'push'
         run: pnpm check
 
-      - name: Verify button contrast and accessible names
-        if: github.event_name == 'push'
-        run: pnpm -C packages/desktop exec vitest run test/unit/specs/empty-state-button-contrast.spec.ts test/unit/specs/icon-button-a11y.spec.ts
-
-      - name: Verify the packaged Windows app with default and full-width table styles
-        if: github.event_name == 'push'
-        shell: pwsh
-        run: |
-          pnpm -C packages/desktop exec electron-builder --win --dir --x64 --publish never
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $env:AUTUMNMARK_PACKAGED_EXE = (Get-Item 'dist/win-unpacked/autumnmark-editor.exe').FullName
-          pnpm -C packages/desktop exec playwright test packaged-table-layout.spec.ts --reporter=github
-
       - name: Run E2E Tests
         shell: bash
         env:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test test/e2e/tabs.spec.ts test/e2e/open-containing-folder-6073.spec.ts --grep='Closing the last tab|appends file locations'
+            pnpm -C packages/desktop exec playwright test test/e2e/multi-folder-sidebar.spec.ts test/e2e/embedded-videos.spec.ts --grep='dropping native folders|a native MP4 drag'
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
