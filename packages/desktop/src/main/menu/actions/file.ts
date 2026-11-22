@@ -12,7 +12,7 @@ import {
   type WebContents
 } from 'electron'
 import log from 'electron-log'
-import { isDirectory, isFile } from 'common/filesystem'
+import { isDirectory, isDirectory2, isFile } from 'common/filesystem'
 import {
   MARKDOWN_EXTENSIONS,
   isDangerousExecutableFile,
@@ -317,20 +317,22 @@ ipcMain.on('mt::window::drop', async(e, fileList: string[]) => {
   if (!win) {
     return
   }
+  let pandocFile: string | undefined
   for (const file of fileList) {
-    if (isMarkdownFile(file)) {
+    if (isDirectory2(file)) {
+      ipcMain.emit('app-add-directory-by-id', win.id, file)
+    } else if (isMarkdownFile(file)) {
       openFileOrFolder(win, file)
-      continue
+    } else if (!pandocFile && PANDOC_EXTENSIONS.some(ext => file.endsWith(ext))) {
+      pandocFile = file
     }
-
-    if (PANDOC_EXTENSIONS.some((ext: string) => file.endsWith(ext))) {
-      const existsPandoc = await pandoc.exists()
-      if (!existsPandoc) {
-        noticePandocNotFound(win)
-      } else {
-        openPandocFile(win.id, file)
-      }
-      break
+  }
+  if (pandocFile) {
+    const existsPandoc = await pandoc.exists()
+    if (existsPandoc) {
+      openPandocFile(win.id, pandocFile)
+    } else {
+      noticePandocNotFound(win)
     }
   }
 })

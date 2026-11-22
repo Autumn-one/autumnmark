@@ -33,7 +33,7 @@
       <about-dialog />
       <export-setting-dialog />
       <rename />
-      <import-modal />
+      <import-modal v-model="showImport" />
     </div>
   </div>
 </template>
@@ -75,6 +75,7 @@ const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+const showImport = ref(false)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
@@ -132,56 +133,65 @@ watch(zoom, (zoomValue) => {
   bus.emit('mt::window-zoom', zoomValue)
 })
 
-const setupDragDropHandler = (): void => {
-  window.addEventListener(
-    'dragover',
-    (e: DragEvent) => {
-      if (
-        editorStore.currentFile?.readOnly &&
-        e.target instanceof Element &&
-        e.target.closest('.mu-editor')
-      ) {
-        e.preventDefault()
-        e.stopPropagation()
-        return
-      }
-      if (!e.dataTransfer || !e.dataTransfer.types.length) return
+function fileDragKind(data: DataTransfer) {
+  const items = Array.from(data.items).filter(item => item.kind === 'file')
+  if (items.length > 1) return 'document'
+  const type = items[0]?.type
+  // Explorer can withhold the filename and MIME type until the drop.
+  if (!type || type === 'application/octet-stream') return 'unknown'
+  return type.startsWith('image/') ? 'image' : 'document'
+}
 
-      if (e.dataTransfer.types.indexOf('Files') >= 0) {
-        if (
-          e.dataTransfer.items.length === 1 &&
-          e.dataTransfer.items[0]!.type.indexOf('image') > -1
-        ) {
-          // Do nothing
-        } else {
-          e.preventDefault()
-          if (timer.value) {
-            clearTimeout(timer.value)
-          }
-          timer.value = setTimeout(() => {
-            bus.emit('importDialog', false)
-          }, 300)
-          bus.emit('importDialog', true)
-        }
-        e.dataTransfer.dropEffect = 'copy'
-      } else if (e.dataTransfer.types.indexOf('text/uri-list') >= 0) {
-        // A web-link / web-image drag (e.g. an <img> dragged from a browser).
-        // The muya editor's own dragover/drop handlers accept these and insert
-        // an image block, so leave the drop enabled — forcing dropEffect='none'
-        // here would clobber the editor's 'copy' and suppress the drop event.
-      } else {
-        e.stopPropagation()
-        e.dataTransfer.dropEffect = 'none'
-      }
-    },
-    false
-  )
+function handleWindowDragOver(event: DragEvent) {
+  const data = event.dataTransfer
+  if (!data?.types.length) return
+  if (data.types.includes('Files')) {
+    const kind = fileDragKind(data)
+    const overEditor = event.target instanceof Element && event.target.closest('.mu-editor')
+    event.preventDefault()
+    if (kind === 'document') {
+      if (timer.value) clearTimeout(timer.value)
+      timer.value = setTimeout(() => { showImport.value = false }, 300)
+      showImport.value = true
+    }
+    data.dropEffect = kind === 'image' && overEditor && currentFile.value?.readOnly ? 'none' : 'copy'
+  } else if (!data.types.includes('text/uri-list')) {
+    event.stopPropagation()
+    data.dropEffect = 'none'
+  }
+}
+
+function handleWindowDrop(event: DragEvent) {
+  const data = event.dataTransfer
+  if (!data?.types.includes('Files')) return
+  const items = Array.from(data.items).filter(item => item.kind === 'file')
+  const files = data.files.length
+    ? Array.from(data.files)
+    : items.map(item => item.getAsFile()).filter(file => file !== null)
+  if (!files.length) return
+  const imagesOnly = files.every(file => file.type.startsWith('image/'))
+  if (imagesOnly && !items.some(item => item.webkitGetAsEntry()?.isDirectory)) {
+    if (!(event.target instanceof Element && event.target.closest('.mu-editor'))) {
+      event.preventDefault()
+    }
+    return
+  }
+  const paths = files.map(file => window.electron.webUtils.getPathForFile(file)).filter(Boolean)
+  if (paths.length) {
+    event.preventDefault()
+    event.stopPropagation()
+    showImport.value = false
+    window.electron.ipcRenderer.send('mt::window::drop', paths)
+  }
 }
 
 let stopSidebarContextMenu: (() => void) | undefined
 let stopWindowSession: (() => void) | undefined
 let stopEditListener: (() => void) | undefined
 onUnmounted(() => {
+  window.removeEventListener('dragover', handleWindowDragOver)
+  window.removeEventListener('drop', handleWindowDrop, true)
+  if (timer.value) clearTimeout(timer.value)
   stopSidebarContextMenu?.()
   stopWindowSession?.()
   stopEditListener?.()
@@ -231,7 +241,8 @@ onMounted(async () => {
 
   stopWindowSession = await startWindowSession()
 
-  setupDragDropHandler()
+  window.addEventListener('dragover', handleWindowDragOver)
+  window.addEventListener('drop', handleWindowDrop, true)
 
   nextTick(() => {
     // `initialState` from bootstrap carries nullable URL params (string|null);

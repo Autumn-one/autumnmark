@@ -4,21 +4,15 @@
       v-model="showImport"
       :show-close="false"
       :modal="true"
+      modal-class="import-overlay"
       custom-class="ag-dialog-table"
       width="450px"
     >
       <div class="body">
-        <div
-          class="drop-container"
-          :class="{ active: isOver }"
-          @dragenter.prevent="dragOverHandler"
-          @dragover.prevent="dragOverHandler"
-          @dragleave="dragLeaveHandler"
-          @drop.prevent="dropHandler"
-        >
+        <div class="drop-container">
           <div class="img-wrapper">
             <img
-              :src="`${importIcon.url}`"
+              :src="importIconUrl"
               alt="import file"
             >
           </div>
@@ -38,62 +32,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import bus from '@/bus'
 import importIconUrl from '@/assets/icons/import_file.svg?url'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
-const importIcon = ref({ url: importIconUrl })
-const showImport = ref(false)
-const isOver = ref(false)
-
-const showDialog = (value: unknown) => {
-  const boolean = Boolean(value)
-  if (boolean !== showImport.value) {
-    showImport.value = boolean
-  }
-}
-
-const dragOverHandler = () => {
-  isOver.value = true
-}
-
-const dragLeaveHandler = () => {
-  isOver.value = false
-}
-
-const dropHandler = (e: DragEvent) => {
-  const fileList: string[] = []
-  e.preventDefault()
-  if (!e.dataTransfer) return
-  if (e.dataTransfer.files.length > 0) {
-    for (const file of Array.from(e.dataTransfer.files)) {
-      fileList.push(window.electron.webUtils.getPathForFile(file))
-    }
-  } else {
-    for (const file of Array.from(e.dataTransfer.items)) {
-      if (file.kind === 'file') {
-        const asFile = file.getAsFile()
-        if (asFile) {
-          fileList.push(window.electron.webUtils.getPathForFile(asFile))
-        }
-      }
-    }
-  }
-  window.electron.ipcRenderer.send('mt::window::drop', fileList)
-}
-
-onMounted(() => {
-  bus.on('importDialog', showDialog)
-})
-
-onBeforeUnmount(() => {
-  bus.off('importDialog', showDialog)
-})
+const showImport = defineModel<boolean>({ required: true })
 </script>
 
 <style scoped>
+:global(.import-overlay) {
+  /* Keep the native drag target stable when this hint appears under the pointer. */
+  pointer-events: none;
+}
 .drop-container {
   border-radius: 5px;
   color: var(--sideBarColor);
@@ -103,10 +53,6 @@ onBeforeUnmount(() => {
   & div,
   & p {
     text-align: center;
-  }
-  &.active {
-    border: 1px dashed var(--themeColor);
-    background-color: var(--itemBgColor);
   }
 }
 .img-wrapper {
