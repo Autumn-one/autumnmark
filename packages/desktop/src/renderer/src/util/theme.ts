@@ -5,42 +5,12 @@ import {
   oneDarkThemes,
   railscastsThemes
 } from '../config'
-import {
-  dark,
-  graphite,
-  materialDark,
-  oneDark,
-  ulysses,
-  dracula,
-  nord,
-  catppuccinMocha,
-  gruvboxDark,
-  tokyoNight,
-  tokyoNightStorm,
-  solarizedDark,
-  ayuDark,
-  ayuMirage,
-  everforestDark,
-  rosePine,
-  rosePineMoon,
-  monokaiPro,
-  synthwave84,
-  horizonDark,
-  palenight,
-  oxocarbonDark,
-  kanagawa,
-  nightfox,
-  cyberdream,
-  catppuccinLatte,
-  gruvboxLight,
-  tokyoNightLight,
-  solarizedLight,
-  ayuLight,
-  everforestLight,
-  rosePineDawn
-} from './themeColor'
+import { builtinThemeCss } from './builtinTheme'
 import { isLinux } from './index'
-import lightTheme from '../assets/themes/light.theme.css?inline'
+
+import { themeBaseId } from 'common/theme'
+import { localThemeList, type LocalTheme } from '@shared/localTheme'
+import { localThemeCss } from './themeOverrides'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ORIGINAL_THEME = '#409EFF'
@@ -55,7 +25,11 @@ const getEmojiPickerPatch = (): string => {
     : ''
 }
 
-export const addThemeStyle = (theme: string): void => {
+
+
+export const addThemeStyle = (id: string, library?: LocalTheme[]): void => {
+  const theme = themeBaseId(id)
+  const custom = localThemeList(library).find(item => item.id === id)
   const isCmRailscasts = railscastsThemes.includes(theme)
   const isCmOneDark = oneDarkThemes.includes(theme)
   const isDarkTheme = isCmOneDark || isCmRailscasts
@@ -66,109 +40,7 @@ export const addThemeStyle = (theme: string): void => {
     document.head.appendChild(themeStyleEle)
   }
 
-  switch (theme) {
-    case 'light':
-      themeStyleEle.innerHTML = patchTheme(lightTheme)
-      break
-    case 'dark':
-      themeStyleEle.innerHTML = patchTheme(dark())
-      break
-    case 'material-dark':
-      themeStyleEle.innerHTML = patchTheme(materialDark())
-      break
-    case 'ulysses':
-      themeStyleEle.innerHTML = patchTheme(ulysses())
-      break
-    case 'graphite':
-      themeStyleEle.innerHTML = patchTheme(graphite())
-      break
-    case 'one-dark':
-      themeStyleEle.innerHTML = patchTheme(oneDark())
-      break
-    case 'dracula':
-      themeStyleEle.innerHTML = patchTheme(dracula())
-      break
-    case 'nord':
-      themeStyleEle.innerHTML = patchTheme(nord())
-      break
-    case 'catppuccin-mocha':
-      themeStyleEle.innerHTML = patchTheme(catppuccinMocha())
-      break
-    case 'gruvbox-dark':
-      themeStyleEle.innerHTML = patchTheme(gruvboxDark())
-      break
-    case 'tokyo-night':
-      themeStyleEle.innerHTML = patchTheme(tokyoNight())
-      break
-    case 'tokyo-night-storm':
-      themeStyleEle.innerHTML = patchTheme(tokyoNightStorm())
-      break
-    case 'solarized-dark':
-      themeStyleEle.innerHTML = patchTheme(solarizedDark())
-      break
-    case 'ayu-dark':
-      themeStyleEle.innerHTML = patchTheme(ayuDark())
-      break
-    case 'ayu-mirage':
-      themeStyleEle.innerHTML = patchTheme(ayuMirage())
-      break
-    case 'everforest-dark':
-      themeStyleEle.innerHTML = patchTheme(everforestDark())
-      break
-    case 'rose-pine':
-      themeStyleEle.innerHTML = patchTheme(rosePine())
-      break
-    case 'rose-pine-moon':
-      themeStyleEle.innerHTML = patchTheme(rosePineMoon())
-      break
-    case 'monokai-pro':
-      themeStyleEle.innerHTML = patchTheme(monokaiPro())
-      break
-    case 'synthwave-84':
-      themeStyleEle.innerHTML = patchTheme(synthwave84())
-      break
-    case 'horizon-dark':
-      themeStyleEle.innerHTML = patchTheme(horizonDark())
-      break
-    case 'palenight':
-      themeStyleEle.innerHTML = patchTheme(palenight())
-      break
-    case 'oxocarbon-dark':
-      themeStyleEle.innerHTML = patchTheme(oxocarbonDark())
-      break
-    case 'kanagawa':
-      themeStyleEle.innerHTML = patchTheme(kanagawa())
-      break
-    case 'nightfox':
-      themeStyleEle.innerHTML = patchTheme(nightfox())
-      break
-    case 'cyberdream':
-      themeStyleEle.innerHTML = patchTheme(cyberdream())
-      break
-    case 'catppuccin-latte':
-      themeStyleEle.innerHTML = patchTheme(catppuccinLatte())
-      break
-    case 'gruvbox-light':
-      themeStyleEle.innerHTML = patchTheme(gruvboxLight())
-      break
-    case 'tokyo-night-light':
-      themeStyleEle.innerHTML = patchTheme(tokyoNightLight())
-      break
-    case 'solarized-light':
-      themeStyleEle.innerHTML = patchTheme(solarizedLight())
-      break
-    case 'ayu-light':
-      themeStyleEle.innerHTML = patchTheme(ayuLight())
-      break
-    case 'everforest-light':
-      themeStyleEle.innerHTML = patchTheme(everforestLight())
-      break
-    case 'rose-pine-dawn':
-      themeStyleEle.innerHTML = patchTheme(rosePineDawn())
-      break
-    default:
-      break
-  }
+  themeStyleEle.textContent = patchTheme(builtinThemeCss(theme) + '\n' + localThemeCss(custom))
 
   // workaround: use dark icons
   document.body.classList.remove('dark')
@@ -263,12 +135,13 @@ export const addCustomStyle = (options: CustomStyleOptions): void => {
 }
 
 export interface AddStylesOptions extends CommonStyleOptions {
+  localThemes?: LocalTheme[]
   theme: string
 }
 
 // Append common sheet and theme at the end of head - order is important.
 export const addStyles = (options: AddStylesOptions): void => {
   const { theme } = options
-  addThemeStyle(theme)
+  addThemeStyle(theme, options.localThemes)
   addCommonStyle(options)
 }

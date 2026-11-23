@@ -1,3 +1,5 @@
+import type { LocalTheme } from '../localTheme'
+
 /** Stable preference values shared by startup planning and the settings UI. */
 export const StartupAction = {
   RESTORE_ALL: 'restoreAll',
@@ -150,6 +152,8 @@ export interface UserPreferences extends RecoveryPreferences {
     | 'redux-color'
     | 'redux-dark-color'
   plantumlServer: string
+  themeSystemPrompt: string
+  localThemes?: LocalTheme[]
   theme: string
   followSystemTheme: boolean
   lightModeTheme: string

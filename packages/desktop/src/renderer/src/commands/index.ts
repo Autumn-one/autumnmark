@@ -2,7 +2,6 @@ import bus from '../bus'
 import { delay, isMac } from '@/util'
 import { isUpdatable } from './utils'
 import getCommandDescriptionById from './descriptions'
-import { t } from '../i18n'
 import { END_USER_DOCS_URL } from '@shared/brand'
 
 export { default as FileEncodingCommand } from './fileEncoding'
@@ -531,40 +530,8 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'window.change-theme',
-    subcommands: [
-      {
-        id: 'window.change-theme-light',
-        description: 'GitBook Teal',
-        value: 'light'
-      },
-      {
-        id: 'window.change-theme-dark',
-        description: 'Dark',
-        value: 'dark'
-      },
-      {
-        id: 'window.change-theme-graphite',
-        description: 'Graphite',
-        value: 'graphite'
-      },
-      {
-        id: 'window.change-theme-material-dark',
-        description: 'Material Dark',
-        value: 'material-dark'
-      },
-      {
-        id: 'window.change-theme-one-dark',
-        description: 'One Dark',
-        value: 'one-dark'
-      },
-      {
-        id: 'window.change-theme-ulysses',
-        description: 'Ulysses',
-        value: 'ulysses'
-      }
-    ],
-    executeSubcommand: async(_, theme) => {
-      window.electron.ipcRenderer.send('mt::set-user-preference', { theme })
+    execute: async() => {
+      window.electron.ipcRenderer.send('mt::open-setting-window', 'theme')
     }
   },
 
@@ -695,25 +662,6 @@ export const getCommandsWithDescriptions = async(): Promise<CommandDescriptor[]>
       const subcommands = (item as CommandDescriptor).subcommands
       if (id) {
         item.description = getCommandDescriptionById(id)
-      }
-
-      if (id === 'window.change-theme' && subcommands && Array.isArray(subcommands)) {
-        for (const subcommand of subcommands) {
-          const { value } = subcommand
-          if (value === 'light') {
-            subcommand.description = t('menu.theme.gitbookTeal')
-          } else if (value === 'dark') {
-            subcommand.description = t('menu.theme.dark')
-          } else if (value === 'graphite') {
-            subcommand.description = t('menu.theme.graphiteLight')
-          } else if (value === 'material-dark') {
-            subcommand.description = t('menu.theme.materialDark')
-          } else if (value === 'one-dark') {
-            subcommand.description = t('menu.theme.oneDark')
-          } else if (value === 'ulysses') {
-            subcommand.description = t('menu.theme.ulyssesLight')
-          }
-        }
       }
 
       if (subcommands && Array.isArray(subcommands)) {

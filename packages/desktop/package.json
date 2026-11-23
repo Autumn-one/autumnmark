@@ -1,6 +1,6 @@
 {
   "name": "marktext",
-  "version": "0.24.44",
+  "version": "0.24.45",
   "description": "AutumnMark — a Markdown editor based on MarkText",
   "main": "./out/main/index.js",
   "author": {
@@ -52,6 +52,7 @@
     "typecheck:watch": "pnpm --filter @muyajs/core build:types && vue-tsc --noEmit -p tsconfig.json --watch"
   },
   "dependencies": {
+    "@csstools/css-tokenizer": "4.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@element-plus/icons-vue": "^2.3.2",
     "@intlify/core-base": "^11.4.16",
@@ -89,6 +90,8 @@
     "pako": "^3.0.3",
     "pathe": "^2.0.3",
     "pinia": "^4.1.0",
+    "postcss": "8.5.29",
+    "postcss-selector-parser": "7.1.6",
     "prismjs": "^1.30.0",
     "snabbdom": "^3.6.4",
     "snabbdom-to-html": "^7.1.0",

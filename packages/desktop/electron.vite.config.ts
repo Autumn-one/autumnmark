@@ -15,7 +15,7 @@ export default defineConfig({
     build: {
       externalizeDeps: {
         // Bundle ESM-only dependencies so main can load them from CommonJS at startup.
-        exclude: ['electron-store'],
+        exclude: ['electron-store', '@csstools/css-tokenizer'],
         include: ['native-keymap']
       }
     },
@@ -54,7 +54,9 @@ export default defineConfig({
       rolldownOptions: {
         input: {
           editor: resolve(__dirname, 'src/renderer/index.html'),
-          settings: resolve(__dirname, 'src/renderer/settings.html')
+          settings: resolve(__dirname, 'src/renderer/settings.html'),
+          themePreview: resolve(__dirname, 'src/renderer/theme-preview.html'),
+          themeStudio: resolve(__dirname, 'src/renderer/theme-studio.html')
         }
       }
     },
@@ -77,8 +79,11 @@ export default defineConfig({
       extensions: ['.mjs', '.ts', '.js', '.json', '.vue']
     },
     optimizeDeps: {
-      // Vite's dev client exposes define.global at runtime for optimized deps.
-      include: ['pako', 'pathe']
+      // Opening the separate studio or its preview must not invalidate the running editor's optimized modules.
+      include: [
+        'pako', 'pathe', 'codemirror', 'codemirror/mode/css/css', 'codemirror/mode/markdown/markdown',
+        'codemirror/addon/display/placeholder', 'postcss', 'postcss-selector-parser'
+      ]
     },
     plugins: [vue(), svgLoader()] as PluginOption[],
     css: {

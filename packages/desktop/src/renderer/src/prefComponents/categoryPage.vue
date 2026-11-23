@@ -3,11 +3,9 @@
     class="pref-category"
     :class="`pref-${category}`"
   >
-    <h4>{{ t(`preferences.categories.${category}`) }}</h4>
-    <theme-settings
-      v-if="category === 'appearance'"
-      embedded
-    />
+    <h4 v-if="category !== 'theme'">{{ t(`preferences.categories.${category}`) }}</h4>
+    <ai-models v-if="category === 'ai'" />
+    <theme-settings v-if="category === 'theme'" />
     <general-settings
       v-if="generalGroups[category]"
       :key="`general-${category}`"
@@ -51,6 +49,7 @@ import Bool from './common/bool/index.vue'
 import { usePreferencesStore } from '@/store/preferences'
 
 const EditorSettings = defineAsyncComponent(() => import('./editor/index.vue'))
+const AiModels = defineAsyncComponent(() => import('./ai/index.vue'))
 const ThemeSettings = defineAsyncComponent(() => import('./theme/index.vue'))
 const SpellcheckerSettings = defineAsyncComponent(() => import('./spellchecker/index.vue'))
 const ImageSettings = defineAsyncComponent(() => import('./image/index.vue'))

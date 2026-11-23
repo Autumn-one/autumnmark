@@ -1,4 +1,5 @@
 import type { UserPreferences } from '@shared/types/preferences'
+import type { LocalTheme } from '@shared/localTheme'
 import { defineStore } from 'pinia'
 import { getCurrentLanguage, setLanguage } from '../i18n'
 
@@ -97,6 +98,7 @@ export interface PreferencesState {
   mermaidDarkTheme: string
   plantumlServer: string
 
+  localThemes: LocalTheme[]
   theme: string
   followSystemTheme: boolean
   lightModeTheme: string
@@ -230,6 +232,7 @@ export const usePreferencesStore = defineStore('preferences', {
     mermaidDarkTheme: 'dark',
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
+    localThemes: [],
     theme: 'light',
     followSystemTheme: true,
     lightModeTheme: 'light',

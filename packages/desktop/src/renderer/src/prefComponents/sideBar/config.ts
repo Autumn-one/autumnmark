@@ -26,8 +26,11 @@ export interface SearchEntry {
   accelerator?: string
 }
 
+const categoryName = (category: string): string =>
+  t(category === 'theme' ? 'preferences.theme.title' : `preferences.categories.${category}`)
+
 export const getCategory = (): PrefCategory[] => preferenceCategories.map(category => ({
-  name: t(`preferences.categories.${category.id}`),
+  name: categoryName(category.id),
   label: category.id,
   icon: category.icon,
   path: `/preference/${category.id}`
@@ -45,7 +48,7 @@ export const getTranslatedSearchContent = (): SearchEntry[] =>
       const preferenceEn = englishText(definition.label)
       return {
         key,
-        category: t(`preferences.categories.${category}`),
+        category: categoryName(category),
         categoryEn,
         preference: preferenceLabel(key),
         preferenceEn,

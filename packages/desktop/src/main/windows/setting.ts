@@ -47,7 +47,7 @@ class SettingWindow extends BaseWindow {
       }
     }
 
-    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme)
+    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme, initialPreferences.localThemes)
     const win = (this.browserWindow = new BrowserWindow(winOptions))
 
     win.webContents.on('did-fail-load', (_event, code, desc, url) => {

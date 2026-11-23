@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test'
 import en from '../../static/locales/en.json'
 import type { ElectronApplication, Page } from 'playwright'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { themeCatalogBase } from '../../src/shared/themeCatalog'
 import { expectNoRendererErrors, launchWithMarkdown, sendIpcToRenderer } from './helpers'
 
 const openSettings = async(app: ElectronApplication, editor: Page): Promise<Page> => {
@@ -237,7 +239,7 @@ test('shortcut conflict notices name and reveal the command occupying the bindin
   }
 })
 
-test('theme picker keeps fixed and system theme choices separate and preserves custom CSS', async() => {
+test('the Theme settings page keeps fixed and system choices separate and preserves custom CSS', async() => {
   const { app, page } = await launchWithMarkdown('# Theme choices\n', {
     preferences: {
       language: 'en', theme: 'light', followSystemTheme: false,
@@ -246,27 +248,236 @@ test('theme picker keeps fixed and system theme choices separate and preserves c
   })
   try {
     const settings = await openSettings(app, page)
+    const categories = settings.locator('.pref-sidebar .category')
     await settings.getByRole('button', { name: 'Appearance', exact: true }).click()
-    await settings.locator('#setting-theme .selected-theme').click()
-    await expect(settings.locator('.theme-option')).toHaveCount(33)
+    await expect(settings.locator('#setting-theme')).toHaveCount(0)
+    await page.evaluate(() => window.electron.ipcRenderer.send('mt::open-setting-window', 'theme'))
+    await expect(categories.getByRole('button', { name: 'Theme', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(settings.locator('.theme-card')).toHaveCount(33)
     await settings.getByRole('textbox', { name: 'Search themes', exact: true }).fill('Dracula')
-    await expect(settings.locator('.theme-option')).toHaveCount(1)
-    await settings.getByRole('button', { name: 'Dracula', exact: true }).click()
+    await expect(settings.locator('.theme-card')).toHaveCount(1)
+    await settings.getByRole('button', { name: 'Apply · Dracula', exact: true }).click()
     await expect.poll(async() => (await preferences(app)).theme).toBe('dracula')
     await expect(page.locator('body')).toHaveClass(/dark/)
-    await settings.getByRole('switch', { name: 'Follow system appearance', exact: true }).locator('..').click()
-    await settings.locator('#setting-lightModeTheme .selected-theme').click()
-    await expect(settings.getByRole('button', { name: 'Dracula', exact: true })).toHaveCount(0)
-    await settings.getByRole('button', { name: 'Solarized Light', exact: true }).click()
+    await settings.getByRole('button', { name: 'Follow system appearance', exact: true }).click()
+    await settings.locator('#setting-lightModeTheme').click()
+    await expect(settings.getByRole('heading', { name: 'Dracula', exact: true })).toHaveCount(0)
+    await settings.getByRole('button', { name: /(?:Apply|Set as light theme) · Solarized Light/ }).click()
     await expect.poll(() => preferences(app)).toMatchObject({ lightModeTheme: 'solarized-light', darkModeTheme: 'dark' })
-    await settings.locator('#setting-darkModeTheme .selected-theme').click()
-    await expect(settings.getByRole('button', { name: 'Solarized Light', exact: true })).toHaveCount(0)
-    await settings.getByRole('button', { name: 'Nord', exact: true }).click()
+    await settings.locator('#setting-darkModeTheme').click()
+    await expect(settings.getByRole('heading', { name: 'Solarized Light', exact: true })).toHaveCount(0)
+    await settings.getByRole('button', { name: /(?:Apply|Set as dark theme) · Nord/ }).click()
     await expect.poll(() => preferences(app)).toMatchObject({ lightModeTheme: 'solarized-light', darkModeTheme: 'nord' })
+    await settings.getByRole('button', { name: 'Appearance', exact: true }).click()
     await settings.locator('.pref-sidebar input').fill('customCss')
     await settings.locator('.pref-autocomplete li').first().click()
+    await expect(settings).toHaveURL(/preference\/theme/)
     await expect(settings.locator('#setting-customCss')).toHaveAttribute('open', '')
     await expect(settings.locator('.custom-css-input')).toHaveValue('/* retained */')
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('theme preview compares and switches samples before applying a local theme', async() => {
+  const { app, page } = await launchWithMarkdown('# Theme preview\n', {
+    preferences: { language: 'en', theme: 'light', followSystemTheme: false },
+    suppressErrorDialog: true
+  })
+  try {
+    const settings = await openSettings(app, page)
+    await settings.getByRole('button', { name: 'Theme', exact: true }).click()
+    await settings.getByRole('button', { name: 'Preview · Nord', exact: true }).click()
+    const dialog = settings.getByRole('dialog', { name: 'Theme preview' })
+    const nord = dialog.frameLocator('iframe[title="Nord"]')
+    await expect(nord.locator('h1')).toContainText('Ridge notes')
+    await expect(nord.locator('body')).toHaveCSS('background-color', 'rgb(46, 52, 64)')
+    await expect(nord.locator('h6')).toContainText('Recording convention')
+    await expect(nord.locator('.mu-table-row')).toHaveCount(4)
+    await expect(nord.locator('.mu-task-list-item')).toHaveCount(3)
+    await expect(nord.locator('.mu-github-alert')).toHaveCount(1)
+    await expect(nord.locator('.mu-math-block')).toHaveCount(1)
+    await expect(nord.locator('.mu-footnote')).toHaveCount(1)
+    await dialog.getByRole('button', { name: 'Compare with current theme' }).click()
+    const current = dialog.frameLocator('iframe[title="GitBook Teal"]')
+    await expect(current.locator('h1')).toContainText('Ridge notes')
+    await dialog.getByRole('button', { name: 'Markdown source', exact: true }).click()
+    for (const frame of [current, nord]) {
+      await expect(frame.locator('.CodeMirror-line').first()).toContainText('# Ridge notes')
+      await expect(frame.locator('main')).toBeHidden()
+    }
+    const picker = dialog.getByRole('combobox', { name: 'Choose theme', exact: true })
+    await picker.click()
+    await picker.fill('Graphite')
+    await picker.press('Space')
+    await expect(dialog).toBeVisible()
+    await expect(picker).toHaveValue('Graphite ')
+    await picker.fill('Graphite')
+    await settings.getByRole('option', { name: 'Graphite', exact: true }).click()
+    await expect(dialog.frameLocator('iframe[title="Graphite"]').locator('.CodeMirror-line').first()).toContainText('# Ridge notes')
+    await dialog.click({ position: { x: 5, y: 5 } })
+    await expect(dialog).toBeHidden()
+    expect((await preferences(app)).theme).toBe('light')
+
+    await settings.getByRole('button', { name: 'Preview · Graphite', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Apply', exact: true }).press('Space')
+    await expect(dialog).toBeHidden()
+    expect((await preferences(app)).theme).toBe('light')
+
+    await settings.getByRole('button', { name: 'Preview · Graphite', exact: true }).click()
+    await dialog.frameLocator('iframe[title="Graphite"]').locator('h1').click()
+    await settings.keyboard.press('Space')
+    await expect(dialog).toBeHidden()
+    expect((await preferences(app)).theme).toBe('light')
+
+    await settings.getByRole('button', { name: 'Preview · Graphite', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await expect.poll(async() => (await preferences(app)).theme).toBe('graphite')
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('online themes install, apply, update and uninstall through the local theme library', async() => {
+  const { app, page } = await launchWithMarkdown('# Online themes\n', {
+    preferences: { language: 'en', theme: 'light', followSystemTheme: false },
+    suppressErrorDialog: true
+  })
+  try {
+    const assets = [1, 2].map(revision => {
+      const file = JSON.stringify({
+        version: 1, id: 'local:nord:21111111-2222-4333-8444-555555555555',
+        name: 'Evening Paper', base: 'nord', values: { accent: revision === 1 ? '#aa8855' : '#aabbcc' }
+      })
+      const entry = {
+        id: 'evening-paper', revision, name: 'Evening Paper', author: 'AutumnMark', base: 'nord',
+        path: `themes/evening-paper/${revision}/theme.theme.json`,
+        sha256: createHash('sha256').update(file).digest('hex')
+      }
+      return { file, entry }
+    })
+    const morningFile = JSON.stringify({
+      version: 1, id: 'local:light:21111111-2222-4333-8444-555555555555',
+      name: 'Morning Paper', base: 'light', values: { accent: '#32805e' }
+    })
+    const morning = { file: morningFile, entry: {
+      id: 'morning-paper', revision: 1, name: 'Morning Paper', author: 'AutumnMark', base: 'light',
+      path: 'themes/morning-paper/1/theme.theme.json',
+      sha256: createHash('sha256').update(morningFile).digest('hex')
+    } }
+    const source = await app.evaluateHandle(({ net }, { assets, morning, catalogBase }) => {
+      const state = { revision: 1, offline: false }
+      const fetch = net.fetch.bind(net)
+      net.fetch = (input, options) => {
+        const url = new URL(typeof input === 'string' ? input : input.url)
+        if (!url.href.startsWith(catalogBase)) return fetch(input, options)
+        if (state.offline) return Promise.resolve(new Response('', { status: 503 }))
+        const current = assets[state.revision - 1]
+        return Promise.resolve(url.pathname.endsWith('/catalog.json')
+          ? Response.json({ version: 1, themes: [current.entry, morning.entry] })
+          : new Response(url.pathname.endsWith(morning.entry.path) ? morning.file : current.file))
+      }
+      return state
+    }, { assets, morning, catalogBase: themeCatalogBase })
+    const settings = await openSettings(app, page)
+    await settings.getByRole('button', { name: 'Theme', exact: true }).click()
+    await settings.getByRole('button', { name: 'Online themes', exact: true }).click()
+    await settings.getByRole('button', { name: 'Install only · Evening Paper', exact: true }).click()
+    await expect.poll(() => preferences(app)).toMatchObject({
+      theme: 'light',
+      localThemes: [{ name: 'Evening Paper', catalog: { id: 'evening-paper', revision: 1 } }]
+    })
+
+    await source.evaluate(state => { state.offline = true })
+    await settings.getByRole('button', { name: 'Refresh online themes', exact: true }).click()
+    await expect(settings.getByText('Showing the last downloaded catalog.')).toBeVisible()
+    await settings.getByRole('button', { name: 'Local themes', exact: true }).click()
+    await settings.getByRole('textbox', { name: 'Search themes', exact: true }).fill('Evening Paper')
+    await settings.getByRole('button', { name: 'Apply · Evening Paper', exact: true }).click()
+    const activeId = /^local:nord:/
+    await expect.poll(() => preferences(app)).toMatchObject({ theme: expect.stringMatching(activeId) })
+    await expect(page.locator('body')).toHaveClass(/dark/)
+    const chosen = (await preferences(app)).theme
+
+    await source.evaluate(state => { state.revision = 2; state.offline = false })
+    await settings.getByRole('button', { name: 'Online themes', exact: true }).click()
+    await settings.getByRole('button', { name: 'Refresh online themes', exact: true }).click()
+    await settings.getByRole('button', { name: 'Update · Evening Paper', exact: true }).click()
+    await expect.poll(() => preferences(app)).toMatchObject({
+      theme: chosen,
+      localThemes: [{ id: chosen, values: { accent: '#aabbcc' }, catalog: { revision: 2 } }]
+    })
+    await expect.poll(() => page.locator('html').evaluate(element =>
+      getComputedStyle(element).getPropertyValue('--themeColor').trim()
+    )).toBe('#aabbcc')
+    await settings.getByRole('button', { name: 'Preview · Morning Paper', exact: true }).click()
+    const preview = settings.getByRole('dialog', { name: 'Theme preview' })
+    const sample = preview.frameLocator('iframe[title="Morning Paper"]')
+    await expect(sample.locator('h1')).toContainText('Ridge notes')
+    await expect.poll(() => sample.locator('html').evaluate(element =>
+      getComputedStyle(element).getPropertyValue('--themeColor').trim()
+    )).toBe('#32805e')
+    expect(await preferences(app)).toMatchObject({
+      theme: chosen,
+      localThemes: [{ id: chosen, catalog: { revision: 2 } }]
+    })
+    await preview.getByRole('button', { name: 'Install and apply', exact: true }).click()
+    await expect.poll(() => preferences(app)).toMatchObject({
+      theme: expect.stringMatching(/^local:light:/),
+      localThemes: expect.arrayContaining([expect.objectContaining({ name: 'Morning Paper' })])
+    })
+    await expect(page.locator('body')).not.toHaveClass(/dark/)
+    await settings.getByRole('button', { name: 'Local themes', exact: true }).click()
+    await settings.getByRole('button', { name: 'Uninstall theme · Morning Paper', exact: true }).click()
+    const confirmation = settings.getByRole('dialog', { name: 'Uninstall theme' })
+    await confirmation.getByRole('button', { name: 'Uninstall theme', exact: true }).click()
+    await expect.poll(() => preferences(app)).toMatchObject({
+      theme: 'light',
+      localThemes: [{ id: chosen, catalog: { revision: 2 } }]
+    })
+    await settings.getByRole('button', { name: 'Online themes', exact: true }).click()
+    await expect(settings.getByRole('button', { name: 'Install only · Morning Paper', exact: true })).toBeVisible()
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('deleting an active custom theme restores its base in each selected slot', async() => {
+  const id = 'local:nord:21111111-2222-4333-8444-555555555555'
+  const retained = {
+    version: 1, id: 'local:light:21111111-2222-4333-8444-555555555556',
+    name: 'Another theme', base: 'light', values: {}
+  }
+  const { app, page } = await launchWithMarkdown('# Custom themes\n', {
+    preferences: {
+      language: 'en', theme: id, lightModeTheme: 'graphite', darkModeTheme: id, followSystemTheme: false,
+      localThemes: [{ version: 1, id, name: 'Ink and Mist', base: 'nord', values: {} }, retained]
+    },
+    suppressErrorDialog: true
+  })
+  try {
+    const settings = await openSettings(app, page)
+    await settings.getByRole('button', { name: 'Theme', exact: true }).click()
+    const nord = settings.locator('.theme-card').filter({ has: settings.getByRole('heading', { name: 'Nord', exact: true }) })
+    await expect(nord.getByRole('button', { name: /Delete theme|Uninstall theme/ })).toHaveCount(0)
+    const trigger = settings.getByRole('button', { name: 'Delete theme · Ink and Mist', exact: true })
+    await trigger.click()
+    const confirmation = settings.getByRole('dialog', { name: 'Delete theme' })
+    await expect(confirmation).toContainText('Theme selections that use it will switch to Nord.')
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(confirmation).toBeHidden()
+    await expect(trigger).toBeVisible()
+    await trigger.click()
+    await confirmation.getByRole('button', { name: 'Delete theme', exact: true }).click()
+    await expect(confirmation).toBeHidden()
+    await expect(trigger).toHaveCount(0)
+    await expect.poll(() => preferences(app)).toMatchObject({
+      theme: 'nord', lightModeTheme: 'graphite', darkModeTheme: 'nord', localThemes: [retained]
+    })
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

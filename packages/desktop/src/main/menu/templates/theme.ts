@@ -2,6 +2,8 @@ import { type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/theme'
 import { t } from '../../i18n'
 import type Preference from '../../preferences'
+import { localThemeList } from '@shared/localTheme'
+import { isDarkThemeId } from 'common/theme'
 
 // [i18nLabelKey, themeId] for each selectable theme. The menu label is
 // `menu.theme.<labelKey>`; `themeId` is both the menu item id and the value
@@ -47,12 +49,13 @@ const DARK_THEMES: ReadonlyArray<readonly [string, string]> = [
 ]
 
 export default function(userPreference: Preference): MenuItemConstructorOptions {
-  const preferences = userPreference.getAll() as { theme?: string; followSystemTheme?: boolean }
+  const preferences = userPreference.getAll()
+
   const { theme, followSystemTheme } = preferences
   const isThemeSelectionEnabled = !followSystemTheme
 
-  const themeRadio = ([labelKey, id]: readonly [string, string]): MenuItemConstructorOptions => ({
-    label: t(`menu.theme.${labelKey}`),
+  const themeRadio = (label: string, id: string): MenuItemConstructorOptions => ({
+    label,
     type: 'radio',
     id,
     enabled: isThemeSelectionEnabled,
@@ -62,7 +65,23 @@ export default function(userPreference: Preference): MenuItemConstructorOptions 
     }
   })
 
+  const menuItems = (builtins: ReadonlyArray<readonly [string, string]>, dark: boolean) => [
+    ...builtins.map(([key, id]) => themeRadio(t(`menu.theme.${key}`), id)),
+    ...localThemeList(preferences.localThemes).filter(item => isDarkThemeId(item.base) === dark)
+      .map(item => themeRadio(item.name, item.id))
+  ]
   const submenu: MenuItemConstructorOptions[] = [
+    {
+      id: 'openThemeSettings',
+      label: t('menu.theme.openSettings'),
+      click: actions.openThemeSettings
+    },
+    {
+      id: 'createThemeFromCurrent',
+      label: t('studio.create'),
+      click: actions.createFromCurrentTheme
+    },
+    { type: 'separator' },
     {
       label: t('preferences.theme.followSystemTheme'),
       type: 'checkbox',
@@ -87,11 +106,11 @@ export default function(userPreference: Preference): MenuItemConstructorOptions 
     { type: 'separator' },
     {
       label: t('menu.theme.lightThemes'),
-      submenu: LIGHT_THEMES.map(themeRadio)
+      submenu: menuItems(LIGHT_THEMES, false)
     },
     {
       label: t('menu.theme.darkThemes'),
-      submenu: DARK_THEMES.map(themeRadio)
+      submenu: menuItems(DARK_THEMES, true)
     }
   )
 

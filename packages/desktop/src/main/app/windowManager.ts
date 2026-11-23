@@ -29,10 +29,10 @@ class WindowActivityList {
     return null
   }
 
-  getSecondNewest(): number | null {
-    const { _buf } = this
-    if (_buf.length >= 2) {
-      return _buf[_buf.length - 2]
+  latestMatching(matches: (id: number) => boolean): number | null {
+    for (let index = this._buf.length - 1; index >= 0; index--) {
+      const id = this._buf[index]
+      if (matches(id)) return id
     }
     return null
   }
@@ -183,16 +183,8 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
   }
 
   getActiveEditor(): BaseWindow | undefined {
-    let win = this.getActiveWindow()
-    if (win && win.type !== WindowType.EDITOR) {
-      const secondNewest = this._windowActivity.getSecondNewest()
-      win = secondNewest != null ? this._windows.get(secondNewest) : undefined
-      if (win && win.type === WindowType.EDITOR) {
-        return win
-      }
-      return undefined
-    }
-    return win
+    const id = this._windowActivity.latestMatching(id => this._windows.get(id)?.type === WindowType.EDITOR)
+    return this.get(id)
   }
 
   getActiveEditorId(): number | null {
@@ -245,9 +237,10 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
     }
 
     const buf: { windowId: number | null; fileList: string[] }[] = []
-    const len = filePathScores!.length
+    if (!filePathScores) return [{ windowId: null, fileList }]
+    const len = filePathScores.length
     for (let i = 0; i < len; ++i) {
-      const { id, score } = filePathScores![i]
+      const { id, score } = filePathScores[i]
       let windowId = id
 
       if (score === -1) {

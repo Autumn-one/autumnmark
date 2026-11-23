@@ -5,12 +5,15 @@ import { TypedEmitter } from '@shared/types/typedEmitter'
 import type Accessor from '../app/accessor'
 import type { UserPreferences } from '@shared/types/preferences'
 import { getThemeBackgroundColor } from '../../common/theme'
+import { localThemeList } from '@shared/localTheme'
+import { themeWindowBackground } from '@shared/themeCss'
 
 
 export const WindowType = {
   BASE: 'base', // You shold never create a `BASE` window.
   EDITOR: 'editor',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  STUDIO: 'studio'
 } as const
 
 export type WindowTypeValue = (typeof WindowType)[keyof typeof WindowType]
@@ -97,7 +100,7 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
 
     // Decided at build time: a NODE_ENV inherited from the user's environment
     // must not point a built app at the dev server URL (#5053).
-    const entry = type === WindowType.SETTINGS ? 'settings.html' : 'index.html'
+    const entry = { base: 'index.html', editor: 'index.html', settings: 'settings.html', studio: 'theme-studio.html' }[type]
     const url = import.meta.env.DEV
       ? new URL(entry, process.env['ELECTRON_RENDERER_URL']!)
       : pathToFileURL(path.join(__dirname, '../renderer', entry))
@@ -116,9 +119,11 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
     return url
   }
 
-  protected _getPreferredBackgroundColor(theme: string | undefined): string {
+  protected _getPreferredBackgroundColor(theme: string | undefined, library?: UserPreferences['localThemes']): string {
     // Paint using the active theme immediately to avoid a white startup flash.
-    return getThemeBackgroundColor(theme)
+    const local = localThemeList(library).find(item => item.id === theme)
+    const background = local?.css ? themeWindowBackground(local.css) : undefined
+    return background ?? local?.values.background ?? getThemeBackgroundColor(theme)
   }
 }
 

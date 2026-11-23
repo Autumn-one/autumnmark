@@ -121,11 +121,7 @@ const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 
-watch(theme, (value, oldValue) => {
-  if (value !== oldValue) {
-    addThemeStyle(value)
-  }
-})
+watch(() => [theme.value, preferencesStore.localThemes] as const, ([id, library]) => addThemeStyle(id, library))
 
 watch(customCss, (value, oldValue) => {
   if (value !== oldValue) {
@@ -257,6 +253,7 @@ onMounted(async () => {
     const init = window.marktext?.initialState
     const style: AddStylesOptions = {
       theme: init?.theme ?? DEFAULT_STYLE.theme,
+      localThemes: preferencesStore.localThemes,
       codeFontFamily: init?.codeFontFamily ?? DEFAULT_STYLE.codeFontFamily,
       codeFontSize: init?.codeFontSize ?? DEFAULT_STYLE.codeFontSize,
       hideScrollbar: init?.hideScrollbar ?? DEFAULT_STYLE.hideScrollbar

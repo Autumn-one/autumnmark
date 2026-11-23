@@ -6,7 +6,6 @@ import log from 'electron-log'
 import { app, BrowserWindow, clipboard, nativeTheme, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
-import type { UserPreferencesPatch } from '@shared/types/preferences'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs, { userArguments } from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
@@ -14,7 +13,6 @@ import { normalizeCliMarkdownPath, normalizeMarkdownPath } from '../filesystem/m
 import { confirmAndTrashItem } from '../filesystem/trash'
 import { registerKeyboardListeners } from '../keyboard'
 import { startAutomaticUpdateChecks } from '../menu/actions/marktext'
-import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
@@ -25,7 +23,7 @@ import EditorWindow, { type FileOpenOptions } from '../windows/editor'
 import SettingWindow from '../windows/setting'
 import { setLanguage } from '../i18n'
 import { matchSupportedLanguage } from 'common/i18n'
-import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
+import { getNativeThemeSource } from './nativeTheme'
 import type Accessor from './accessor'
 import type WindowManager from './windowManager'
 import type { PreparedSessionWindow } from '@shared/types/applicationState'
@@ -184,10 +182,6 @@ class App {
     const { preferences } = this._accessor
 
     this._initializeLanguage()
-    const { theme } = preferences.getAll()
-    const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
-    const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-    const darkModeTheme = preferences.getItem<string>('darkModeTheme')
 
     if (!this._initialArgumentsConsumed && args._.length) {
       const readOnly = args['--read-only'] === true
@@ -205,85 +199,24 @@ class App {
 
     this._initialArgumentsConsumed = true
 
-    nativeTheme.themeSource = getNativeThemeSource({ followSystemTheme, theme })
-
-    const isDarkTheme = isDarkApplicationTheme(theme)
-    const systemIsDark = nativeTheme.shouldUseDarkColors
-
-    if (followSystemTheme && isDarkTheme !== systemIsDark) {
-      const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-      log.info(
-        `Following system theme at startup: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-      )
-      selectTheme(newTheme)
+    const syncSystemTheme = (): void => {
+      const { followSystemTheme, theme, lightModeTheme, darkModeTheme } = preferences.getAll()
+      if (!followSystemTheme) return
+      const expected = nativeTheme.shouldUseDarkColors ? darkModeTheme : lightModeTheme
+      if (theme !== expected) preferences.setItem('theme', expected)
     }
 
-    onInternalChannel(
-      'broadcast-preferences-changed',
-      (change: UserPreferencesPatch) => {
-        const nextPreferences = {
-          ...preferences.getAll(),
-          ...change
-        }
-        nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
-
-        if (change.followSystemTheme === true) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-
-          log.info(
-            `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-          )
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
-        if (
-          preferences.getItem<boolean>('followSystemTheme') &&
-        (change.lightModeTheme || change.darkModeTheme)
-        ) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-
-        // Use newly changed theme preferences before the stored values are refreshed.
-          let lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          let darkModeTheme = preferences.getItem<string>('darkModeTheme')
-
-          if (change.lightModeTheme !== undefined) {
-            lightModeTheme = change.lightModeTheme
-          }
-          if (change.darkModeTheme !== undefined) {
-            darkModeTheme = change.darkModeTheme
-          }
-
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-
-          log.info(`Theme preference changed, applying: ${newTheme}`)
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
-      })
+    nativeTheme.themeSource = getNativeThemeSource(preferences.getAll())
+    syncSystemTheme()
 
     if (!this._themeListenerRegistered) {
-      nativeTheme.on('updated', () => {
-        const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
-        const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-        const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-
-        if (followSystemTheme) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-          const currentTheme = preferences.getItem<string>('theme')
-
-          if (newTheme !== currentTheme) {
-            log.info(
-              `System theme changed, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-            )
-            selectTheme(newTheme)
-            preferences.setItem('theme', newTheme)
-          }
+      onInternalChannel('broadcast-preferences-changed', (change: Record<string, unknown>) => {
+        if ('followSystemTheme' in change || 'theme' in change) {
+          nativeTheme.themeSource = getNativeThemeSource(preferences.getAll())
         }
+        if ('followSystemTheme' in change || 'lightModeTheme' in change || 'darkModeTheme' in change) syncSystemTheme()
       })
+      nativeTheme.on('updated', syncSystemTheme)
       this._themeListenerRegistered = true
     }
 
@@ -709,8 +642,8 @@ class App {
       const owner = this._windowManager.getEditorForWebContents(event.sender)?.browserWindow
       if (owner?.isFocused()) this._prepareSettingsWindow(owner)
     })
-    ipcMain.on('mt::open-setting-window', () => {
-      this._openSettingsWindow()
+    ipcMain.on('mt::open-setting-window', (_event, category?: string) => {
+      this._openSettingsWindow(category === 'ai' || category === 'theme' ? category : undefined)
     })
 
     ipcMain.on('mt::make-screenshot', (e) => {

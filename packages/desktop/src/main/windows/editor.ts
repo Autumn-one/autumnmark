@@ -84,7 +84,7 @@ class EditorWindow extends BaseWindow {
       }
     }
 
-    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme)
+    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme, initialPreferences.localThemes)
     if (env.disableSpellcheck) {
       ;(winOptions.webPreferences as { spellcheck: boolean }).spellcheck = false
     }

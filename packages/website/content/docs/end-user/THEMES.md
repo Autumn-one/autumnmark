@@ -49,11 +49,19 @@ The names below match the labels shown in the **Theme** menu. The default light 
 
 ## Switching Themes
 
-You can switch themes in several ways:
+Open **Preferences → Theme** to browse and apply local themes. The **Theme → Theme Settings…** menu item and the **Change Theme** command in the command palette open the same page.
 
-1. **Menu**: Go to `Theme` menu and select your preferred theme
-2. **Preferences**: Open `Preferences` → `Theme` tab to preview and select themes
-3. **Follow System**: "Follow System Theme" is enabled on first launch. It switches between the configured light and dark themes with the system. Disable it to select a fixed theme.
+Choose **Preview** on a theme card to see the example document in the rendered editor or as Markdown source. **Compare with current theme** shows the same document in both themes. Use **Apply** or **Install and apply** when you are ready to switch.
+
+Click outside the preview or press **Space** to close it. The preview and theme editor share a default sample with headings, inline formatting, tables, lists, code, equations, and footnotes.
+
+**Follow system appearance** is enabled on first launch. Use the light and dark slots to choose a theme for each system appearance. Applying a theme of the current appearance takes effect immediately. Selecting a theme of the other appearance sets it for the next system switch. Choose **Fixed theme** to keep using a single theme.
+
+### Online Themes
+
+Select **Online themes** in Theme settings. **Install only** adds it to **Local themes** for later use. **Install and apply** installs and selects it in one step. Installed themes work offline. Use the refresh button to check for new catalog entries and updates.
+
+In **Local themes**, use **Uninstall theme** for a downloaded theme or **Delete theme** for a custom theme. Any current or system theme selection that used it returns to its built-in base.
 
 ## Theme Screenshots
 
@@ -83,7 +91,17 @@ You can switch themes in several ways:
 
 ## Custom Themes
 
-Use **Custom CSS** in Preferences → Theme to override the active theme's styles. The Theme menu and preferences expose the built-in themes listed above; they do not provide a custom-theme import control.
+Open **Preferences → Theme → Create from current theme** to open the theme editor in its own window. Describe a change in **AI assistant**, or open **CSS source** to edit the same stylesheet directly. **View base CSS** shows the inherited rules. The preview updates as you edit, and drafts are saved automatically.
+
+Use **Save theme only** to add the theme to the picker for later. Saving changes to a downloaded theme creates a custom copy. Open **Save options** and select **Save and apply** to use the saved theme. If you follow the system appearance, this assigns the saved theme to the light or dark slot of its base theme. Use **Export theme** and **Import as a copy** inside the editor to share a theme JSON file.
+
+For conversational editing, open **AI assistant** and enter the base URL of your Chat Completions API, model ID and API key. Local servers can use a loopback HTTP address and an empty key. The model receives the base theme CSS, your CSS overrides and the conversation. Documents you open for preview stay on your device. You can stop generation or undo its changes.
+
+In the theme window, choose **CSS source → Inspect element** to dock Chromium DevTools on the right. Click a heading, paragraph or code block in the preview to select its HTML in **Elements**. Try declarations in **Styles** and copy the ones you want to keep into the CSS editor below the preview. Close DevTools to restore the side-by-side editing layout.
+
+Select a preview node in the **Elements** tree. The CSS toolbar lists its classes. Choose **Add selector** to insert a rule and place the cursor inside it, or **Go to rule** to edit an existing match in your theme. For elements without classes, the toolbar uses the ID or tag name. Both actions take you to the editable stylesheet.
+
+**Custom CSS** in Preferences → Theme is available for personal style overrides.
 
 Open **View → Show Developer Tools** in the editor window. In **Elements**, use the element picker to select part of the editor and try CSS rules in **Styles**. Copy the rules you want to keep into **Preferences → Theme → Custom CSS**.
 

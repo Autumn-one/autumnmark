@@ -35,7 +35,7 @@ const { theme, titleBarStyle } = storeToRefs(preferencesStore)
 
 const showCustomTitleBar = computed(() => !isMac && titleBarStyle.value === 'custom')
 
-watch(theme, addThemeStyle, { immediate: true })
+watch(() => [theme.value, preferencesStore.localThemes] as const, ([id, library]) => addThemeStyle(id, library), { immediate: true })
 </script>
 
 <style>

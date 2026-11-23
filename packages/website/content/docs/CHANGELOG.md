@@ -1,3 +1,9 @@
+## AutumnMark 0.24.45
+
+- Themes have their own Settings page. Browse the official online catalog, install themes for offline use, and remove custom or downloaded themes from the local library.
+- Preview the same Markdown document in your current and candidate themes side by side. Switch between the rendered document and Markdown source, and close the preview with Space or by clicking outside it.
+- Create themes in a dedicated editor with live CSS preview, local drafts, theme import and export, and an optional AI assistant. The default sample covers headings, tables, task lists, code, equations, and footnotes.
+
 ## AutumnMark 0.24.44
 
 - GitBook Teal is the new default light theme, with centered first-level headings, teal second-level headings, and updated typography for prose, lists, and quotes.

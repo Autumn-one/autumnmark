@@ -14,6 +14,9 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
+import { registerThemeStudio } from './ipc/themeStudio'
+import { registerThemeCatalog } from './ipc/themeCatalog'
+import { registerAiModels } from './ipc/aiModels'
 import { APP_ID, APP_NAME } from '@shared/brand'
 
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -122,6 +125,10 @@ try {
 // Preferences only exist now; the fetch handler refuses everything until it
 // knows which server the user configured.
 setPlantumlServerSource(() => accessor.preferences.getItem<string>('plantumlServer') ?? '')
+
+const savedModelSettings = registerAiModels(accessor)
+registerThemeStudio(accessor, savedModelSettings)
+registerThemeCatalog(accessor)
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

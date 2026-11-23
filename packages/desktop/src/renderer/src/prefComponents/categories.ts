@@ -1,16 +1,18 @@
 import {
-  Setting, Brush, Edit, FolderOpened, Document, Picture, VideoCamera, Operation
+  Setting, Brush, MagicStick, Edit, FolderOpened, Document, Picture, VideoCamera, Operation, Cpu
 } from '@element-plus/icons-vue'
 
 export const preferenceCategories = [
   { id: 'general', icon: Setting },
   { id: 'appearance', icon: Brush },
+  { id: 'theme', icon: MagicStick },
   { id: 'editor', icon: Edit },
   { id: 'files', icon: FolderOpened },
   { id: 'markdown', icon: Document },
   { id: 'images', icon: Picture },
   { id: 'video', icon: VideoCamera },
-  { id: 'keybindings', icon: Operation }
+  { id: 'keybindings', icon: Operation },
+  { id: 'ai', icon: Cpu }
 ] as const
 export type PreferenceCategoryId = (typeof preferenceCategories)[number]['id']
 

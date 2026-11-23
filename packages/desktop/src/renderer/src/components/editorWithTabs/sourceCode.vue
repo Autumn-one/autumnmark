@@ -47,7 +47,7 @@ import { getDocumentLocationMenuItems } from '@/contextMenu/fileLocation'
 import { isDocumentBackground } from '@/contextMenu/documentBackground'
 import type { MediaEditor } from '@/services/batchMedia'
 import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
-import { oneDarkThemes, railscastsThemes } from '@/config'
+import { oneDarkThemes, railscastsThemes, themeBaseId } from 'common/theme'
 
 interface MuyaIndexCursorLike {
   anchor: CodeMirror.Position
@@ -716,9 +716,10 @@ onMounted(() => {
     viewportMargin: Infinity
   }
 
-  if (railscastsThemes.includes(theme.value)) {
+  const base = themeBaseId(theme.value)
+  if (railscastsThemes.includes(base)) {
     codeMirrorConfig.theme = 'railscasts'
-  } else if (oneDarkThemes.includes(theme.value)) {
+  } else if (oneDarkThemes.includes(base)) {
     codeMirrorConfig.theme = 'one-dark'
   }
 

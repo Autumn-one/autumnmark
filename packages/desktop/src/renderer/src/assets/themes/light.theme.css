@@ -113,7 +113,8 @@
     white-space: nowrap;
   }
 
-  :scope h1:is(.mu-atx-heading, .mu-setext-heading) {
+  /* Keep level filters weightless so ordinary heading overrides win before scoping proximity breaks a tie. */
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h1) {
     margin-block: 3rem 2.5rem;
     color: #10b97b;
     font-size: calc(var(--mu-font-size) * 2.6);
@@ -122,7 +123,7 @@
     text-align: center;
   }
 
-  :scope h2:is(.mu-atx-heading, .mu-setext-heading) {
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h2) {
     margin-block: 2rem;
     padding: 3px 5px 3px 10px;
     background: var(--proseAccent);
@@ -135,7 +136,7 @@
     --link-color: inherit;
   }
 
-  :scope h3.mu-atx-heading {
+  :scope .mu-atx-heading:where(h3) {
     box-sizing: border-box;
     width: fit-content;
     max-width: 100%;
@@ -146,15 +147,15 @@
     font-size: calc(var(--mu-font-size) * 1.2);
   }
 
-  :scope h4.mu-atx-heading {
+  :scope .mu-atx-heading:where(h4) {
     font-size: calc(var(--mu-font-size) * 1.15);
   }
 
-  :scope :is(h5, h6).mu-atx-heading {
+  :scope .mu-atx-heading:where(h5, h6) {
     font-size: calc(var(--mu-font-size) * 0.95);
   }
 
-  :scope h6.mu-atx-heading {
+  :scope .mu-atx-heading:where(h6) {
     font-weight: 400;
   }
 

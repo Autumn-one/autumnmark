@@ -507,7 +507,7 @@ class AppMenu {
     })
 
     onInternalChannel('broadcast-preferences-changed', async(prefs: UserPreferencesPatch) => {
-      if (prefs.theme !== undefined || prefs.followSystemTheme !== undefined) {
+      if (prefs.theme !== undefined || prefs.followSystemTheme !== undefined || prefs.localThemes !== undefined) {
         this.updateAppMenu()
       }
       if (prefs.autoSave !== undefined) {
