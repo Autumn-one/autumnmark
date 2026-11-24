@@ -4,6 +4,7 @@ import type { ImageMounts } from '../resources/imageMounts';
 import type { IContainerRenderOptions, IInlineCursor, IInlineEnvironment, IRenderBlock } from './types';
 import { CLASS_NAMES } from '../../config';
 import { conflict } from '../../utils';
+import { getImageSrc } from '../../utils/image';
 import { h } from '../../utils/snabbdom';
 import { vnodeToHTML } from '../../utils/vnodeToHTML';
 import { tokenEvents } from '../model/traversal';
@@ -65,6 +66,11 @@ class Renderer {
 
     get environment(): IInlineEnvironment {
         return this._environment();
+    }
+
+    imageSource(src: string) {
+        const preview = this.environment.resolveImagePreview?.(src);
+        return preview ? { src: preview.key, isUnknownType: false, load: preview.load } : getImageSrc(src);
     }
 
     private _checkConflicted(block: IRenderBlock, token: Pick<Token, 'range'>, cursor: IInlineCursor = {}) {

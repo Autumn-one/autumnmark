@@ -78,6 +78,8 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
   - zh_TW
 
 electronFuses:
+  # The installed AutumnMark Skill uses the app's Electron runtime to run its local bridge.
+  runAsNode: true
   # Node's CLI parser inside Electron rejects `--debug` (DEP0062, exit 9) before
   # MarkText can read it (#5409). With this fuse off the packaged app ignores
   # Node's inspector flags, so `--debug` reaches MarkText.

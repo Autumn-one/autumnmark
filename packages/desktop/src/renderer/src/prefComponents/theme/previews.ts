@@ -1,7 +1,7 @@
 import baseStyle from '@/assets/styles/index.css?inline'
 import { themeBaseId } from 'common/theme'
 import type { LocalTheme } from '@shared/localTheme'
-import { localThemeCss } from '@/util/themeOverrides'
+import { localThemeCss } from '@shared/themeOverrides'
 import { builtinThemeCss } from '@/util/builtinTheme'
 
 export const themePreviewStyle = (id: string, local?: LocalTheme): Record<string, string> => {

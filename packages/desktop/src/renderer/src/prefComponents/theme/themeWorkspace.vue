@@ -4,7 +4,6 @@
     ref="studio"
     :entry="active"
     :saved-theme="savedThemes.find(theme => theme.id === active.draft.id)"
-    :applied-id="preferences.theme"
     :switching="switching"
     :workspace-error="workspaceError"
     @saved="themeSaved"
@@ -34,10 +33,11 @@ import { themeBaseId } from 'common/theme'
 import { localThemeList, maxThemeNameLength, themeBases, type LocalTheme } from '@shared/localTheme'
 import type { UserPreferences } from '@shared/types/preferences'
 import { addThemeStyle } from '@/util/theme'
-import { localThemeCss } from '@/util/themeOverrides'
+import { localThemeCss } from '@shared/themeOverrides'
 import Studio from './studio.vue'
 import ThemeLibrary from './themeLibrary.vue'
 import { openChatHistory } from './chatHistory'
+import { removeThemeVersions } from './themeVersions'
 import { themeLabel } from './config'
 import { editableTheme, listThemeDrafts, newThemeDraft, readThemeDraft, removeThemeDraft, themeDraftPrefix,
   type ThemeDraftEntry, type ThemeLibraryItem } from './themeDrafts'
@@ -206,6 +206,8 @@ function deleteTheme(item: ThemeLibraryItem): void {
     } finally {
       archive.close()
     }
+    const uuid = item.id.split(':')[2]
+    if (!savedThemes.value.some(theme => theme.id.split(':')[2] === uuid)) await removeThemeVersions(uuid)
   }, 'themeLibrary.deleteFailed')
 }
 

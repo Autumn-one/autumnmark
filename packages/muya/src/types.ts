@@ -112,6 +112,8 @@ export interface IMuyaOptions {
      * the raw `src` verbatim.
      */
     imageAction?: (state: IImageActionState) => Promise<string>;
+    /** Resolve preview bytes without changing the image destination in Markdown. */
+    resolveImagePreview?: (src: string) => { key: string; load: () => Promise<string> } | undefined;
     editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit, event?: MouseEvent) => void;
     embedImage?: (image: File | string) => Promise<string> | undefined;
     /** Omitted sources keep their original destinations in the pasted document. */

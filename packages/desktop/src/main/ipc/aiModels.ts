@@ -6,6 +6,7 @@ import { sync as writeAtomic } from 'write-file-atomic'
 import type { AiConnectionDraft, AiModelDraft, AiModelOptions, AiModelProfile } from '@shared/aiModel'
 import { aiInputTypes } from '@shared/aiModel'
 import type Accessor from '../app/accessor'
+import { t } from '../i18n'
 import { WindowType, type WindowTypeValue } from '../windows/base'
 import { listProviderModels, modelBaseUrl, testModelConnection, type ChatSettings } from './openAi'
 
@@ -53,7 +54,7 @@ export const registerAiModels = (app: Accessor) => {
   const persist = (models: StoredModel[]): AiModelProfile[] => {
     writeAtomic(file, JSON.stringify(models), { mode: 0o600 })
     const list = profiles(models)
-    for (const { win } of app.windowManager.getWindowsByType(WindowType.STUDIO)) {
+    for (const { win } of [...app.windowManager.getWindowsByType(WindowType.STUDIO), ...app.windowManager.getWindowsByType(WindowType.EDITOR)]) {
       win.browserWindow?.webContents.send('mt::ai::changed', list)
     }
     return list
@@ -80,7 +81,7 @@ export const registerAiModels = (app: Accessor) => {
     return { ...optionsFrom(profile), ...await connection({ id, baseUrl: profile.baseUrl, key: null }, models) }
   }
   ipcMain.handle('mt::ai::list', event => {
-    requireModelWindow(app, event, WindowType.SETTINGS, WindowType.STUDIO)
+    requireModelWindow(app, event, WindowType.SETTINGS, WindowType.STUDIO, WindowType.EDITOR)
     return profiles(read())
   })
   ipcMain.handle('mt::ai::save', async(event, draft: AiModelDraft) => {
@@ -106,6 +107,14 @@ export const registerAiModels = (app: Accessor) => {
     } else {
       models.push(model)
     }
+    return persist(models)
+  })
+  ipcMain.handle('mt::ai::copy', (event, id: string) => {
+    requireModelWindow(app, event, WindowType.SETTINGS)
+    const models = read()
+    const source = lookup(models, id)
+    const displayName = `${source.displayName || source.model} - ${t('menu.edit.copy')}`
+    models.push({ ...source, id: randomUUID(), displayName })
     return persist(models)
   })
   ipcMain.handle('mt::ai::delete', (event, id: string) => {

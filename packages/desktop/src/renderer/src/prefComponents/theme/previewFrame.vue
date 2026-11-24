@@ -19,6 +19,7 @@ const props = defineProps<{
   filename: string
   sidebar: string
   source: boolean
+  demo?: boolean
 }>()
 const emit = defineEmits<{ dismiss: [] }>()
 const frame = ref<HTMLIFrameElement>()
@@ -30,7 +31,7 @@ function sendPreview(): void {
     markdown: props.markdown,
     sidebar: props.sidebar,
     filename: props.filename,
-    demo: true,
+    demo: props.demo ?? true,
     source: props.source
   }, '*')
 }
@@ -41,7 +42,7 @@ function onMessage(event: MessageEvent): void {
   if (event.data?.type === 'theme-preview-dismiss') emit('dismiss')
 }
 
-watch(() => [props.theme, props.markdown, props.filename, props.sidebar, props.source], sendPreview)
+watch(() => [props.theme, props.markdown, props.filename, props.sidebar, props.source, props.demo], sendPreview)
 onMounted(() => window.addEventListener('message', onMessage))
 onBeforeUnmount(() => window.removeEventListener('message', onMessage))
 </script>

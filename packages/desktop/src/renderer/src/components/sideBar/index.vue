@@ -24,48 +24,17 @@
           :aria-selected="rightColumn === tab.view"
           :aria-controls="`sidebar-panel-${tab.view}`"
           :tabindex="rightColumn === tab.view ? 0 : -1"
+          :title="t(tab.label)"
           @click="selectTab(tab.view)"
         >
-          {{ t(tab.label) }}
+          <component
+            :is="tab.icon"
+            class="sidebar-tab-icon"
+            aria-hidden="true"
+          />
+          <span class="text-overflow">{{ t(tab.label) }}</span>
         </button>
       </div>
-      <icon-tooltip
-        v-if="rightColumn === 'files'"
-        :content="t('sideBar.icons.search')"
-      >
-        <button
-          ref="searchButton"
-          type="button"
-          class="plain-button search-button"
-          :aria-label="t('sideBar.icons.search')"
-          @click="openSearch"
-        >
-          <Search aria-hidden="true" />
-        </button>
-      </icon-tooltip>
-      <icon-tooltip
-        v-else-if="editorStore.listToc.length"
-        :content="bulkLabel"
-      >
-        <button
-          type="button"
-          class="plain-button outline-bulk-toggle"
-          :aria-label="bulkLabel"
-          :disabled="!tocRef?.canToggleAll"
-          @click="tocRef?.toggleAll()"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            aria-hidden="true"
-          >
-            <path d="M8 4h12v12M4 8h12v12H4z" />
-            <path :d="tocRef?.allCollapsed ? 'M7 14h6m-3-3v6' : 'M7 14h6'" />
-          </svg>
-        </button>
-      </icon-tooltip>
     </div>
     <div class="sidebar-content">
       <div
@@ -75,7 +44,21 @@
         role="tabpanel"
         aria-labelledby="sidebar-tab-files"
       >
-        <tree :tabs="tabs" />
+        <tree :tabs="tabs">
+          <template #search>
+            <icon-tooltip :content="t('sideBar.icons.search')">
+              <button
+                ref="searchButton"
+                type="button"
+                class="plain-button sidebar-panel-action search-button"
+                :aria-label="t('sideBar.icons.search')"
+                @click="openSearch"
+              >
+                <Search aria-hidden="true" />
+              </button>
+            </icon-tooltip>
+          </template>
+        </tree>
       </div>
       <div
         v-show="rightColumn === 'outline'"
@@ -83,11 +66,52 @@
         class="sidebar-panel outline-panel"
         role="tabpanel"
         aria-labelledby="sidebar-tab-outline"
-        tabindex="0"
+        :tabindex="tocRef?.canToggleAll ? -1 : 0"
       >
+        <div class="outline-heading">
+          <h2>{{ t('sideBar.toc.title') }}</h2>
+          <icon-tooltip
+            v-if="editorStore.listToc.length"
+            :content="bulkLabel"
+          >
+            <button
+              type="button"
+              class="plain-button sidebar-panel-action outline-bulk-toggle"
+              :aria-label="bulkLabel"
+              :disabled="!tocRef?.canToggleAll"
+              @click="tocRef?.toggleAll()"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
+                <path d="M8 4h12v12M4 8h12v12H4z" />
+                <path :d="tocRef?.allCollapsed ? 'M7 14h6m-3-3v6' : 'M7 14h6'" />
+              </svg>
+            </button>
+          </icon-tooltip>
+        </div>
         <toc
           ref="tocRef"
           :visible="showToc"
+        />
+      </div>
+      <div
+        v-show="rightColumn === 'documentChat'"
+        id="sidebar-panel-documentChat"
+        class="sidebar-panel"
+        role="tabpanel"
+        aria-labelledby="sidebar-tab-documentChat"
+      >
+        <document-chat
+          v-if="documentChatVisited"
+          ref="documentChat"
+          :read-markdown="readMarkdown"
+          :edit-markdown="editMarkdown"
+          @theme-preview="(theme, documentId) => emit('theme-preview', theme, documentId)"
         />
       </div>
       <side-bar-search
@@ -106,6 +130,19 @@
           @click="projectStore.OPEN_SETTING_WINDOW()"
         >
           <Setting aria-hidden="true" />
+        </button>
+      </icon-tooltip>
+      <icon-tooltip
+        :content="t('history.title')"
+        placement="top"
+      >
+        <button
+          type="button"
+          class="plain-button history-button"
+          :aria-label="t('history.title')"
+          @click="emit('open-history')"
+        >
+          <Clock aria-hidden="true" />
         </button>
       </icon-tooltip>
       <icon-tooltip :content="t('menu.file.addFolder')">
@@ -135,21 +172,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
 
-import { Search, Setting, Plus } from '@element-plus/icons-vue'
+import { ChatLineRound, Clock, FolderOpened, List, Plus, Search, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import Tree from './tree.vue'
 import Toc from './toc.vue'
 import SideBarSearch from './search.vue'
+import DocumentChat from './documentChat.vue'
+import type { LocalTheme } from '@shared/localTheme'
+import type { EditMarkdown } from '@shared/markdownEdits'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import { storeToRefs } from 'pinia'
 import bus from '@/bus'
 
 const { t } = useI18n()
+defineProps<{
+  readMarkdown: (id: string) => string | undefined
+  editMarkdown: EditMarkdown
+}>()
+const emit = defineEmits<{ 'theme-preview': [theme: LocalTheme | null, documentId?: string]; 'open-history': [] }>()
+const documentChat = ref<InstanceType<typeof DocumentChat>>()
+defineExpose({
+  showHistoryTurn: (chatId: string, turnId: string) => documentChat.value?.showHistoryTurn(chatId, turnId)
+})
 const prepareSettings = (): void => {
   window.electron.ipcRenderer.send('mt::prepare-setting-window')
 }
@@ -159,8 +208,9 @@ const projectStore = useProjectStore()
 const editorStore = useEditorStore()
 const tocRef = ref<InstanceType<typeof Toc> | null>(null)
 const sidebarTabs = [
-  { view: 'files', label: 'sideBar.icons.files' },
-  { view: 'outline', label: 'sideBar.toc.title' }
+  { view: 'files', label: 'sideBar.icons.files', icon: FolderOpened },
+  { view: 'outline', label: 'sideBar.toc.title', icon: List },
+  { view: 'documentChat', label: 'documentChat.tab', icon: ChatLineRound }
 ] as const
 type SidebarTab = (typeof sidebarTabs)[number]['view']
 const bulkLabel = computed(() =>
@@ -173,6 +223,10 @@ const draggedSideBarWidth = ref<number | null>(null)
 
 const { rightColumn, showSideBar, showToc, effectiveSideBarWidth, sideBarMaximumWidth } =
   storeToRefs(layoutStore)
+const documentChatVisited = ref(false)
+watch(rightColumn, view => {
+  if (view === 'documentChat') documentChatVisited.value = true
+}, { immediate: true })
 
 const { tabs } = storeToRefs(editorStore)
 
@@ -231,9 +285,12 @@ const selectTab = (view: SidebarTab): void => {
 }
 
 const navigateTabs = (event: KeyboardEvent): void => {
-  let view: SidebarTab = rightColumn.value === 'files' ? 'outline' : 'files'
-  if (event.key === 'Home') view = 'files'
-  if (event.key === 'End') view = 'outline'
+  const index = sidebarTabs.findIndex(tab => tab.view === rightColumn.value)
+  const offset = event.key === 'ArrowLeft' ? -1 : 1
+  let next = (index + offset + sidebarTabs.length) % sidebarTabs.length
+  if (event.key === 'Home') next = 0
+  if (event.key === 'End') next = sidebarTabs.length - 1
+  const view = sidebarTabs[next].view
   selectTab(view)
   nextTick(() => document.getElementById(`sidebar-tab-${view}`)?.focus())
 }
@@ -276,7 +333,6 @@ const returnToFiles = (restoreFocus = true): void => {
   background: var(--sideBarBgColor);
 }
 
-.sidebar-header,
 .sidebar-footer {
   display: flex;
   align-items: center;
@@ -287,10 +343,11 @@ const returnToFiles = (restoreFocus = true): void => {
 
 .sidebar-header {
   height: var(--editorToolbarHeight);
-  padding-block: 0;
-  padding-inline-start: 10px;
-  justify-content: space-between;
-  gap: 6px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border-block-end: 1px solid var(--sideBarBorderColor);
+  container-type: inline-size;
+  -webkit-app-region: no-drag;
 }
 
 .add-folder-button {
@@ -299,28 +356,85 @@ const returnToFiles = (restoreFocus = true): void => {
 
 .sidebar-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  box-sizing: border-box;
-  height: 28px;
-  min-width: 126px;
-  padding: 2px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 9%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--editorColor) 5%, transparent);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  column-gap: 3px;
+  height: 100%;
+  padding-inline: 12px;
 }
 
-.sidebar-header > .plain-button,
+.sidebar-tab {
+  position: relative;
+  min-width: 0;
+  gap: 4px;
+  border-radius: 5px 5px 0 0;
+  font-size: 13px;
+  color: var(--sideBarColor);
+}
+
+.sidebar-tab > span {
+  min-width: 0;
+}
+
+.sidebar-tab-icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.sidebar-tab[aria-selected='true'] {
+  color: color-mix(in srgb, var(--sideBarTitleColor) 80%, var(--themeColor));
+  font-weight: 600;
+}
+
+.sidebar-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  width: 28px;
+  height: 2px;
+  margin-inline: auto;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--themeColor) 75%, var(--sideBarTitleColor));
+}
+
+@media (forced-colors: active) {
+  .sidebar-tab[aria-selected='true']::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+}
+
+@container (width < 270px) {
+  .sidebar-tabs {
+    padding-inline: 8px;
+  }
+
+  .sidebar-tab {
+    font-size: 12px;
+  }
+
+  .sidebar-tab-icon {
+    display: none;
+  }
+}
+
+.sidebar-panel-action,
 .sidebar-footer button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 4px;
   color: var(--sideBarIconColor);
 }
 
-.sidebar-header > button:hover:not(:disabled),
+.sidebar-panel-action {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+}
+
+.sidebar-panel-action:hover:not(:disabled),
 .sidebar-tab[aria-selected='false']:hover,
 .sidebar-footer button:hover {
   background: var(--sideBarItemHoverBgColor);
@@ -330,31 +444,12 @@ const returnToFiles = (restoreFocus = true): void => {
   opacity: 0.4;
 }
 
-.sidebar-header .sidebar-tab {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  padding: 0 12px;
-  border-radius: 5px;
-  font-size: 13px;
-  color: var(--editorColor60);
-}
-
-.sidebar-tab[aria-selected='true'] {
-  color: var(--editorColor80);
-  background: var(--editorBgColor);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
-  font-weight: 600;
-}
-
 .outline-panel:focus-visible {
   outline: 1px solid var(--focusColor);
   outline-offset: -1px;
 }
 
-.sidebar-header svg,
+.sidebar-panel-action svg,
 .sidebar-footer svg {
   width: 18px;
   height: 18px;
@@ -371,7 +466,29 @@ const returnToFiles = (restoreFocus = true): void => {
 }
 
 .outline-panel {
+  display: flex;
+  flex-direction: column;
   padding-inline: 8px;
+}
+
+.outline-heading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding-inline: 4px;
+}
+
+.outline-heading h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.outline-panel .side-bar-toc {
+  flex: 1;
+  min-height: 0;
 }
 
 .drag-bar {

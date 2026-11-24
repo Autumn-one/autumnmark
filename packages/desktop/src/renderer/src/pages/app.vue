@@ -8,13 +8,20 @@
     />
 
     <div class="editor-workspace">
-      <side-bar v-if="init" />
+      <side-bar
+        v-if="init"
+        ref="sideBar"
+        :read-markdown="readMarkdown"
+        :edit-markdown="editMarkdown"
+        @theme-preview="setThemePreview"
+        @open-history="preferredHistoryType = 'document'"
+      />
 
       <div class="editor-middle">
         <recent v-if="!hasCurrentFile && init" />
         <editor-with-tabs
-          ref="editorView"
           v-if="hasCurrentFile && init"
+          ref="editorView"
           :markdown="markdown"
           :cursor="cursor"
           :muya-index-cursor="muyaIndexCursor"
@@ -22,16 +29,38 @@
           :show-tab-bar="showTabBar"
           :text-direction="textDirection"
           :platform="platform"
-        />
+          :can-insert-drawing="!!insertionNote"
+          :insert-drawing="insertDrawing"
+        >
+          <template
+            v-if="activeThemePreview"
+            #document-actions
+          >
+            <button
+              type="button"
+              class="theme-preview-status"
+              @click="openAiChat"
+            >
+              {{ t('themeAi.previewStatus') }}
+            </button>
+          </template>
+        </editor-with-tabs>
         <command-palette />
         <about-dialog />
         <export-setting-dialog />
+        <application-history
+          v-if="preferredHistoryType"
+          :preferred-type="preferredHistoryType"
+          :target="currentFile ?? undefined"
+          @conversation="openHistoryConversation"
+          @close="preferredHistoryType = null"
+        />
         <rename />
         <import-modal v-model="showImport" />
         <batch-media-dialog
           v-if="batchMediaTarget"
           :target="batchMediaTarget"
-          :edit="editMedia"
+          :edit="editMarkdown"
           @close="batchMediaTarget = null"
         />
       </div>
@@ -40,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, watch, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
@@ -48,13 +77,14 @@ import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import BatchMediaDialog from '@/components/batchMediaDialog.vue'
 import { batchMediaTarget } from '@/contextMenu/batchMedia'
-import type { MediaEditor } from '@/services/batchMedia'
+import type { EditMarkdown } from '@shared/markdownEdits'
 import { t } from '@/i18n'
 import TitleBar from '@/components/titleBar/index.vue'
 import SideBar from '@/components/sideBar/index.vue'
 import AboutDialog from '@/components/about/index.vue'
 import CommandPalette from '@/components/commandPalette/index.vue'
 import ExportSettingDialog from '@/components/exportSettings/index.vue'
+import ApplicationHistory from '@/components/history/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import bus from '@/bus'
@@ -62,18 +92,25 @@ import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
 import { useListenForMainStore } from '@/store/listenForMain'
 import { usePreferencesStore } from '@/store/preferences'
-import { useEditorStore } from '@/store/editor'
+import { getSessionActions, useEditorStore } from '@/store/editor'
 import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
 import { useNotificationStore } from '@/store/notification'
 import { startWindowSession } from '@/services/windowSession'
+import { serveSkillDocuments } from '@/services/skillDocuments'
 import { videoMime } from '@shared/embeddedImage'
+import type { LocalTheme } from '@shared/localTheme'
+import { imageToMarkdown } from '@muyajs/core'
+import { drawingDestination, isDrawingPath } from '@/util/drawingPaths'
+import notice from '@/services/notification'
+import { blankDrawing } from '@shared/drawing'
 
 const mainStore = useMainStore()
 const editorView = ref<InstanceType<typeof EditorWithTabs>>()
-const editMedia: MediaEditor = (id, prepare) => {
+const readMarkdown = (id: string): string | undefined => editorView.value?.readMarkdown(id)
+const editMarkdown: EditMarkdown = (id, prepare) => {
   if (!editorView.value) throw new Error(t('batchMedia.changed'))
-  editorView.value.applyMediaEdits(id, prepare)
+  editorView.value.editMarkdown(id, prepare)
 }
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
@@ -85,11 +122,77 @@ const notificationStore = useNotificationStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const showImport = ref(false)
+const sideBar = ref<InstanceType<typeof SideBar>>()
+const preferredHistoryType = ref<'document' | 'theme' | null>(null)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { currentFile } = storeToRefs(editorStore)
+const lastNote = ref('')
+const currentDrawing = computed(() => !!currentFile.value && isDrawingPath(currentFile.value.pathname || currentFile.value.filename))
+const insertionNote = computed(() => editorStore.tabs.find(tab => tab.id === lastNote.value && !tab.readOnly && !tab.modeChanging))
+watch(() => currentFile.value?.id, id => {
+  if (id && currentDrawing.value) layoutStore.SET_LAYOUT({ showTabBar: true })
+  else if (id) lastNote.value = id
+}, { immediate: true, flush: 'sync' })
+let choosingDrawing = false
+
+async function showDrawing(requestedPath?: unknown) {
+  if (choosingDrawing) return
+  choosingDrawing = true
+  const note = currentFile.value
+  try {
+    const options = {
+      title: t('drawing.open'),
+      defaultPath: note?.pathname ? window.path.dirname(note.pathname) : undefined,
+      filters: [{ name: 'Excalidraw', extensions: ['excalidraw'] }]
+    }
+    const path = typeof requestedPath === 'string' ? requestedPath : await window.electron.dialog.showOpenFile(options)
+    if (!path) return
+    if (!window.path.isAbsolute(path) || !isDrawingPath(path)) throw new Error(t('drawing.invalidFile'))
+    window.electron.ipcRenderer.send('mt::open-file', path, { preview: false })
+  } catch (reason) {
+    void notice.notify({ title: t('drawing.openFailed', { reason: String(reason) }), type: 'error' })
+  } finally {
+    choosingDrawing = false
+  }
+}
+
+const newDrawing = () => {
+  const stem = t('drawing.untitled')
+  let title = `${stem}.excalidraw`
+  let number = 2
+  while (editorStore.tabs.some(tab => tab.filename === title)) title = `${stem} ${number++}.excalidraw`
+  void getSessionActions()?.create(blankDrawing, true, title).catch(reason => {
+    void notice.notify({ title: t('drawing.openFailed', { reason: String(reason) }), type: 'error' })
+  })
+}
+const openDrawing = (pathname: unknown) => { void showDrawing(pathname) }
+
+async function insertDrawing(path: string): Promise<boolean> {
+  const note = insertionNote.value
+  if (!note || !path) return false
+  editorStore.UPDATE_CURRENT_FILE(note)
+  await nextTick()
+  if (!note.pathname || note.isPendingCreation) {
+    const saved = await editorStore.FILE_SAVE({ waitForResult: true })
+    if (saved?.status !== 'saved') return false
+  }
+  if (currentFile.value?.id !== note.id || !note.pathname || note.readOnly || note.modeChanging) return false
+  const src = drawingDestination(note.pathname, path)
+  const image = imageToMarkdown({ src, alt: window.path.basename(path, window.path.extname(path)) })
+  editMarkdown(note.id, markdown => [{
+    start: markdown.length,
+    end: markdown.length,
+    text: `${markdown && !markdown.endsWith('\n\n') ? markdown.endsWith('\n') ? '\n' : '\n\n' : ''}${image}\n`
+  }])
+  return true
+}
+
+watch(() => [currentFile.value?.id, currentFile.value?.isSaved] as const, ([id, saved], [previousId, wasSaved]) => {
+  if (id && id === previousId && saved && !wasSaved) bus.emit('drawing::preview-changed')
+})
 
 watch(
   () => [currentFile.value?.id, currentFile.value?.readOnly],
@@ -97,7 +200,7 @@ watch(
     window.electron.ipcRenderer.send(
       'mt::update-document-mode',
       !!currentFile.value?.readOnly,
-      !!currentFile.value
+      !!currentFile.value && !currentDrawing.value
     )
   },
   { immediate: true }
@@ -121,7 +224,30 @@ const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 
-watch(() => [theme.value, preferencesStore.localThemes] as const, ([id, library]) => addThemeStyle(id, library))
+const themePreview = shallowRef<{ theme: LocalTheme; documentId: string; sourceId: string }>()
+const activeThemePreview = computed(() => {
+  const preview = themePreview.value
+  return preview && preview.sourceId === theme.value && preview.documentId === currentFile.value?.id ? preview.theme : undefined
+})
+
+function setThemePreview(draft: LocalTheme | null, documentId?: string): void {
+  themePreview.value = draft && documentId ? { theme: draft, documentId, sourceId: theme.value } : undefined
+}
+
+function openAiChat(): void {
+  layoutStore.SET_LAYOUT({ rightColumn: 'documentChat', showSideBar: true })
+}
+
+async function openHistoryConversation(chatId: string, turnId: string): Promise<void> {
+  preferredHistoryType.value = null
+  openAiChat()
+  await nextTick()
+  await sideBar.value?.showHistoryTurn(chatId, turnId)
+}
+
+watch([theme, () => preferencesStore.localThemes, activeThemePreview], ([id, library, preview]) => {
+  addThemeStyle(preview?.id ?? id, preview ? [preview] : library)
+})
 
 watch(customCss, (value, oldValue) => {
   if (value !== oldValue) {
@@ -145,6 +271,7 @@ function fileDragKind(data: DataTransfer) {
 }
 
 function handleWindowDragOver(event: DragEvent) {
+  if (event.target instanceof Element && event.target.closest('.drawing-canvas')) return
   const data = event.dataTransfer
   if (!data?.types.length) return
   if (data.types.includes('Files')) {
@@ -164,6 +291,7 @@ function handleWindowDragOver(event: DragEvent) {
 }
 
 function handleWindowDrop(event: DragEvent) {
+  if (event.target instanceof Element && event.target.closest('.drawing-canvas')) return
   const data = event.dataTransfer
   if (!data?.types.includes('Files')) return
   const items = Array.from(data.items).filter(item => item.kind === 'file')
@@ -183,6 +311,10 @@ function handleWindowDrop(event: DragEvent) {
     event.preventDefault()
     event.stopPropagation()
     showImport.value = false
+    if (paths.length === 1 && isDrawingPath(paths[0])) {
+      openDrawing(paths[0])
+      return
+    }
     window.electron.ipcRenderer.send('mt::window::drop', paths)
   }
 }
@@ -191,7 +323,11 @@ let stopSidebarContextMenu: (() => void) | undefined
 let stopWindowSession: (() => void) | undefined
 let stopEditListener: (() => void) | undefined
 let stopViewListener: (() => void) | undefined
+let stopSkillDocuments: (() => void) | undefined
+let stopAppliedThemeHistory: (() => void) | undefined
 onUnmounted(() => {
+  bus.off('drawing::new', newDrawing)
+  bus.off('drawing::open', openDrawing)
   window.removeEventListener('dragover', handleWindowDragOver)
   window.removeEventListener('drop', handleWindowDrop, true)
   if (timer.value) clearTimeout(timer.value)
@@ -199,9 +335,14 @@ onUnmounted(() => {
   stopWindowSession?.()
   stopEditListener?.()
   stopViewListener?.()
+  stopSkillDocuments?.()
+  stopAppliedThemeHistory?.()
 })
 
 onMounted(async () => {
+  stopAppliedThemeHistory = window.electron.ipcRenderer.on('mt::theme::show-active-history', () => { preferredHistoryType.value = 'theme' })
+  bus.on('drawing::new', newDrawing)
+  bus.on('drawing::open', openDrawing)
   if (window.marktext?.initialState) {
     preferencesStore.SET_USER_PREFERENCE(window.marktext.initialState)
   }
@@ -242,6 +383,7 @@ onMounted(async () => {
   notificationStore.listenForNotification()
 
   stopWindowSession = await startWindowSession()
+  stopSkillDocuments = serveSkillDocuments(editorStore, readMarkdown, editMarkdown)
 
   window.addEventListener('dragover', handleWindowDragOver)
   window.addEventListener('drop', handleWindowDrop, true)
@@ -291,5 +433,14 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   position: relative;
+}
+.theme-preview-status {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--themeColor10);
+  color: var(--themeColor);
+  font: inherit;
+  cursor: pointer;
 }
 </style>

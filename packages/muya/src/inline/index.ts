@@ -43,6 +43,7 @@ class InlineEngine {
                 readOnly: muya.isReadOnly,
                 softNewlineAsSpace: muya.options.softNewlineAsSpace,
                 references: this.labels,
+                resolveImagePreview: muya.options.resolveImagePreview,
                 selectedImage: selected ? { block: selected.block, range: { ...selected.imageInfo.token.range } } : null,
                 translate: text => muya.i18n.t(text),
             };

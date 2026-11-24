@@ -2,7 +2,6 @@ import type { ReferenceImageToken } from '../model/types';
 import type Renderer from './index';
 import type { ISyntaxRenderOptions } from './types';
 import { CLASS_NAMES } from '../../config';
-import { getImageSrc } from '../../utils/image';
 import { normalizeReferenceLabel } from '../referenceLabel';
 
 // reference_image
@@ -24,7 +23,7 @@ export default function referenceImage(
     const rawSrc = label + backlash.second;
     const { href = '', title = '' } = this.environment.references.get(normalizeReferenceLabel(rawSrc)) ?? {};
 
-    const imageSrc = getImageSrc(href);
+    const imageSrc = this.imageSource(href);
     const { src } = imageSrc;
     let id;
     let isSuccess;

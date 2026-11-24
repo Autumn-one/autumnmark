@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { lstat, mkdir, open, readFile, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, open, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { app as electronApp, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import chokidar, { type FSWatcher } from 'chokidar'
 import writeAtomic from 'write-file-atomic'
 import log from 'electron-log'
@@ -16,7 +16,6 @@ import { previewCaptureTool } from './themePreviewCapture'
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i
 const requestFilename = /^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.json$/i
-const skillName = 'autumnmark-theme'
 const jpegPrefix = 'data:image/jpeg;base64,'
 
 function missing(error: unknown): boolean {
@@ -57,15 +56,6 @@ function validateFiles(value: unknown): asserts value is ThemeCollaborationFiles
   if (typeof files?.css !== 'string' || themeCssIssue(files.css) || !isThemeSample(files.sampleMarkdown)) {
     throw new Error('invalidRequest')
   }
-}
-
-async function installSkill(): Promise<'installed' | 'conflict'> {
-  const source = await readFile(join(__static, 'skills', skillName, 'SKILL.md'), 'utf8')
-  const folder = join(electronApp.getPath('home'), '.agents', 'skills', skillName)
-  await ensureDirectory(folder)
-  const destination = join(folder, 'SKILL.md')
-  await seed(destination, source)
-  return await readText(destination, 64 * 1024) === source.replace(/^\uFEFF/, '') ? 'installed' : 'conflict'
 }
 
 type Capture = (target: PreviewTarget, files: ThemeCollaborationFiles, signal: AbortSignal) => Promise<{ text: string; image?: string }>
@@ -235,10 +225,6 @@ function createWorkspace(directory: string, initial: ThemeCollaborationFiles,
 export function registerThemeCollaboration(app: Accessor): void {
   const sessions = new Map<number, { workspace: ReturnType<typeof createWorkspace>; close: () => void }>()
   const root = join(app.paths.userDataPath, 'theme-collaboration')
-  ipcMain.handle('mt::theme::collaboration-install', event => {
-    requireModelWindow(app, event, WindowType.STUDIO)
-    return installSkill()
-  })
   ipcMain.handle('mt::theme::collaboration-start', async(event, draftId: string, files: ThemeCollaborationFiles, baseCss: string) => {
     requireModelWindow(app, event, WindowType.STUDIO)
     const { sender } = event
@@ -247,8 +233,8 @@ export function registerThemeCollaboration(app: Accessor): void {
     validateFiles(files)
     const senderId = sender.id
     await ensureDirectory(root)
-    const directory = join(root, draftId.toLowerCase())
-    if (sender.isDestroyed() || sessions.has(senderId) || [...sessions.values()].some(({ workspace }) => workspace.directory === directory)) {
+    const directory = join(root, draftId.toLowerCase(), randomUUID())
+    if (sender.isDestroyed() || sessions.has(senderId)) {
       throw new Error('invalidRequest')
     }
     const workspace = createWorkspace(directory, files, (id, state) => {

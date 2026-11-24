@@ -242,7 +242,8 @@ const fontsAPI = {
 }
 
 const dialogAPI = {
-  showSave: (request: SaveDialogRequest) => invoke('mt::dialog::show-save', request)
+  showSave: (request: SaveDialogRequest) => invoke('mt::dialog::show-save', request),
+  showOpenFile: (request: SaveDialogRequest) => invoke('mt::dialog::show-open-file', request)
 }
 
 const diagramAPI = {

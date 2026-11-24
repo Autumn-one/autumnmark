@@ -40,14 +40,13 @@ export default function codeFenceAnnotationsExtension(): MarkedExtension {
                 const info = parseFenceLine(token.raw)?.info.trim() ?? token.lang ?? '';
                 const { title, ranges } = parseCodeFenceAnnotations(info);
                 const language = codeFenceLanguage(info);
-                const heightWithoutLanguage = info.startsWith('max-lines=');
-                if (!title && !ranges.length && !heightWithoutLanguage)
+                if (!title && !ranges.length && (language || !info.startsWith('max-lines=')))
                     return false;
                 if (token.codeBlockStyle === 'indented' || diagramTypeOfLang(language))
                     return false;
 
                 const classAttribute = language ? ` class="language-${escapeHTML(language)}"` : '';
-                const text = ranges.length || heightWithoutLanguage ? token.text : token.text.replace(/\n$/, '');
+                const text = token.text.replace(/\n$/, '');
                 const html = token.escaped ? text : escapeHTML(text);
                 const code = ranges.length ? renderAnnotatedLines(html, ranges) : `${html}\n`;
                 const block = `<pre><code${classAttribute}>${code}</code></pre>`;

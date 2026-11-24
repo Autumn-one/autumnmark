@@ -16,17 +16,23 @@ async function openStudio(app: ElectronApplication) {
 test('the assistant updates the example preview and can revise its Markdown across a reload', async() => {
   const example = '# Theme gallery\n\n> A sample quotation\n\n| Block | Example |\n| --- | --- |\n| Table | Test |'
   const checklist = 'Review preview spacing'
-  const requests: { sampleMarkdown: string; css: string }[] = []
+  const requests: { markdown?: string; themeCss?: string; baseCss?: string }[] = []
   const server = createServer(async(req, res) => {
     let body = ''
     for await (const chunk of req) body += chunk
     const { messages } = JSON.parse(body)
+    if (messages[0].content.startsWith('Summarize the theme version')) {
+      res.end(JSON.stringify({ choices: [{ message: { content: 'Updated the example Markdown.' } }] }))
+      return
+    }
     const context = JSON.parse(messages[1].content)
     requests.push(context)
     const sampleMarkdown = messages.at(-1).content === 'Add a checklist'
-      ? context.sampleMarkdown + '\n\n- [ ] ' + checklist
+      ? context.markdown + '\n\n- [ ] ' + checklist
       : example
-    const content = JSON.stringify({ sampleMarkdown }) + '\n' + JSON.stringify({ message: 'Updated the example.' })
+    const content = context.markdown === undefined
+      ? JSON.stringify({ read: ['markdown'] })
+      : JSON.stringify({ sampleMarkdown }) + '\n' + JSON.stringify({ message: 'Updated the example.' })
     res.setHeader('content-type', 'application/json')
     res.end(JSON.stringify({ choices: [{ message: { content } }] }))
   })
@@ -49,7 +55,9 @@ test('the assistant updates the example preview and can revise its Markdown acro
     await send('Generate a richer example document')
     await expect(preview.locator('h1')).toContainText('Theme gallery')
     await expect(preview.locator('table')).toContainText('Example')
-    expect(requests[0]).toMatchObject({ sampleMarkdown: expect.stringContaining('# Ridge notes'), css: '' })
+    expect(requests[0]).toEqual({ base: 'light', availableContext: ['markdown', 'themeCss', 'baseCss'] })
+    expect(requests[1]).toMatchObject({ markdown: expect.stringContaining('# Ridge notes') })
+    expect(requests[1]).not.toHaveProperty('themeCss')
     await studio.getByRole('button', { name: 'Markdown source', exact: true }).click()
     await expect(preview.locator('.CodeMirror')).toContainText('A sample quotation')
     await studio.getByRole('button', { name: 'Undo last change' }).click()
@@ -62,7 +70,8 @@ test('the assistant updates the example preview and can revise its Markdown acro
     await expect(preview.locator('h1')).toContainText('Theme gallery')
     await send('Add a checklist')
     await expect(preview.locator('main')).toContainText(checklist)
-    expect(requests[2]).toMatchObject({ sampleMarkdown: example, css: '' })
+    expect(requests[5]).toMatchObject({ markdown: example })
+    expect(requests[5]).not.toHaveProperty('baseCss')
     await log.getByRole('button', { name: 'Retract' }).last().click()
     await expect(preview.locator('main')).not.toContainText(checklist)
     await expect(preview.locator('h1')).toContainText('Theme gallery')
@@ -269,7 +278,12 @@ test('theme chats survive restarts and support isolated retry, retract, diagnost
   const server = createServer(async(req, res) => {
     let body = ''
     for await (const part of req) body += part
-    requests.push(JSON.parse(body).messages)
+    const { messages } = JSON.parse(body)
+    if (messages[0].content.startsWith('Summarize the theme version')) {
+      res.end(JSON.stringify({ choices: [{ message: { content: 'Increased the top margin of second-level headings.' } }] }))
+      return
+    }
+    requests.push(messages)
     const replies = [invalidEdit, JSON.stringify({ find: '', replace: css }) + '\nApplied once.',
       'Independent reply.', 'Replacement reply.', 'Follow-up reply.', 'Edited branch.']
     res.setHeader('content-type', 'application/json')
@@ -334,7 +348,7 @@ test('theme chats survive restarts and support isolated retry, retract, diagnost
     await send('Edited first message')
     await expect(log()).toContainText('Replacement reply.')
     expect(requests[3].slice(2)).toEqual([{ role: 'user', content: 'Edited first message' }])
-    expect(JSON.parse(requests[3][1].content).css).toBe('')
+    expect(JSON.parse(requests[3][1].content)).not.toHaveProperty('themeCss')
     await send('Follow-up')
     await expect(log()).toContainText('Follow-up reply.')
     expect(requests[4].slice(2).map(message => message.content)).toEqual(['Edited first message', 'Replacement reply.', 'Follow-up'])

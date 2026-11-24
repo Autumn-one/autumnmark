@@ -7,6 +7,10 @@
       :label="t('recent.newFile')"
       @click="newFile"
     />
+    <EmptyStateButton
+      :label="t('drawing.new')"
+      @click="bus.emit('drawing::new')"
+    />
   </section>
 </template>
 
@@ -16,6 +20,7 @@ import EmptyStateButton from '@/components/emptyStateButton.vue'
 import { useEditorStore } from '@/store/editor'
 import { APP_NAME } from '@shared/brand'
 import { t } from '../../i18n'
+import bus from '@/bus'
 
 const editorStore = useEditorStore()
 

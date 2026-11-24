@@ -28,16 +28,16 @@ export function restoreCodeTabs(tokens: Token[], source: string, original = sour
         }
         else if (token.type === 'code') {
             const code = token as Tokens.Code;
+            const count = code.text.replace(/\n$/, '').split('\n').length;
+            const suffix = code.text.endsWith('\n') ? '\n' : '';
             if (code.codeBlockStyle === 'indented') {
-                const count = code.text.replace(/\n$/, '').split('\n').length;
-                const suffix = code.text.endsWith('\n') ? '\n' : '';
                 code.text = lines.slice(0, count).map(value => removeIndent(value, parentColumn + 4, startColumn)).join('\n') + suffix;
             }
             else {
                 const fence = /^([ \t]*)(?:`{3,}|~{3,})/.exec(lines[0] ?? '');
                 if (fence && code.text) {
                     const columns = indentationWidth(fence[1], startColumn);
-                    code.text = lines.slice(1, code.text.split('\n').length + 1).map(value => removeIndent(value, columns, startColumn)).join('\n');
+                    code.text = lines.slice(1, count + 1).map(value => removeIndent(value, columns, startColumn)).join('\n') + suffix;
                 }
             }
         }

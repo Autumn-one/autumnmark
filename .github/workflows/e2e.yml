@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.45]
+    branches: [release/v0.24.46]
   workflow_dispatch:
     inputs:
       platform:
@@ -70,7 +70,16 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test test/e2e/preferences-window.spec.ts test/e2e/theme-studio.spec.ts test/e2e/theme-library.spec.ts test/e2e/theme-collaboration.spec.ts --grep='Theme settings page|theme preview compares|online themes install|deleting an active custom theme|Theme menu opens|CSS inspector docks|a file-based agent|one theme studio|theme library deletes|previously saved themes|saving an active theme|AI and CSS edit'
+            pnpm -C packages/desktop exec playwright test \
+              test/e2e/ai-models.spec.ts \
+              test/e2e/autumnmark-skill.spec.ts \
+              test/e2e/document-chat.spec.ts \
+              test/e2e/editor-theme-ai.spec.ts \
+              test/e2e/excalidraw.spec.ts \
+              test/e2e/layout-toggles.spec.ts \
+              test/e2e/theme-collaboration.spec.ts \
+              test/e2e/theme-library.spec.ts \
+              test/e2e/theme-studio.spec.ts
             exit $?
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")

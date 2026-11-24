@@ -23,13 +23,14 @@ import { t } from '../i18n'
 import { scheduleWindowCheckpoint } from './checkpoint'
 import type { IFileState, FileNotification, FileWordCount, LineEnding, PageOptions, TabOptions } from '@shared/types/files'
 import type { SaveDocumentResult } from '@shared/types/ipc'
+import { isDrawingPath } from '@shared/drawing'
 
 export interface SessionActions {
   checkpoint(transactionId?: string): Promise<unknown>
   scheduleCheckpoint(): void
   captureView(): void
   save(id: string, saveAs?: boolean): Promise<SaveDocumentResult>
-  create(markdown: string, selected: boolean): Promise<void>
+  create(markdown: string, selected: boolean, title?: string): Promise<void>
   close(ids: string[]): Promise<void>
   saveAll(closeTabs: boolean): Promise<void>
 }
@@ -401,7 +402,8 @@ export const useEditorStore = defineStore('editor', {
       if (currentFile && pathname === currentFile.pathname) {
         this.currentFile = tab
         const { id, cursor, history, scrollTop, muyaIndexCursor } = tab // Should not use blocks history as this is loaded from disk
-        bus.emit('file-changed', {
+        if (isDrawingPath(pathname || currentFile.filename)) this.UPDATE_TOC([])
+        else bus.emit('file-changed', {
           id,
           markdown: tab.markdown,
           muyaIndexCursor,
@@ -533,6 +535,16 @@ export const useEditorStore = defineStore('editor', {
     // no-op when nothing is pending.
     flushActiveEditor(): void {
       bus.emit('flush-active-editor')
+    },
+
+    UPDATE_DRAWING(id: string, content: string): void {
+      const file = this.tabs.find(tab => tab.id === id)
+      if (!file || file.readOnly || file.markdown === content || !isDrawingPath(file.pathname || file.filename)) return
+      file.markdown = content
+      file.isPreview = false
+      file.isSaved = false
+      if (file.pathname && usePreferencesStore().autoSave) this.HANDLE_AUTO_SAVE(file)
+      scheduleWindowCheckpoint()
     },
 
     FILE_SAVE({ waitForResult = false } = {}): Promise<SaveDocumentResult> | void {
@@ -674,7 +686,8 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        bus.emit('file-changed', {
+        if (isDrawingPath(pathname || currentFile.filename)) this.UPDATE_TOC([])
+        else bus.emit('file-changed', {
           id,
           markdown,
           cursor,

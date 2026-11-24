@@ -60,7 +60,7 @@ test('the saved system prompt applies to text and tool requests in an open studi
   }
 })
 
-test('Chinese AI settings display the empty table and classic request type on first open', async() => {
+test('Chinese AI settings show the defaults and copy a named model with the maximum output preset', async() => {
   const { app, page } = await launchElectron([], { preferences: { language: 'zh-CN' } })
   try {
     const opened = app.waitForEvent('window')
@@ -72,7 +72,24 @@ test('Chinese AI settings display the empty table and classic request type on fi
     await expect(table.getByText('尚未配置 AI 模型。')).toBeVisible()
     await expect(settings.getByRole('alert')).toHaveCount(0)
     await settings.getByRole('button', { name: '添加模型' }).click()
-    await expect(settings.getByRole('dialog').getByLabel('请求类型')).toHaveValue('chat-completions')
+    const dialog = settings.getByRole('dialog')
+    await expect(dialog.getByLabel('请求类型')).toHaveValue('chat-completions')
+    await dialog.getByLabel('显示名称（可选）').fill('推理模型')
+    await dialog.getByLabel('API 基础地址').fill('https://example.com/v1')
+    await dialog.getByLabel('模型 ID').fill('reasoning-model')
+    await dialog.getByLabel('最大输出（Token）').click()
+    await settings.getByRole('option', { name: '384000', exact: true }).click()
+    await dialog.getByRole('button', { name: '保存', exact: true }).click()
+    await expect(dialog).toHaveCount(0)
+
+    const source = table.getByRole('row', { name: /推理模型/ })
+    await source.getByRole('button', { name: '复制', exact: true }).click()
+    const copy = table.getByRole('row', { name: /推理模型 - 复制/ })
+    await expect(copy).toBeVisible()
+    await expect(table.getByRole('row', { name: /reasoning-model/ })).toHaveCount(2)
+    await copy.getByRole('button', { name: '编辑', exact: true }).click()
+    await expect(dialog.getByLabel('显示名称（可选）')).toHaveValue('推理模型 - 复制')
+    await expect(dialog.getByLabel('最大输出（Token）')).toHaveValue('384000')
   } finally { await app.close() }
 })
 
@@ -196,15 +213,29 @@ test('AI preferences discover, test and manage profiles alongside the original t
       reasoning: { effort: 'custom-effort' }, max_output_tokens: 4096, input: [{ role: 'user', content: '仅回复1' }] })
     await dialog.getByRole('button', { name: 'Save', exact: true }).click()
     await settings.reload()
-    const renamed = settings.getByRole('row', { name: /renamed-model/ })
+    const renamed = settings.getByRole('row').filter({
+      has: settings.getByRole('cell', { name: 'renamed-model', exact: true })
+    })
     await expect(renamed.getByRole('cell').first()).toHaveText('renamed-model')
     await expect(renamed.getByText('Responses')).toBeVisible()
     await renamed.getByRole('button', { name: 'Test' }).click()
     await expect(renamed.getByRole('status')).toContainText('Connected')
     expect(received.at(-1)?.path).toBe('/v1/responses')
+    await renamed.getByRole('button', { name: 'Copy' }).click()
+    const copy = settings.getByRole('row', { name: /renamed-model - Copy/ })
+    await expect(copy).toBeVisible()
     await renamed.getByRole('button', { name: 'Delete' }).click()
     await dialog.getByRole('button', { name: 'Delete' }).click()
-    await expect(settings.getByRole('row', { name: /renamed-model/ })).toHaveCount(0)
+    await expect(renamed).toHaveCount(0)
+    await settings.reload()
+    await copy.getByRole('button', { name: 'Test' }).click()
+    await expect(copy.getByRole('status')).toContainText('Connected')
+    const copiedRequest = received[received.length - 1]
+    expect(copiedRequest.path).toBe('/v1/responses')
+    expect(JSON.parse(copiedRequest.body)).toMatchObject({
+      model: 'renamed-model', reasoning: { effort: 'custom-effort' }, max_output_tokens: 4096
+    })
+    if (key) expect(copiedRequest.auth).toBe('Bearer ' + key)
     await expect(settings.getByRole('row', { name: /original/ })).toBeVisible()
   } finally {
     server.closeAllConnections()

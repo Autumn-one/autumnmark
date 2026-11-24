@@ -96,7 +96,7 @@ test('one theme studio switches independent drafts and applies a theme without c
 
     const save = studio.getByRole('button', { name: 'Save theme only', exact: true })
     await save.click()
-    await expect(save).toBeDisabled()
+    await expect(save).toBeEnabled()
     await openLibrary()
     await expect(saved('Cedar draft')).toBeVisible()
     await expect(saved('Cedar draft')).not.toContainText('Currently applied')
@@ -104,7 +104,7 @@ test('one theme studio switches independent drafts and applies a theme without c
     const options = studio.getByRole('button', { name: 'Save options', exact: true })
     await options.click()
     await studio.getByRole('button', { name: 'Save and apply', exact: true }).click()
-    await expect(options).toBeDisabled()
+    await expect(options).toBeEnabled()
     expect(studio.isClosed()).toBe(false)
     await openLibrary()
     await expect(saved('Cedar draft')).toContainText('Currently applied')
@@ -154,7 +154,7 @@ test('the theme library deletes drafts and applied themes across a reload', asyn
     })
     expect(chatId).not.toBe('')
     await openLibrary()
-    await library.locator('.theme-row[title="Saved theme"]').click()
+    await library.getByRole('button', { name: /^Saved theme/ }).click()
     await expect(name).toHaveValue('Saved theme')
 
     await openLibrary()

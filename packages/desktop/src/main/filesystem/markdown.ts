@@ -4,8 +4,9 @@ import path from 'path'
 import log from 'electron-log'
 import iconv from 'iconv-lite'
 import { LINE_ENDING_REG, LF_LINE_ENDING_REG, CRLF_LINE_ENDING_REG } from '../config'
-import { isDirectory2 } from 'common/filesystem'
+import { isDirectory2, isFile2 } from 'common/filesystem'
 import { hasMarkdownExtension, isMarkdownFile } from 'common/filesystem/paths'
+import { isDrawingPath } from '@shared/drawing'
 import { normalizeAndResolvePath, writeFile, writeFileChunks } from '../filesystem'
 import { diskVideoReferences, diskVideoThreshold } from '@shared/diskVideo'
 import { expandDiskVideos, readVideoMarkdown } from './diskVideo'
@@ -77,7 +78,7 @@ export const normalizeMarkdownPath = (
   pathname: string
 ): { isDir: boolean; path: string } | null => {
   const isDir = isDirectory2(pathname)
-  if (isDir || isMarkdownFile(pathname)) {
+  if (isDir || isMarkdownFile(pathname) || (isDrawingPath(pathname) && isFile2(pathname))) {
     const resolved = normalizeAndResolvePath(pathname)
     if (resolved) {
       return { isDir, path: resolved }

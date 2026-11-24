@@ -12,7 +12,6 @@ export function useThemeCollaboration(options: {
   const connection = shallowRef<ThemeCollaborationConnection>()
   const opening = ref(false)
   const stopping = ref(false)
-  const installing = ref(false)
   const notice = ref('')
   const failure = ref(false)
   const directory = computed(() => connection.value?.directory ?? '')
@@ -111,16 +110,6 @@ export function useThemeCollaboration(options: {
     finally { stopping.value = false }
   }
 
-  async function install(): Promise<void> {
-    installing.value = true
-    notice.value = ''
-    try {
-      const result = await ipc.invoke('mt::theme::collaboration-install')
-      notice.value = result === 'installed' ? 'installed' : 'skillConflict'
-    } catch { notice.value = 'skillError' }
-    finally { installing.value = false }
-  }
-
   async function openDirectory(): Promise<void> {
     if (!directory.value) return
     notice.value = ''
@@ -151,5 +140,5 @@ export function useThemeCollaboration(options: {
     if (linked) void ipc.invoke('mt::theme::collaboration-stop', linked.id).catch(() => {})
   })
 
-  return { directory, opening, stopping, installing, notice, failure, issue, start, stop, flush, install, openDirectory, copyDirectory }
+  return { directory, opening, stopping, notice, failure, issue, start, stop, flush, openDirectory, copyDirectory }
 }

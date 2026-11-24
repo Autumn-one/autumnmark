@@ -80,6 +80,14 @@
               </el-button>
               <el-button
                 size="small"
+                :loading="copying === profile.id"
+                :disabled="!!copying || testing.has(profile.id)"
+                @click="copy(profile.id)"
+              >
+                {{ t('menu.edit.copy') }}
+              </el-button>
+              <el-button
+                size="small"
                 :disabled="testing.has(profile.id)"
                 @click="removing = profile"
               >
@@ -141,6 +149,7 @@ const editing = ref<AiModelProfile>()
 const editorOpen = ref(false)
 const removing = ref<AiModelProfile>()
 const deleting = ref(false)
+const copying = ref<string>()
 const testing = ref(new Set<string>())
 const results = ref<Record<string, string>>({})
 const error = ref('')
@@ -164,6 +173,18 @@ async function test(id: string): Promise<void> {
     results.value[id] = t('ai.connected')
   } catch (cause) { results.value[id] = modelError(cause, t) }
   finally { testing.value.delete(id) }
+}
+async function copy(id: string): Promise<void> {
+  if (copying.value) return
+  copying.value = id
+  try {
+    profiles.value = await ipc.invoke('mt::ai::copy', id)
+    error.value = ''
+  } catch (cause) {
+    error.value = modelError(cause, t)
+  } finally {
+    copying.value = undefined
+  }
 }
 async function remove(): Promise<void> {
   if (!removing.value || deleting.value) return

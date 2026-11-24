@@ -8,9 +8,11 @@ import 'codemirror/theme/railscasts.css'
 import './assets/themes/codemirror/one-dark.css'
 import './codeMirror/index.css'
 import { builtinThemeCss } from './util/builtinTheme'
-import { localThemeCss } from './util/themeOverrides'
+import { localThemeCss } from '@shared/themeOverrides'
 import { isDarkThemeId } from 'common/theme'
 import { isLocalTheme, themeBases } from '@shared/localTheme'
+import { isSkillThemeProbe, type SkillWindowResponse } from '@shared/autumnmarkSkill'
+import { measureTheme } from './services/autumnmarkSkill'
 import { inspectSelectors } from './prefComponents/theme/selectorRules'
 import { preparePreviewTarget } from './prefComponents/theme/previewTarget'
 import { deferThemeDevUpdates } from './prefComponents/theme/devUpdates'
@@ -81,6 +83,20 @@ window.addEventListener('autumnmark-inspected-element', event => {
 window.addEventListener('message', event => {
   const data = event.data
   if (event.source !== parent) return
+  if (data?.type === 'theme-preview-measure') {
+    const port = event.ports[0]
+    if (!port || !isSkillThemeProbe(data.probe)) return
+    let result: SkillWindowResponse
+    try {
+      if (lastMarkdown === null) throw new Error('theme-preview-unavailable')
+      result = { ok: true, value: measureTheme(document, data.probe) }
+    } catch (error) {
+      result = { ok: false, error: error instanceof Error ? error.message : 'theme-preview-unavailable' }
+    }
+    port.postMessage(result)
+    port.close()
+    return
+  }
   if (data?.type === 'theme-preview-inspector') {
     inspectClicks = data.open === true
     if (inspectClicks) reportSelectors()

@@ -3,6 +3,8 @@
     class="editor-wrapper"
     :class="{ typewriter, focus, source: sourceCode, 'use-theme-font': !editorFontFamily || editorFontFamily === 'Open Sans' }"
     :dir="textDirection"
+    @click.capture="activateDrawingPreview"
+    @dblclick.capture="activateDrawingPreview"
     @contextmenu="showDocumentBackgroundMenu"
   >
     <div
@@ -156,10 +158,11 @@ import {
   registerDocumentView,
   pruneSourceHistory
 } from '../../services/documentMode'
-import { applyMarkdownEdits } from '@shared/markdownEdits'
-import type { MediaEditor } from '@/services/batchMedia'
+import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
 import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
 import { getDocumentLocationMenuItems } from '../../contextMenu/fileLocation'
+import { invalidateDrawingPreviews, resolveDrawingPreview } from '@/services/drawingPreviews'
+import { resolveDrawingPath } from '@/util/drawingPaths'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -309,11 +312,17 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
   popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
 }
 
-const applyMediaEdits: MediaEditor = (id, prepare) => {
+function readMarkdown(id: string): string | undefined {
   const muya = editor.value
-  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) throw new Error(t('batchMedia.changed'))
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return
   muya.flush()
-  const markdown = muya.getMarkdown()
+  return muya.getMarkdown()
+}
+
+const editMarkdown: EditMarkdown = (id, prepare) => {
+  const muya = editor.value
+  const markdown = readMarkdown(id)
+  if (!muya || markdown === undefined) throw new Error(t('batchMedia.changed'))
   const edits = prepare(markdown)
   if (!edits.length) return
   const folds = muya.getHeadingFoldState()
@@ -323,13 +332,33 @@ const applyMediaEdits: MediaEditor = (id, prepare) => {
   muya.editor.compactBlocks.restoreExpandedPaths(expanded)
 }
 
-defineExpose({ applyMediaEdits })
+defineExpose({ editMarkdown, readMarkdown })
+
+function activateDrawingPreview(event: MouseEvent) {
+  const muya = editor.value
+  const tab = currentFile.value
+  if (!muya || !tab || !(event.target instanceof Element)) return
+  if (event.type === 'click' && (!muya.isReadOnly || !event.target.matches('img'))) return
+  const linked = linkedImageAt(muya, event.target)
+  const path = linked && resolveDrawingPath(linked.src, tab.pathname)
+  if (path) {
+    event.preventDefault()
+    event.stopPropagation()
+    bus.emit('drawing::open', path)
+  }
+}
 
 const showDocumentBackgroundMenu = (event: MouseEvent): void => {
   const tab = currentFile.value
   if (event.defaultPrevented || !tab) return
   const muya = editor.value
   const linked = muya && event.target instanceof Element ? linkedImageAt(muya, event.target) : undefined
+  const drawing = linked && resolveDrawingPath(linked.src, tab.pathname)
+  if (drawing) {
+    event.preventDefault()
+    popupContextMenu([{ label: t('drawing.open'), click: () => bus.emit('drawing::open', drawing) }], { x: event.clientX, y: event.clientY })
+    return
+  }
   if (linked && !tab.readOnly) {
     event.preventDefault()
     const { id, pathname } = tab
@@ -359,7 +388,8 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
     showReadingContextMenu({ event })
     return
   }
-  popupContextMenu([{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem], {
+  popupContextMenu([{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem,
+    { label: t('drawing.new'), click: () => bus.emit('drawing::new') }], {
     x: event.clientX,
     y: event.clientY,
     editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
@@ -1064,6 +1094,11 @@ const handleInvalidateImageCache = () => {
   }
 }
 
+const refreshDrawingPreviews = () => {
+  invalidateDrawingPreviews()
+  if (/\.excalidraw/i.test(currentFile.value?.markdown ?? '')) handleInvalidateImageCache()
+}
+
 const openSpellcheckerLanguageCommand = () => {
   if (!isMac) {
     bus.emit('show-command-palette', switchLanguageCommand)
@@ -1403,6 +1438,7 @@ const handleExport = async (options: unknown) => {
     case 'styledHtml': {
       try {
         const content = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: htmlTitle || '',
           printOptimization: false,
           extraCss,
@@ -1433,6 +1469,7 @@ const handleExport = async (options: unknown) => {
         }
 
         const html = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: '',
           printOptimization: true,
           extraCss,
@@ -1459,6 +1496,7 @@ const handleExport = async (options: unknown) => {
       // NOTE: Print doesn't support page size or orientation.
       try {
         const html = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: '',
           printOptimization: true,
           extraCss,
@@ -1979,6 +2017,7 @@ onMounted(() => {
     fetchLinkHtml: (url) => window.electron.fetchLinkHtml(url),
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
+    resolveImagePreview: src => resolveDrawingPreview(src, currentFile.value?.pathname),
     beforeImageDrop,
     importVideo: input => videoMarkdown(input, savedVideoDocument(currentFile.value), currentFile.value && documentVideos(currentFile.value.id)),
     videoAttachments: {
@@ -2046,6 +2085,8 @@ onMounted(() => {
 
   bus.on('file-loaded', setMarkdownToEditor)
   bus.on('invalidate-image-cache', handleInvalidateImageCache)
+  bus.on('drawing::preview-changed', refreshDrawingPreviews)
+  window.addEventListener('focus', refreshDrawingPreviews)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
   bus.on('selectAll', handleSelectAll)
@@ -2229,6 +2270,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('selectionchange', readingSelectionChanged)
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
+  bus.off('drawing::preview-changed', refreshDrawingPreviews)
+  window.removeEventListener('focus', refreshDrawingPreviews)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
   bus.off('selectAll', handleSelectAll)

@@ -13,6 +13,7 @@ import type { FileOpenOptions } from '../windows/editor'
 import { loadMarkdownFile, loadCliMarkdownFile, writeMarkdownFile } from '../filesystem/markdown'
 import { t } from '../i18n'
 import { documentWrites } from '../filesystem/documentWrites'
+import { isDrawingPath } from '@shared/drawing'
 import { createDefaultLayout } from '@shared/applicationState/defaults'
 import { RecoveryStatus, SessionLifecycle } from '@shared/types/applicationState'
 import { StartupAction } from '@shared/types/preferences'
@@ -180,7 +181,9 @@ export class SessionHost {
       resource: { kind: 'untitled' },
       content: markdown ? { kind: 'recovery', contentRevision: 1 } : { kind: 'empty' },
       readOnly: false,
-      saveFormat: this._defaultFormat(),
+      saveFormat: isDrawingPath(title)
+        ? { encoding: { encoding: 'utf8', isBom: false }, lineEnding: 'lf', adjustLineEndingOnSave: false, trimTrailingNewline: 0 }
+        : this._defaultFormat(),
       view: null
     }
   }
@@ -210,20 +213,21 @@ export class SessionHost {
     id = createStateId()
   ): Promise<{ document: DocumentSnapshot; content: RegisteredDocumentContent }> {
     const preferences = this._accessor.preferences.getAll()
+    const drawing = isDrawingPath(pathname)
     const raw =
       options.allowMissing && !options.readOnly
         ? await loadCliMarkdownFile(
           pathname,
           preferences.defaultEncoding,
           this._accessor.preferences.getPreferredEol(),
-          preferences.autoGuessEncoding,
+          !drawing && preferences.autoGuessEncoding,
           preferences.trimTrailingNewline,
           preferences.autoNormalizeLineEndings
         )
         : await loadMarkdownFile(
           pathname,
           this._accessor.preferences.getPreferredEol(),
-          preferences.autoGuessEncoding,
+          !drawing && preferences.autoGuessEncoding,
           preferences.trimTrailingNewline,
           preferences.autoNormalizeLineEndings
         )
@@ -239,7 +243,7 @@ export class SessionHost {
         ? { kind: 'empty' }
         : { kind: 'disk', baseline: raw.rawBaseline },
       readOnly:
-        options.readOnly ?? (!raw.isPendingCreation && preferences.defaultOpenMode === 'read'),
+        options.readOnly ?? (!drawing && !raw.isPendingCreation && preferences.defaultOpenMode === 'read'),
       saveFormat: {
         encoding: { encoding: raw.encoding.encoding, isBom: !!raw.encoding.isBom },
         lineEnding: raw.lineEnding,
@@ -1031,16 +1035,19 @@ export class SessionHost {
         if (epoch === null) throw new Error('Document is read-only')
         const native = this._native(windowId)
         const resource = capture.snapshot.resource
+        const drawing = isDrawingPath(capture.snapshot.title)
         // A preceding queued Save As may have rebound the resource since the request arrived.
         previousPath = resource.kind === 'file' ? resource.location.path : ''
         let destination = resource.kind === 'file' ? resource.location.path : ''
         if (saveAs || !destination) {
           const choice = await dialog.showSaveDialog(native, {
             defaultPath:
-              destination || path.join(app.getPath('documents'), `${capture.snapshot.title}.md`)
+              destination || path.join(app.getPath('documents'), drawing ? capture.snapshot.title : `${capture.snapshot.title}.md`),
+            ...(drawing ? { filters: [{ name: 'Excalidraw', extensions: ['excalidraw'] }] } : {})
           })
           if (choice.canceled || !choice.filePath) return null
           destination = choice.filePath
+          if (drawing && !isDrawingPath(destination)) throw new Error(t('drawing.invalidFile'))
         } else {
           const current = await this._diskBaseline(destination)
           const baseline = capture.baseline

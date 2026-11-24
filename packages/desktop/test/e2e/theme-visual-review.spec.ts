@@ -25,17 +25,28 @@ for (const requestType of ['chat-completions', 'responses']) {
         for await (const chunk of req) raw += chunk
         const packet = JSON.parse(raw)
         const messages = packet.input ?? packet.messages
+        if (messages[0].content.startsWith('Summarize the theme version')) {
+          expect(packet.stream).toBe(false)
+          expect(raw).not.toContain('data:image/')
+          const text = 'Changed the second-level heading background to blue.'
+          const output = [{ type: 'message', content: [{ type: 'output_text', text }] }]
+          res.end(JSON.stringify(responses ? { status: 'completed', output } : { choices: [{ message: { content: text } }] }))
+          return
+        }
         const question = messages.findLast((item: { role?: string; content?: unknown }) => item.role === 'user' && typeof item.content === 'string').content
         requests.push(question)
         expect(packet.stream).toBe(true)
         expect(req.url).toBe(responses ? '/v1/responses' : '/v1/chat/completions')
         expect(packet.tools.map((tool: { name?: string; function?: { name: string } }) => (tool.function ?? tool).name))
-          .toEqual(['capture_preview', 'edit_theme_css', 'edit_sample_markdown'])
+          .toEqual(['read_context', 'capture_preview', 'edit_theme_css', 'edit_sample_markdown'])
         expect(packet.tool_choice).toBe('auto')
         const outputs = messages.filter((item: { type?: string; role?: string }) => responses ? item.type === 'function_call_output' : item.role === 'tool')
         const step = outputs.length
         const last = outputs.at(-1)
-        if (!step) expect(raw).not.toContain('data:image/')
+        if (!step) {
+          expect(raw).not.toContain('data:image/')
+          expect(JSON.parse(messages[1].content)).toEqual({ base: 'light', availableContext: ['markdown', 'themeCss', 'baseCss'] })
+        }
         if (step) {
           expect(last.call_id ?? last.tool_call_id).toBe('call-' + step)
           if (responses) expect(messages.some((item: { type?: string; encrypted_content?: string }) => item.type === 'reasoning' && item.encrypted_content === 'reasoning-token')).toBe(true)
@@ -63,12 +74,18 @@ for (const requestType of ['chat-completions', 'responses']) {
         let args: object = {}
         let reply = 'Headings and paragraph spacing are editable.'
         if (question === edit) {
-          if (step === 0 || step === 2) {
-            name = 'edit_theme_css'
-            args = step === 0 ? { find: '', replace: css } : { find: '#e71765', replace: '#1f6feb' }
+          if (step === 0) {
+            name = 'read_context'
+            args = { read: ['themeCss', 'baseCss'] }
           } else if (step === 1 || step === 3) {
+            if (step === 1) {
+              expect(JSON.parse(last.output ?? last.content)).toEqual({ themeCss: '', baseCss: expect.any(String) })
+            }
+            name = 'edit_theme_css'
+            args = step === 1 ? { find: '', replace: css } : { find: '#e71765', replace: '#1f6feb' }
+          } else if (step === 2 || step === 4) {
             name = 'capture_preview'
-            args = { framing: step === 1 ? 'node' : 'viewport', selector: 'h2', occurrence: 2, slice: 1 }
+            args = { framing: step === 2 ? 'node' : 'viewport', selector: 'h2', occurrence: 2, slice: 1 }
           } else reply = 'Verified the blue heading.'
         } else if (question === inspect) {
           if (step <= 1) {

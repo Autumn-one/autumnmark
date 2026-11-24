@@ -5,12 +5,14 @@ import { getSessionActions, useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { embedVideo } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
+import { isDrawingReference } from '@/util/drawingPaths'
 import { documentMediaSource, embedLinkedImage } from './pastedImages'
-import type { MarkdownEdit } from '@shared/markdownEdits'
+import type { EditMarkdown } from '@shared/markdownEdits'
 
 type Media = ReturnType<typeof findLinkedDocumentMedia>[number]
+const convertibleMedia = (markdown: string) => findLinkedDocumentMedia(markdown).filter(item => !isDrawingReference(item.src))
 export type MediaSelection = Record<Media['kind'], boolean>
-export type MediaEditor = (id: string, edits: (markdown: string) => MarkdownEdit[]) => void
+export type MediaEditor = EditMarkdown
 
 export interface MediaDocument {
   pathname: string
@@ -30,14 +32,14 @@ export async function scanMediaDocument(paths: string[]): Promise<MediaDocument>
   const pathname = tab?.pathname ?? paths[0]
   const aliases = paths.filter(path => path !== pathname)
   if (tab) {
-    const media = findLinkedDocumentMedia(tab.markdown)
+    const media = convertibleMedia(tab.markdown)
     if (media.length && (tab.readOnly || tab.modeChanging)) throw new Error(t('batchMedia.locked'))
     return { pathname, aliases, media, origin: { tabId: tab.id, markdown: tab.markdown } }
   }
   const { markdown, hash } = await window.electron.ipcRenderer.invoke(
     'mt::media::read-document', pathname, usePreferencesStore().autoGuessEncoding
   )
-  return { pathname, aliases, media: findLinkedDocumentMedia(markdown), origin: { hash } }
+  return { pathname, aliases, media: convertibleMedia(markdown), origin: { hash } }
 }
 
 async function readMedia(media: Media, doc: MediaDocument) {

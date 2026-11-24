@@ -239,7 +239,7 @@ test('previously saved themes open as editable CSS and retain their ID', async()
     await base.uncheck()
     await studio.getByRole('button', { name: 'Save options' }).click()
     await studio.getByRole('button', { name: 'Save and apply' }).click()
-    await expect(studio.getByRole('button', { name: 'Save theme only' })).toBeDisabled()
+    await expect(studio.getByRole('button', { name: 'Save theme only' })).toBeEnabled()
     const prefs = await settings.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
     expect(prefs.localThemes).toHaveLength(1)
     expect(prefs.localThemes?.[0]).toMatchObject({ id, values: {}, css: expect.stringContaining('#126789') })
@@ -296,8 +296,14 @@ test('AI and CSS edit one theme in an independent, reusable window', async() => 
   let authorization = ''
   let reply: ServerResponse | undefined
   const server = createServer(async(req, res) => {
+    let input = ''
+    for await (const part of req) input += part
+    if (JSON.parse(input).messages[0].content.startsWith('Summarize the theme version')) {
+      res.end(JSON.stringify({ choices: [{ message: { content: 'Adjusted heading spacing and background and added paragraph padding.' } }] }))
+      return
+    }
+    body = input
     authorization = req.headers.authorization ?? ''
-    for await (const part of req) body += part
     res.writeHead(200, { 'content-type': 'text/event-stream' })
     res.write(streamEdit(layout) + streamEdit(headingBackground))
     reply = res
@@ -362,7 +368,7 @@ test('AI and CSS edit one theme in an independent, reusable window', async() => 
     await expect(studio.getByRole('alert')).toHaveCount(0)
     await studio.getByRole('button', { name: 'Save options' }).click()
     await studio.getByRole('button', { name: 'Save and apply' }).click()
-    await expect(studio.getByRole('button', { name: 'Save theme only' })).toBeDisabled()
+    await expect(studio.getByRole('button', { name: 'Save theme only' })).toBeEnabled()
     await expect(page.locator('.mu-container h2')).toHaveCSS('margin-top', '47px')
     await expect(page.locator('.mu-container h2')).toHaveCSS('background-color', 'rgb(31, 111, 235)')
     expect(JSON.parse(body).model).toBe('test-model')
@@ -393,10 +399,82 @@ test('AI and CSS edit one theme in an independent, reusable window', async() => 
     await expect(reopened.getByRole('combobox', { name: 'Base theme' })).toBeEnabled()
     await reopened.getByRole('button', { name: 'Save options' }).click()
     await reopened.getByRole('button', { name: 'Save and apply' }).click()
-    await expect(reopened.getByRole('button', { name: 'Save theme only' })).toBeDisabled()
+    await expect(reopened.getByRole('button', { name: 'Save theme only' })).toBeEnabled()
     const imported = await settings.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
     expect(imported.localThemes).toHaveLength(2)
     expect(imported.theme).not.toBe(saved.theme)
+  } finally {
+    server.closeAllConnections()
+    server.close()
+    await app.close()
+  }
+})
+
+test('theme history persists manual edits, AI summaries and repeated saves and restores a draft', async() => {
+  const summary = 'Added inline padding to paragraphs.'
+  let summaryInput: unknown
+  const server = createServer(async(req, res) => {
+    let body = ''
+    for await (const part of req) body += part
+    const { stream, messages } = JSON.parse(body)
+    const content = stream ? JSON.stringify({ find: '', replace: paragraph }) + '\n' + JSON.stringify({ message: 'Done.' }) : summary
+    if (!stream) summaryInput = JSON.parse(messages[1].content)
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify({ choices: [{ message: { content } }] }))
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const baseUrl = 'http://127.0.0.1:' + (server.address() as AddressInfo).port + '/v1'
+  const profile = { id: 'history', model: 'test', encryptedKey: '', baseUrl, requestType: 'chat-completions',
+    reasoningEffort: '', contextSize: null, outputSize: null, inputTypes: [] }
+  const { app, page } = await launchWithMarkdown('## Heading\n\nParagraph', {
+    preferences: { language: 'en', theme: 'light', followSystemTheme: false },
+    userDataFiles: { 'theme-model.json': JSON.stringify([profile]) }
+  })
+  try {
+    const studio = await openStudio(app, await openSettings(app, page))
+    const trigger = studio.getByRole('button', { name: 'Version history' })
+    const history = studio.getByRole('dialog', { name: 'Version history' })
+    const save = studio.getByRole('button', { name: 'Save theme only' })
+    await studio.getByRole('button', { name: 'CSS source' }).click()
+    await studio.getByRole('textbox', { name: 'CSS source' }).focus()
+    await studio.keyboard.insertText(layout)
+    await trigger.click()
+    const rows = history.getByRole('navigation').getByRole('button')
+    await expect(rows).toHaveCount(2)
+    await expect(rows.first()).toContainText('Manual edit')
+    await history.getByRole('button', { name: 'Close', exact: true }).click()
+    await studio.getByRole('button', { name: 'AI assistant' }).click()
+    await studio.getByLabel('Message the theme assistant').fill('Add paragraph padding')
+    await studio.getByRole('button', { name: 'Send', exact: true }).click()
+    await trigger.click()
+    await expect(rows.first()).toContainText(summary)
+    expect(summaryInput).toEqual([{ field: 'css', location: '.mu-container p.mu-paragraph › padding-inline', before: null, after: '18px' }])
+    await history.getByRole('button', { name: 'Close', exact: true }).click()
+    await studio.getByRole('button', { name: 'Save options' }).click()
+    await studio.getByRole('button', { name: 'Save and apply', exact: true }).click()
+    await expect(page.locator('.mu-paragraph')).toHaveCSS('padding-inline-start', '18px')
+    await save.click()
+    await save.click()
+    await trigger.click()
+    await expect(rows).toHaveCount(6)
+    await expect(rows.nth(0)).toContainText('Saved the theme.')
+    await expect(rows.nth(1)).toContainText('Saved the theme.')
+    const prefs = await studio.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(prefs.localThemes).toHaveLength(1)
+    await history.getByRole('button', { name: /Manual edit/ }).click()
+    await history.getByRole('button', { name: 'Theme preview', exact: true }).click()
+    await expect(history.frameLocator('iframe').locator('h2')).toHaveCSS('margin-top', '47px')
+    await history.getByRole('button', { name: 'Restore as draft' }).click()
+    await history.getByRole('button', { name: 'Confirm restore' }).click()
+    await expect(rows).toHaveCount(7)
+    await expect(rows.first()).toContainText('Current draft')
+    await expect(page.locator('.mu-paragraph')).toHaveCSS('padding-inline-start', '18px')
+    await studio.reload()
+    await trigger.click()
+    await expect(rows).toHaveCount(7)
+    await expect(rows.first()).toContainText('Restored the version')
+    await expect(rows.getByText(summary)).toBeVisible()
   } finally {
     server.closeAllConnections()
     server.close()

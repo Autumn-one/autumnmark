@@ -43,8 +43,18 @@ describe('theme function calls', () => {
     const changes: ThemeModelEvent[] = []
     const capture = vi.fn()
     const fetcher = vi.fn<typeof fetch>()
-      .mockResolvedValueOnce(reply({ tool_calls: [call('sample', 'edit_sample_markdown', { markdown: sampleMarkdown })] }))
-      .mockResolvedValueOnce(reply({ content: 'Example updated.' }))
+      .mockImplementationOnce(async(_url, init) => {
+        const { messages } = JSON.parse(String(init?.body))
+        expect(JSON.parse(messages[1].content)).toEqual({ base: 'light', availableContext: ['markdown', 'themeCss', 'baseCss'] })
+        return reply({ tool_calls: [call('sample', 'edit_sample_markdown', { markdown: sampleMarkdown })] })
+      })
+      .mockResolvedValueOnce(reply({ tool_calls: [call('read', 'read_context', { read: ['markdown', 'themeCss'] })] }))
+      .mockImplementationOnce(async(_url, init) => {
+        const { messages } = JSON.parse(String(init?.body))
+        expect(messages.at(-1).tool_call_id).toBe('read')
+        expect(JSON.parse(messages.at(-1).content)).toEqual({ markdown: sampleMarkdown, themeCss: request.css })
+        return reply({ content: 'Example updated.' })
+      })
     const css = await runThemeTools(vision, { ...input, sampleMarkdown: '# Original' }, new AbortController().signal,
       event => changes.push(event), capture, trace(), fetcher)
     expect(css).toBe(input.css)
@@ -88,7 +98,7 @@ describe('theme model contract', () => {
     expect(() => modelBaseUrl('http://provider.test/v1')).toThrow('invalidEndpoint')
     expect(() => modelBaseUrl('https://user:pass@provider.test/v1')).toThrow('invalidEndpoint')
   })
-  it('reserves the output budget, retaining the current CSS and latest instruction', async() => {
+  it('reserves the output budget, retaining available sources and the latest instruction', async() => {
     const settings = { ...classic, reasoningEffort: 'high', contextSize: 1000, outputSize: 200 }
     const messages: ThemeModelRequest['messages'] = [{ role: 'user', content: 'a'.repeat(4000) }, ...request.messages]
     const fetcher: typeof fetch = async(_url, init) => {
@@ -107,15 +117,25 @@ describe('theme model contract', () => {
     await readReply('{"find":"color: red","replace":"margin-top: 2em"}\n{"message":"Restored."}', changes)
     expect(changes).toEqual([{ css: 'h2 { margin-top: 2em; }' }, { message: 'Restored.' }])
   })
-  it('passes the current example to text models and applies a Markdown replacement', async() => {
+  it('provides the example and current CSS in one on-demand streamed read', async() => {
     const sampleMarkdown = '# Example\n\n```json\n{"size": 2}\n```'
     const changes: ThemeModelEvent[] = []
-    const fetcher: typeof fetch = async(_url, init) => {
-      const { messages } = JSON.parse(String(init?.body))
-      expect(JSON.parse(messages[1].content)).toMatchObject({ sampleMarkdown: '# Original' })
-      const content = JSON.stringify({ sampleMarkdown }) + '\n' + JSON.stringify({ message: 'Example updated.' })
-      return Response.json({ choices: [{ message: { content } }] })
-    }
+    const fetcher = vi.fn<typeof fetch>()
+      .mockImplementationOnce(async(_url, init) => {
+        const { messages } = JSON.parse(String(init?.body))
+        expect(JSON.parse(messages[1].content)).toEqual({ base: 'light', availableContext: ['markdown', 'themeCss', 'baseCss'] })
+        const chunks = ['{"read":["markdown",', '"themeCss"]}'].map(content =>
+          'data: ' + JSON.stringify({ choices: [{ delta: { content } }] }) + '\n\n')
+        return new Response(chunks.join('') + 'data: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } })
+      })
+      .mockImplementationOnce(async(_url, init) => {
+        const { messages } = JSON.parse(String(init?.body))
+        const context = JSON.parse(messages[1].content)
+        expect(context).toMatchObject({ markdown: '# Original', themeCss: request.css })
+        expect(context).not.toHaveProperty('baseCss')
+        const content = JSON.stringify({ sampleMarkdown }) + '\n' + JSON.stringify({ message: 'Example updated.' })
+        return Response.json({ choices: [{ message: { content } }] })
+      })
     const css = await generateTheme(classic, { ...request, sampleMarkdown: '# Original' },
       new AbortController().signal, event => changes.push(event), fetcher)
     expect(css).toBe(request.css)
@@ -123,15 +143,25 @@ describe('theme model contract', () => {
   })
 
   it('can answer a theme question when a large example exceeds the configured context', async() => {
-    const fetcher: typeof fetch = async(_url, init) => {
-      const { messages } = JSON.parse(String(init?.body))
-      const context = JSON.parse(messages[1].content)
-      expect(context).toMatchObject({ css: request.css, sampleMarkdownOmitted: true })
-      expect(context).not.toHaveProperty('sampleMarkdown')
-      return Response.json({ choices: [{ message: { content: 'The heading is red.' } }] })
-    }
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '{"read":["markdown","themeCss"]}' } }] }))
+      .mockImplementationOnce(async(_url, init) => {
+        const { messages } = JSON.parse(String(init?.body))
+        const context = JSON.parse(messages[1].content)
+        expect(context).toMatchObject({ themeCss: request.css, unavailableContext: ['markdown'] })
+        expect(context).not.toHaveProperty('markdown')
+        return Response.json({ choices: [{ message: { content: 'The heading is red.' } }] })
+      })
     await generateTheme({ ...classic, contextSize: 1500 }, { ...request, sampleMarkdown: 'Example text\n'.repeat(1000) },
       new AbortController().signal, vi.fn(), fetcher)
+  })
+
+  it('stops when a text model repeats the same context request', async() => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async() =>
+      Response.json({ choices: [{ message: { content: '{"read":["themeCss"]}' } }] }))
+    await expect(generateTheme(classic, request, new AbortController().signal, vi.fn(), fetcher))
+      .rejects.toThrow('invalidReply:format')
+    expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
   it('keeps a clarification and quoted edit examples in the conversation', async() => {

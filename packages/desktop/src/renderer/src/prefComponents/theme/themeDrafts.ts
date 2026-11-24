@@ -1,5 +1,5 @@
 import { isLocalTheme, isThemeSample, type LocalTheme } from '@shared/localTheme'
-import { localThemeCss } from '@/util/themeOverrides'
+import { localThemeCss } from '@shared/themeOverrides'
 
 export const themeDraftPrefix = 'autumnmark.theme-draft.v1.'
 

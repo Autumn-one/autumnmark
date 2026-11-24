@@ -56,6 +56,7 @@
             </svg>
           </button>
         </icon-tooltip>
+        <slot name="search" />
       </div>
       <div
         v-show="showOpenedFiles"
@@ -91,6 +92,15 @@
         @keydown="handleResizeKeydown"
       />
     </div>
+    <div
+      v-else
+      class="folders-heading"
+    >
+      <h2 class="folder-section-title">
+        {{ t('sideBar.tree.folders') }}
+      </h2>
+      <slot name="search" />
+    </div>
 
     <div
       ref="treeWrapper"
@@ -104,7 +114,7 @@
       @keydown="handleTreeKeydown"
     >
       <h2
-        v-if="roots.length"
+        v-if="openedFilesInSidebar && roots.length"
         class="folder-section-title"
       >
         {{ t('sideBar.tree.folders') }}
@@ -671,11 +681,22 @@ onUnmounted(() => {
   padding-bottom: 12px;
 }
 
-.opened-files > .title {
+.opened-files > .title,
+.folders-heading {
   height: 26px;
   padding: 0 7px;
   display: flex;
   align-items: center;
+}
+
+.folders-heading {
+  flex-shrink: 0;
+  justify-content: space-between;
+  margin-inline: 8px;
+}
+
+.folders-heading .folder-section-title {
+  padding: 0;
 }
 
 .opened-files-toggle,

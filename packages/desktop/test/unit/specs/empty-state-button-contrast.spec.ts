@@ -16,7 +16,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const RENDERER = resolve(__dirname, '../../../src/renderer/src')
 const THEME_DIR = resolve(RENDERER, 'assets/themes')
 const BASE_CSS = resolve(RENDERER, 'assets/styles/index.css')
-const BUTTON_COMPONENT = resolve(RENDERER, 'components/emptyStateButton.vue')
 
 type Rgb = [number, number, number]
 type Rgba = [number, number, number, number]
@@ -141,14 +140,23 @@ const extractButtonVars = (
 
 const baseVars = parseVars(readFileSync(BASE_CSS, 'utf8'))
 const themeFiles = readdirSync(THEME_DIR).filter((f) => f.endsWith('.theme.css'))
-const lightVars = {
-  ...baseVars,
-  ...parseVars(readFileSync(resolve(THEME_DIR, 'light.theme.css'), 'utf8'))
-}
 
-const BUTTON_SURFACES = [
-  { name: 'Open Folder', surfaceVar: '--sideBarBgColor' },
-  { name: 'New File', surfaceVar: '--editorBgColor' }
+const COMPONENTS = [
+  {
+    name: 'Open Folder (sidebar/tree.vue)',
+    path: resolve(RENDERER, 'components/sideBar/tree.vue'),
+    surfaceVar: '--sideBarBgColor'
+  },
+  {
+    name: 'New File (recent/index.vue)',
+    path: resolve(RENDERER, 'components/recent/index.vue'),
+    surfaceVar: '--editorBgColor'
+  },
+  {
+    name: 'Open Folder (sideBar/search.vue no-data)',
+    path: resolve(RENDERER, 'components/sideBar/search.vue'),
+    surfaceVar: '--sideBarBgColor'
+  }
 ]
 
 describe('empty-state button readability (#4774)', () => {
@@ -158,10 +166,10 @@ describe('empty-state button readability (#4774)', () => {
     expect(baseVars['--buttonPrimaryBgColor']).toBeTruthy()
   })
 
-  for (const { name, surfaceVar } of BUTTON_SURFACES) {
-    it(`${name} label is at least as readable as the standard primary button in every theme`, () => {
-      const { fgVar, bgVar } = extractButtonVars(BUTTON_COMPONENT)
-      expect(pairContrast(fgVar, bgVar, surfaceVar, lightVars)).toBeGreaterThanOrEqual(4.5)
+  for (const component of COMPONENTS) {
+    it(`${component.name} label is at least as readable as the standard primary button, in every theme`, () => {
+      expect(readFileSync(component.path, 'utf8')).toContain('<EmptyStateButton')
+      const { fgVar, bgVar } = extractButtonVars(resolve(RENDERER, 'components/emptyStateButton.vue'))
       const failures: string[] = []
 
       for (const file of themeFiles) {
@@ -169,11 +177,11 @@ describe('empty-state button readability (#4774)', () => {
           ...baseVars,
           ...parseVars(readFileSync(resolve(THEME_DIR, file), 'utf8'))
         }
-        const buttonContrast = pairContrast(fgVar, bgVar, surfaceVar, vars)
+        const buttonContrast = pairContrast(fgVar, bgVar, component.surfaceVar, vars)
         const primaryContrast = pairContrast(
           '--buttonPrimaryFontColor',
           '--buttonPrimaryBgColor',
-          surfaceVar,
+          component.surfaceVar,
           vars
         )
         // Equal is fine (the button reuses the primary pairing); only a

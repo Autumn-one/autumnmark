@@ -45,7 +45,7 @@ import bus from '../../bus'
 import { t } from '@/i18n'
 import { getDocumentLocationMenuItems } from '@/contextMenu/fileLocation'
 import { isDocumentBackground } from '@/contextMenu/documentBackground'
-import type { MediaEditor } from '@/services/batchMedia'
+import type { EditMarkdown } from '@shared/markdownEdits'
 import { popupContextMenu, type ContextMenuItem } from '@/contextMenu/popupMenu'
 import { oneDarkThemes, railscastsThemes, themeBaseId } from 'common/theme'
 
@@ -237,19 +237,24 @@ function dropEmbeddedImage(event: DragEvent) {
   else if (image) void insertEmbeddedImage(image, position)
 }
 
-const applyMediaEdits: MediaEditor = (id, prepare) => {
+function readMarkdown(id: string): string | undefined {
+  if (tabId.value === id && !currentTab.value?.readOnly) return editor.value?.getValue()
+}
+
+const editMarkdown: EditMarkdown = (id, prepare) => {
   const cm = editor.value
-  if (!cm || tabId.value !== id || currentTab.value?.readOnly) throw new Error(t('batchMedia.changed'))
-  const edits = prepare(cm.getValue())
+  const markdown = readMarkdown(id)
+  if (!cm || markdown === undefined) throw new Error(t('batchMedia.changed'))
+  const edits = prepare(markdown)
   cm.operation(() => {
     for (const edit of edits.reverse()) {
-      cm.replaceRange(edit.text, cm.posFromIndex(edit.start), cm.posFromIndex(edit.end), 'embed-document-images')
+      cm.replaceRange(edit.text, cm.posFromIndex(edit.start), cm.posFromIndex(edit.end), 'document-edit')
     }
   })
   saveContent(cm)
 }
 
-defineExpose({ applyMediaEdits })
+defineExpose({ editMarkdown, readMarkdown })
 
 const showContextMenu = (event: MouseEvent): void => {
   const cm = editor.value

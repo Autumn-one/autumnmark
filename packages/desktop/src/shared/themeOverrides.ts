@@ -1,4 +1,4 @@
-import { isThemeField, validThemeValue, type ThemeValues, type LocalTheme } from '@shared/localTheme'
+import { isThemeField, validThemeValue, type ThemeValues, type LocalTheme } from './localTheme'
 
 export const localThemeCss = (theme?: LocalTheme): string =>
   theme ? [themeOverridesCss(theme.values), theme.css].filter(Boolean).join('\n\n') : ''

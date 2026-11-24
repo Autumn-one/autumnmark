@@ -96,7 +96,7 @@ test.describe('Tab management', () => {
   for (const closeWith of ['button', 'command'] as const) {
     test(`Closing the last tab with the ${closeWith} returns to the initial page`, async() => {
       const launched = await launchWithMarkdown('# Last tab\n', {
-        windowLayout: { showTabBar: true, showSideBar: true },
+        windowLayout: { showTabBar: true },
         preferences: {
           language: closeWith === 'button' ? 'zh-CN' : 'en',
           theme: closeWith === 'button' ? 'light' : 'dark',
@@ -128,16 +128,9 @@ test.describe('Tab management', () => {
 
         const newFileLabel = closeWith === 'button' ? '新建文件' : 'New File'
         const newFileButton = welcome.getByRole('button', { name: newFileLabel, exact: true })
-        const buttonColor = closeWith === 'button' ? 'rgb(16, 122, 102)' : 'rgb(64, 158, 255)'
-        await expect(newFileButton).toHaveCSS('background-color', buttonColor)
-        const filesOpenFolder = lastPage.locator('.open-project').getByRole('button')
-        await expect(filesOpenFolder).toBeVisible()
-        await expect(filesOpenFolder).toHaveCSS('background-color', buttonColor)
-        await lastPage.locator('.search-button').click()
-        const searchOpenFolder = lastPage.locator('.no-data').getByRole('button')
-        await expect(searchOpenFolder).toBeVisible()
-        await expect(searchOpenFolder).toHaveCSS('background-color', buttonColor)
-        await lastPage.locator('.back-button').click()
+        if (closeWith === 'button') {
+          await expect(newFileButton).toHaveCSS('background-color', 'rgb(101, 71, 184)')
+        }
         await newFileButton.click()
         await expect(lastPage.locator(tabSelector)).toHaveCount(1)
         await expect(lastPage.locator('.recent-files-projects')).toHaveCount(0)

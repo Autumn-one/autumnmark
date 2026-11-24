@@ -5,8 +5,12 @@
   >
     <tabs v-show="showTabBar" />
     <div class="container">
-      <div class="document-body">
+      <div
+        class="document-body"
+        :data-document-id="store.currentFile?.id"
+      >
         <editor
+          v-if="!currentDrawing"
           ref="renderedEditor"
           :image-menu-item="imageMenuItem"
           :markdown="markdown"
@@ -17,7 +21,7 @@
           @edit-embedded-image="handleImage"
         />
         <source-code
-          v-if="sourceCode"
+          v-if="sourceCode && !currentDrawing"
           ref="sourceEditor"
           :image-menu-item="imageMenuItem"
           :markdown="markdown"
@@ -26,11 +30,21 @@
           @heading-link="headingLink = $event"
           @edit-embedded-image="handleImage"
         />
+        <template v-for="file in drawingTabs" :key="file.id">
+          <drawing-canvas
+            v-if="openedDrawings.has(file.id)"
+            v-show="currentDrawing && store.currentFile?.id === file.id"
+            :file="file"
+            :can-insert="canInsertDrawing"
+            :insert="() => insertDrawing(file.pathname)"
+          />
+        </template>
       </div>
     </div>
     <div class="editor-footer">
       <tab-notifications />
-      <div v-if="store.currentFile" class="document-status">
+      <div v-if="store.currentFile && !currentDrawing" class="document-status">
+        <slot name="document-actions" />
         <document-statistics
           :pathname="store.currentFile.pathname"
           :word-count="store.currentFile.wordCount"
@@ -63,13 +77,14 @@
 <script setup lang="ts">
 import { MIN_EDITOR_WIDTH } from '@/util/editorLayout'
 import Tabs from './tabs.vue'
-import { computed, ref, shallowRef, shallowReactive, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, shallowRef, shallowReactive, watch } from 'vue'
 import { embedDocumentImages, imagePasteJobs } from '@/services/pastedImages'
 import { t } from '@/i18n'
 import DocumentStatistics from '../titleBar/documentStatistics.vue'
 import DocumentImageStatus from './documentImageStatus.vue'
 import { imageDestinationEdits, isInlineImage } from '@/util/documentImages'
-import type { MediaEditor } from '@/services/batchMedia'
+import { isDrawingPath, isDrawingReference } from '@/util/drawingPaths'
+import type { EditMarkdown } from '@shared/markdownEdits'
 import { findDocumentImages, type IEmbeddedImageEdit } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
 import { documentVideos } from '@/util/videoAttachments'
@@ -80,6 +95,7 @@ import type { HeadingLinkRequest } from '@/util/headingLinks'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
+const DrawingCanvas = defineAsyncComponent(() => import('@/components/drawingCanvas.vue'))
 
 const props = defineProps<{
   markdown: string
@@ -90,6 +106,8 @@ const props = defineProps<{
   showTabBar: boolean
   textDirection: string
   platform: string
+  canInsertDrawing: boolean
+  insertDrawing: (path: string) => Promise<boolean>
 }>()
 
 const embeddedImage = shallowRef<IEmbeddedImageEdit | null>(null)
@@ -106,18 +124,29 @@ function handleImage(image: IEmbeddedImageEdit, event?: MouseEvent) {
 }
 const headingLink = shallowRef<HeadingLinkRequest | null>(null)
 const store = useEditorStore()
+const currentDrawing = computed(() => !!store.currentFile && isDrawingPath(store.currentFile.pathname || store.currentFile.filename))
+const drawingTabs = computed(() => store.tabs.filter(file => isDrawingPath(file.pathname || file.filename)))
+const openedDrawings = shallowReactive(new Set<string>())
+watch(() => store.currentFile?.id, id => {
+  if (id && currentDrawing.value) openedDrawings.add(id)
+}, { immediate: true })
+watch(drawingTabs, files => {
+  for (const id of openedDrawings) if (!files.some(file => file.id === id)) openedDrawings.delete(id)
+})
 const sourceEditor = ref<InstanceType<typeof SourceCode> | null>(null)
 const renderedEditor = ref<InstanceType<typeof Editor> | null>(null)
-const applyMediaEdits: MediaEditor = (id, prepare) => {
-  const view = props.sourceCode ? sourceEditor.value : renderedEditor.value
+const activeEditor = computed(() => props.sourceCode ? sourceEditor.value : renderedEditor.value)
+const readMarkdown = (id: string): string | undefined => activeEditor.value?.readMarkdown(id)
+const editMarkdown: EditMarkdown = (id, prepare) => {
+  const view = activeEditor.value
   if (!view) throw new Error(t('batchMedia.changed'))
-  view.applyMediaEdits(id, prepare)
+  view.editMarkdown(id, prepare)
 }
-defineExpose({ applyMediaEdits })
+defineExpose({ editMarkdown, readMarkdown })
 const imageCounts = shallowRef({ embedded: 0, pending: 0 })
 watch([() => store.currentFile?.id, () => props.markdown], ([id, markdown], previous, onCleanup) => {
   const refresh = () => {
-    const images = findDocumentImages(markdown ?? '')
+    const images = currentDrawing.value ? [] : findDocumentImages(markdown ?? '').filter(image => !isDrawingReference(image.src))
     const pending = images.filter(image => !isInlineImage(image.src)).length
     imageCounts.value = { embedded: images.length - pending, pending }
   }
@@ -146,7 +175,7 @@ async function convertCurrentImages() {
   const tab = store.currentFile
   if (!tab || tab.readOnly || tab.modeChanging || busy.has(tab.id)) return
   store.flushActiveEditor()
-  const sources = findDocumentImages(tab.markdown).map(image => image.src).filter(src => !isInlineImage(src))
+  const sources = findDocumentImages(tab.markdown).map(image => image.src).filter(src => !isInlineImage(src) && !isDrawingReference(src))
   if (!sources.length) return
   const { id, pathname } = tab
   busy.add(id)
@@ -164,7 +193,7 @@ watch([() => store.currentFile, () => props.sourceCode ? sourceEditor.value : re
   if (!tab || !view || !result) return
   ready.delete(tab.id)
   if (!tab.readOnly && !tab.modeChanging && tab.pathname === result.pathname) {
-    view.applyMediaEdits(tab.id, markdown => imageDestinationEdits(markdown, result.converted))
+    view.editMarkdown(tab.id, markdown => imageDestinationEdits(markdown, result.converted))
   }
 }, { flush: 'post' })
 watch(() => store.tabs.map(tab => tab.id), ids => {

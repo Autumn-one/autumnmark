@@ -11,7 +11,7 @@ interface IImageRenderHost {
 
 export default function loadImageAsync(
     this: IImageRenderHost,
-    imageInfo: { isUnknownType: boolean; src: string },
+    imageInfo: { isUnknownType: boolean; src: string; load?: () => Promise<string> },
     attrs: Record<string, string>,
     className?: string,
     imageClass?: string,
@@ -23,7 +23,7 @@ export default function loadImageAsync(
         return { ...cached, id: getUniqueId() };
 
     const root = this.environment.root;
-    const id = this.mounts.watch(root, this.images.request(src, isUnknownType), (placeholder, result) => {
+    const id = this.mounts.watch(root, this.images.request(src, isUnknownType, imageInfo.load), (placeholder, result) => {
         if (this.images.get(src) !== result)
             return;
         mountImage(placeholder, result, attrs, className, imageClass);

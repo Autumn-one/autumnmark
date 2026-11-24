@@ -6,7 +6,7 @@
     :data-tree-path="file.pathname"
     data-tree-directory="false"
     :draggable="!renameCache && !projectStore.createCache.dirname"
-    :style="{ opacity: file.isMarkdown ? 1 : 0.75 }"
+    :style="{ opacity: file.isMarkdown || isDrawingPath(file.pathname) ? 1 : 0.75 }"
     :class="[
       { current: currentFile?.pathname === file.pathname, active: file.id === activeItem.id }
     ]"
@@ -42,6 +42,7 @@ import bus from '../../bus'
 import { renameSelectionEnd } from './renameKey'
 import { useTreeRow } from './rowRegistry'
 import type { TreeFileNode } from './types'
+import { isDrawingPath } from '@/util/drawingPaths'
 
 const props = defineProps<{
   file: TreeFileNode
@@ -68,6 +69,10 @@ const handleFileClick = (event: MouseEvent): void => {
   // A double-click's second click must not re-issue the open request.
   if (event.detail === 2) return
   const { isMarkdown, pathname } = props.file
+  if (isDrawingPath(pathname)) {
+    bus.emit('drawing::open', pathname)
+    return
+  }
   if (!isMarkdown) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {

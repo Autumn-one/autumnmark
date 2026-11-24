@@ -6,7 +6,7 @@ import DeleteIcon from '../../assets/icons/delete/2.png';
 import ImageIcon from '../../assets/icons/image/2.png';
 import ImageFailIcon from '../../assets/icons/image_fail/2.png';
 import { CLASS_NAMES } from '../../config';
-import { getImageSrc, usesDefaultObjectSize } from '../../utils/image';
+import { usesDefaultObjectSize } from '../../utils/image';
 
 function renderIcon(h: H, className: string, icon: string) {
     // A `<span>`, not an `<a>`: these hover controls carry no href, and an `<a>`
@@ -64,7 +64,7 @@ export default function image(
     this: Renderer,
     { h, block, token }: ISyntaxRenderOptions & { token: TSelectableImageToken },
 ) {
-    const imageSrc = getImageSrc(token.attrs.src ?? '');
+    const imageSrc = this.imageSource(token.attrs.src ?? '');
     const selectedImage = this.environment.selectedImage;
     const { translate } = this.environment;
     const data = {

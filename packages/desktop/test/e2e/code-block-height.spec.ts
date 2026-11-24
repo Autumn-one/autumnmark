@@ -74,7 +74,7 @@ test('editing code scrolls inside the preview and expands from its bottom edge',
   ].join('\n')
   const markdown = `# Tasks\n\n~~~ts\n${source}\n~~~\n\n${'Paragraph.\n\n'.repeat(45)}`
   const { app, page } = await launchWithMarkdown(markdown, {
-    preferences: { compactCodeMaxLines: 6, language: 'zh-CN' }
+    preferences: { compactCodeMaxLines: 6, wrapCodeBlocks: false, language: 'zh-CN' }
   })
   try {
     const editor = page.locator('.editor-component')

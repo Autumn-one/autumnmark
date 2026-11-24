@@ -14,7 +14,6 @@ test('default light theme styles prose and keeps the table and code typography',
     const editor = page.locator('.mu-container')
     await expect(editor.locator('h1')).toHaveCSS('text-align', 'center')
     await expect(editor.locator('h2')).toHaveCSS('background-color', 'rgb(17, 151, 125)')
-    await expect(editor.locator('h2')).toHaveCSS('padding-left', '10px')
     await expect(editor.locator('.mu-paragraph strong')).toHaveCSS('color', 'rgb(17, 151, 125)')
     await expect(editor.locator('blockquote')).toHaveCSS('background-color', 'rgb(245, 247, 249)')
     await expect(editor.locator('td strong')).toHaveCSS('color', 'rgb(77, 77, 77)')

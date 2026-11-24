@@ -1,4 +1,4 @@
-import { type MenuItemConstructorOptions } from 'electron'
+import { BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/theme'
 import { t } from '../../i18n'
 import type Preference from '../../preferences'
@@ -80,6 +80,20 @@ export default function(userPreference: Preference): MenuItemConstructorOptions 
       id: 'createThemeFromCurrent',
       label: t('studio.create'),
       click: actions.createFromCurrentTheme
+    },
+    {
+      id: 'openActiveThemeHistory',
+      label: t('themeHistory.title'),
+      click: (_item, win) => {
+        if (win instanceof BrowserWindow) win.webContents.send('mt::theme::show-active-history')
+      }
+    },
+    {
+      id: 'openAiAssistant',
+      label: t('documentChat.title'),
+      click: (_item, win) => {
+        if (win instanceof BrowserWindow) win.webContents.send('mt::set-view-layout', { rightColumn: 'documentChat' })
+      }
     },
     { type: 'separator' },
     {

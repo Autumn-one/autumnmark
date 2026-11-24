@@ -138,11 +138,11 @@ class WindowSession {
         void this._captureActiveView().catch((error) => this._failure(error))
       },
       save: (id, saveAs = false) => this._save(id, saveAs),
-      create: async(markdown, selected) => {
+      create: async(markdown, selected, title = '') => {
         if (!this._context) return
         const result = await ipc.invoke('mt::state::register-untitled', {
           contextToken: this._context.contextToken,
-          title: '',
+          title,
           markdown,
           selected
         })

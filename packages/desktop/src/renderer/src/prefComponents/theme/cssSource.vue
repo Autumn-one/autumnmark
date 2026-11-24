@@ -44,6 +44,7 @@ watch(() => props.modelValue, value => {
   }
 })
 watch(() => props.dark, dark => editor?.setOption('theme', dark ? 'railscasts' : 'default'))
+watch(() => props.readonly, readonly => editor?.setOption('readOnly', readonly))
 function useSelector(choice: SelectorChoice): void {
   if (!editor || props.readonly) return
   const cm = editor

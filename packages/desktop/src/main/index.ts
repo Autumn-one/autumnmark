@@ -17,6 +17,8 @@ import { setPlantumlServerSource } from './ipc/diagram'
 import { registerThemeStudio } from './ipc/themeStudio'
 import { registerThemeCatalog } from './ipc/themeCatalog'
 import { registerAiModels } from './ipc/aiModels'
+import { registerDocumentChat } from './ipc/documentChat'
+import { registerAutumnMarkSkill } from './ipc/autumnmarkSkill'
 import { APP_ID, APP_NAME } from '@shared/brand'
 
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -127,7 +129,9 @@ try {
 setPlantumlServerSource(() => accessor.preferences.getItem<string>('plantumlServer') ?? '')
 
 const savedModelSettings = registerAiModels(accessor)
-registerThemeStudio(accessor, savedModelSettings)
+registerDocumentChat(accessor, savedModelSettings)
+const skillTheme = registerThemeStudio(accessor, savedModelSettings)
+registerAutumnMarkSkill(accessor, skillTheme)
 registerThemeCatalog(accessor)
 
 const appController = new App(accessor, args as unknown as { _: string[] })

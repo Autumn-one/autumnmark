@@ -36,7 +36,7 @@ export class ImageResources {
             this._previews.set(src, preview);
     }
 
-    request(src: string, detectContentType: boolean): Promise<ILoadedImage | null> {
+    request(src: string, detectContentType: boolean, resolve?: () => Promise<string>): Promise<ILoadedImage | null> {
         if (this._disposed)
             return Promise.resolve(null);
         const state = this._states.get(src);
@@ -49,7 +49,10 @@ export class ImageResources {
         const loadSrc = /^file:\/\//i.test(src)
             ? `${src}${src.includes('?') ? '&' : '?'}mucache=${id}`
             : src;
-        const request = loadImage(loadSrc, detectContentType).then(
+        const loading = resolve
+            ? Promise.resolve().then(resolve).then(url => loadImage(url))
+            : loadImage(loadSrc, detectContentType);
+        const request = loading.then(
             result => ({ id, isSuccess: true, ...result }),
             () => ({ id, isSuccess: false }),
         ).then((result) => {

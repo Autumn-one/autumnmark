@@ -8,13 +8,14 @@
           :disabled="saving || collaborationOpening || collaborationStopping || switching"
         />
         <input
-          v-model="draft.name"
+          v-model="themeName"
           class="theme-name"
           :aria-label="t('studio.name')"
           :title="t('studio.name')"
           :maxlength="maxThemeNameLength"
-          :disabled="switching"
+          :disabled="switching || saving || chatWorking || busy"
           spellcheck="false"
+          @blur="finishManualVersion"
         >
         <div class="base-control select-control">
           <Moon
@@ -29,7 +30,7 @@
             :aria-label="t('studio.base')"
             :title="t('studio.base')"
             :value="draft.base"
-            :disabled="editing || busy || collaborationOpening || switching"
+            :disabled="editing || busy || chatWorking || saving || collaborationOpening || switching"
             @change="changeBase"
           >
             <option
@@ -66,7 +67,7 @@
         <button
           type="button"
           class="primary save-theme"
-          :disabled="saveDisabled || alreadySaved"
+          :disabled="saveDisabled"
           @click="saveTheme(false)"
         >
           <Check aria-hidden="true" />
@@ -75,7 +76,7 @@
         <button
           type="button"
           class="primary save-options-trigger"
-          :disabled="saveDisabled || alreadyApplied"
+          :disabled="saveDisabled"
           :aria-label="t('studio.saveOptions')"
           :title="t('studio.saveOptions')"
           aria-haspopup="dialog"
@@ -94,7 +95,7 @@
           <button
             type="button"
             class="toolbar-action"
-            :disabled="saveDisabled || alreadyApplied"
+            :disabled="saveDisabled"
             autofocus
             @click="saveTheme(true)"
           >
@@ -198,7 +199,7 @@
             ref="sourceEditor"
             :key="String(showBase)"
             :model-value="showBase ? formattedBase : css"
-            :readonly="showBase"
+            :readonly="showBase || saving"
             :dark="isDarkThemeId(draft.base)"
             :label="showBase ? t('studio.baseSource') : t('studio.css')"
             @update:model-value="typeCss"
@@ -390,6 +391,16 @@
         {{ t('menu.edit.undo') }}
       </button>
       <button
+        type="button"
+        class="toolbar-action version-history-trigger"
+        aria-haspopup="dialog"
+        :disabled="switching || busy || saving || chatWorking"
+        @click="openVersionHistory"
+      >
+        <Clock aria-hidden="true" />
+        {{ t('themeHistory.title') }}
+      </button>
+      <button
         class="toolbar-action file-menu-trigger"
         popovertarget="theme-files"
         aria-haspopup="dialog"
@@ -456,32 +467,17 @@
         <code v-if="collaborationDirectory">{{ collaborationDirectory }}</code>
         <div class="collaboration-actions">
           <button
-            :disabled="collaborationInstalling"
-            @click="collaboration.install"
+            :disabled="collaborationOpening || chatWorking || !!issue"
+            @click="showCollaborationDirectory(false)"
           >
-            {{ t('themeCollaboration.install') }}
+            {{ t('themeCollaboration.open') }}
           </button>
           <button
-            v-if="!collaborationDirectory"
             :disabled="collaborationOpening || chatWorking || !!issue"
-            @click="startCollaboration"
+            @click="showCollaborationDirectory(true)"
           >
-            {{ t('themeCollaboration.start') }}
+            {{ t('themeCollaboration.copy') }}
           </button>
-          <template v-else>
-            <button @click="openCollaborationDirectory">
-              {{ t('themeCollaboration.open') }}
-            </button>
-            <button @click="collaboration.copyDirectory">
-              {{ t('themeCollaboration.copy') }}
-            </button>
-            <button
-              :disabled="collaborationStopping"
-              @click="stopCollaboration"
-            >
-              {{ t('themeCollaboration.stop') }}
-            </button>
-          </template>
         </div>
         <p
           v-if="collaborationNotice"
@@ -492,21 +488,26 @@
       </div>
       <div class="footer-status">
         <span
-          v-if="issue || error || storageError || collaborationError || workspaceError"
+          v-if="issue || error || storageError || collaborationError || workspaceError || versionFailed"
           role="alert"
-        >{{ issue ? t('studio.cssIssue') + ' · ' + issue : storageError || error || collaborationError || workspaceError }}</span>
+        >{{ issue ? t('studio.cssIssue') + ' · ' + issue : storageError || error || collaborationError || workspaceError || t('themeHistory.storageError') }}</span>
         <span
-          v-else-if="!collaborationDirectory"
+          v-else
           class="muted"
           role="status"
         >{{ t('studio.draft') }}</span>
-        <span
-          v-if="collaborationDirectory"
-          class="collaboration-status muted"
-          role="status"
-        >{{ t('themeCollaboration.active') }}</span>
       </div>
     </footer>
+    <theme-history-dialog
+      v-if="versionDialogOpen"
+      :name="draft.name"
+      :current="versionSnapshot()"
+      :entries="versionEntries"
+      :failed="versionFailed"
+      :restoring="versionRestoring"
+      @restore="restoreVersion"
+      @close="closeVersionHistory"
+    />
     <screenshot-viewer
       v-if="viewing"
       v-bind="viewing"
@@ -518,17 +519,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Aim, ArrowDown, Check, Connection, Document, Download, Files,
+import { Aim, ArrowDown, Check, Clock, Connection, Document, Download, Files,
   MagicStick, Moon, Plus, RefreshLeft, Setting, Sunny, Tickets, Top, Upload } from '@element-plus/icons-vue'
 import { getThemeBackgroundColor, isDarkThemeId } from 'common/theme'
 import { themeCssIssue } from '@shared/themeCss'
 import { parse } from 'postcss'
 import { builtinThemeCss } from '@/util/builtinTheme'
-import { localThemeCss } from '@/util/themeOverrides'
+import { listenForSkillRequests, skillRevision } from '@/services/autumnmarkSkill'
+import type { SkillTheme, SkillThemeProbe, SkillThemeSnapshot, SkillWindowResponse } from '@shared/autumnmarkSkill'
 import CssSource from './cssSource.vue'
 import ChatPicker from './chatPicker.vue'
 import { deferThemeDevUpdates } from './devUpdates'
 import ScreenshotViewer from './screenshotViewer.vue'
+import ThemeHistoryDialog from './themeHistoryDialog.vue'
 import { useThemeChats } from './useThemeChats'
 import { useThemeCollaboration } from './useThemeCollaboration'
 import type { ThemeChat, ThemeTurn } from './chatHistory'
@@ -540,11 +543,13 @@ import { isCancelledRequest, modelError } from './studioErrors'
 import { editableTheme, readDraftSample, type ThemeDraftEntry } from './themeDrafts'
 import type { AiModelProfile } from '@shared/aiModel'
 import type { ThemeCollaborationCapture, ThemeCollaborationFiles } from '@shared/themeCollaboration'
+import type { ThemeSnapshot } from '@shared/themeVersion'
+import type { ThemeVersion } from './themeVersions'
+import { useThemeVersions } from './useThemeVersions'
 
 const props = defineProps<{
   entry: ThemeDraftEntry
   savedTheme?: LocalTheme
-  appliedId: string
   switching: boolean
   workspaceError: string
 }>()
@@ -554,9 +559,24 @@ const ipc = window.electron.ipcRenderer
 const storageKey = props.entry.key
 let temporaryDraft = sessionStorage.getItem(storageKey) !== null && localStorage.getItem(storageKey) === null
 const sampleKey = storageKey + '.sample'
-const collaborationKey = storageKey + '.collaboration'
 const restoredPreview = props.entry.draft.previewCss
 const draft = ref(editableTheme(props.entry.draft))
+const draftUuid = draft.value.id.split(':')[2]
+const versions = useThemeVersions(draftUuid)
+const { entries: versionEntries, failed: versionFailed } = versions
+const versionDialogOpen = ref(false)
+const versionRestoring = ref(false)
+let manualVersionStart: ThemeSnapshot | undefined
+let manualVersionTimer: ReturnType<typeof setTimeout> | undefined
+let generationVersion: { before: ThemeSnapshot; profile: string; locale: string } | undefined
+const themeName = computed({
+  get: () => draft.value.name,
+  set: (name: string) => {
+    if (name === draft.value.name || saving.value || chatWorking.value || busy.value) return
+    startManualVersion()
+    draft.value.name = name
+  }
+})
 const editing = computed(() => props.savedTheme?.id === draft.value.id)
 const source = ref(false)
 const tab = ref<'css' | 'ai'>('ai')
@@ -570,9 +590,6 @@ const choice = computed(() => selectorChoices.value.find(item => item.selector =
 const css = computed(() => draft.value.css ?? '')
 const issue = computed(() => themeCssIssue(css.value))
 const previewCss = ref(issue.value ? (typeof restoredPreview === 'string' && !themeCssIssue(restoredPreview) ? restoredPreview : '') : css.value)
-const alreadySaved = computed(() => editing.value && props.savedTheme?.name === draft.value.name.trim() &&
-  !Object.keys(props.savedTheme.values).length && localThemeCss(props.savedTheme) === css.value)
-const alreadyApplied = computed(() => alreadySaved.value && props.appliedId === draft.value.id)
 const baseCss = computed(() => builtinThemeCss(draft.value.base))
 const formattedBase = computed(() => {
   const root = parse(baseCss.value)
@@ -608,7 +625,7 @@ const selectedProfile = computed(() => profiles.value.find(profile => profile.id
 const imageCapable = computed(() => selectedProfile.value?.inputTypes?.includes('image') === true)
 let turnController: AbortController | undefined
 const configLoaded = ref(false)
-const history = useThemeChats(storageKey + '.chat', draft.value.id.split(':')[2], t)
+const history = useThemeChats(storageKey + '.chat', draftUuid, t)
 if (import.meta.hot) onBeforeUnmount(deferThemeDevUpdates(import.meta.hot, history.whenIdle))
 const { chats, selected, chat, turns, prompt, ready: chatReady, working: chatWorking, removing: chatRemoving, storageError, newChat } = history
 const viewing = ref<{ src: string; number: number }>()
@@ -635,7 +652,8 @@ const collaboration = useThemeCollaboration({
   capture: captureCollaborationPreview
 })
 const { directory: collaborationDirectory, issue: collaborationIssue, opening: collaborationOpening,
-  stopping: collaborationStopping, installing: collaborationInstalling, notice: collaborationNotice } = collaboration
+  stopping: collaborationStopping, notice: collaborationNotice } = collaboration
+let workspacePreparation: Promise<string> | undefined
 const saveDisabled = computed(() => props.switching || chatWorking.value || saving.value ||
   collaborationOpening.value || collaborationStopping.value || !!collaborationIssue.value || !!issue.value || !draft.value.name.trim())
 const collaborationError = computed(() => {
@@ -651,6 +669,7 @@ let stopped = false
 let unsubscribe: (() => void) | undefined
 let unsubscribeModels: (() => void) | undefined
 let unsubscribeInspector: (() => void) | undefined
+let stopSkillTheme: (() => void) | undefined
 
 function updatePreview(paintPort?: MessagePort, captureTarget?: PreviewTarget): void {
   const snapshot = captureRequest?.snapshot
@@ -738,7 +757,50 @@ async function previewEvent(event: MessageEvent): Promise<void> {
 }
 function changeBase(event: Event): void {
   const base = (event.target as HTMLSelectElement).value
-  draft.value = { ...draft.value, base, id: 'local:' + base + ':' + draft.value.id.split(':')[2] }
+  finishTyping()
+  const before = versionSnapshot()
+  draft.value = { ...draft.value, base, id: `local:${base}:${draftUuid}` }
+  void versions.record('manual', before, versionSnapshot())
+}
+function versionSnapshot(): ThemeSnapshot {
+  return { name: draft.value.name, base: draft.value.base, css: css.value, sample: sampleOverride.value,
+    ...(issue.value ? { previewCss: previewCss.value } : {}) }
+}
+function startManualVersion(): void {
+  manualVersionStart ??= versionSnapshot()
+  clearTimeout(manualVersionTimer)
+  manualVersionTimer = setTimeout(finishManualVersion, 700)
+}
+function finishManualVersion(): void {
+  clearTimeout(manualVersionTimer)
+  const before = manualVersionStart
+  manualVersionStart = undefined
+  if (before) void versions.record('manual', before, versionSnapshot())
+}
+function openVersionHistory(): void {
+  finishTyping()
+  void versions.open(versionSnapshot())
+  versionDialogOpen.value = true
+}
+function closeVersionHistory(): void {
+  versionDialogOpen.value = false
+  versions.close()
+}
+async function restoreVersion(entry: ThemeVersion): Promise<void> {
+  if (leaving || props.switching || busy.value || saving.value || versionFailed.value || versionRestoring.value) return
+  versionRestoring.value = true
+  finishTyping()
+  const before = versionSnapshot()
+  const { base, name, css: restoredCss, sample, previewCss: restoredPreviewCss } = entry.snapshot
+  draft.value = { ...draft.value, id: `local:${base}:${draftUuid}`, base, name, css: restoredCss }
+  sampleOverride.value = sample
+  if (issue.value) {
+    previewCss.value = restoredPreviewCss ?? ''
+    saveDraft()
+  }
+  undoStack.value = []
+  await versions.record('restore', before, versionSnapshot(), { restoredAt: entry.time })
+  versionRestoring.value = false
 }
 function currentEdits(): DraftEdits {
   return { css: css.value, sample: sampleOverride.value }
@@ -754,27 +816,36 @@ function remember(before: DraftEdits | undefined): void {
   if (before && !matchesCurrentEdits(before)) undoStack.value = [...undoStack.value.slice(-29), before]
 }
 function finishTyping(): void {
+  finishManualVersion()
   remember(typingStart.value)
   typingStart.value = undefined
 }
 function finishGeneration(): void {
   remember(generationStart)
   generationStart = undefined
+  const version = generationVersion
+  generationVersion = undefined
+  if (version) void versions.record('ai', version.before, versionSnapshot(), { model: version })
 }
 function typeCss(value: string): void {
-  if (leaving || props.switching) return
+  if (leaving || props.switching || saving.value) return
   if (busy.value) {
     if (!stopped) stop()
     finishGeneration()
   }
   typingStart.value ??= currentEdits()
+  startManualVersion()
   draft.value.css = value
 }
 function undo(): void {
   if (leaving || props.switching) return
   finishTyping()
   const previous = undoStack.value.pop()
-  if (previous) restoreEdits(previous)
+  if (previous) {
+    const before = versionSnapshot()
+    restoreEdits(previous)
+    void versions.record('undo', before, versionSnapshot())
+  }
 }
 async function prepareToLeave(): Promise<void> {
   if (saving.value || collaborationOpening.value || collaborationStopping.value) throw new Error('studioBusy')
@@ -790,46 +861,119 @@ async function prepareToLeave(): Promise<void> {
     persistDraft()
     persistSample(sampleOverride.value)
   }
+  await versions.whenIdle()
 }
 function resumeDraft(): void {
   if (!leaving) return
   leaving = false
-  if (!collaborationDirectory.value && localStorage.getItem(collaborationKey) === draft.value.id.split(':')[2]) void startCollaboration()
 }
 function copyDraft(): { theme: LocalTheme; sample: string | null } {
   return { theme: editableTheme(draft.value), sample: sampleOverride.value }
 }
 defineExpose({ prepareToLeave, resumeDraft, copyDraft })
 
-async function startCollaboration(): Promise<void> {
-  if (chatWorking.value || leaving) return
-  finishTyping()
-  saveDraft()
-  const id = draft.value.id.split(':')[2]
-  await collaboration.start(id)
-  if (collaborationDirectory.value) localStorage.setItem(collaborationKey, id)
+function prepareCollaborationDirectory(): Promise<string> {
+  if (workspacePreparation) return workspacePreparation
+  workspacePreparation = (async() => {
+    if (chatWorking.value || leaving || props.switching || !!issue.value) throw new Error('theme-editor-busy')
+    if (!collaborationDirectory.value) {
+      finishTyping()
+      saveDraft()
+      await collaboration.start(draft.value.id.split(':')[2])
+    }
+    const synced = await collaboration.flush()
+    if (!synced || !collaborationDirectory.value || leaving) throw new Error('theme-workspace-unavailable')
+    return collaborationDirectory.value
+  })().finally(() => { workspacePreparation = undefined })
+  return workspacePreparation
 }
-async function stopCollaboration(): Promise<void> {
-  await collaboration.stop()
-  if (!collaborationDirectory.value) localStorage.removeItem(collaborationKey)
-}
-async function openCollaborationDirectory(): Promise<void> {
-  await collaboration.openDirectory()
-  if (!collaborationNotice.value) collaborationMenu.value?.hidePopover()
+
+async function showCollaborationDirectory(copy: boolean): Promise<void> {
+  try {
+    await prepareCollaborationDirectory()
+    if (copy) await collaboration.copyDirectory()
+    else {
+      await collaboration.openDirectory()
+      if (!collaborationNotice.value) collaborationMenu.value?.hidePopover()
+    }
+  } catch { collaborationNotice.value = copy ? 'copyError' : 'openError' }
 }
 function applyCollaborationFiles(files: Partial<ThemeCollaborationFiles>): void {
   const cssChanged = files.css !== undefined && files.css !== css.value
   const sampleChanged = files.sampleMarkdown !== undefined && files.sampleMarkdown !== sampleMarkdown.value
   if (!cssChanged && !sampleChanged) return
-  if (busy.value && !stopped) {
-    stop()
+  if (busy.value) {
+    if (!stopped) stop()
     finishGeneration()
   }
   finishTyping()
   const before = currentEdits()
+  const versionBefore = versionSnapshot()
   if (cssChanged) draft.value.css = files.css
   if (sampleChanged) sampleOverride.value = files.sampleMarkdown ?? null
   remember(before)
+  void versions.record('collaboration', versionBefore, versionSnapshot())
+}
+
+function skillTheme(): SkillTheme {
+  const { id, name, base } = draft.value
+  return { id, name, base, scope: 'draft' }
+}
+
+async function measureDraftTheme(id: string, probe: SkillThemeProbe): Promise<unknown> {
+  await nextTick()
+  const preview = frame.value?.contentWindow
+  if (!preview || issue.value || captureRequest) throw new Error('theme-preview-unavailable')
+  if (leaving || props.switching || draft.value.id !== id) throw new Error('theme-target-changed')
+  const original = previewCss.value
+  const { port1, port2 } = new MessageChannel()
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    const result = await new Promise<SkillWindowResponse>((resolve, reject) => {
+      port1.onmessage = event => resolve(event.data)
+      timeout = setTimeout(() => reject(new Error('theme-preview-unavailable')), 2000)
+      preview.postMessage({ type: 'theme-preview-measure', probe }, '*', [port2])
+    })
+    if (leaving || props.switching || draft.value.id !== id || previewCss.value !== original || captureRequest) {
+      throw new Error('theme-target-changed')
+    }
+    if (!result.ok) throw new Error(result.error)
+    return result.value
+  } finally {
+    clearTimeout(timeout)
+    port1.close()
+    port2.close()
+  }
+}
+
+function serveSkillTheme(): () => void {
+  return listenForSkillRequests(async request => {
+    if (leaving || props.switching) throw new Error('theme-editor-busy')
+    const target = skillTheme()
+    if (request.action === 'theme-info') return target
+    if (request.action === 'measure-theme') return measureDraftTheme(request.id, request.probe)
+    if (request.action === 'theme-workspace') {
+      if (request.id !== target.id) throw new Error('theme-target-changed')
+      const directory = await prepareCollaborationDirectory()
+      if (leaving || props.switching || draft.value.id !== target.id) throw new Error('theme-target-changed')
+      return { directory }
+    }
+    if (request.action !== 'read-theme' && request.action !== 'edit-theme') throw new Error('invalid-request')
+    const original = css.value
+    const base = baseCss.value
+    const state = JSON.stringify([target, original])
+    const revision = await skillRevision(state)
+    if (request.action === 'read-theme') {
+      return { ...target, css: original, baseCss: base, revision } satisfies SkillThemeSnapshot
+    }
+    if (leaving || props.switching || busy.value || saving.value || chatWorking.value) throw new Error('theme-editor-busy')
+    if (target.id !== request.id || revision !== request.revision || state !== JSON.stringify([skillTheme(), css.value])) {
+      throw new Error('theme-changed')
+    }
+    if (themeCssIssue(request.css)) throw new Error('invalid-theme-css')
+    applyCollaborationFiles({ css: request.css })
+    return { changed: request.css !== original }
+  })
 }
 function selectTab(value: 'css' | 'ai'): void {
   finishTyping()
@@ -970,8 +1114,10 @@ async function retractTurn(position: number): Promise<void> {
     await history.retract(item, position)
     if (draftId === draft.value.id && matchesCurrentEdits(original)) {
       finishTyping()
+      const versionBefore = versionSnapshot()
       restoreEdits(restored)
       remember(original)
+      void versions.record('undo', versionBefore, versionSnapshot())
     }
     if (!prompt.value.trim()) prompt.value = instruction
     error.value = ''
@@ -1017,7 +1163,11 @@ async function generate(item: ThemeChat, instruction: string, replaceFrom?: numb
     diagnostics: replaceFrom === undefined ? [] : [...(turns.value[replaceFrom].diagnostics ?? [])] })
   await history.save(item, turn, replaceFrom)
   finishTyping()
-  if (draft.value.id === turn.draftId && matchesCurrentEdits(original)) restoreEdits(before)
+  if (draft.value.id === turn.draftId && matchesCurrentEdits(original)) {
+    const versionBefore = versionSnapshot()
+    restoreEdits(before)
+    void versions.record('undo', versionBefore, versionSnapshot())
+  }
   else {
     turn.draftId = draft.value.id
     turn.before = css.value
@@ -1035,6 +1185,7 @@ async function generate(item: ThemeChat, instruction: string, replaceFrom?: numb
   assistantReply = ''
   error.value = ''
   generationStart = currentEdits()
+  generationVersion = { before: versionSnapshot(), profile: profileId.value, locale: locale.value }
   const phaseName = withImages ? 'tools' : 'text'
   let reported = false
   let interrupted = false
@@ -1104,19 +1255,26 @@ function stop(): void {
   void ipc.invoke('mt::theme::cancel', active.value).catch(() => {})
 }
 async function saveTheme(apply: boolean): Promise<void> {
-  if (leaving || saveDisabled.value || (apply ? alreadyApplied.value : alreadySaved.value)) return
+  if (leaving || saveDisabled.value) return
   saveOptions.value?.hidePopover()
   saving.value = true
   error.value = ''
   try {
     const synced = await collaboration.flush()
     if (!synced) { error.value = t('themeCollaboration.applyError'); return }
+    finishTyping()
+    const before = versionSnapshot()
     const theme = JSON.parse(JSON.stringify(draft.value)) as LocalTheme
     const saved = await ipc.invoke('mt::theme::save', theme, apply)
     if (!saved) { error.value = t('studio.storageError'); return }
-    if (saved.id === draft.value.id) {
+    const savedSnapshot = { ...before, name: saved.name }
+    const kind = apply ? 'apply' : 'save'
+    if (saved.id === theme.id) {
       draft.value.name = saved.name
       saveDraft()
+      await versions.record(kind, before, savedSnapshot)
+    } else {
+      await versions.fork(saved.id.split(':')[2], kind, before, savedSnapshot)
     }
     emit('saved', saved, apply)
   } catch { error.value = t('studio.storageError') }
@@ -1161,8 +1319,10 @@ async function importTheme(event: Event): Promise<void> {
   } catch { error.value = t('studio.invalidFile') }
 }
 onMounted(async() => {
+  stopSkillTheme = serveSkillTheme()
+  if (!temporaryDraft) void versions.ensure(versionSnapshot())
+  window.addEventListener('beforeunload', finishPendingVersions)
   void history.open()
-  if (localStorage.getItem(collaborationKey) === draft.value.id.split(':')[2]) void startCollaboration()
   window.addEventListener('message', previewEvent)
   unsubscribeInspector = ipc.on('mt::theme::inspector-changed', (_event, open) => inspectorChanged(open))
   void ipc.invoke('mt::theme::inspector-state').then(inspectorChanged).catch(() => { error.value = t('studio.inspectorFailed') })
@@ -1203,11 +1363,19 @@ onMounted(async() => {
   } catch (cause) { error.value = modelError(cause, t) }
   finally { configLoaded.value = true }
 })
+function finishPendingVersions(): void {
+  finishManualVersion()
+  if (active.value) finishGeneration()
+}
 watch([turns, progressText], async() => {
   await nextTick()
   if (conversation.value) conversation.value.scrollTop = conversation.value.scrollHeight
 }, { deep: true })
 onBeforeUnmount(() => {
+  stopSkillTheme?.()
+  window.removeEventListener('beforeunload', finishPendingVersions)
+  finishPendingVersions()
+  versions.close()
   captureFinished()
   if (active.value) {
     stop()
@@ -1499,9 +1667,8 @@ footer {
   background: var(--studio-toolbar);
 }
 .footer-status { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 9px; min-width: 0; }
-.collaboration-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.collaboration-status::before { content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--themeColor); }
 .file-menu-trigger { anchor-name: --theme-files; }
+.theme-studio .version-history-trigger { color: var(--themeColor); }
 .collaboration-trigger { anchor-name: --theme-collaboration; margin-inline-start: auto; }
 footer .menu-chevron { width: 11px; height: 11px; }
 .footer-popover {

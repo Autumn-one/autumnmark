@@ -83,6 +83,8 @@ const commands: CommandDescriptor[] = [
       window.electron.ipcRenderer.send('mt::cmd-open-file')
     }
   },
+  { id: 'drawing.new', execute: () => bus.emit('drawing::new') },
+  { id: 'drawing.open', execute: () => bus.emit('drawing::open') },
   {
     id: 'file.open-folder',
     execute: async() => {

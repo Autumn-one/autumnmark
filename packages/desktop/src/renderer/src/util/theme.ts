@@ -10,7 +10,7 @@ import { isLinux } from './index'
 
 import { themeBaseId } from 'common/theme'
 import { localThemeList, type LocalTheme } from '@shared/localTheme'
-import { localThemeCss } from './themeOverrides'
+import { localThemeCss } from '@shared/themeOverrides'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ORIGINAL_THEME = '#409EFF'
