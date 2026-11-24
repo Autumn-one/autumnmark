@@ -1,3 +1,7 @@
+## AutumnMark 0.24.49
+
+- 松墨（Pine Ink） is now the built-in default light theme, with a warm paper background, pine-green headings, and brass accents.
+
 ## AutumnMark 0.24.48
 
 - Reloading the editor keeps the selected theme. External AI clients check that the editor has rendered the current theme before reading or changing it.

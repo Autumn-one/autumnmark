@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.48]
+    branches: [release/v0.24.49]
   workflow_dispatch:
     inputs:
       platform:
@@ -92,7 +92,8 @@ jobs:
               test/e2e/layout-toggles.spec.ts \
               test/e2e/theme-collaboration.spec.ts \
               test/e2e/theme-library.spec.ts \
-              test/e2e/theme-studio.spec.ts; then
+              test/e2e/theme-studio.spec.ts \
+              test/e2e/themes.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then
