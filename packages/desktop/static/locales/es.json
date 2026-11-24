@@ -40,7 +40,7 @@
     "title": "External collaboration",
     "open": "Open collaboration folder",
     "copy": "Copy folder path",
-    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillConflict": "Ya existe otra skill llamada autumnmark en la carpeta compartida de skills.",
     "skillError": "The AutumnMark Skill could not be installed.",
     "openError": "The collaboration folder could not be opened.",
     "copied": "Folder path copied.",
@@ -140,7 +140,7 @@
     "deleteDraft": "Delete draft",
     "deleteTheme": "Delete theme",
     "cancel": "Cancel",
-    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "confirmDelete": "¿Eliminar permanentemente «{name}», sus cambios de borrador, el historial de versiones, el Markdown de ejemplo y los chats con IA?",
     "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
     "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
