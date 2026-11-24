@@ -122,16 +122,17 @@ export function registerAutumnMarkSkill(accessor: Accessor, appliedTheme: SkillA
       const explicitActive = request.scope === 'active' && request.explicit === true
       const studio = explicitActive ? undefined : themeEditor()
       if (typeof id !== 'string' || request.scope !== (studio ? 'draft' : 'active')) throw new Error('theme-target-changed')
+      const editor = studio ? undefined : activeEditor()
+      const activeDestinationChanged = () => (!explicitActive && !!themeEditor()) || activeEditor()?.id !== editor?.id
       if (action === 'measure-theme') {
         const probe = request.probe
         if (!isSkillThemeProbe(probe)) throw new Error('invalid-theme-measurement')
         if (studio) return fromWindow(studio, { action, id, probe })
         const theme = appliedTheme.read()
         if (theme.id !== id) throw new Error('theme-target-changed')
-        const editor = activeEditor()
         if (!editor) throw new Error('theme-preview-unavailable')
-        const measurement = await fromWindow(editor, { action, id, probe })
-        if ((!explicitActive && themeEditor()) || appliedTheme.read().revision !== theme.revision) throw new Error('theme-target-changed')
+        const measurement = await fromWindow(editor, { action: 'active-theme', revision: theme.revision, query: { probe } })
+        if (activeDestinationChanged() || appliedTheme.read().revision !== theme.revision) throw new Error('theme-target-changed')
         return measurement
       }
       if (action === 'read-theme') {
@@ -142,14 +143,19 @@ export function registerAutumnMarkSkill(accessor: Accessor, appliedTheme: SkillA
         }
         const theme = appliedTheme.read()
         if (theme.id !== id) throw new Error('theme-target-changed')
-        const editor = activeEditor()
-        const baseCss = editor ? await fromWindow<string>(editor, { action: 'theme-base', base: theme.base }) : ''
-        if ((!explicitActive && themeEditor()) || appliedTheme.read().revision !== theme.revision) throw new Error('theme-target-changed')
+        const baseCss = editor
+          ? await fromWindow<string>(editor, { action: 'active-theme', revision: theme.revision, query: { base: theme.base } })
+          : ''
+        if (activeDestinationChanged() || appliedTheme.read().revision !== theme.revision) throw new Error('theme-target-changed')
         return { ...theme, baseCss }
       }
       if (typeof css !== 'string' || css.length > maxThemeCss ||
         typeof revision !== 'string' || !revisionPattern.test(revision)) throw new Error('invalid-request')
       if (studio) return fromWindow(studio, { action, id, revision, css })
+      const theme = appliedTheme.read()
+      if (theme.id !== id || theme.revision !== revision) throw new Error('theme-changed')
+      if (editor) await fromWindow(editor, { action: 'active-theme', revision })
+      if (activeDestinationChanged()) throw new Error('theme-target-changed')
       const result = appliedTheme.edit(id, revision, css)
       return { ...result, ...themeInfo(appliedTheme.read()) }
     }

@@ -72,7 +72,7 @@
 import { computed, watch, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
+import { addStyles, addThemeStyle, addCustomStyle } from '@/util/theme'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import BatchMediaDialog from '@/components/batchMediaDialog.vue'
@@ -98,6 +98,7 @@ import { useProjectStore } from '@/store/project'
 import { useNotificationStore } from '@/store/notification'
 import { startWindowSession } from '@/services/windowSession'
 import { serveSkillDocuments } from '@/services/skillDocuments'
+import { appliedThemeRevisionInput } from '@shared/autumnmarkSkill'
 import { videoMime } from '@shared/embeddedImage'
 import type { LocalTheme } from '@shared/localTheme'
 import { imageToMarkdown } from '@muyajs/core'
@@ -245,8 +246,11 @@ async function openHistoryConversation(chatId: string, turnId: string): Promise<
   await sideBar.value?.showHistoryTurn(chatId, turnId)
 }
 
+let renderedThemeState = ''
 watch([theme, () => preferencesStore.localThemes, activeThemePreview], ([id, library, preview]) => {
-  addThemeStyle(preview?.id ?? id, preview ? [preview] : library)
+  const renderedId = preview?.id ?? id
+  const source = addThemeStyle(renderedId, preview ? [preview] : library)
+  renderedThemeState = appliedThemeRevisionInput(renderedId, source)
 })
 
 watch(customCss, (value, oldValue) => {
@@ -343,9 +347,18 @@ onMounted(async () => {
   stopAppliedThemeHistory = window.electron.ipcRenderer.on('mt::theme::show-active-history', () => { preferredHistoryType.value = 'theme' })
   bus.on('drawing::new', newDrawing)
   bus.on('drawing::open', openDrawing)
-  if (window.marktext?.initialState) {
-    preferencesStore.SET_USER_PREFERENCE(window.marktext.initialState)
-  }
+  const initial = window.marktext?.initialState
+  const initialTheme = initial?.theme || DEFAULT_STYLE.theme
+  if (initial) preferencesStore.SET_USER_PREFERENCE({ ...initial, theme: initialTheme })
+  // The window URL is fixed at creation and can outlive changes to preferences.
+  const source = addStyles({
+    theme: initialTheme,
+    localThemes: preferencesStore.localThemes,
+    codeFontFamily: initial?.codeFontFamily ?? DEFAULT_STYLE.codeFontFamily,
+    codeFontSize: initial?.codeFontSize ?? DEFAULT_STYLE.codeFontSize,
+    hideScrollbar: initial?.hideScrollbar ?? DEFAULT_STYLE.hideScrollbar
+  })
+  renderedThemeState = appliedThemeRevisionInput(initialTheme, source)
 
   mainStore.LISTEN_WIN_STATUS()
   await commandCenterStore.LISTEN_COMMAND_CENTER_BUS()
@@ -383,25 +396,10 @@ onMounted(async () => {
   notificationStore.listenForNotification()
 
   stopWindowSession = await startWindowSession()
-  stopSkillDocuments = serveSkillDocuments(editorStore, readMarkdown, editMarkdown)
+  stopSkillDocuments = serveSkillDocuments(editorStore, readMarkdown, editMarkdown, () => renderedThemeState)
 
   window.addEventListener('dragover', handleWindowDragOver)
   window.addEventListener('drop', handleWindowDrop, true)
-
-  nextTick(() => {
-    // `initialState` from bootstrap carries nullable URL params (string|null);
-    // `addStyles` requires non-null `theme` / `codeFontFamily` strings.
-    // Coalesce against DEFAULT_STYLE for every nullable field.
-    const init = window.marktext?.initialState
-    const style: AddStylesOptions = {
-      theme: init?.theme ?? DEFAULT_STYLE.theme,
-      localThemes: preferencesStore.localThemes,
-      codeFontFamily: init?.codeFontFamily ?? DEFAULT_STYLE.codeFontFamily,
-      codeFontSize: init?.codeFontSize ?? DEFAULT_STYLE.codeFontSize,
-      hideScrollbar: init?.hideScrollbar ?? DEFAULT_STYLE.hideScrollbar
-    }
-    addStyles(style)
-  })
 })
 </script>
 

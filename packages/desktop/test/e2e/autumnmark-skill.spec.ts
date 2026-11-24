@@ -198,6 +198,69 @@ test('the AutumnMark Skill confirms across instances and only edits the active t
   }
 })
 
+test('reloading the editor keeps the applied theme and rejects collaboration against stale rendering', async() => {
+  const source = {
+    version: 1,
+    id: 'local:light:e39d8aac-31ae-4b20-8fb7-344cd6b4c235',
+    name: 'Downloaded theme',
+    base: 'light',
+    values: {},
+    css: ':root .mu-container h1 { color: #287e70; }\n:root .mu-container h2 { color: #213e32; }',
+    catalog: { id: 'downloaded-theme', revision: 1 }
+  }
+  const { app, page } = await launchWithMarkdown('# Title\n\n## Subtitle\n', {
+    preferences: { language: 'en', theme: 'dracula', followSystemTheme: false, localThemes: [source] }
+  })
+  try {
+    const home = await app.evaluate(() => process.env.MARKTEXT_TEST_SKILL_HOME ?? '')
+    await expect(page.evaluate(() => window.electron.ipcRenderer.invoke('mt::autumnmark-skill::status'))).resolves.toBe('ready')
+    const prefs = () => page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    const h1 = page.locator('.mu-container h1')
+    const h2 = page.locator('.mu-container h2')
+    const selected = await page.evaluate(theme => window.electron.ipcRenderer.invoke('mt::preferences::update', { theme }), source.id)
+    expect(selected.status).toBe('persisted')
+    await expect(h2).toHaveCSS('color', 'rgb(33, 62, 50)')
+
+    await page.reload()
+    await waitForEditor(page)
+    const readTheme = () => invoke(home, 'read-theme', { target: '--editor' })
+    await expect.poll(async() => (await readTheme()).status).toBe('ok')
+    expect(new URL(page.url()).searchParams.get('theme')).toBe('dracula')
+    const original = await readTheme()
+    expect(original).toMatchObject({ scope: 'active', css: source.css })
+    expect(original.target).toContain(source.id)
+    await expect(h1).toHaveCSS('color', 'rgb(40, 126, 112)')
+    await expect(h2).toHaveCSS('color', 'rgb(33, 62, 50)')
+
+    const edit = { ...original, css: original.css.replace('#213e32', '#123456') }
+    const headingProbe = { probe: ['--target', original.target, '.mu-container h2', 'color'] }
+    await sendIpcToRenderer(app, 'mt::user-preference', { localThemes: [{ ...source, css: edit.css }] })
+    await expect(h2).toHaveCSS('color', 'rgb(18, 52, 86)')
+    expect(await readTheme()).toMatchObject({ error: 'theme-target-changed' })
+    expect(await invoke(home, 'measure-theme', headingProbe)).toMatchObject({ error: 'theme-target-changed' })
+    expect(await invoke(home, 'edit-theme', { input: edit })).toMatchObject({ error: 'theme-target-changed' })
+    expect(await prefs()).toMatchObject({ theme: source.id, localThemes: [source] })
+
+    await sendIpcToRenderer(app, 'mt::user-preference', { localThemes: [source] })
+    await expect(h2).toHaveCSS('color', 'rgb(33, 62, 50)')
+    const first = await invoke(home, 'edit-theme', { input: edit })
+    expect(first).toMatchObject({ status: 'ok', scope: 'active' })
+    expect(first.target).not.toBe(original.target)
+    const copy = await readTheme()
+    expect(copy).toMatchObject({ target: first.target, css: edit.css })
+    const second = await invoke(home, 'edit-theme', { input: { ...copy, css: copy.css.replace('#123456', '#654321') } })
+    expect(second).toMatchObject({ status: 'ok', target: copy.target })
+    await expect(h1).toHaveCSS('color', 'rgb(40, 126, 112)')
+    await expect(h2).toHaveCSS('color', 'rgb(101, 67, 33)')
+    const current = await prefs()
+    expect(current.localThemes).toHaveLength(2)
+    expect(current.localThemes).toContainEqual(source)
+    expect(current.localThemes?.find(theme => theme.id === current.theme)?.catalog).toBeUndefined()
+  } finally {
+    await app.close()
+  }
+})
+
 test('external edits to the applied theme persist and can be restored without a model', async() => {
   const userDataDir = await mkdtemp(join(tmpdir(), 'autumnmark-applied-theme-history-'))
   let running: Awaited<ReturnType<typeof launchElectron>> | undefined

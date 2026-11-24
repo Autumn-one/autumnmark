@@ -1,3 +1,5 @@
+import type { LocalTheme } from './localTheme'
+
 export const maxSkillMarkdownLength = 1_000_000
 
 export interface SkillDocument {
@@ -19,6 +21,10 @@ export interface SkillThemeSnapshot extends SkillTheme {
   css: string
   baseCss: string
   revision: string
+}
+
+export function appliedThemeRevisionInput(id: string, source: LocalTheme | undefined): string {
+  return JSON.stringify([id, source])
 }
 
 export interface SkillThemeProbe {
@@ -50,6 +56,6 @@ export type SkillWindowRequest =
   | { action: 'measure-theme'; id: string; probe: SkillThemeProbe }
   | { action: 'theme-workspace'; id: string }
   | { action: 'edit-theme'; id: string; revision: string; css: string }
-  | { action: 'theme-base'; base: string }
+  | { action: 'active-theme'; revision: string; query?: { base: string } | { probe: SkillThemeProbe } }
 
 export type SkillWindowResponse = { ok: true; value: unknown } | { ok: false; error: string }

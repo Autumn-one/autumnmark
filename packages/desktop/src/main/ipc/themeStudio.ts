@@ -5,7 +5,7 @@ import log from 'electron-log'
 import { isLocalTheme, localThemeList, maxThemeNameLength, themeBases, themeSelectionPatch, type LocalTheme, type ThemeModelEvent, type ThemeModelRequest } from '@shared/localTheme'
 import type { AppliedThemeHistory, ThemeVersionChange } from '@shared/themeVersion'
 import type { DocumentChatThemeEffect } from '@shared/documentChat'
-import type { SkillTheme } from '@shared/autumnmarkSkill'
+import { appliedThemeRevisionInput, type SkillTheme } from '@shared/autumnmarkSkill'
 import type { UserPreferences } from '@shared/types/preferences'
 import { reverseTextChange } from '@shared/reversibleText'
 import { themeCssIssue } from '@shared/themeCss'
@@ -296,7 +296,7 @@ export const registerThemeStudio = (app: Accessor, savedSettings: (id: string) =
     const { theme: id, localThemes } = app.preferences.getAll()
     const source = localThemeList(localThemes).find(item => item.id === id)
     const target: SkillTheme = { id, name: source?.name ?? id, base: source?.base ?? id, scope: 'active' }
-    const revision = createHash('sha256').update(JSON.stringify([id, source])).digest('hex')
+    const revision = createHash('sha256').update(appliedThemeRevisionInput(id, source)).digest('hex')
     return { target, source, revision }
   }
 

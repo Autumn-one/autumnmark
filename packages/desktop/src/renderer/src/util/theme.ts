@@ -27,7 +27,7 @@ const getEmojiPickerPatch = (): string => {
 
 
 
-export const addThemeStyle = (id: string, library?: LocalTheme[]): void => {
+export const addThemeStyle = (id: string, library?: LocalTheme[]): LocalTheme | undefined => {
   const theme = themeBaseId(id)
   const custom = localThemeList(library).find(item => item.id === id)
   const isCmRailscasts = railscastsThemes.includes(theme)
@@ -61,6 +61,7 @@ export const addThemeStyle = (id: string, library?: LocalTheme[]): void => {
       cm.classList.add('cm-s-default')
     }
   }
+  return custom
 }
 
 export const setEditorWidth = (value: string): void => {
@@ -140,8 +141,9 @@ export interface AddStylesOptions extends CommonStyleOptions {
 }
 
 // Append common sheet and theme at the end of head - order is important.
-export const addStyles = (options: AddStylesOptions): void => {
+export const addStyles = (options: AddStylesOptions): LocalTheme | undefined => {
   const { theme } = options
-  addThemeStyle(theme, options.localThemes)
+  const source = addThemeStyle(theme, options.localThemes)
   addCommonStyle(options)
+  return source
 }
