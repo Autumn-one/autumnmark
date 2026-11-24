@@ -1,3 +1,7 @@
+## AutumnMark 0.24.51
+
+- Image resize handles follow the visible part of a hovered image as you scroll. They stay below the menu bar and remain draggable when the top of the image scrolls out of view.
+
 ## AutumnMark 0.24.50
 
 - Upgrades switch the previous system light default to Pine Ink once. Fixed themes and other saved system themes keep their selections.

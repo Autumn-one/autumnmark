@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.50]
+    branches: [hotfix/v0.24.51]
   workflow_dispatch:
     inputs:
       platform:
@@ -40,8 +40,8 @@ jobs:
       - name: Verify desktop code and unit tests
         run: pnpm check && pnpm test:unit
 
-      - name: Test Muya content tabs and document switching
-        run: pnpm -C packages/muya test src/__tests__/contentTabs.spec.ts src/__tests__/setContent.spec.ts src/state/__tests__/contentTabs.spec.ts src/utils/__tests__/contentTabs.spec.ts
+      - name: Test Muya image resize handles
+        run: pnpm -C packages/muya test src/ui/imageResizeBar/__tests__/imageResizeBar.spec.ts src/selection/__tests__/duplicateImageResize.spec.ts src/selection/__tests__/imageResizeBarCaretOnImageLine.spec.ts
 
   e2e:
     runs-on: ${{ (github.event_name == 'push' || inputs.platform == 'windows') && 'windows-latest' || 'ubuntu-24.04' }}
@@ -84,17 +84,9 @@ jobs:
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
             if pnpm -C packages/desktop exec playwright test \
-              test/e2e/ai-models.spec.ts \
-              test/e2e/autumnmark-skill.spec.ts \
-              test/e2e/document-chat.spec.ts \
-              test/e2e/editor-theme-ai.spec.ts \
-              test/e2e/excalidraw.spec.ts \
-              test/e2e/layout-toggles.spec.ts \
-              test/e2e/preferences-window.spec.ts \
-              test/e2e/theme-collaboration.spec.ts \
-              test/e2e/theme-library.spec.ts \
-              test/e2e/theme-studio.spec.ts \
-              test/e2e/themes.spec.ts; then
+              test/e2e/image-resize-viewport.spec.ts \
+              test/e2e/picture-dimensions.spec.ts \
+              test/e2e/issue-5394-image-resize-reload.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then
