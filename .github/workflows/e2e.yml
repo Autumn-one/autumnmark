@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.49]
+    branches: [hotfix/v0.24.50]
   workflow_dispatch:
     inputs:
       platform:
@@ -90,6 +90,7 @@ jobs:
               test/e2e/editor-theme-ai.spec.ts \
               test/e2e/excalidraw.spec.ts \
               test/e2e/layout-toggles.spec.ts \
+              test/e2e/preferences-window.spec.ts \
               test/e2e/theme-collaboration.spec.ts \
               test/e2e/theme-library.spec.ts \
               test/e2e/theme-studio.spec.ts \

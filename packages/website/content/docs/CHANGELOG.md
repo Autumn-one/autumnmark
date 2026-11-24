@@ -1,3 +1,8 @@
+## AutumnMark 0.24.50
+
+- Upgrades switch the previous system light default to Pine Ink once. Fixed themes and other saved system themes keep their selections.
+- Pine Ink appears first in the local theme list when light themes are shown.
+
 ## AutumnMark 0.24.49
 
 - 松墨（Pine Ink） is now the built-in default light theme, with a warm paper background, pine-green headings, and brass accents.
