@@ -157,7 +157,9 @@ async function run ([action, ...args]) {
   if (action === 'targets') {
     const { theme, target } = listTheme(instances)
     return {
-      status: 'ok', documents: listDocuments(instances).map(publicDocument), theme: { ...theme, target },
+      status: 'ok',
+      documents: listDocuments(instances).map(publicDocument),
+      theme: { ...theme, target },
       themes: listThemes(instances).map(({ theme, target }) => ({ ...theme, target }))
     }
   }
@@ -200,7 +202,8 @@ async function run ([action, ...args]) {
     })
     const resolved = { ...theme, ...result }
     return {
-      ...resolved, target: themeSelection(instance, resolved).target,
+      ...resolved,
+      target: themeSelection(instance, resolved).target,
       ...(action === 'read-theme' && requested ? { confirmed: target } : {})
     }
   }
