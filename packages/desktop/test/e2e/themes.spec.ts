@@ -2,13 +2,31 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, clickMenuById, setSourceMarkdown } from './helpers'
 
-test('default light theme styles prose and keeps the table and code typography', async() => {
+test('Pine Ink is the default light theme and renders its paper and heading colors', async() => {
+  const { app, page } = await launchWithMarkdown('# Title\n\n## Section', {
+    preferences: { followSystemTheme: false }
+  })
+  try {
+    const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(preferences).toMatchObject({ theme: 'pine-ink', lightModeTheme: 'pine-ink', darkModeTheme: 'dark', localThemes: [] })
+    const theme = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('pine-ink')?.label)
+    expect(theme).toBe('松墨（Pine Ink）')
+    const background = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--editorBgColor').trim())
+    await expect.poll(background).toBe('#faf7ef')
+    await expect(page.locator('.mu-container h2')).toHaveCSS('color', 'rgb(33, 62, 50)')
+    await expect(page.locator('.mu-container h2')).toHaveCSS('border-left-color', 'rgb(171, 121, 65)')
+  } finally {
+    await app.close()
+  }
+})
+
+test('GitBook Teal styles prose and keeps the table and code typography', async() => {
   const markdown = [
     '# Title', '## Section', 'Some **emphasis**', '> Quote', '- [x] Task',
     '| Column |\n| --- |\n| **Cell** |', '```js\nconst n = 1\n```'
   ].join('\n\n')
   const { app, page } = await launchWithMarkdown(markdown, {
-    preferences: { followSystemTheme: false }
+    preferences: { theme: 'light', followSystemTheme: false }
   })
   try {
     const editor = page.locator('.mu-container')

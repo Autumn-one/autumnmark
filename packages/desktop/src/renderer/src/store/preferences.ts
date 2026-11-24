@@ -1,6 +1,7 @@
 import type { UserPreferences } from '@shared/types/preferences'
 import type { LocalTheme } from '@shared/localTheme'
 import { defineStore } from 'pinia'
+import { pineInkTheme } from 'common/theme'
 import { getCurrentLanguage, setLanguage } from '../i18n'
 
 export type EndOfLine = 'default' | 'lf' | 'crlf'
@@ -233,9 +234,9 @@ export const usePreferencesStore = defineStore('preferences', {
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
     localThemes: [],
-    theme: 'light',
+    theme: pineInkTheme.id,
     followSystemTheme: true,
-    lightModeTheme: 'light',
+    lightModeTheme: pineInkTheme.id,
     darkModeTheme: 'dark',
     customCss: '',
 

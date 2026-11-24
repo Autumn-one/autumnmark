@@ -3,7 +3,7 @@ import * as actions from '../actions/theme'
 import { t } from '../../i18n'
 import type Preference from '../../preferences'
 import { localThemeList } from '@shared/localTheme'
-import { isDarkThemeId } from 'common/theme'
+import { isDarkThemeId, pineInkTheme } from 'common/theme'
 
 // [i18nLabelKey, themeId] for each selectable theme. The menu label is
 // `menu.theme.<labelKey>`; `themeId` is both the menu item id and the value
@@ -120,7 +120,7 @@ export default function(userPreference: Preference): MenuItemConstructorOptions 
     { type: 'separator' },
     {
       label: t('menu.theme.lightThemes'),
-      submenu: menuItems(LIGHT_THEMES, false)
+      submenu: [themeRadio(pineInkTheme.name, pineInkTheme.id), ...menuItems(LIGHT_THEMES, false)]
     },
     {
       label: t('menu.theme.darkThemes'),

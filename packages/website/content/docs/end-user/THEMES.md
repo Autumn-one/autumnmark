@@ -1,8 +1,8 @@
 # Themes
 
-AutumnMark includes 33 built-in themes organized into Light and Dark categories. Each theme provides a color scheme for the editor interface.
+AutumnMark includes 34 built-in themes organized into Light and Dark categories. Each theme provides a color scheme for the editor interface.
 
-The names below match the labels shown in the **Theme** menu. The default light theme, _GitBook Teal_, uses the id `light` in `preferences.json`. The full list of theme names and ids lives in `packages/desktop/src/main/menu/templates/theme.ts`.
+The names below match the labels shown in the **Theme** menu. The default light theme, _松墨（Pine Ink）_, uses the id `pine-ink` in `preferences.json`. GitBook Teal uses the id `light`.
 
 ## Light Themes
 
@@ -14,6 +14,7 @@ The names below match the labels shown in the **Theme** menu. The default light 
 | **GitBook Teal**      | Centered titles, teal headings and list markers |
 | **Graphite Light**    | Cool gray-toned light theme                    |
 | **Gruvbox Light**     | Retro groove with warm, earthy colors          |
+| **松墨（Pine Ink）**  | Warm paper, pine-green headings and brass accents |
 | **Rosé Pine Dawn**    | Elegant theme with subtle rose accents         |
 | **Solarized Light**   | Classic precision color scheme                 |
 | **Tokyo Night Light** | Modern light variant of Tokyo Night            |
