@@ -27,7 +27,7 @@ test('one theme studio switches independent drafts and applies a theme without c
   })
   try {
     await app.evaluate(({ clipboard }) => {
-      clipboard.writeText = () => {}
+      clipboard.writeText = async() => {}
     })
     const opened = app.waitForEvent('window')
     await clickMenuById(app, 'createThemeFromCurrent')

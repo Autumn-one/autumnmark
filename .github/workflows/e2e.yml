@@ -70,7 +70,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pnpm -C packages/desktop exec playwright test \
+            if pnpm -C packages/desktop exec playwright test \
               test/e2e/ai-models.spec.ts \
               test/e2e/autumnmark-skill.spec.ts \
               test/e2e/document-chat.spec.ts \
@@ -79,8 +79,13 @@ jobs:
               test/e2e/layout-toggles.spec.ts \
               test/e2e/theme-collaboration.spec.ts \
               test/e2e/theme-library.spec.ts \
-              test/e2e/theme-studio.spec.ts
-            exit $?
+              test/e2e/theme-studio.spec.ts; then
+              exit 0
+            fi
+            if [[ -d packages/desktop/test-results ]]; then
+              find packages/desktop/test-results -name error-context.md -exec cat {} +
+            fi
+            exit 1
           fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
           if [[ "$RUNNER_OS" == Linux ]]; then
