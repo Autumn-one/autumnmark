@@ -158,7 +158,7 @@ test('the theme library deletes drafts and applied themes across a reload', asyn
     })
     expect(chatId).not.toBe('')
     await openLibrary()
-    await library.getByRole('button', { name: /^Saved theme/ }).click()
+    await library.locator('.theme-row[title="Saved theme"]').click()
     await expect(name).toHaveValue('Saved theme')
 
     await openLibrary()
