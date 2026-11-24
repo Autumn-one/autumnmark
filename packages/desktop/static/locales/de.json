@@ -36,12 +36,30 @@
     "invalidSize": "Positive ganze Zahlen eingeben. Das Ausgabelimit darf die Kontextgröße nicht überschreiten.",
     "modelChanged": "Das Modell wurde geändert. Zum Bearbeiten erneut öffnen."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Verlauf",
+    "document": "Dokument",
+    "theme": "Theme",
+    "documentChanges": "KI-Änderungen am Dokument",
+    "empty": "In diesem Verlauf gibt es noch keine Änderungen.",
+    "undated": "Ohne Datum",
+    "viewConversation": "Unterhaltung anzeigen"
+  },
   "themeAi": {
-    "title": "Design-KI",
-    "current": "Aktuelles Design",
-    "openDocument": "Öffnen Sie eine Notiz, um Designänderungen auszuprobieren.",
-    "empty": "Beschreiben Sie eine Designänderung, etwa einen größeren Zeilenabstand oder eine andere Überschriftenfarbe.",
-    "placeholder": "Was möchten Sie am Design ändern?",
     "viewChange": "Diese Änderung ansehen",
     "previewStatus": "Designvorschau aktiv",
     "previewing": "Vorschau in dieser Notiz",
@@ -101,7 +119,30 @@
       "base": "Basisdesign",
       "css": "Stil",
       "sample": "Markdown-Vorschau"
-    }
+    },
+    "appliedAi": "Der KI-Assistent hat eine Theme-Änderung angewendet."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "Themendateien",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark installiert und aktualisiert den Skill beim Start. Aktualisieren Sie die Skill-Liste des Clients oder importieren Sie den Skill aus dem Freigabeordner unten.",
       "copyInstruction": "Aufruf kopieren",
       "instructionCopied": "Aufruf kopiert. Fügen Sie ihn in Ihren KI-Client ein."
-    }
+    },
+    "tab": "KI",
+    "title": "KI-Assistent",
+    "empty": "Stelle eine Frage oder beschreibe eine Änderung am Dokument oder an seinem Aussehen.",
+    "message": "Nachricht an den Assistenten",
+    "waiting": "Warte auf das Modell…",
+    "review": "Änderungen an {name} prüfen",
+    "applyHint": "Öffne das Zieldokument im Bearbeitungsmodus, um diese Änderungen zu übernehmen.",
+    "apply": "Änderungen übernehmen",
+    "applied": "Änderungen wurden im Editor übernommen.",
+    "changed": "Das Dokument wurde geändert oder kann nicht mehr bearbeitet werden. Bitte fordere die Änderungen für die aktuelle Version erneut an.",
+    "contextTooSmall": "Die Nachricht und der Editorkontext überschreiten die Kontextgröße des Modells.",
+    "invalidEdits": "Die vorgeschlagenen Änderungen konnten dem Dokument nicht zugeordnet werden. Bitte versuche es erneut.",
+    "invalidThemeEdits": "Die vorgeschlagenen Theme-Änderungen konnten nicht auf das aktuelle CSS angewendet werden. Bitte versuche es erneut.",
+    "sendFailed": "Die Nachricht konnte nicht gesendet werden. Prüfe die Unterhaltung und versuche es erneut."
   },
   "drawing": {
     "new": "Neue Excalidraw-Zeichnung",

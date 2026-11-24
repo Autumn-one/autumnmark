@@ -36,12 +36,30 @@
     "invalidSize": "Inserisci interi positivi. Il limite di output non può superare la dimensione del contesto.",
     "modelChanged": "Il modello è cambiato. Riaprilo per modificarlo."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Cronologia",
+    "document": "Documento",
+    "theme": "Tema",
+    "documentChanges": "Modifiche al documento apportate dall’IA",
+    "empty": "Questa cronologia non contiene ancora modifiche.",
+    "undated": "Senza data",
+    "viewConversation": "Visualizza conversazione"
+  },
   "themeAi": {
-    "title": "IA dei temi",
-    "current": "Tema corrente",
-    "openDocument": "Apri una nota per provare a modificare il tema.",
-    "empty": "Descrivi una modifica, ad esempio un’interlinea più ampia o un altro colore per i titoli.",
-    "placeholder": "Che cosa vuoi modificare nel tema?",
     "viewChange": "Vedi questa modifica",
     "previewStatus": "Anteprima del tema attiva",
     "previewing": "Anteprima in questa nota",
@@ -101,7 +119,30 @@
       "base": "Tema di base",
       "css": "Stile",
       "sample": "Markdown di anteprima"
-    }
+    },
+    "appliedAi": "L’assistente IA ha applicato una modifica al tema."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "File del tema",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark installa e aggiorna lo Skill all’avvio. Aggiorna l’elenco degli Skill del client o importalo dalla cartella condivisa qui sotto.",
       "copyInstruction": "Copia istruzione",
       "instructionCopied": "Istruzione copiata. Incollala nel client IA."
-    }
+    },
+    "tab": "IA",
+    "title": "Assistente IA",
+    "empty": "Fai una domanda o descrivi una modifica al documento o al suo aspetto.",
+    "message": "Scrivi all’assistente",
+    "waiting": "In attesa del modello…",
+    "review": "Esamina le modifiche a {name}",
+    "applyHint": "Apri il documento di destinazione in modalità di modifica per applicare queste modifiche.",
+    "apply": "Applica modifiche",
+    "applied": "Modifiche applicate nell’editor.",
+    "changed": "Il documento è cambiato o non è più modificabile. Richiedi nuovamente le modifiche per la versione corrente.",
+    "contextTooSmall": "Il messaggio e il contesto dell’editor superano la capacità di contesto del modello.",
+    "invalidEdits": "Non è stato possibile individuare nel documento le modifiche proposte. Chiedi al modello di riprovare.",
+    "invalidThemeEdits": "Non è stato possibile applicare le modifiche proposte al CSS corrente. Chiedi al modello di riprovare.",
+    "sendFailed": "Impossibile inviare il messaggio. Controlla la conversazione e riprova."
   },
   "drawing": {
     "new": "Nuovo disegno Excalidraw",

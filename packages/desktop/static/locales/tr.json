@@ -36,12 +36,30 @@
     "invalidSize": "Pozitif tam sayılar girin. Çıktı sınırı bağlam boyutunu aşamaz.",
     "modelChanged": "Model değişti. Düzenlemek için yeniden açın."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Geçmiş",
+    "document": "Belge",
+    "theme": "Tema",
+    "documentChanges": "Yapay zekânın belge değişiklikleri",
+    "empty": "Bu geçmişte henüz değişiklik yok.",
+    "undated": "Tarihsiz",
+    "viewConversation": "Sohbeti görüntüle"
+  },
   "themeAi": {
-    "title": "Tema yapay zekâsı",
-    "current": "Geçerli tema",
-    "openDocument": "Tema değişikliklerini denemek için bir not açın.",
-    "empty": "Satır aralığını artırmak veya başlık rengini değiştirmek gibi bir değişiklik belirtin.",
-    "placeholder": "Temada neyi değiştirmek istersiniz?",
     "viewChange": "Bu değişikliği görüntüle",
     "previewStatus": "Tema önizlemesi etkin",
     "previewing": "Bu notta önizleniyor",
@@ -101,7 +119,30 @@
       "base": "Temel tema",
       "css": "Stil",
       "sample": "Önizleme Markdown metni"
-    }
+    },
+    "appliedAi": "Yapay zekâ asistanı bir tema değişikliği uyguladı."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "Tema dosyaları",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark başlangıçta Skill’i yükler ve günceller. İstemcide Skill listesini yenileyin veya aşağıdaki ortak klasörden içe aktarın.",
       "copyInstruction": "Çağrı talimatını kopyala",
       "instructionCopied": "Çağrı talimatı kopyalandı. Yapay zekâ istemcinize yapıştırın."
-    }
+    },
+    "tab": "YZ",
+    "title": "Yapay zekâ asistanı",
+    "empty": "Bir soru sorun veya belgede ya da görünümünde istediğiniz değişikliği açıklayın.",
+    "message": "Asistana mesaj yazın",
+    "waiting": "Modelin yanıtı bekleniyor…",
+    "review": "{name} değişikliklerini incele",
+    "applyHint": "Bu değişiklikleri uygulamak için hedef belgeyi düzenleme modunda açın.",
+    "apply": "Değişiklikleri uygula",
+    "applied": "Değişiklikler düzenleyicide uygulandı.",
+    "changed": "Belge değişti veya artık düzenlenemiyor. Güncel sürüm için değişikliği yeniden isteyin.",
+    "contextTooSmall": "Mesaj ve düzenleyici bağlamı, modelin bağlam sınırını aşıyor.",
+    "invalidEdits": "Önerilen değişikliklerin belgede karşılığı bulunamadı. Modelden tekrar denemesini isteyin.",
+    "invalidThemeEdits": "Önerilen tema değişiklikleri mevcut CSS’ye uygulanamadı. Modelden tekrar denemesini isteyin.",
+    "sendFailed": "Mesaj gönderilemedi. Sohbeti kontrol edip tekrar deneyin."
   },
   "drawing": {
     "new": "Yeni Excalidraw çizimi",

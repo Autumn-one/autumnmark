@@ -36,12 +36,30 @@
     "invalidSize": "Voer positieve gehele getallen in. De uitvoerlimiet mag niet groter zijn dan de context.",
     "modelChanged": "Het model is gewijzigd. Open het opnieuw om het te bewerken."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Geschiedenis",
+    "document": "Document",
+    "theme": "Thema",
+    "documentChanges": "Documentwijzigingen door AI",
+    "empty": "Deze geschiedenis bevat nog geen wijzigingen.",
+    "undated": "Zonder datum",
+    "viewConversation": "Gesprek bekijken"
+  },
   "themeAi": {
-    "title": "Thema-AI",
-    "current": "Huidig thema",
-    "openDocument": "Open een notitie om wijzigingen aan het thema uit te proberen.",
-    "empty": "Beschrijf een wijziging, zoals meer regelafstand of een andere kopkleur.",
-    "placeholder": "Wat wil je aan het thema veranderen?",
     "viewChange": "Deze wijziging bekijken",
     "previewStatus": "Themavoorbeeld actief",
     "previewing": "Voorbeeld in deze notitie",
@@ -101,7 +119,30 @@
       "base": "Basisthema",
       "css": "Stijl",
       "sample": "Markdown-voorbeeld"
-    }
+    },
+    "appliedAi": "De AI-assistent heeft een themawijziging toegepast."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "Themabestanden",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark installeert en werkt de skill bij bij het opstarten. Vernieuw de lijst met skills of importeer de skill uit de gedeelde map hieronder.",
       "copyInstruction": "Aanroep kopiëren",
       "instructionCopied": "Aanroep gekopieerd. Plak deze in je AI-client."
-    }
+    },
+    "tab": "AI",
+    "title": "AI-assistent",
+    "empty": "Stel een vraag of beschrijf een wijziging aan het document of de opmaak.",
+    "message": "Schrijf een bericht aan de assistent",
+    "waiting": "Wachten op het model…",
+    "review": "Wijzigingen aan {name} bekijken",
+    "applyHint": "Open het doeldocument in de bewerkingsmodus om deze wijzigingen toe te passen.",
+    "apply": "Wijzigingen toepassen",
+    "applied": "Wijzigingen toegepast in de editor.",
+    "changed": "Het document is gewijzigd of kan niet meer worden bewerkt. Vraag de wijzigingen opnieuw aan voor de huidige versie.",
+    "contextTooSmall": "Het bericht en de editorcontext overschrijden de contextlimiet van het model.",
+    "invalidEdits": "De voorgestelde wijzigingen konden niet in het document worden gevonden. Vraag het model het opnieuw te proberen.",
+    "invalidThemeEdits": "De voorgestelde themawijzigingen konden niet op de huidige CSS worden toegepast. Vraag het model het opnieuw te proberen.",
+    "sendFailed": "Het bericht kon niet worden verzonden. Controleer het gesprek en probeer het opnieuw."
   },
   "drawing": {
     "new": "Nieuwe Excalidraw-tekening",

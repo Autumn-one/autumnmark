@@ -36,12 +36,30 @@
     "invalidSize": "Введите положительные целые числа. Предел вывода не может превышать размер контекста.",
     "modelChanged": "Настройки модели изменились. Откройте их заново."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "История",
+    "document": "Документ",
+    "theme": "Тема",
+    "documentChanges": "Изменения документа, внесённые ИИ",
+    "empty": "В этой истории пока нет изменений.",
+    "undated": "Без даты",
+    "viewConversation": "Просмотреть беседу"
+  },
   "themeAi": {
-    "title": "ИИ для тем",
-    "current": "Текущая тема",
-    "openDocument": "Откройте заметку, чтобы попробовать изменить тему.",
-    "empty": "Опишите изменение, например увеличьте межстрочный интервал или поменяйте цвет заголовков.",
-    "placeholder": "Что изменить в теме?",
     "viewChange": "Посмотреть это изменение",
     "previewStatus": "Предпросмотр темы",
     "previewing": "Предпросмотр в этой заметке",
@@ -101,7 +119,30 @@
       "base": "Базовая тема",
       "css": "Стиль",
       "sample": "Markdown для предпросмотра"
-    }
+    },
+    "appliedAi": "ИИ-ассистент применил изменение темы."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "Файлы темы",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark устанавливает и обновляет навык при запуске. Обновите список навыков клиента или импортируйте навык из общей папки ниже.",
       "copyInstruction": "Скопировать указание",
       "instructionCopied": "Указание скопировано. Вставьте его в клиент ИИ."
-    }
+    },
+    "tab": "ИИ",
+    "title": "ИИ-ассистент",
+    "empty": "Задайте вопрос или опишите желаемые изменения в документе или его оформлении.",
+    "message": "Напишите ассистенту",
+    "waiting": "Ожидание ответа модели…",
+    "review": "Просмотреть изменения в {name}",
+    "applyHint": "Откройте нужный документ в режиме редактирования, чтобы применить эти изменения.",
+    "apply": "Применить изменения",
+    "applied": "Изменения применены в редакторе.",
+    "changed": "Документ изменился или больше недоступен для редактирования. Запросите изменения ещё раз для текущей версии.",
+    "contextTooSmall": "Сообщение и контекст редактора превышают размер контекста модели.",
+    "invalidEdits": "Не удалось найти в документе фрагменты для предложенных изменений. Попросите модель повторить попытку.",
+    "invalidThemeEdits": "Не удалось применить предложенные изменения темы к текущему CSS. Попросите модель повторить попытку.",
+    "sendFailed": "Не удалось отправить сообщение. Проверьте беседу и повторите попытку."
   },
   "drawing": {
     "new": "Новый рисунок Excalidraw",

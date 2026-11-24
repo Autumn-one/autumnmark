@@ -36,12 +36,30 @@
     "invalidSize": "양의 정수를 입력하세요. 출력 한도는 컨텍스트 크기를 넘을 수 없습니다.",
     "modelChanged": "모델이 변경되었습니다. 다시 열어 편집하세요."
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "기록",
+    "document": "문서",
+    "theme": "테마",
+    "documentChanges": "AI 문서 변경 사항",
+    "empty": "아직 이 기록에 변경 사항이 없습니다.",
+    "undated": "날짜 없음",
+    "viewConversation": "대화 보기"
+  },
   "themeAi": {
-    "title": "테마 AI",
-    "current": "현재 테마",
-    "openDocument": "노트를 열어 테마 변경을 시험해 보세요.",
-    "empty": "줄 간격이나 제목 색처럼 바꾸고 싶은 부분을 설명하세요.",
-    "placeholder": "테마에서 무엇을 바꾸고 싶나요?",
     "viewChange": "이 변경 사항 보기",
     "previewStatus": "테마 미리 보기 중",
     "previewing": "이 노트에서 미리 보는 중",
@@ -101,7 +119,30 @@
       "base": "기본 테마",
       "css": "스타일",
       "sample": "미리 보기 Markdown"
-    }
+    },
+    "appliedAi": "AI 도우미가 테마 변경 사항을 적용했습니다."
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "테마 파일",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark는 시작할 때 Skill을 자동으로 설치하고 업데이트합니다. 클라이언트의 Skill 목록을 새로 고치거나 아래 공유 폴더에서 가져오세요.",
       "copyInstruction": "호출 지시 복사",
       "instructionCopied": "호출 지시를 복사했습니다. AI 클라이언트에 붙여넣으세요."
-    }
+    },
+    "tab": "AI",
+    "title": "AI 도우미",
+    "empty": "질문하거나 문서 또는 모양에 적용할 변경 사항을 설명하세요.",
+    "message": "도우미에게 메시지 보내기",
+    "waiting": "모델의 응답을 기다리는 중…",
+    "review": "{name} 변경 사항 검토",
+    "applyHint": "변경 사항을 적용하려면 대상 문서를 편집 모드로 여세요.",
+    "apply": "변경 사항 적용",
+    "applied": "편집기에 변경 사항을 적용했습니다.",
+    "changed": "문서가 변경되었거나 더 이상 편집할 수 없습니다. 현재 버전을 기준으로 변경 사항을 다시 요청하세요.",
+    "contextTooSmall": "메시지와 편집기 컨텍스트가 모델의 컨텍스트 한도를 초과합니다.",
+    "invalidEdits": "제안된 변경 사항과 일치하는 부분을 문서에서 찾을 수 없습니다. 모델에 다시 요청하세요.",
+    "invalidThemeEdits": "제안된 테마 변경 사항을 현재 CSS에 적용할 수 없습니다. 모델에 다시 요청하세요.",
+    "sendFailed": "메시지를 보내지 못했습니다. 대화를 확인하고 다시 시도하세요."
   },
   "drawing": {
     "new": "새 Excalidraw 그림",

@@ -36,12 +36,30 @@
     "invalidSize": "正の整数を入力してください。出力上限はコンテキスト長以下にしてください。",
     "modelChanged": "モデルが変更されました。もう一度開いて編集してください。"
   },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "A different autumnmark-theme Skill already exists in the shared skills folder.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "履歴",
+    "document": "ドキュメント",
+    "theme": "テーマ",
+    "documentChanges": "AI によるドキュメントの変更",
+    "empty": "この履歴にはまだ変更がありません。",
+    "undated": "日付なし",
+    "viewConversation": "会話を表示"
+  },
   "themeAi": {
-    "title": "テーマ AI",
-    "current": "現在のテーマ",
-    "openDocument": "ノートを開いてテーマの変更を試せます。",
-    "empty": "行間を広げる、見出しの色を変えるなど、テーマの変更を入力してください。",
-    "placeholder": "テーマをどう変えたいですか？",
     "viewChange": "今回の変更を見る",
     "previewStatus": "テーマをプレビュー中",
     "previewing": "このノートでプレビュー中",
@@ -101,7 +119,30 @@
       "base": "ベーステーマ",
       "css": "スタイル",
       "sample": "プレビューの Markdown"
-    }
+    },
+    "appliedAi": "AI アシスタントがテーマの変更を適用しました。"
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Permanently delete “{name}”, along with its draft changes, example Markdown, and AI chats?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   },
   "studio": {
     "themeFiles": "テーマファイル",
@@ -1241,7 +1282,21 @@
       "skillHelpHint": "AutumnMark は起動時に Skill をインストールし、更新します。クライアントの Skill 一覧を更新するか、下の共有フォルダーから読み込んでください。",
       "copyInstruction": "呼び出し指示をコピー",
       "instructionCopied": "呼び出し指示をコピーしました。AI クライアントに貼り付けてください。"
-    }
+    },
+    "tab": "AI",
+    "title": "AI アシスタント",
+    "empty": "質問するか、ドキュメントや見た目に加えたい変更を入力してください。",
+    "message": "アシスタントにメッセージを送る",
+    "waiting": "モデルの応答を待っています…",
+    "review": "{name} の変更を確認",
+    "applyHint": "変更を適用するには、対象のドキュメントを編集モードで開いてください。",
+    "apply": "変更を適用",
+    "applied": "エディターに変更を適用しました。",
+    "changed": "ドキュメントが変更されたか、編集できなくなりました。現在のバージョンでもう一度変更を依頼してください。",
+    "contextTooSmall": "メッセージとエディターのコンテキストがモデルのコンテキスト上限を超えています。",
+    "invalidEdits": "提案された変更に対応する箇所がドキュメントに見つかりませんでした。モデルにもう一度依頼してください。",
+    "invalidThemeEdits": "提案されたテーマの変更を現在の CSS に適用できませんでした。モデルにもう一度依頼してください。",
+    "sendFailed": "メッセージを送信できませんでした。会話を確認してもう一度お試しください。"
   },
   "drawing": {
     "new": "新しい Excalidraw 図面",
