@@ -12,7 +12,7 @@
 import { onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import type { LocalTheme } from '@shared/localTheme'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   theme: LocalTheme | string
   markdown: string
@@ -20,7 +20,7 @@ const props = defineProps<{
   sidebar: string
   source: boolean
   demo?: boolean
-}>()
+}>(), { demo: true })
 const emit = defineEmits<{ dismiss: [] }>()
 const frame = ref<HTMLIFrameElement>()
 
@@ -31,7 +31,7 @@ function sendPreview(): void {
     markdown: props.markdown,
     sidebar: props.sidebar,
     filename: props.filename,
-    demo: props.demo ?? true,
+    demo: props.demo,
     source: props.source
   }, '*')
 }
