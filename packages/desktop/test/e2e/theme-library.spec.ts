@@ -26,6 +26,9 @@ test('one theme studio switches independent drafts and applies a theme without c
     userDataFiles: { 'theme-model.json': JSON.stringify([profile]) }
   })
   try {
+    await app.evaluate(({ clipboard }) => {
+      clipboard.writeText = () => {}
+    })
     const opened = app.waitForEvent('window')
     await clickMenuById(app, 'createThemeFromCurrent')
     const studio = await opened
@@ -40,7 +43,8 @@ test('one theme studio switches independent drafts and applies a theme without c
     const saved = (title: string) => library.getByRole('region', { name: 'My themes', exact: true }).getByRole('button', { name: new RegExp('^' + title) })
     const startCollaboration = async() => {
       await external.click()
-      await collaboration.getByRole('button', { name: 'Start collaboration' }).click()
+      await collaboration.getByRole('button', { name: 'Copy folder path' }).click()
+      await expect(collaboration.getByRole('status')).toHaveText('Folder path copied.')
       const path = await collaboration.locator('code').innerText()
       await external.click()
       return path
