@@ -14,8 +14,9 @@ import { editor, floats } from '../helpers/selectors';
  * handle stays aligned with the image.
  */
 
-const DATA_URI =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=';
+const DATA_URI = `data:image/svg+xml;base64,${btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="teal"/></svg>',
+)}`;
 
 test.describe('ImageResizeBar reflow (#2939)', () => {
     test('left handle tracks the image when the viewport resizes', async ({ page }) => {

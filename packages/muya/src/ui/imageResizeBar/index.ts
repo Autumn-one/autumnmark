@@ -30,7 +30,6 @@ export class ImageResizeBar {
     // dragging — only this snapshot is (#5392).
     private _dragStart: { clientX: number; width: number; ratio: number; explicitHeight: boolean; lastX?: number; peers: ReturnType<typeof picturesOnRow> } | null = null;
     private _eventId: string[] = [];
-    private _lastScrollTop: number | null = null;
     private _resizing: boolean = false;
     // Stops the autoUpdate reposition loop set up in `_render`.
     private _cleanup: (() => void) | null = null;
@@ -47,25 +46,6 @@ export class ImageResizeBar {
 
     private _listen() {
         const { eventCenter, domNode } = this.muya;
-
-        const scrollHandler = (event: Event) => {
-            if (!isHTMLElement(event.target))
-                return;
-            if (typeof this._lastScrollTop !== 'number') {
-                this._lastScrollTop = event.target.scrollTop;
-
-                return;
-            }
-
-            // only when scroll distance great than 50px, then hide the float box.
-            if (
-                !this._resizing
-                && this._status
-                && Math.abs(event.target.scrollTop - this._lastScrollTop) > 50
-            ) {
-                this.hide();
-            }
-        };
 
         eventCenter.on('selection-change', ({ selection }) => {
             const image = selection?.kind === SelectionType.IMAGE ? selection.context : null;
@@ -109,7 +89,6 @@ export class ImageResizeBar {
                 return;
             this.hide();
         });
-        eventCenter.attachDOMEvent(findScrollContainer(domNode), 'scroll', scrollHandler);
         eventCenter.attachDOMEvent(this._container, 'dragstart', event =>
             event.preventDefault());
         eventCenter.attachDOMEvent(document.body, 'mousedown', this._mouseDown);
@@ -145,18 +124,21 @@ export class ImageResizeBar {
         this._update();
         // Reposition the handles whenever the image moves (window/ancestor
         // resize, sidebar toggle, scroll), so they stay attached to it (#2939).
-        const viewport = this._reference.closest('.mu-compact-image-body')?.parentElement;
+        const compactViewport = this._reference.closest('.mu-compact-image-body')?.parentElement;
+        const editorViewport = findScrollContainer(this.muya.domNode, document.documentElement);
         const update = () => this._update();
         const stopPositioning = autoUpdate(this._reference, this._container, update);
-        const observer = viewport && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
-        if (viewport) {
-            observer?.observe(viewport);
-            viewport.addEventListener('scroll', update);
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+        if (editorViewport !== document.documentElement)
+            observer?.observe(editorViewport);
+        if (compactViewport) {
+            observer?.observe(compactViewport);
+            compactViewport.addEventListener('scroll', update);
         }
         this._cleanup = () => {
             stopPositioning();
             observer?.disconnect();
-            viewport?.removeEventListener('scroll', update);
+            compactViewport?.removeEventListener('scroll', update);
         };
         eventCenter.emit('muya-float', this, true);
     }
@@ -172,23 +154,37 @@ export class ImageResizeBar {
     }
 
     private _update() {
-        if (!this._reference?.isConnected) {
+        const reference = this._reference;
+        if (!reference?.isConnected) {
             this.hide();
             return;
         }
-        const rect = this._reference!.getBoundingClientRect();
-        // A compact preview can crop or scroll the bitmap without changing its intrinsic dimensions.
-        const viewport = this._reference!.closest<HTMLElement>('.mu-compact-limited:not(.mu-compact-expanded)');
-        const clip = viewport?.getBoundingClientRect();
-        const top = clip ? Math.max(rect.top, clip.top) : rect.top;
-        const bottom = clip ? Math.min(rect.bottom, clip.bottom) : rect.bottom;
-        const height = clip ? Math.min(BAR_HEIGHT, Math.max(0, bottom - top)) : BAR_HEIGHT;
+        const rect = reference.getBoundingClientRect();
+        const viewport = findScrollContainer(this.muya.domNode, document.documentElement);
+        const viewportRect = viewport === document.documentElement ? null : viewport.getBoundingClientRect();
+        const scrollportTop = viewportRect ? viewportRect.top + viewport.clientTop : 0;
+        const viewportTop = Math.max(0, scrollportTop);
+        const viewportBottom = viewportRect ? Math.min(window.innerHeight, scrollportTop + viewport.clientHeight) : window.innerHeight;
+        const compact = reference.closest('.mu-compact-limited:not(.mu-compact-expanded)')?.getBoundingClientRect();
+        const top = Math.max(rect.top, viewportTop, compact?.top ?? viewportTop);
+        const bottom = Math.min(rect.bottom, viewportBottom, compact?.bottom ?? viewportBottom);
+        this._container.hidden = bottom <= top;
+        if (this._container.hidden)
+            return;
+
+        // The overlay lives under document.body, outside the editor's overflow clip.
+        this._container.style.top = `${viewportTop}px`;
+        this._container.style.bottom = `${window.innerHeight - viewportBottom}px`;
+        let height = Math.min(BAR_HEIGHT, viewportBottom - viewportTop);
+        if (compact || top > rect.top || bottom < rect.bottom)
+            height = Math.min(height, bottom - top);
+        const barTop = Math.min(Math.max(viewportTop, (top + bottom - height) / 2), viewportBottom - height);
         // Tiny pictures still need a click target between their two handles.
         const overlap = rect.width < 4 * CIRCLE_RADIO ? 0 : CIRCLE_RADIO;
         VERTICAL_BAR.forEach((c) => {
             const bar: HTMLDivElement = this._container.querySelector(`.${c}`)!;
             bar.style.height = `${height}px`;
-            bar.style.top = `${(top + bottom - height) / 2}px`;
+            bar.style.top = `${barTop - viewportTop}px`;
 
             switch (c) {
                 case 'left':
@@ -319,9 +315,11 @@ export class ImageResizeBar {
         if (output.textContent !== label)
             output.textContent = label;
         const bar = handle.getBoundingClientRect();
+        const viewport = this._container.getBoundingClientRect();
         const x = this._movingAnchor === 'left' ? bar.left - output.offsetWidth - 6 : bar.right + 6;
-        output.style.left = `${Math.max(4, Math.min(x, window.innerWidth - output.offsetWidth - 4))}px`;
-        output.style.top = `${Math.max(4, Math.min(bar.top + (bar.height - output.offsetHeight) / 2, window.innerHeight - output.offsetHeight - 4))}px`;
+        const y = bar.top - viewport.top + (bar.height - output.offsetHeight) / 2;
+        output.style.left = `${Math.max(4, Math.min(x, viewport.width - output.offsetWidth - 4))}px`;
+        output.style.top = `${Math.max(0, Math.min(y, viewport.height - output.offsetHeight))}px`;
     }
 
     private _mouseUp = (event: Event) => {
