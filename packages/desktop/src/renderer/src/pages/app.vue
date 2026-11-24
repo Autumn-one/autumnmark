@@ -32,9 +32,11 @@
           :can-insert-drawing="!!insertionNote"
           :insert-drawing="insertDrawing"
         >
-          <template #document-actions>
+          <template
+            v-if="activeThemePreview"
+            #document-actions
+          >
             <button
-              v-if="activeThemePreview"
               type="button"
               class="theme-preview-status"
               @click="openAiChat"

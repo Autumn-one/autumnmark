@@ -1,7 +1,7 @@
 import { once } from 'node:events'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { expect, test } from '@playwright/test'
 import { clickMenuById, launchWithMarkdown } from './helpers'
@@ -94,9 +94,9 @@ test('one theme studio switches independent drafts and applies a theme without c
     await expect(name).toHaveValue('Cedar draft')
     await expect(preview.locator('h1')).toContainText('Cedar example')
     await expect(log).toContainText('Write a cedar example')
-    await external.click()
-    await expect(collaboration.locator('code')).toHaveText(cedarPath)
-    await external.click()
+    const reopenedCedarPath = await startCollaboration()
+    expect(dirname(reopenedCedarPath)).toBe(dirname(cedarPath))
+    expect(await readFile(join(reopenedCedarPath, 'sample.md'), 'utf8')).toContain('# Cedar example')
 
     const save = studio.getByRole('button', { name: 'Save theme only', exact: true })
     await save.click()

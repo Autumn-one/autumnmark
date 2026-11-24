@@ -1,6 +1,6 @@
 ## AutumnMark 0.24.46
 
-- Use the new AI sidebar to ask about the current document, review Markdown changes before applying them, and preview theme changes on the current note. View and revert AI edits from the conversation or review them in History.
+- Use the new AI sidebar to ask about the current document and edit Markdown or the active theme. Review and undo edits from the conversation, or browse document and theme changes in History.
 - Use the AutumnMark skill in a compatible external AI client to edit Markdown or a theme. When several documents are open, choose which one to edit.
 - Create and edit Excalidraw drawings in their own tabs. Insert a drawing into a Markdown document and include its preview in HTML and PDF exports.
 - Review and restore previous versions of a theme. History covers manual changes, AI edits, and saves.
