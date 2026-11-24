@@ -1,3 +1,7 @@
+## AutumnMark 0.24.48
+
+- Reloading the editor keeps the selected theme. External AI clients check that the editor has rendered the current theme before reading or changing it.
+
 ## AutumnMark 0.24.47
 
 - Use the new AI sidebar to ask about the current document and edit Markdown or the active theme. Review and undo edits from the conversation, or browse document and theme changes in History.
