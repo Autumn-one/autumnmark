@@ -4,6 +4,8 @@ AutumnMark includes 34 built-in themes organized into Light and Dark categories.
 
 The names below match the labels shown in the **Theme** menu. The default light theme, _松墨（Pine Ink）_, uses the id `pine-ink` in `preferences.json`. GitBook Teal uses the id `light`.
 
+On upgrade, the previous system light default switches to Pine Ink once. You can choose GitBook Teal again in Theme settings.
+
 ## Light Themes
 
 | Theme                 | Description                                    |

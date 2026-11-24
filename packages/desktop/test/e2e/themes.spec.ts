@@ -4,7 +4,7 @@ import { launchWithMarkdown, clickMenuById, setSourceMarkdown } from './helpers'
 
 test('Pine Ink is the default light theme and renders its paper and heading colors', async() => {
   const { app, page } = await launchWithMarkdown('# Title\n\n## Section', {
-    preferences: { followSystemTheme: false }
+    preferences: { language: 'en', followSystemTheme: false }
   })
   try {
     const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
@@ -15,6 +15,10 @@ test('Pine Ink is the default light theme and renders its paper and heading colo
     await expect.poll(background).toBe('#faf7ef')
     await expect(page.locator('.mu-container h2')).toHaveCSS('color', 'rgb(33, 62, 50)')
     await expect(page.locator('.mu-container h2')).toHaveCSS('border-left-color', 'rgb(171, 121, 65)')
+    const openingSettings = app.waitForEvent('window')
+    await clickMenuById(app, 'openThemeSettings')
+    const settings = await openingSettings
+    await expect(settings.locator('.theme-card').first().getByRole('heading', { name: '松墨（Pine Ink）', exact: true })).toBeVisible()
   } finally {
     await app.close()
   }

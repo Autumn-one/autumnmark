@@ -13,7 +13,9 @@ export interface ThemeChoiceItem {
   remote?: ThemeCatalogSnapshot['themes'][number]
 }
 
-export const themes = themeBases.map(name => ({ name })).sort((a, b) => Number(isDarkThemeId(a.name)) - Number(isDarkThemeId(b.name)))
+export const themes = [pineInkTheme.id, ...themeBases.filter(id => id !== pineInkTheme.id)]
+  .sort((a, b) => Number(isDarkThemeId(a)) - Number(isDarkThemeId(b)))
+  .map(name => ({ name }))
 
 export const themeLabel = (name: string, library: LocalTheme[] = []): string => {
   const local = library.find(item => item.id === name)
