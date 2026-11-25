@@ -37,11 +37,6 @@
     "modelChanged": "Het model is gewijzigd. Open het opnieuw om het te bewerken."
   },
   "themeAi": {
-    "title": "Thema-AI",
-    "current": "Huidig thema",
-    "openDocument": "Open een notitie om wijzigingen aan het thema uit te proberen.",
-    "empty": "Beschrijf een wijziging, zoals meer regelafstand of een andere kopkleur.",
-    "placeholder": "Wat wil je aan het thema veranderen?",
     "viewChange": "Deze wijziging bekijken",
     "previewStatus": "Themavoorbeeld actief",
     "previewing": "Voorbeeld in deze notitie",
@@ -101,7 +96,8 @@
       "base": "Basisthema",
       "css": "Stijl",
       "sample": "Markdown-voorbeeld"
-    }
+    },
+    "appliedAi": "De AI-assistent heeft een themawijziging toegepast."
   },
   "studio": {
     "themeFiles": "Themabestanden",
@@ -881,6 +877,10 @@
         },
         "plantumlServer": {
           "title": "PlantUML server"
+        },
+        "embedDrawings": {
+          "title": "Embed drawings in Markdown",
+          "description": "Turn off to create and reference a separate .excalidraw file when inserting a drawing."
         }
       },
       "misc": {
@@ -1246,7 +1246,22 @@
       "skillHelpHint": "AutumnMark installeert en werkt de skill bij bij het opstarten. Vernieuw de lijst met skills of importeer de skill uit de gedeelde map hieronder.",
       "copyInstruction": "Aanroep kopiëren",
       "instructionCopied": "Aanroep gekopieerd. Plak deze in je AI-client."
-    }
+    },
+    "tab": "AI",
+    "title": "AI-assistent",
+    "empty": "Stel een vraag of beschrijf een wijziging aan het document of de opmaak.",
+    "message": "Schrijf een bericht aan de assistent",
+    "waiting": "Wachten op het model…",
+    "review": "Wijzigingen aan {name} bekijken",
+    "applyHint": "Open het doeldocument in de bewerkingsmodus om deze wijzigingen toe te passen.",
+    "apply": "Wijzigingen toepassen",
+    "applied": "Wijzigingen toegepast in de editor.",
+    "changed": "Het document is gewijzigd of kan niet meer worden bewerkt. Vraag de wijzigingen opnieuw aan voor de huidige versie.",
+    "contextTooSmall": "Het bericht en de editorcontext overschrijden de contextlimiet van het model.",
+    "documentTooLarge": "The open document exceeds the AI sidebar’s document size limit.",
+    "invalidEdits": "De voorgestelde wijzigingen konden niet in het document worden gevonden. Vraag het model het opnieuw te proberen.",
+    "invalidThemeEdits": "De voorgestelde themawijzigingen konden niet op de huidige CSS worden toegepast. Vraag het model het opnieuw te proberen.",
+    "sendFailed": "Het bericht kon niet worden verzonden. Controleer het gesprek en probeer het opnieuw."
   },
   "drawing": {
     "insert": "Excalidraw-tekening invoegen",
@@ -1266,7 +1281,19 @@
     "invalidFile": "Selecteer een .excalidraw-bestand.",
     "openFailed": "Kan het bestand niet openen. {reason}",
     "saveFailed": "Kan de tekening niet opslaan of invoegen. {reason}",
-    "cardFailed": "Kan de documentkaart niet toevoegen. {reason}"
+    "cardFailed": "Kan de documentkaart niet toevoegen. {reason}",
+    "embedded": "Embedded drawing",
+    "filename": "Drawing filename",
+    "invalidName": "Enter a valid drawing filename.",
+    "renameFailed": "Could not rename the drawing. {reason}",
+    "documentUnavailable": "The source document is unavailable.",
+    "browseDocuments": "Browse Files…",
+    "canvas": "Canvas",
+    "source": "Source",
+    "invalidSource": "The drawing source is invalid. {reason}",
+    "sourceChanged": "The canvas changed while you were editing the source. Discard the draft to reload the latest source.",
+    "discardSource": "Discard the unapplied changes to the drawing source?",
+    "insertionChanged": "The document changed. Start the drawing again from the intended insertion point."
   },
   "common": {
     "cancel": "Annuleren",
@@ -1498,5 +1525,50 @@
     "viewImage": "Afbeelding bekijken",
     "copyLink": "Linkadres kopiëren",
     "resumed": "De bewerkingsmodus is ingeschakeld. Automatisch opslaan is hervat."
+  },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "Er staat al een andere skill met de naam autumnmark in de gedeelde skillsmap.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Geschiedenis",
+    "document": "Document",
+    "theme": "Thema",
+    "documentChanges": "Documentwijzigingen door AI",
+    "empty": "Deze geschiedenis bevat nog geen wijzigingen.",
+    "undated": "Zonder datum",
+    "viewConversation": "Gesprek bekijken"
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "‘{name}’ definitief verwijderen, inclusief conceptwijzigingen, versiegeschiedenis, Markdown-voorbeeld en AI-gesprekken?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   }
 }

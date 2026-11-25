@@ -51,11 +51,6 @@
     "applyError": "協作草稿已變更或有錯誤，請檢查預覽後再儲存。"
   },
   "themeAi": {
-    "title": "主題 AI",
-    "current": "目前主題",
-    "openDocument": "開啟一篇筆記即可試改主題。",
-    "empty": "告訴 AI 想怎麼調整主題，例如加寬內文行距或更改標題顏色。",
-    "placeholder": "想怎麼調整這個主題？",
     "viewChange": "查看本次變更",
     "previewStatus": "主題預覽中",
     "previewing": "正在此筆記中預覽",
@@ -115,7 +110,8 @@
       "base": "基礎主題",
       "css": "樣式",
       "sample": "預覽 Markdown"
-    }
+    },
+    "appliedAi": "AI 助理已套用主題變更。"
   },
   "themeLibrary": {
     "title": "主題庫",
@@ -1286,7 +1282,22 @@
       "skillHelpHint": "AutumnMark 啟動時會自動安裝和更新 Skill。請重新整理用戶端的 Skill 清單，或從下方共用目錄匯入。",
       "copyInstruction": "複製呼叫指令",
       "instructionCopied": "已複製呼叫指令，請貼到 AI 用戶端。"
-    }
+    },
+    "tab": "AI",
+    "title": "AI 助理",
+    "empty": "可以提問，或描述要如何修改文件或其外觀。",
+    "message": "傳訊息給助理",
+    "waiting": "正在等待模型回覆…",
+    "review": "檢視「{name}」的變更",
+    "applyHint": "在編輯模式開啟目標文件，即可套用這些變更。",
+    "apply": "套用變更",
+    "applied": "變更已套用至編輯器。",
+    "changed": "文件已變更或無法再編輯。請依目前的版本重新提出修改要求。",
+    "contextTooSmall": "訊息與編輯器的上下文超過模型的上下文長度限制。",
+    "documentTooLarge": "目前開啟的文件超過 AI 側欄的大小限制。",
+    "invalidEdits": "無法在文件中找到建議變更的對應內容。請讓模型再試一次。",
+    "invalidThemeEdits": "無法將建議的主題變更套用至目前的 CSS。請讓模型再試一次。",
+    "sendFailed": "無法傳送訊息。請檢查對話後再試一次。"
   },
   "drawing": {
     "new": "新增 Excalidraw 繪圖",
@@ -1550,5 +1561,14 @@
     "viewImage": "檢視圖片",
     "copyLink": "複製連結位址",
     "resumed": "已切換至編輯模式，自動儲存已恢復。"
+  },
+  "history": {
+    "title": "歷史紀錄",
+    "document": "文件",
+    "theme": "主題",
+    "documentChanges": "AI 文件變更",
+    "empty": "目前沒有歷史變更。",
+    "undated": "無日期",
+    "viewConversation": "檢視對話"
   }
 }

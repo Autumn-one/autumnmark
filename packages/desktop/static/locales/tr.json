@@ -37,11 +37,6 @@
     "modelChanged": "Model değişti. Düzenlemek için yeniden açın."
   },
   "themeAi": {
-    "title": "Tema yapay zekâsı",
-    "current": "Geçerli tema",
-    "openDocument": "Tema değişikliklerini denemek için bir not açın.",
-    "empty": "Satır aralığını artırmak veya başlık rengini değiştirmek gibi bir değişiklik belirtin.",
-    "placeholder": "Temada neyi değiştirmek istersiniz?",
     "viewChange": "Bu değişikliği görüntüle",
     "previewStatus": "Tema önizlemesi etkin",
     "previewing": "Bu notta önizleniyor",
@@ -101,7 +96,8 @@
       "base": "Temel tema",
       "css": "Stil",
       "sample": "Önizleme Markdown metni"
-    }
+    },
+    "appliedAi": "Yapay zekâ asistanı bir tema değişikliği uyguladı."
   },
   "studio": {
     "themeFiles": "Tema dosyaları",
@@ -881,6 +877,10 @@
         },
         "plantumlServer": {
           "title": "PlantUML Sunucu URL'si"
+        },
+        "embedDrawings": {
+          "title": "Embed drawings in Markdown",
+          "description": "Turn off to create and reference a separate .excalidraw file when inserting a drawing."
         }
       },
       "misc": {
@@ -1246,7 +1246,22 @@
       "skillHelpHint": "AutumnMark başlangıçta Skill’i yükler ve günceller. İstemcide Skill listesini yenileyin veya aşağıdaki ortak klasörden içe aktarın.",
       "copyInstruction": "Çağrı talimatını kopyala",
       "instructionCopied": "Çağrı talimatı kopyalandı. Yapay zekâ istemcinize yapıştırın."
-    }
+    },
+    "tab": "YZ",
+    "title": "Yapay zekâ asistanı",
+    "empty": "Bir soru sorun veya belgede ya da görünümünde istediğiniz değişikliği açıklayın.",
+    "message": "Asistana mesaj yazın",
+    "waiting": "Modelin yanıtı bekleniyor…",
+    "review": "{name} değişikliklerini incele",
+    "applyHint": "Bu değişiklikleri uygulamak için hedef belgeyi düzenleme modunda açın.",
+    "apply": "Değişiklikleri uygula",
+    "applied": "Değişiklikler düzenleyicide uygulandı.",
+    "changed": "Belge değişti veya artık düzenlenemiyor. Güncel sürüm için değişikliği yeniden isteyin.",
+    "contextTooSmall": "Mesaj ve düzenleyici bağlamı, modelin bağlam sınırını aşıyor.",
+    "documentTooLarge": "The open document exceeds the AI sidebar’s document size limit.",
+    "invalidEdits": "Önerilen değişikliklerin belgede karşılığı bulunamadı. Modelden tekrar denemesini isteyin.",
+    "invalidThemeEdits": "Önerilen tema değişiklikleri mevcut CSS’ye uygulanamadı. Modelden tekrar denemesini isteyin.",
+    "sendFailed": "Mesaj gönderilemedi. Sohbeti kontrol edip tekrar deneyin."
   },
   "drawing": {
     "insert": "Excalidraw çizimi ekle",
@@ -1266,7 +1281,19 @@
     "invalidFile": "Bir .excalidraw dosyası seçin.",
     "openFailed": "Dosya açılamadı. {reason}",
     "saveFailed": "Çizim kaydedilemedi veya eklenemedi. {reason}",
-    "cardFailed": "Belge kartı eklenemedi. {reason}"
+    "cardFailed": "Belge kartı eklenemedi. {reason}",
+    "embedded": "Embedded drawing",
+    "filename": "Drawing filename",
+    "invalidName": "Enter a valid drawing filename.",
+    "renameFailed": "Could not rename the drawing. {reason}",
+    "documentUnavailable": "The source document is unavailable.",
+    "browseDocuments": "Browse Files…",
+    "canvas": "Canvas",
+    "source": "Source",
+    "invalidSource": "The drawing source is invalid. {reason}",
+    "sourceChanged": "The canvas changed while you were editing the source. Discard the draft to reload the latest source.",
+    "discardSource": "Discard the unapplied changes to the drawing source?",
+    "insertionChanged": "The document changed. Start the drawing again from the intended insertion point."
   },
   "common": {
     "cancel": "İptal",
@@ -1498,5 +1525,50 @@
     "viewImage": "Görseli Görüntüle",
     "copyLink": "Bağlantı Adresini Kopyala",
     "resumed": "Düzenleme Modu açık. Otomatik kaydetme devam ediyor."
+  },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "Paylaşılan beceriler klasöründe autumnmark adlı başka bir beceri zaten var.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Geçmiş",
+    "document": "Belge",
+    "theme": "Tema",
+    "documentChanges": "Yapay zekânın belge değişiklikleri",
+    "empty": "Bu geçmişte henüz değişiklik yok.",
+    "undated": "Tarihsiz",
+    "viewConversation": "Sohbeti görüntüle"
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "“{name}” kalıcı olarak silinsin mi? Taslak değişiklikleri, sürüm geçmişi, örnek Markdown ve yapay zekâ sohbetleri de silinecek.",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   }
 }

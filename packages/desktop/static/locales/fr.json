@@ -37,11 +37,6 @@
     "modelChanged": "Ce modèle a changé. Rouvrez-le pour le modifier."
   },
   "themeAi": {
-    "title": "IA de thème",
-    "current": "Thème actuel",
-    "openDocument": "Ouvrez une note pour essayer de modifier le thème.",
-    "empty": "Décrivez une modification, par exemple un interligne plus grand ou une autre couleur de titre.",
-    "placeholder": "Que souhaitez-vous modifier dans ce thème ?",
     "viewChange": "Voir cette modification",
     "previewStatus": "Aperçu du thème actif",
     "previewing": "Aperçu dans cette note",
@@ -101,7 +96,8 @@
       "base": "Thème de base",
       "css": "Style",
       "sample": "Markdown de l’aperçu"
-    }
+    },
+    "appliedAi": "L’assistant IA a appliqué une modification au thème."
   },
   "studio": {
     "themeFiles": "Fichiers du thème",
@@ -881,6 +877,10 @@
         },
         "plantumlServer": {
           "title": "URL du serveur PlantUML"
+        },
+        "embedDrawings": {
+          "title": "Embed drawings in Markdown",
+          "description": "Turn off to create and reference a separate .excalidraw file when inserting a drawing."
         }
       },
       "misc": {
@@ -1246,7 +1246,22 @@
       "skillHelpHint": "AutumnMark installe et met à jour le Skill au démarrage. Actualisez la liste des Skills du client ou importez-le depuis le dossier partagé ci-dessous.",
       "copyInstruction": "Copier la commande",
       "instructionCopied": "Commande copiée. Collez-la dans votre client IA."
-    }
+    },
+    "tab": "IA",
+    "title": "Assistant IA",
+    "empty": "Posez une question ou décrivez une modification du document ou de son apparence.",
+    "message": "Écrire à l’assistant",
+    "waiting": "En attente du modèle…",
+    "review": "Examiner les modifications de {name}",
+    "applyHint": "Ouvrez le document cible en mode édition pour appliquer ces modifications.",
+    "apply": "Appliquer les modifications",
+    "applied": "Modifications appliquées dans l’éditeur.",
+    "changed": "Le document a changé ou n’est plus modifiable. Demandez à nouveau les modifications à partir de la version actuelle.",
+    "contextTooSmall": "Le message et le contexte de l’éditeur dépassent la capacité de contexte du modèle.",
+    "documentTooLarge": "The open document exceeds the AI sidebar’s document size limit.",
+    "invalidEdits": "Les modifications proposées n’ont pas pu être associées au document. Demandez au modèle de réessayer.",
+    "invalidThemeEdits": "Les modifications proposées pour le thème n’ont pas pu être appliquées au CSS actuel. Demandez au modèle de réessayer.",
+    "sendFailed": "Impossible d’envoyer le message. Vérifiez la conversation et réessayez."
   },
   "drawing": {
     "insert": "Insérer un dessin Excalidraw",
@@ -1266,7 +1281,19 @@
     "invalidFile": "Sélectionnez un fichier .excalidraw.",
     "openFailed": "Impossible d’ouvrir le fichier. {reason}",
     "saveFailed": "Impossible d’enregistrer ou d’insérer le dessin. {reason}",
-    "cardFailed": "Impossible d’ajouter la carte du document. {reason}"
+    "cardFailed": "Impossible d’ajouter la carte du document. {reason}",
+    "embedded": "Embedded drawing",
+    "filename": "Drawing filename",
+    "invalidName": "Enter a valid drawing filename.",
+    "renameFailed": "Could not rename the drawing. {reason}",
+    "documentUnavailable": "The source document is unavailable.",
+    "browseDocuments": "Browse Files…",
+    "canvas": "Canvas",
+    "source": "Source",
+    "invalidSource": "The drawing source is invalid. {reason}",
+    "sourceChanged": "The canvas changed while you were editing the source. Discard the draft to reload the latest source.",
+    "discardSource": "Discard the unapplied changes to the drawing source?",
+    "insertionChanged": "The document changed. Start the drawing again from the intended insertion point."
   },
   "common": {
     "cancel": "Annuler",
@@ -1498,5 +1525,50 @@
     "viewImage": "Afficher l’image",
     "copyLink": "Copier l’adresse du lien",
     "resumed": "Le mode édition est activé. L’enregistrement automatique a repris."
+  },
+  "themeCollaboration": {
+    "title": "External collaboration",
+    "open": "Open collaboration folder",
+    "copy": "Copy folder path",
+    "skillConflict": "Un autre skill nommé autumnmark existe déjà dans le dossier partagé des skills.",
+    "skillError": "The AutumnMark Skill could not be installed.",
+    "openError": "The collaboration folder could not be opened.",
+    "copied": "Folder path copied.",
+    "copyError": "The folder path could not be copied.",
+    "cssError": "Collaboration CSS needs attention · {detail}",
+    "sampleError": "The example Markdown exceeds the collaboration size limit.",
+    "filesError": "The collaboration files could not be read or saved.",
+    "applyError": "The collaboration draft changed or needs attention. Check the preview before saving."
+  },
+  "history": {
+    "title": "Historique",
+    "document": "Document",
+    "theme": "Thème",
+    "documentChanges": "Modifications du document par l’IA",
+    "empty": "Cet historique ne contient encore aucune modification.",
+    "undated": "Sans date",
+    "viewConversation": "Voir la conversation"
+  },
+  "themeLibrary": {
+    "title": "Theme library",
+    "drafts": "Drafts",
+    "saved": "My themes",
+    "newTheme": "New theme",
+    "defaultName": "My new theme",
+    "untitled": "Untitled theme",
+    "copyCurrent": "Copy current draft",
+    "createDraft": "Create draft",
+    "back": "Back",
+    "editing": "Editing",
+    "currentlyApplied": "Currently applied",
+    "unapplied": "Unapplied changes",
+    "switchFailed": "Could not switch themes. Check the current draft and try again.",
+    "empty": "No drafts or saved themes yet.",
+    "deleteDraft": "Delete draft",
+    "deleteTheme": "Delete theme",
+    "cancel": "Cancel",
+    "confirmDelete": "Supprimer définitivement « {name} », ses modifications de brouillon, son historique des versions, son exemple Markdown et ses conversations avec l’IA ?",
+    "deleteApplied": "AutumnMark will switch to this theme’s built-in base theme.",
+    "deleteFailed": "Could not complete theme deletion. Check the library and try again."
   }
 }

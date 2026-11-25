@@ -485,11 +485,11 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     pointer-events: none;
 }
 
-.mu-editor:focus-within [data-mu-image-caret="start"]::after {
+.mu-editor:focus-within [data-mu-image-caret='start']::after {
     inset-inline-start: 0;
 }
 
-.mu-editor:focus-within [data-mu-image-caret="end"]::after {
+.mu-editor:focus-within [data-mu-image-caret='end']::after {
     inset-inline-end: 0;
 }
 
