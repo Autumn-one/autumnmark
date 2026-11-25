@@ -12,7 +12,6 @@ import logger from '../utils/logger';
 import { projectEmbeddedImages } from './embeddedImages';
 import { tokenizer } from './lexer';
 import { profileForBlock } from './parser/profiles';
-import { tokensToPlainText } from './projection';
 import { getReferenceDefinition, ReferenceDefinitionIndex } from './referenceDefinitions';
 import Renderer from './renderer';
 import { ImageMounts } from './resources/imageMounts';
@@ -102,10 +101,6 @@ class InlineEngine {
         const { labels } = this;
 
         return tokenizer(text, { profile: profileForBlock(block.blockName), labels, options, highlights });
-    }
-
-    getPlainText(block: Pick<Format, 'text' | 'blockName'>): string {
-        return tokensToPlainText(this._tokenizer(block, []), ' ', ' ');
     }
 
     /** Invalidates pending and completed loads before repainting all image occurrences. */

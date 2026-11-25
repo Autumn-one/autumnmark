@@ -1,6 +1,7 @@
 ## AutumnMark 0.24.57
 
-- Level-one headings in the visual editor stay on a single line. Long headings end with an ellipsis, and hovering over them reveals the full text. While editing, the heading scrolls horizontally to keep the caret in view.
+- The visual editor and theme catalog preview use the full width available to them.
+- Long level-one headings can wrap across multiple lines.
 
 ## AutumnMark 0.24.56
 

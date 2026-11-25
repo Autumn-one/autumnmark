@@ -107,7 +107,7 @@
     margin-block: 1.5rem 0.5rem;
   }
 
-  :scope :is(.mu-atx-heading, .mu-setext-heading):not(.mu-active) > .mu-content {
+  :scope :is(.mu-atx-heading, .mu-setext-heading):not(h1, .mu-active) > .mu-content {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

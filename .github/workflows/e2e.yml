@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test test/e2e/heading-overflow.spec.ts test/e2e/heading-fold-tab-state-6054.spec.ts test/e2e/issue-6051-heading-scroll.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/editor-width.spec.ts test/e2e/heading-fold-tab-state-6054.spec.ts test/e2e/issue-6051-heading-scroll.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then
