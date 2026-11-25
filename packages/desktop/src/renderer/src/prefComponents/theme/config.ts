@@ -19,9 +19,7 @@ export const themes = [...featuredThemes, ...themeBases.filter(id => !featuredTh
   .sort((a, b) => Number(isDarkThemeId(a)) - Number(isDarkThemeId(b)))
   .map(name => ({ name }))
 
-export const themeLabel = (name: string, library: LocalTheme[] = []): string => {
-  const local = library.find(item => item.id === name)
-  if (local) return local.name
+export const themeLabel = (name: string): string => {
   if (name === 'light') return 'GitBook Teal'
   return builtinThemeName(name) ?? name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }

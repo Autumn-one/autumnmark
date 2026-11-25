@@ -70,6 +70,43 @@ test('Violet Diary is a built-in dark theme with distinct section and subsection
   }
 })
 
+test('Violet Diary retains a saved custom theme with a distinct name in the menu and settings', async() => {
+  const local = {
+    version: 1 as const,
+    id: 'local:rose-pine-moon:12345678-1234-4567-8234-123456789012',
+    name: '暮紫日记',
+    base: 'rose-pine-moon',
+    values: { accent: '#efabc8' },
+    css: ':root { --editorColor: #e5dbea; }'
+  }
+  const { app, page } = await launchWithMarkdown('# Violet Diary', {
+    preferences: { language: 'en', theme: local.id, darkModeTheme: local.id, followSystemTheme: false, localThemes: [local] }
+  })
+  try {
+    const menu = await app.evaluate(({ Menu }, localId) => {
+      const menu = Menu.getApplicationMenu()
+      return {
+        builtin: menu?.getMenuItemById('violet-diary')?.label,
+        custom: menu?.getMenuItemById(localId)?.label
+      }
+    }, local.id)
+    expect(menu).toEqual({ builtin: '暮紫日记', custom: '暮紫日记 · Custom' })
+    const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(preferences).toMatchObject({ theme: local.id, darkModeTheme: local.id, localThemes: [local] })
+
+    const openingSettings = app.waitForEvent('window')
+    await clickMenuById(app, 'openThemeSettings')
+    const settings = await openingSettings
+    const cards = settings.locator('.theme-card')
+    await expect(cards.getByRole('heading', { name: '暮紫日记', exact: true })).toHaveCount(1)
+    await expect(cards.filter({ has: settings.getByRole('heading', { name: '暮紫日记 · Custom', exact: true }) }))
+      .toHaveClass(/is-active/)
+    await expect(settings.locator('.theme-slot strong')).toHaveText('暮紫日记 · Custom')
+  } finally {
+    await app.close()
+  }
+})
+
 test('GitBook Teal styles prose and keeps the table and code typography', async() => {
   const markdown = [
     '# Title', '## Section', 'Some **emphasis**', '> Quote', '- [x] Task',

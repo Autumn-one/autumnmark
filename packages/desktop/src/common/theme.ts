@@ -5,6 +5,11 @@ const namedThemes = [pineInkTheme, violetDiaryTheme]
 
 export const builtinThemeName = (id: string): string | undefined => namedThemes.find(theme => theme.id === id)?.name
 
+export const localThemeDisplayName = (name: string, sourceLabel: string): string => {
+  const trimmed = name.trim()
+  return namedThemes.some(theme => theme.name === trimmed) ? `${trimmed} · ${sourceLabel}` : name
+}
+
 export const railscastsThemes: readonly string[] = Object.freeze([
   'dark',
   'material-dark',

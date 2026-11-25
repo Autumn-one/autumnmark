@@ -3,7 +3,7 @@ import * as actions from '../actions/theme'
 import { t } from '../../i18n'
 import type Preference from '../../preferences'
 import { localThemeList } from '@shared/localTheme'
-import { isDarkThemeId, pineInkTheme, violetDiaryTheme } from 'common/theme'
+import { isDarkThemeId, localThemeDisplayName, pineInkTheme, violetDiaryTheme } from 'common/theme'
 
 // [i18nLabelKey, themeId] for each selectable theme. The menu label is
 // `menu.theme.<labelKey>`; `themeId` is both the menu item id and the value
@@ -68,7 +68,10 @@ export default function(userPreference: Preference): MenuItemConstructorOptions 
   const menuItems = (builtins: ReadonlyArray<readonly [string, string]>, dark: boolean) => [
     ...builtins.map(([key, id]) => themeRadio(t(`menu.theme.${key}`), id)),
     ...localThemeList(preferences.localThemes).filter(item => isDarkThemeId(item.base) === dark)
-      .map(item => themeRadio(item.name, item.id))
+      .map(item => themeRadio(
+        localThemeDisplayName(item.name, t(item.catalog ? 'preferences.theme.installed' : 'preferences.theme.custom')),
+        item.id
+      ))
   ]
   const submenu: MenuItemConstructorOptions[] = [
     {
