@@ -1,3 +1,7 @@
+## AutumnMark 0.24.53
+
+- Embedded image and drawing labels in source mode now use the source editor’s text color so they stay readable on the active theme’s background.
+
 ## AutumnMark 0.24.52
 
 - Insert Excalidraw drawings directly into Markdown. New drawings are embedded by default, and you can choose to save a separate drawing file or open the drawing editor in a tab.
