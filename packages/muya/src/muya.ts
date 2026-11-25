@@ -360,6 +360,18 @@ export class Muya {
         }
     }
 
+    /** Return the reader-facing text for a rendered heading's content element. */
+    getHeadingText(element: Element): string {
+        if (!this.domNode.contains(element))
+            return '';
+
+        const block = getBlock(element);
+        if (!block?.isContent() || !['atxheading.content', 'setextheading.content'].includes(block.blockName))
+            return '';
+
+        return this.editor.inlineEngine.getPlainText(block).trim();
+    }
+
     search(value: string, opts: ISearchOption = {}) {
         return this.editor.searchModule.search(value, opts);
     }

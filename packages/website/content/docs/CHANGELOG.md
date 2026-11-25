@@ -1,3 +1,7 @@
+## AutumnMark 0.24.57
+
+- Level-one headings in the visual editor stay on a single line. Long headings end with an ellipsis, and hovering over them reveals the full text. While editing, the heading scrolls horizontally to keep the caret in view.
+
 ## AutumnMark 0.24.56
 
 - Distinguished built-in Violet Diary from saved themes with the same name in the Theme menu and settings. Existing theme styles, selections, and history are preserved.

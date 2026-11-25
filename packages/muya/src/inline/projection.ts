@@ -56,10 +56,17 @@ function leafTokenToPlainText(token: Token): string {
 // (state/markdownToHtml.ts injects ids from `heading.textContent`). The TOC uses
 // it to show and slug headings by their rendered text instead of raw source
 // (#4811).
-export function tokensToPlainText(tokens: Token[], lineBreak = ' '): string {
+// An explicit HTML break stays empty by default to preserve existing slugs.
+export function tokensToPlainText(tokens: Token[], lineBreak = ' ', htmlLineBreak = ''): string {
     const parts: string[] = [];
     for (const { token, exiting } of tokenEvents(tokens)) {
-        if (exiting || ('children' in token && token.children))
+        if (exiting)
+            continue;
+        if (token.type === 'html_tag' && token.tag === 'br') {
+            parts.push(htmlLineBreak);
+            continue;
+        }
+        if ('children' in token && token.children)
             continue;
         parts.push(token.type === 'soft_line_break' || token.type === 'hard_line_break' ? lineBreak : leafTokenToPlainText(token));
     }

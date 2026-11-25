@@ -5,12 +5,31 @@
     :dir="textDirection"
     @click.capture="activateDrawingPreview"
     @keydown.capture="activateDrawingByKey"
+    @pointerenter.capture="showHeadingPreview"
+    @pointerleave.capture="leaveHeadingPreview"
+    @pointerdown.capture="dismissHeadingPreview"
     @contextmenu="showDocumentBackgroundMenu"
   >
     <div
       ref="editorRef"
       class="editor-component"
     />
+    <el-tooltip
+      ref="headingTooltip"
+      virtual-triggering
+      :reference-el="headingPreview?.element"
+      :show-after="400"
+      :show-arrow="false"
+      effect="light"
+      placement="bottom-start"
+      popper-class="editor-heading-tooltip"
+    >
+      <template #content>
+        <div :dir="textDirection">
+          {{ headingPreview?.text }}
+        </div>
+      </template>
+    </el-tooltip>
     <media-viewer
       ref="mediaViewer"
       @open="editor?.hideAllFloatTools()"
@@ -176,7 +195,7 @@ import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
 // Import the engine entrypoint for its editor styles.
 import '@muyajs/core'
 import '@/assets/themes/codemirror/one-dark.css'
-import { type InputNumberInstance } from 'element-plus'
+import { type InputNumberInstance, type TooltipInstance } from 'element-plus'
 
 const { t } = useI18n()
 const STANDAR_Y = 320
@@ -297,6 +316,38 @@ const tableChecker = reactive({
 
 const editorRef = ref<HTMLDivElement | null>(null)
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
+const headingTooltip = ref<TooltipInstance | null>(null)
+const headingPreview = shallowRef<{ element: HTMLElement; text: string } | null>(null)
+const H1_CONTENT_SELECTOR = 'h1:is(.mu-atx-heading, .mu-setext-heading) > .mu-content'
+
+const showHeadingPreview = (event: PointerEvent): void => {
+  const element = event.target
+  if (event.pointerType !== 'mouse' || event.buttons || !(element instanceof HTMLElement) ||
+      !element.matches(H1_CONTENT_SELECTOR) || element.scrollWidth <= element.clientWidth) return
+
+  const text = editor.value?.getHeadingText(element)
+  if (!text) return
+
+  headingPreview.value = { element, text }
+  headingTooltip.value?.onOpen(event)
+}
+
+const leaveHeadingPreview = (event: PointerEvent): void => {
+  if (event.target === headingPreview.value?.element) headingTooltip.value?.onClose(event)
+}
+
+const dismissHeadingPreview = (): void => {
+  if (headingPreview.value) headingTooltip.value?.onClose(undefined, 0)
+}
+
+const hideHeadingPreviewOnEscape = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') dismissHeadingPreview()
+}
+
+watch([sourceCode, () => currentFile.value?.id], () => {
+  dismissHeadingPreview()
+  headingPreview.value = null
+})
 
 const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; href?: string; image?: string }): void => {
   const muya = editor.value
@@ -2121,6 +2172,7 @@ onMounted(() => {
   })
   muya.on('reading-context-menu', showReadingContextMenu)
   document.addEventListener('selectionchange', readingSelectionChanged)
+  document.addEventListener('keydown', hideHeadingPreviewOnEscape, true)
   registerDocumentView((value) => muya.setReadOnly(value))
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
@@ -2189,6 +2241,7 @@ onMounted(() => {
 
   // Engine json-change emits operations; the desktop pipeline consumes a derived document snapshot.
   editor.value.on('json-change', () => {
+    dismissHeadingPreview()
     const tab = currentFile.value
     // Capture the tab ID before a later tab switch can redirect this update.
     if (loadingContent || !tab || tab.readOnly || !editor.value) return
@@ -2217,6 +2270,7 @@ onMounted(() => {
   // The engine does not emit `scroll`; listen on the scroll container directly
   // so the desktop can persist each tab's scroll position.
   scrollHandler = () => {
+    dismissHeadingPreview()
     documentViewChanged()
     if (!sourceCode.value) updateActiveHeading(container.getBoundingClientRect().top + 80)
     if (currentFile.value) {
@@ -2337,6 +2391,7 @@ onBeforeUnmount(() => {
   releaseViewState?.()
   registerDocumentView(null)
   document.removeEventListener('selectionchange', readingSelectionChanged)
+  document.removeEventListener('keydown', hideHeadingPreviewOnEscape, true)
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('drawing::preview-changed', refreshDrawingPreviews)
@@ -2451,6 +2506,50 @@ onBeforeUnmount(() => {
 .editor-component .mu-container {
   padding-top: 20px;
   padding-bottom: 100vh;
+}
+
+.editor-component .mu-container h1:is(.mu-atx-heading, .mu-setext-heading) > .mu-content {
+  overflow: clip visible;
+  text-overflow: ellipsis;
+  white-space: pre;
+
+  & .mu-line-end {
+    display: inline;
+  }
+
+  & code.mu-inline-rule {
+    white-space: inherit;
+  }
+
+  & :is(.mu-line-end, .mu-soft-line-break, .mu-hard-line-break) {
+    white-space: nowrap;
+  }
+
+  & br {
+    display: none;
+  }
+
+  & .mu-html-tag:has(> br)::after {
+    content: ' ';
+  }
+}
+
+/* Chromium can scroll the active line to the caret, then clipping restores its start. */
+.editor-component .mu-container h1:is(.mu-atx-heading, .mu-setext-heading).mu-active > .mu-content {
+  overflow: hidden;
+}
+
+.el-popper.is-light.editor-heading-tooltip {
+  box-sizing: border-box;
+  max-width: min(40rem, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  background: var(--floatBgColor);
+  color: var(--editorColor);
+  border-color: var(--floatBorderColor);
+  box-shadow: var(--floatShadow);
 }
 
 .typewriter .editor-component {
