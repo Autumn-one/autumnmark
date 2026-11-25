@@ -253,7 +253,7 @@ test('the Theme settings page keeps fixed and system choices separate and preser
     await expect(settings.locator('#setting-theme')).toHaveCount(0)
     await page.evaluate(() => window.electron.ipcRenderer.send('mt::open-setting-window', 'theme'))
     await expect(categories.getByRole('button', { name: 'Theme', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(settings.locator('.theme-card')).toHaveCount(34)
+    await expect(settings.locator('.theme-card')).toHaveCount(35)
     await settings.getByRole('textbox', { name: 'Search themes', exact: true }).fill('Dracula')
     await expect(settings.locator('.theme-card')).toHaveCount(1)
     await settings.getByRole('button', { name: 'Apply · Dracula', exact: true }).click()
