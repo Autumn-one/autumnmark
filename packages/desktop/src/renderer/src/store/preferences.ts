@@ -1,7 +1,7 @@
 import type { UserPreferences } from '@shared/types/preferences'
 import type { LocalTheme } from '@shared/localTheme'
 import { defineStore } from 'pinia'
-import { pineInkTheme } from 'common/theme'
+import { pineInkTheme, violetDiaryTheme } from 'common/theme'
 import { getCurrentLanguage, setLanguage } from '../i18n'
 
 export type EndOfLine = 'default' | 'lf' | 'crlf'
@@ -241,7 +241,7 @@ export const usePreferencesStore = defineStore('preferences', {
     theme: pineInkTheme.id,
     followSystemTheme: true,
     lightModeTheme: pineInkTheme.id,
-    darkModeTheme: 'dark',
+    darkModeTheme: violetDiaryTheme.id,
     customCss: '',
 
     spellcheckerEnabled: false,

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { sync as writeAtomic } from 'write-file-atomic'
-import { pineInkTheme } from 'common/theme'
+import { pineInkTheme, violetDiaryTheme } from 'common/theme'
 import {
   RECOVERY_DEFAULTS,
   type PreferenceSchemaEntry,
@@ -14,7 +14,7 @@ import schema from '@shared/preferences/schema.json'
 
 const schemaEntries: Record<string, PreferenceSchemaEntry> = schema
 const rules: Record<string, Rule> = schemaEntries
-const themeDefaultsVersion = 1
+const themeDefaultsVersion = 2
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 const accepts = (value: unknown, rule: Rule): boolean => {
@@ -45,7 +45,7 @@ export const preferenceDefaults = (dark = false): UserPreferences & Record<strin
   for (const [key, rule] of Object.entries(rules))
     if ('default' in rule) defaults[key] = structuredClone(rule.default)
   Object.assign(defaults, structuredClone(bundled), RECOVERY_DEFAULTS, { language: '' })
-  if (dark) defaults.theme = 'dark'
+  if (dark) defaults.theme = violetDiaryTheme.id
   return defaults as UserPreferences & Record<string, unknown>
 }
 
@@ -81,11 +81,21 @@ export class PreferenceFile {
       readOnly = (error as NodeJS.ErrnoException).code !== 'ENOENT'
     }
     this.readOnly = readOnly
-    if (!readOnly && this._raw.themeDefaultsVersion === undefined &&
-      this._value.followSystemTheme && this._value.lightModeTheme === 'light') {
-      this._value.lightModeTheme = pineInkTheme.id
-      if (this._value.theme === 'light') this._value.theme = pineInkTheme.id
-      this.update({})
+    const savedThemeDefaultsVersion =
+      typeof this._raw.themeDefaultsVersion === 'number' ? this._raw.themeDefaultsVersion : 0
+    if (!readOnly && this._value.followSystemTheme) {
+      let migrated = false
+      if (savedThemeDefaultsVersion < 1 && this._value.lightModeTheme === 'light') {
+        this._value.lightModeTheme = pineInkTheme.id
+        if (this._value.theme === 'light') this._value.theme = pineInkTheme.id
+        migrated = true
+      }
+      if (savedThemeDefaultsVersion < 2 && this._value.darkModeTheme === 'dark') {
+        this._value.darkModeTheme = violetDiaryTheme.id
+        if (this._value.theme === 'dark') this._value.theme = violetDiaryTheme.id
+        migrated = true
+      }
+      if (migrated) this.update({})
     }
   }
 
@@ -105,12 +115,17 @@ export class PreferenceFile {
     const next = { ...this._value, ...structuredClone(patch) }
     try {
       mkdirSync(path.dirname(this._pathname), { recursive: true })
-      // Stamp manual selections too so a later restart respects a return to GitBook Teal.
+      // Stamp manual selections too so later restarts respect switching back to legacy defaults.
+      const persistedThemeDefaultsVersion = Math.max(
+        typeof this._raw.themeDefaultsVersion === 'number' ? this._raw.themeDefaultsVersion : 0,
+        themeDefaultsVersion
+      )
       this._write(this._pathname, JSON.stringify({
         ...this._raw,
         ...next,
-        themeDefaultsVersion: this._raw.themeDefaultsVersion ?? themeDefaultsVersion
+        themeDefaultsVersion: persistedThemeDefaultsVersion
       }, null, 2))
+      this._raw.themeDefaultsVersion = persistedThemeDefaultsVersion
     } catch {
       return { status: 'failed', reason: 'storage-unavailable' }
     }

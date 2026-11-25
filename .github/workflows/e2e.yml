@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.54]
+    branches: [release/v0.24.55]
   workflow_dispatch:
     inputs:
       platform:
@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test test/e2e/document-chat.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/themes.spec.ts test/e2e/preferences-window.spec.ts test/e2e/theme-studio.spec.ts test/e2e/theme-collaboration.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

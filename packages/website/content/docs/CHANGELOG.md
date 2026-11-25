@@ -1,3 +1,9 @@
+## AutumnMark 0.24.55
+
+- Added 暮紫日记 (Violet Diary) as the built-in dark theme and refreshed 松风明月 (Pine Ink), the built-in light theme, with distinct styles for each heading level.
+- When following the system appearance, upgrades switch the previous default dark theme to 暮紫日记 once. You can still select Cadmium Dark in Theme settings.
+- Expanded the English and Chinese theme previews with a route map, more Markdown examples, and interactive sections.
+
 ## AutumnMark 0.24.54
 
 - The AI sidebar now groups the message field, compact model picker, and send button in one card. The message field grows as you type longer prompts.

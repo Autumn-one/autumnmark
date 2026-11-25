@@ -1,10 +1,10 @@
 # Themes
 
-AutumnMark includes 34 built-in themes organized into Light and Dark categories. Each theme provides a color scheme for the editor interface.
+AutumnMark includes 35 built-in themes organized into Light and Dark categories. Each theme provides a color scheme for the editor interface.
 
-The names below match the labels shown in the **Theme** menu. The default light theme, _松墨（Pine Ink）_, uses the id `pine-ink` in `preferences.json`. GitBook Teal uses the id `light`.
+The names below match the labels shown in the **Theme** menu. The default light theme, _松风明月_, uses the id `pine-ink` in `preferences.json`, and the default dark theme, _暮紫日记_, uses `violet-diary`. GitBook Teal uses `light`.
 
-On upgrade, the previous system light default switches to Pine Ink once. You can choose GitBook Teal again in Theme settings.
+On upgrade, the previous system light and dark defaults switch once to 松风明月 and 暮紫日记. You can choose GitBook Teal or Cadmium Dark again in Theme settings.
 
 ## Light Themes
 
@@ -16,7 +16,7 @@ On upgrade, the previous system light default switches to Pine Ink once. You can
 | **GitBook Teal**      | Centered titles, teal headings and list markers |
 | **Graphite Light**    | Cool gray-toned light theme                    |
 | **Gruvbox Light**     | Retro groove with warm, earthy colors          |
-| **松墨（Pine Ink）**  | Warm paper, pine-green headings and brass accents |
+| **松风明月**          | Warm paper, pine-green headings and brass accents |
 | **Rosé Pine Dawn**    | Elegant theme with subtle rose accents         |
 | **Solarized Light**   | Classic precision color scheme                 |
 | **Tokyo Night Light** | Modern light variant of Tokyo Night            |
@@ -26,6 +26,7 @@ On upgrade, the previous system light default switches to Pine Ink once. You can
 
 | Theme                 | Description                                 |
 | --------------------- | ------------------------------------------- |
+| **暮紫日记**          | Dusky purple with rose chapter accents and diamond subsection markers |
 | **Ayu Dark**          | Deep, comfortable dark theme                |
 | **Ayu Mirage**        | Softer dark variant of Ayu                  |
 | **Cadmium Dark**      | Clean, minimal dark theme                   |

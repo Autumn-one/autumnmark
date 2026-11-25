@@ -473,7 +473,7 @@
   "darkModeTheme": {
     "description": "Theme--Theme to use when system is in dark mode.",
     "type": "string",
-    "default": "dark"
+    "default": "violet-diary"
   },
   "customCss": {
     "description": "Custom CSS--Custom CSS to apply to the current theme.--internal",

@@ -5,6 +5,7 @@ import CodeMirror from 'codemirror'
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/mode/markdown/markdown'
 import 'codemirror/theme/railscasts.css'
+import ridgeMap from '../../../static/theme-preview/ridge-map.png?inline'
 import './assets/themes/codemirror/one-dark.css'
 import './codeMirror/index.css'
 import { builtinThemeCss } from './util/builtinTheme'
@@ -54,7 +55,12 @@ const sheet = document.createElement('style')
 document.head.append(chrome, sheet)
 const sidebarLabel = document.getElementById('preview-sidebar-label')
 const filenameLabels = document.querySelectorAll<HTMLElement>('#preview-tab, #preview-sidebar-file')
-const muya = new Muya(document.querySelector<HTMLElement>('#editor')!, { markdown: '', readOnly: true, hideQuickInsertHint: true })
+const muya = new Muya(document.querySelector<HTMLElement>('#editor')!, {
+  markdown: '',
+  readOnly: true,
+  hideQuickInsertHint: true,
+  resolveImagePreview: src => src === './ridge-map.png' ? { key: src, load: async() => ridgeMap } : undefined
+})
 muya.init({ focus: false })
 const cm = CodeMirror.fromTextArea(document.querySelector('textarea')!, { readOnly: 'nocursor', lineWrapping: true, mode: 'markdown' })
 let lastMarkdown: string | null = null
@@ -156,8 +162,8 @@ document.addEventListener('click', event => {
 }, true)
 document.addEventListener('keydown', event => {
   if (!document.body.classList.contains('catalog-preview') || event.isComposing) return
-  const onButton = event.target instanceof Element && event.target.closest('button')
-  const space = event.key === ' ' && !onButton && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
+  const onControl = event.target instanceof Element && event.target.closest('button, summary')
+  const space = event.key === ' ' && !onControl && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
   if (event.key === 'Escape' || space) {
     event.preventDefault()
     event.stopPropagation()

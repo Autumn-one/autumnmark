@@ -1,4 +1,9 @@
-export const pineInkTheme = { id: 'pine-ink', name: '松墨（Pine Ink）' } as const
+export const pineInkTheme = { id: 'pine-ink', name: '松风明月' } as const
+export const violetDiaryTheme = { id: 'violet-diary', name: '暮紫日记' } as const
+
+const namedThemes = [pineInkTheme, violetDiaryTheme]
+
+export const builtinThemeName = (id: string): string | undefined => namedThemes.find(theme => theme.id === id)?.name
 
 export const railscastsThemes: readonly string[] = Object.freeze([
   'dark',
@@ -22,7 +27,8 @@ export const railscastsThemes: readonly string[] = Object.freeze([
   'oxocarbon-dark',
   'kanagawa',
   'nightfox',
-  'cyberdream'
+  'cyberdream',
+  violetDiaryTheme.id
 ])
 
 export const oneDarkThemes: readonly string[] = Object.freeze(['one-dark'])
@@ -75,7 +81,8 @@ const themeBackgroundColors: ReadonlyMap<string, string> = new Map([
   ['tokyo-night', '#1a1b26'],
   ['tokyo-night-light', '#d5d6db'],
   ['tokyo-night-storm', '#24283b'],
-  ['ulysses', '#f3f3f3']
+  ['ulysses', '#f3f3f3'],
+  [violetDiaryTheme.id, '#221e2e']
 ])
 
 const DARK_FALLBACK_BACKGROUND = '#282828'
