@@ -112,7 +112,7 @@ test('places a caret beside a legacy drawing and keeps the scene when typing inl
 test('shows source drawings as atomic chips and opens the drawing under the clicked chip', async() => {
   const sourceMarkdown = `${blankInlineDrawing.repeat(2)}\n\n> ${blankDrawingFence.replace(/\n/g, '\n> ')}\n\n![Linked](linked.excalidraw)\n`
   const { app, page, filePath } = await launchWithMarkdown(sourceMarkdown, {
-    preferences: { language: 'en', autoSave: false }
+    preferences: { language: 'en', autoSave: false, theme: 'pine-ink', followSystemTheme: false }
   })
   try {
     await writeFile(join(dirname(filePath), 'linked.excalidraw'), blankDrawing)
@@ -120,6 +120,7 @@ test('shows source drawings as atomic chips and opens the drawing under the clic
     const source = page.locator('.source-code .CodeMirror')
     const chips = source.locator('.embedded-drawing-chip')
     await expect(chips).toHaveCount(4)
+    await expect(chips.first()).toHaveCSS('color', 'rgb(255, 255, 255)')
     await expect(source.locator('.CodeMirror-code')).toHaveText(/^(?![\s\S]*(?:base64|appState|\x60{3}))[\s\S]*$/)
     expect((await getMarkdownContent(page, app)).trim()).toBe(sourceMarkdown.trim())
 

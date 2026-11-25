@@ -97,7 +97,9 @@ test('opens a compact portrait image from either side of the picture', async() =
 test('embedded images survive save and mode changes and delete in one keystroke', async() => {
   test.setTimeout(60000)
   const markdown = `before ![dot](${src}) after`
-  const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { imageInsertAction: 'embed', language: 'en' } })
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { imageInsertAction: 'embed', language: 'en', theme: 'pine-ink', followSystemTheme: false }
+  })
   try {
     const atom = page.locator('.mu-editor .mu-embedded-image')
     await expect(atom).toHaveCount(1)
@@ -129,6 +131,7 @@ test('embedded images survive save and mode changes and delete in one keystroke'
     await enterSourceMode(page, app)
     const chip = page.locator('.CodeMirror .embedded-image-chip')
     await expect(chip).toHaveCount(1)
+    await expect(chip).toHaveCSS('color', 'rgb(255, 255, 255)')
     await expect(page.locator('.CodeMirror-code')).not.toContainText(png)
     expect((await getMarkdownContent(page, app)).trim()).toBe(markdown)
     await page.locator('.CodeMirror').evaluate(node => {

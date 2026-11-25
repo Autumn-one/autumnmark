@@ -276,18 +276,24 @@ watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentF
 .embedded-image-chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--editorColor10);
+  border: 1px solid;
   border-radius: 4px;
   padding: 0.1em 0.45em;
-  background: var(--floatHoverColor);
-  color: var(--editorColor);
   font: 0.85em var(--codeFontFamily, monospace);
   vertical-align: middle;
   cursor: pointer;
 }
 .mu-embedded-image:not(.mu-embedded-picture) {
+  border-color: var(--editorColor10);
+  background: var(--floatHoverColor);
+  color: var(--editorColor);
   flex-direction: column;
   max-width: 100%;
+}
+.embedded-image-chip {
+  color: inherit;
+  border-color: color-mix(in srgb, currentColor 25%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
 }
 .mu-embedded-video video {
   max-width: 100%;
