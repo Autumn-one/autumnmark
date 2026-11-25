@@ -1,6 +1,8 @@
 name: E2E Test
 
 on:
+  push:
+    branches: [release/v0.24.52]
   workflow_dispatch:
     inputs:
       platform:
@@ -24,8 +26,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify-release:
+    name: Verify release code before tagging
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Verify desktop code and unit tests
+        run: pnpm check && pnpm test:unit
+
+      - name: Test Muya drawing previews and image resize handles
+        run: pnpm -C packages/muya test src/ui/imageResizeBar/__tests__/imageResizeBar.spec.ts src/selection/__tests__/duplicateImageResize.spec.ts src/selection/__tests__/imageResizeBarCaretOnImageLine.spec.ts src/block/extra/diagram/__tests__/diagramPreview.spec.ts
+
   e2e:
-    runs-on: ${{ inputs.platform == 'windows' && 'windows-latest' || 'ubuntu-24.04' }}
+    runs-on: ${{ (github.event_name == 'push' || inputs.platform == 'windows') && 'windows-latest' || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -63,6 +82,24 @@ jobs:
         env:
           TEST_GREP: ${{ inputs.grep }}
         run: |
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            if pnpm -C packages/desktop exec playwright test \
+              test/e2e/image-resize-viewport.spec.ts \
+              test/e2e/excalidraw.spec.ts \
+              test/e2e/media-caret-alignment.spec.ts \
+              test/e2e/document-chat.spec.ts \
+              test/e2e/preferences-window.spec.ts \
+              test/e2e/issue-5596-unsaved-close.spec.ts \
+              test/e2e/announcement-layout.spec.ts \
+              test/e2e/picture-dimensions.spec.ts \
+              test/e2e/issue-5394-image-resize-reload.spec.ts; then
+              exit 0
+            fi
+            if [[ -d packages/desktop/test-results ]]; then
+              find packages/desktop/test-results -name error-context.md -exec cat {} +
+            fi
+            exit 1
+          fi
           tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
           if [[ "$RUNNER_OS" == Linux ]]; then
             xvfb-run --auto-servernum "${tests[@]}"

@@ -78,7 +78,7 @@ jobs:
             platform: windows
             arch: x64
           - name: macos-arm64
-            os: macos-15
+            os: macos-15-intel
             platform: macos
             arch: arm64
 
@@ -131,7 +131,21 @@ jobs:
           restore-keys: |
             electron-${{ matrix.os }}-
 
-      # Must be set before postinstall runs electron-rebuild
+      - name: Install optional binaries for both host and target architectures
+        if: matrix.name == 'macos-arm64'
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python <<'PY'
+          from pathlib import Path
+          import yaml
+          path = Path('pnpm-workspace.yaml')
+          config = yaml.safe_load(path.read_text())
+          config['supportedArchitectures'] = {'os': ['current'], 'cpu': ['x64', 'arm64']}
+          path.write_text(yaml.safe_dump(config, sort_keys=False))
+          PY
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      # Electron's V8 headers require C++20 for native modules on macOS.
       - name: Set C++20 for MacOS
         if: matrix.platform == 'macos'
         run: |
@@ -152,17 +166,65 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: build-mac
-        if: matrix.platform == 'macos'
-        run: pnpm run build:mac:${{ matrix.arch }}
+      - name: Cross-compile Apple Silicon native modules and packages
+        if: matrix.name == 'macos-arm64'
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_arch: arm64
+        run: |
+          pnpm -C packages/desktop exec electron-rebuild -f --arch=arm64
+          pnpm -C packages/desktop exec electron-vite build
+          build_log=$(mktemp "$RUNNER_TEMP/autumnmark-dmg.XXXXXX")
+          if pnpm -C packages/desktop exec electron-builder --mac --arm64 --publish never 2>&1 | tee "$build_log"; then
+            exit 0
+          fi
+          if ! grep -Eq 'hdiutil:.*Resource busy' "$build_log"; then
+            exit 1
+          fi
+          echo "::warning::Retrying macOS packaging after hdiutil reported a busy disk image"
+          pnpm -C packages/desktop exec electron-builder --mac --arm64 --publish never
+
+      - name: Verify Apple Silicon binary architectures
+        if: matrix.name == 'macos-arm64'
+        run: |
+          node <<'NODE'
+          const { existsSync } = require('node:fs')
+          const { join } = require('node:path')
+          const { execFileSync } = require('node:child_process')
+          const contents = 'dist/mac-arm64/AutumnMark.app/Contents'
+          const verify = path => {
+            execFileSync('lipo', [path, '-verify_arch', 'arm64'], { stdio: 'inherit' })
+            console.log('Verified ARM64: ' + path)
+          }
+          verify(join(contents, 'MacOS/AutumnMark'))
+          const modules = join(contents, 'Resources/app.asar.unpacked/node_modules')
+          for (const path of [
+            'ced/build/Release/ced.node',
+            'keytar/build/Release/keytar.node',
+            'native-keymap/build/Release/keymapping.node'
+          ]) verify(join(modules, path))
+          const ripgrep = join(modules, '@vscode/ripgrep-darwin-arm64/bin/rg')
+          const hasRipgrep = existsSync(ripgrep)
+          if (!hasRipgrep) throw new Error('The ARM64 search binary is missing')
+          verify(ripgrep)
+          NODE
 
       - name: build-win
         if: matrix.platform == 'windows'
         run: pnpm run build:win:${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify table resizing in the Windows release archive
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $target = Join-Path $env:RUNNER_TEMP 'autumnmark-release-check'
+          Expand-Archive -LiteralPath "dist/autumnmark-win-x64-$version.zip" -DestinationPath $target
+          $env:AUTUMNMARK_PACKAGED_EXE = (Get-Item "$target/autumnmark-editor.exe").FullName
+          pnpm -C packages/desktop exec playwright test packaged-table-layout.spec.ts --reporter=github
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.2
@@ -226,12 +288,25 @@ jobs:
         env:
           IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
         run: |
+          highlights=$(awk -v heading="## AutumnMark ${GITHUB_REF_NAME#v}" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' packages/website/content/docs/CHANGELOG.md)
           {
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               echo "## ❗ This is a pre-release"
               echo "- May contain bugs and unfinished features."
               echo ""
             fi
+            if [[ -n "$highlights" ]]; then
+              printf '## What’s new\n%s\n\n' "$highlights"
+            fi
+            echo "## First installation of the independent version"
+            echo "If you use AutumnMark 0.24.8 or earlier, download the new installer below. On Windows, uninstall the old AutumnMark first and keep its settings when prompted. The current version uses its own settings directory and can coexist with MarkText."
+            echo ""
+            echo "从 0.24.8 或更早版本升级时，请在下方下载安装包。Windows 用户请先卸载旧版 AutumnMark，并在提示时保留设置。新版使用独立的设置目录，可以与 MarkText 共存。"
+            echo ""
             echo "## ⚠️ Note for macOS users"
             echo "Builds are unsigned (no Apple Developer ID). After dragging AutumnMark into Applications, clear the quarantine flag once:"
             echo '```'

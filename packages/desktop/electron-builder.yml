@@ -78,7 +78,7 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
   - zh_TW
 
 electronFuses:
-  # The installed Skill invokes its bundled bridge with the app's Electron runtime.
+  # The installed AutumnMark Skill uses the app's Electron runtime to run its local bridge.
   runAsNode: true
   # Node's CLI parser inside Electron rejects `--debug` (DEP0062, exit 9) before
   # MarkText can read it (#5409). With this fuse off the packaged app ignores
@@ -92,7 +92,8 @@ electronFuses:
 asarUnpack:
   - resources/**
 win:
-  executableName: autumnmark
+  # NSIS uses the executable name for its default directory. Older releases used autumnmark.
+  executableName: autumnmark-editor
   artifactName: 'autumnmark-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
@@ -133,6 +134,7 @@ mac:
       arch: [arm64]
 dmg:
   artifactName: 'autumnmark-mac-${arch}-${version}.${ext}'
+  filesystem: APFS
   contents:
     - x: 410
       y: 240

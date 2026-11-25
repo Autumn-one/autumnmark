@@ -1,3 +1,258 @@
+## AutumnMark 0.24.52
+
+- Insert Excalidraw drawings directly into Markdown. New drawings are embedded by default, and you can choose to save a separate drawing file or open the drawing editor in a tab.
+- Reopen embedded drawings for editing, select them individually in source mode, and move the text cursor around images and drawings in the visual editor.
+- Ask the document assistant to replace the entire note. AutumnMark shows the proposed replacement for review before applying it.
+- Preview themes with a richer sample that includes diagrams, an embedded image, and inline diffs. Scroll the theme picker to switch between themes.
+- Improved save and cancel behavior when closing the editor with unsaved changes, including changes made in source mode or a drawing editor.
+
+## AutumnMark 0.24.51
+
+- Image resize handles follow the visible part of a hovered image as you scroll. They stay below the menu bar and remain draggable when the top of the image scrolls out of view.
+
+## AutumnMark 0.24.50
+
+- Upgrades switch the previous system light default to Pine Ink once. Fixed themes and other saved system themes keep their selections.
+- Pine Ink appears first in the local theme list when light themes are shown.
+
+## AutumnMark 0.24.49
+
+- 松墨（Pine Ink） is now the built-in default light theme, with a warm paper background, pine-green headings, and brass accents.
+
+## AutumnMark 0.24.48
+
+- Reloading the editor keeps the selected theme. External AI clients check that the editor has rendered the current theme before reading or changing it.
+
+## AutumnMark 0.24.47
+
+- Use the new AI sidebar to ask about the current document and edit Markdown or the active theme. Review and undo edits from the conversation, or browse document and theme changes in History.
+- Use the AutumnMark skill in a compatible external AI client to edit Markdown or a theme. When several documents are open, choose which one to edit.
+- Create and edit Excalidraw drawings in their own tabs. Insert a drawing into a Markdown document and include its preview in HTML and PDF exports.
+- Review and restore previous versions of a theme. History covers manual changes, AI edits, and saves.
+
+## AutumnMark 0.24.45
+
+- Themes have their own Settings page. Browse the official online catalog, install themes for offline use, and remove custom or downloaded themes from the local library.
+- Preview the same Markdown document in your current and candidate themes side by side. Switch between the rendered document and Markdown source, and close the preview with Space or by clicking outside it.
+- Create themes in a dedicated editor with live CSS preview, local drafts, theme import and export, and an optional AI assistant. The default sample covers headings, tables, task lists, code, equations, and footnotes.
+
+## AutumnMark 0.24.44
+
+- GitBook Teal is the new default light theme, with centered first-level headings, teal second-level headings, and updated typography for prose, lists, and quotes.
+- Second-level headings have 10 pixels of left padding so the text has room inside the teal bar.
+- Images, videos, code blocks, and tables retain their existing styles.
+
+## AutumnMark 0.24.43
+
+- Drag folders from your file manager onto the editor window to add them to the current sidebar. You can drop several folders at once. Dropping a folder again focuses its existing entry.
+
+## AutumnMark 0.24.42
+
+- The **Open Folder** buttons in the file and search sidebars now match **New File** on the welcome screen.
+- Right-click an empty area in a document to copy its full file path or the path of its containing folder.
+
+## AutumnMark 0.24.39
+
+- The editor stays at the table when you release a row or column resize, even if the text cursor is elsewhere in the document.
+- Press Backspace at the start of the paragraph immediately after a table to delete the table and keep the paragraph. Press Up from the blank line below the table to enter its last cell.
+
+## AutumnMark 0.24.38
+
+- Tables with automatic column widths fill the editing area by default. Saved column widths still apply.
+- Use the arrow keys to choose the number of rows and columns in the `/table` picker, then press Enter to insert the table. The picker also supports tables with just a header row.
+
+## AutumnMark 0.24.37
+
+- Drag the right or bottom border of a table to resize all columns or rows proportionally.
+- Drag an internal divider to transfer space between neighboring columns or rows while keeping the table's overall size fixed. Rows keep enough height for wrapped text.
+
+## AutumnMark 0.24.36
+
+- Fixed table resizing when custom CSS makes tables full width. Dragging the outer edge now changes the table width and keeps the internal dividers in place. Tables with automatic sizing still follow the theme, and columns saved as `100%` still fill the available space.
+
+## AutumnMark 0.24.35
+
+- Fixed table resizing when the table fills the editing area. Dragging its right edge now resizes the last column and keeps earlier dividers in place. The layout is preserved when you save and reopen the document.
+- Internal dividers now follow the pointer when saved column widths exceed the available space, including in horizontally scrolled tables.
+
+## AutumnMark 0.24.34
+
+- Drag cell edges to resize table columns and rows. Double-click an edge to restore automatic sizing. Markdown saves custom sizes, including a responsive 100% width when a drag fills the content area.
+- Drag the handles below columns or beside body rows to reorder them. Custom sizes move with their rows and columns, and the header stays at the top.
+- Code blocks wrap long lines by default. Existing preferences are respected.
+
+## AutumnMark 0.24.33
+
+- The announcement dialog shows live information from About below the announcements. The Alipay and WeChat Pay QR codes are stacked in a sidebar.
+
+## AutumnMark 0.24.32
+
+- Code block titles align with the horizontal center of the full block, including when line numbers are shown. Titles also appear centered in reading mode, printed documents, and HTML exports.
+
+## AutumnMark 0.24.31
+
+- Code block titles now sit in the center of the toolbar, between the language and the copy button. Click the title or language to edit the full Markdown fence information. The title reappears when you return to the code.
+
+## AutumnMark 0.24.30
+
+- Closing the last tab now shows the purple AutumnMark logo and “秋笺 AutumnMark” centered above the **New File** button. Open a document to return to the editor with the small logo beside its filename.
+- **New File** uses the signature purple in the default light theme and the theme’s primary button colors in other themes.
+
+## AutumnMark 0.24.28
+
+- The editor title bar now centers the AutumnMark logo and name to the left of the filename. In narrow windows, the logo stays visible and the app name folds away to make room for the filename.
+
+## AutumnMark 0.24.27
+
+- Hover over a code block in editing mode to see a single centered height-adjustment grip. Drag the short line to resize the block, or click the arrow above it to expand or collapse.
+- The code block's full-width bottom edge fades from transparent to `#eee`. Set `--mu-code-edge-background` in custom CSS to change it.
+
+## AutumnMark 0.24.25
+
+- The word count and image status now sit above the reading-mode notice, keeping its close button accessible even when the notice wraps in a narrow window.
+- Includes the scrollable code previews and full-width bottom-edge expand and collapse control in both editing and reading modes.
+
+## AutumnMark 0.24.24
+
+- Code previews in editing and reading modes now show scrollbars when code overflows. Turn off **Wrap Code Blocks** to scroll long lines horizontally.
+- Expand or collapse code with the centered arrow on the shallow, full-width gradient at the bottom edge. Copy stays in the top-right corner. Drag either side of the bottom edge to set the preview height.
+
+## AutumnMark 0.24.22
+
+- Code blocks in editing mode now use the same top toolbar as reading mode. Edit the language, expand or collapse long code, and copy the full source from the top of the block.
+- Scrolling over code moves the document. The caret stays visible when typing or pasting into a collapsed block, and dragging its bottom edge still sets the preview height.
+
+## AutumnMark 0.24.21
+
+- Open **View → Show Developer Tools** in the editor to inspect elements and try CSS rules. Save your rules in **Preferences → Theme → Custom CSS**.
+- This release includes the recent code block updates. In reading mode, expand a preview or copy its full source from the toolbar. When editing, pasting long code or selecting a block preserves your reading position.
+- Downloads are available for Windows x64, Linux x64 and Apple Silicon Macs (ARM64).
+
+## AutumnMark 0.24.20
+
+- Reading mode shows the code language, expand and collapse control, and copy button together above each code preview. Long lines wrap with their original indentation, and the mouse wheel scrolls the document over code.
+- Expand a preview to read the whole block in place, or copy its complete original source directly from the collapsed preview.
+
+## AutumnMark 0.24.19
+
+- Keep the document in place when pasting long code into a height-limited code block. The caret stays visible inside the block so you can continue typing.
+- Keep your reading position when selecting a code block or pressing Select All twice in a paragraph to select the whole document.
+
+## AutumnMark 0.24.18
+
+- Drag an embedded image to pan its preview at any zoom level, including when it fits inside the window.
+
+## AutumnMark 0.24.17
+
+- Drag the bottom edge of a code block to set how many rows are visible. The height is saved in Markdown and overrides compact mode for that block.
+- Double-click the bottom edge to follow compact mode again, or right-click it and choose **Always show full code**. Copying code and exporting to PDF include the complete code.
+
+## AutumnMark 0.24.16
+
+- Image previews open faster in long documents. The embedded image dialog uses a smaller default size and closes when you click the backdrop, including the area over the window title bar.
+- The embedded image badge stays in the top-right corner of tall pictures as you scroll within a compact preview.
+- Compact mode now limits only code blocks by default, showing 12 lines. You can set image and video height limits in Editor preferences.
+
+## AutumnMark 0.24.15
+
+- The custom title bar uses the Windows 11 Mica backdrop while the window has focus. It returns to the theme color when the window loses focus. Requires Windows 11 22H2 or later.
+- Convert linked or embedded images and videos in a Markdown file or across a folder from the file sidebar. The conversion dialog shows the counts for each media type before you start.
+- Open Settings faster. The app prepares the settings window in the background and reuses it when you reopen Settings.
+- Dismiss image previews by clicking outside the image. Drag to pan a zoomed image and use the context menu to copy it.
+
+## AutumnMark 0.24.14
+
+- See the filename and save indicator in the title bar, and word count, paragraph count, and embedded-image totals in a floating panel at the bottom right.
+- Embed one linked image from its context menu, or embed all images from the document background menu. Conversion reports progress and keeps links that could not be read.
+- Linked and embedded pictures align along their top edges. Embedded pictures have a small document badge. Hover over either kind to resize it, see its dimensions in pixels, and hold Shift to match another picture's width or height on the same row.
+- Set an embedded picture's exact width and height in either editing mode, lock its aspect ratio, or restore automatic sizing. The insertion caret is visible between adjacent pictures and after the last one.
+- Compact mode crops the preview of tall standalone pictures while keeping the resize handles accessible. Set the image, video, or code-block limit to zero to turn off compact mode for just that type.
+
+## AutumnMark 0.24.13
+
+- Paste Markdown or HTML with image links to embed the images in both editing modes. You can keep editing while images load. The editor shows progress for longer pastes and keeps the original links for images it cannot load.
+- Keep images near the compact-mode height limit stable when switching documents or resizing the editor.
+
+## AutumnMark 0.24.12
+
+- Embed local videos of 32 MiB or more with less memory use. Save the Markdown, move it on its own, and reopen it with the video intact.
+- Recover large embedded videos with unsaved edits after restarting the editor.
+- Use the playback controls directly in the editor to seek within a video.
+
+## AutumnMark 0.24.11
+
+- Insert videos from a file, by dragging them into the editor, or by pasting them. Link to a local file or embed the video directly in Markdown, then play it in the editor.
+- Use compact mode to limit the display height of images and videos and the number of visible code lines.
+- Preview, zoom, replace, copy, export, or drag out embedded images. Convert embedded images to local files from the context menu.
+- Embed newly inserted images by default on fresh installations. Existing image preferences still apply.
+- Reduce the amount of data sent between processes when saving recovery checkpoints for documents with embedded videos.
+
+## AutumnMark 0.24.10
+
+- Embed pasted or dropped images directly in Markdown as Base64. Click an embedded image to preview, replace, or delete it in either editing mode.
+- Drag headings in the outline to reorder whole sections, including their text and subheadings. Undo restores the previous order in one step.
+- Use heading suggestions to link within the current document or to a heading in another Markdown file. Suggestions appear in the visual editor and source mode.
+- Restore the previous workspace and its unsaved edits when opening a Markdown file from the file manager. Session checkpoints also continue during sustained editing.
+
+## AutumnMark 0.24.9
+
+- Install AutumnMark alongside MarkText with separate app identities, settings, and update caches.
+- Install this release manually when upgrading from 0.24.8 or earlier. On Windows, uninstall the previous AutumnMark installation first and keep its settings when prompted. The new version starts with its own settings directory.
+
+## AutumnMark 0.24.8
+
+- Switch between Files and Outline in the left sidebar. Use the keyboard to switch tabs or resize the sidebar, and keep your file tree open at the same spot when returning to Files.
+- Use the document context menu on blank lines and margins to show a saved file in your file manager or open its containing folder in the sidebar. This works in editing, reading, and source-code views.
+
+## AutumnMark 0.24.7
+
+- See download progress and speed in the software update dialog, continue the download in the background, and restart to install when ready.
+- Keep the unsaved indicator visible while long paths scroll in the title bar. Hover to see the end of the path, or use reduced motion to keep that view in place.
+
+## AutumnMark 0.24.6
+
+- Improved the layout and scrolling of announcements opened from the title bar.
+- Added Alipay and WeChat Pay donation QR codes beneath the announcement.
+
+## AutumnMark 0.24.5
+
+- Read announcements from the title bar and view project information in the About dialog.
+- Check for stable updates at launch and periodically on supported installations. Approve an update before it downloads.
+- Add content tabs without entering rename mode, and use the arrow keys to move between tab titles and the document.
+- Use a standalone bold paragraph as a fold block title, and move the caret into the title with the arrow keys.
+- Hover over a long breadcrumb to reveal the full path, and keep the unsaved indicator visible.
+- Refresh the AutumnMark application icon and link the in-app documentation to the installed release.
+
+## AutumnMark 0.24.4
+
+- Add collapsible Markdown blocks with a saved default open or closed state. Other Markdown readers can show the heading and full content.
+- Label fenced code blocks with a filename or title using `title="..."`.
+- Highlight selected code lines and inclusive ranges using fence metadata such as `{2-3,7}`.
+- Preserve code annotations in HTML export and show the complete contents of fold blocks in PDF exports and printing.
+
+## AutumnMark 0.24.3
+
+- Use theme-aware surfaces and spacing to distinguish the application menu, document tab bar, and file sidebar.
+- Mark the current document with a rounded highlight, and use folder icons and indentation to show the file tree hierarchy.
+
+## AutumnMark 0.24.2
+
+- The application menu spans the full window, with a theme-aware background and a divider above the file sidebar and document tabs.
+- Opened documents and folders have dedicated sections. Root folders collapse independently, and nested items have indentation guides.
+- The active document has a tinted row and a colored edge. The dot indicates unsaved edits.
+
+## AutumnMark 0.24.1
+
+- Use Left and Right on the content tab bar to focus the add button, then press Enter or Space to add and name a tab.
+- Press Enter on a focused content tab to select its title for renaming.
+
+## AutumnMark 0.24.0
+
+- Published the first stable AutumnMark release with update manifests and installers for Windows, macOS, and Linux.
+- Added Markdown content tabs with inline title editing, keyboard navigation, and Markdown round trips.
+- Improved caret restoration when switching documents and made Select All respect the focused text input.
+- Introduced the purple AutumnMark logo and added a tab action to open its containing folder in the sidebar.
+
 ## 0.23.0
 
 ### Features
