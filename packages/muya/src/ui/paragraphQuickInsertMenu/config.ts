@@ -56,6 +56,13 @@ export interface IQuickInsertMenuItem {
     }[];
 }
 
+export const DRAWING_INSERT_LABEL = 'insert-drawing';
+export const DRAWING_INSERT_ITEM = {
+    label: DRAWING_INSERT_LABEL,
+    subTitle: 'Excalidraw',
+    icon: flowchartIcon,
+};
+
 export const MENU_CONFIG: IQuickInsertMenuItem[] = [
     {
         name: 'basic blocks',
@@ -226,6 +233,18 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     code: 'KeyJ',
                 },
                 icon: htmlIcon,
+            },
+            {
+                title: 'Content tabs',
+                subTitle: '<!-- tabs -->',
+                label: 'content-tabs',
+                icon: newTableIcon,
+            },
+            {
+                title: 'Fold block',
+                subTitle: '<!-- fold -->',
+                label: 'fold-block',
+                icon: quoteIcon,
             },
             {
                 title: 'Code Block',

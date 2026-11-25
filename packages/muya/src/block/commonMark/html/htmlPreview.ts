@@ -1,7 +1,10 @@
 import type { Muya } from '../../../muya';
 import type { IHtmlBlockState, TState } from '../../../state/types';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
+import { mountVideoPlayer, openEmbeddedMedia } from '../../../inline/embeddedImages';
 import { sanitize } from '../../../utils';
+import { abbreviatePreviewText, findEmbeddedMedia } from '../../../utils/embeddedImage';
+import { resolveVideoSource } from '../../../utils/fileUrl';
 import { getImageSrc } from '../../../utils/image';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
@@ -63,6 +66,8 @@ class HTMLPreview extends Parent {
         else {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlContent, 'text/html');
+            if (this.muya.options.editEmbeddedImage)
+                abbreviatePreviewText(doc.body);
             const imgs = doc.documentElement.querySelectorAll('img');
 
             for (const img of imgs) {
@@ -73,6 +78,26 @@ class HTMLPreview extends Parent {
 
             this.domNode!.innerHTML
                 = doc.documentElement!.querySelector('body')!.innerHTML;
+            if (this.muya.options.editEmbeddedImage && /<video\b/i.test(html)) {
+                const videos = findEmbeddedMedia(html).filter(media => media.kind === 'video' && media.preview);
+                const elements = this.domNode!.querySelectorAll('video');
+                for (const element of elements) {
+                    const source = element.getAttribute('src') ?? element.querySelector('source')?.getAttribute('src');
+                    const index = videos.findIndex(video => video.src.replace(/&amp;/g, '&') === source);
+                    if (index < 0 || !(element instanceof HTMLVideoElement))
+                        continue;
+                    const [media] = videos.splice(index, 1);
+                    element.src = this.muya.options.videoAttachments?.playback(media.src) ?? resolveVideoSource(media.src);
+                    const activate = (event: Event) => {
+                        const block = this.parent?.firstContentInDescendant();
+                        if (block && block.text === html)
+                            openEmbeddedMedia(block, media, html.slice(media.start, media.end), media.name ?? '', media.start, event);
+                    };
+                    const wrapper = document.createElement('span');
+                    element.replaceWith(wrapper);
+                    mountVideoPlayer(wrapper, element, media.name || media.label, activate);
+                }
+            }
         }
     }
 

@@ -36,6 +36,24 @@ const metadata = (snapshot: DocumentSnapshot): RendererDocumentCheckpoint => ({
 })
 
 describe('document identity and content lifecycle', () => {
+  it('reconstructs a recovery snapshot from acknowledged ranges and rejects stale or invalid ranges', () => {
+    const { registry, snapshot, windowId } = registration(true)
+    const meta = { ...metadata(snapshot), content: { kind: 'recovery' as const, contentRevision: 1 } }
+    const update = { documentId: snapshot.id, contentRevision: 1, markdown: 'x|y',
+      reuse: { revision: 0, spans: [{ at: 1, from: 3, length: 5 }, { at: 2, from: 0, length: 3 }] } }
+    const prepared = registry.prepare(windowId, meta, update)
+    registry.apply([prepared])
+    expect(registry.text(snapshot.id)).toBe('xginal|Oriy')
+    expect(registry.pendingRecords(20)).toMatchObject([{ markdown: 'xginal|Oriy', contentSha256: contentSha256('xginal|Oriy') }])
+    expect(() => registry.prepare(windowId, meta, update)).toThrow(/base/)
+    for (const spans of [
+      [{ at: 1, from: -1, length: 1 }], [{ at: 4, from: 0, length: 1 }],
+      [{ at: 1, from: 2, length: 100 }], [{ at: 2, from: 0, length: 1 }, { at: 1, from: 1, length: 1 }]
+    ]) {
+      expect(() => registry.prepare(windowId, meta, { ...update, reuse: { revision: 1, spans } })).toThrow(/span/)
+    }
+    expect(registry.text(snapshot.id)).toBe('xginal|Oriy')
+  })
   it('relocates dirty text without changing identity, revision or the original disk baseline', () => {
     const { registry, snapshot, windowId } = registration(true)
     const baseline = registry.baseline(snapshot.id)
@@ -234,7 +252,7 @@ describe('document identity and content lifecycle', () => {
       )
     ])
     expect(() => registry.prepareClose(snapshot.id, false, 10)).toThrow(/unsaved/i)
-    registry.discard(snapshot.id)
+    registry.finishClose(registry.prepareClose(snapshot.id, true, 10))
     expect(registry.pendingRecords(10)).toMatchObject([
       { status: 'discarded', documentId: snapshot.id }
     ])

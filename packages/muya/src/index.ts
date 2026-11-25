@@ -1,8 +1,13 @@
 export type { IHeadingFoldState } from './block/folding';
 export type { IClipboardImageCopy } from './clipboard/image';
+export { imageDocumentMarkdown } from './clipboard/markdownSource';
+export { embeddedImageDestination, findDocumentImages, findLinkedDocumentMedia, findPastedImageSources } from './clipboard/pastedImageSources';
 export type { ISerializedHistory } from './history';
 export type { ILocale } from './i18n/types';
 
+export { headingLinkAt } from './inline/headingLink';
+export { embeddedPictureSize } from './inline/imageDimensions';
+export { linkedImageAt } from './inline/linkedImage';
 export { de, en, es, fr, it, ja, ko, nl, pt, ru, tr, zhCN, zhTW } from './locales';
 export { Muya } from './muya';
 export type { IMatch, IReplaceOption, ISearchOption } from './search/types';
@@ -20,13 +25,14 @@ export type {
     TSelectionState,
 } from './selection/types';
 export type { ITocItem } from './state/getTOC';
+export { getMarkdownOutline, getStateSections } from './state/markdownOutline';
 export { MarkdownToHtml } from './state/markdownToHtml';
 export type { IExportHeading, IHtmlExport, IHtmlExportOptions } from './state/markdownToHtml';
 export { renderToStaticHTML } from './state/renderToStaticHTML';
 export type { IRenderToStaticHTMLOptions } from './state/renderToStaticHTML';
 export type { TState } from './state/types';
 export { ChangeSource } from './types';
-export type { IMuyaOptions } from './types';
+export type { IDrawingInsertion, IMuyaOptions } from './types';
 
 export { CodeBlockLanguageSelector } from './ui/codeBlockLanguageSelector';
 // Export ui tools.
@@ -49,11 +55,16 @@ export { TableColumnToolbar } from './ui/tableColumnToolbar';
 export { TableDragBar } from './ui/tableDragBar';
 export { TableRowColumMenu } from './ui/tableRowColumMenu';
 export type { IKeyboardShortcutOptions, IShortcutHintOptions } from './ui/types';
+export { decodeInlineDrawing, encodeInlineDrawing, isInlineDrawingSource } from './utils/diagram/drawingData';
+export { findEmbeddedDrawings, inlineDrawingToMarkdown } from './utils/diagram/drawingSource';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions } from './utils/diagram/render';
+export { bindEmbeddedImageEvents, findEmbeddedImages, findEmbeddedMedia, replaceEmbeddedImage } from './utils/embeddedImage';
+export type { IEmbeddedImage, IEmbeddedImageEdit, IImageDimensions } from './utils/embeddedImage';
 export type { IImageInfo } from './utils/image';
-export { getImageInfo } from './utils/image';
+export { getImageInfo, imageToMarkdown, standaloneRemoteMarkdownImage } from './utils/image';
 export { escapeHTML, sanitize, unescapeHTML, wordCount } from './utils/index';
 export { default as logger } from './utils/logger';
 export type { TLogLevel, TLogSink } from './utils/logger';
+export { getClipboardImageFile, standaloneImageSource, videoFromTransfer } from './utils/paste';
 export { generateGithubSlug } from './utils/slug';

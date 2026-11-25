@@ -1,3 +1,4 @@
+import type { ICodeLineRange } from './codeFenceAnnotations';
 import { CLASS_NAMES } from '../config';
 
 // A trailing newline counts as an empty visible row. Count without allocating
@@ -34,7 +35,7 @@ export function syncLineNumbersSpans(wrapper: HTMLElement, count: number): void 
 
 // Viewport tops of the logical lines in `codeEl`, in order. Lines at the end
 // with nothing to measure are left out.
-function measureLineTops(codeEl: HTMLElement): number[] {
+export function measureLineTops(codeEl: HTMLElement): number[] {
     const text = codeEl.textContent ?? '';
 
     const lineStarts: number[] = [0];
@@ -83,12 +84,12 @@ function measureLineTops(codeEl: HTMLElement): number[] {
 export function repositionLineNumberSpans(
     wrapper: HTMLElement,
     codeEl: HTMLElement,
+    tops = measureLineTops(codeEl),
 ): void {
     const spans = Array.from(wrapper.children) as HTMLElement[];
     if (spans.length === 0)
         return;
 
-    const tops = measureLineTops(codeEl);
     const measuredCount = Math.min(tops.length, spans.length);
     // Anchor to the first text line, not the wrapper top, to cancel line-box leading.
     for (let i = 0; i < measuredCount; i++)
@@ -102,4 +103,22 @@ export function repositionLineNumberSpans(
             spans[i].style.top = i > 0 ? `${prevTop + lineH}px` : '0px';
         }
     }
+}
+
+/** Paint full logical lines, including all visual rows of a wrapped source line. */
+export function lineHighlightBackground(tops: number[], height: number, ranges: ICodeLineRange[]): string {
+    const origin = tops[0];
+    if (origin === undefined || height <= 0)
+        return '';
+
+    const stops = ['transparent 0'];
+    const ink = 'var(--mu-code-line-highlight)';
+    for (const { start, end } of ranges) {
+        if (start > tops.length)
+            break;
+        const from = tops[start - 1] - origin;
+        const to = end < tops.length ? tops[end] - origin : height;
+        stops.push(`transparent ${from}px`, `${ink} ${from}px`, `${ink} ${to}px`, `transparent ${to}px`);
+    }
+    return stops.length > 1 ? `linear-gradient(to bottom, ${stops.join(', ')})` : '';
 }

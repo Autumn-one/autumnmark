@@ -2,9 +2,13 @@ import type { ILexOption } from './types';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import Prism from 'prismjs';
+import { codeFenceLanguage } from '../codeFenceAnnotations';
 import compactNestedLists from './compactNestedLists';
+import codeFenceAnnotationsExtension from './extensions/codeFenceAnnotations';
+import contentTabsExtension from './extensions/contentTabs';
 import emojiExtension from './extensions/emoji';
 import fancyListsHtmlExtension from './extensions/fancyListsHtml';
+import foldBlocksExtension from './extensions/foldBlocks';
 import footnoteExtension from './extensions/footnote';
 import githubAlertsExtension from './extensions/githubAlerts';
 import inlineDelimitersExtension from './extensions/inlineDelimiters';
@@ -14,6 +18,7 @@ import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBa
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import referenceDefinitionTabs from './extensions/referenceDefinitionTabs';
 import superSubScriptExtension from './extensions/superSubscript';
+import tableLayoutExtension from './extensions/tableLayout';
 import fm, { frontMatterRender } from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
@@ -24,9 +29,11 @@ const DIAGRAM_TYPE = [
     'vega-lite',
     'flowchart',
     'sequence',
+    'excalidraw',
 ];
 
-function highlight(code: string, lang: string) {
+function highlight(code: string, _language: string, info: string) {
+    const lang = codeFenceLanguage(info);
     if (!lang)
         return code;
 
@@ -47,7 +54,9 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
         = options;
 
     // Use a fresh Marked instance; repeated use() chains walkTokens and corrupts repeated renders.
-    const marked = new Marked(markedHighlight({ highlight }), referenceDefinitionTabs());
+    const marked = new Marked(markedHighlight({ highlight }), foldBlocksExtension(), referenceDefinitionTabs());
+    marked.use(codeFenceAnnotationsExtension());
+    marked.use(tableLayoutExtension());
 
     marked.use({
         walkTokens: walkTokens({ texMathDollars, texMathGfm }),
@@ -104,6 +113,7 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
 
     marked.use(multilineBlockquoteExtension(multilineBlockquote === true));
     marked.use(githubAlertsExtension(options.githubAlerts === true));
+    marked.use(contentTabsExtension());
 
     if (footnote)
         marked.use(footnoteExtension());

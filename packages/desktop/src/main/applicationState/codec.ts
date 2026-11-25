@@ -68,8 +68,9 @@ const layout = (value: unknown): WindowLayoutState => {
   if (object(value.sidebar)) {
     const sidebar = value.sidebar
     if (typeof sidebar.visible === 'boolean') result.sidebar.visible = sidebar.visible
-    if (sidebar.activeView === 'files' || sidebar.activeView === 'search')
-      result.sidebar.activeView = sidebar.activeView
+    const activeView = sidebar.activeView === 'themeAi' ? 'documentChat' : sidebar.activeView
+    if (activeView === 'files' || activeView === 'outline' || activeView === 'search' || activeView === 'documentChat')
+      result.sidebar.activeView = activeView
     if (finite(sidebar.preferredWidthPx))
       result.sidebar.preferredWidthPx = Math.max(220, sidebar.preferredWidthPx)
     if (object(sidebar.openedFiles)) {
@@ -78,13 +79,6 @@ const layout = (value: unknown): WindowLayoutState => {
       if (nonnegative(sidebar.openedFiles.preferredHeightPx))
         result.sidebar.openedFiles.preferredHeightPx = sidebar.openedFiles.preferredHeightPx
     }
-  }
-  if (object(value.outline)) {
-    if (typeof value.outline.visible === 'boolean') result.outline.visible = value.outline.visible
-    if (value.outline.position === 'left' || value.outline.position === 'right')
-      result.outline.position = value.outline.position
-    if (finite(value.outline.preferredWidthPx))
-      result.outline.preferredWidthPx = Math.max(180, Math.min(600, value.outline.preferredWidthPx))
   }
   if (object(value.tabBar) && typeof value.tabBar.visible === 'boolean')
     result.tabBar.visible = value.tabBar.visible

@@ -26,6 +26,7 @@ import { indentationWidth, indentToTabStop, indentWithTabs, removeIndent } from 
 import { continuesList, formatListMarker, minSpacesAfterMarker, parseListMarker } from '../utils/listMarker';
 import logger from '../utils/logger';
 import stringWidth from '../utils/stringWidth';
+import { tableLayoutComment } from '../utils/tableLayout';
 import { BlockBoundaryResolver } from './blockBoundary';
 import { isAnyListState, isAtxHeadingState, isSetextHeadingState } from './types';
 
@@ -538,6 +539,9 @@ export default class ExportMarkdown {
         const result: string[] = [];
         const row = state.children.length;
         const tableData = [];
+        const comment = tableLayoutComment(state);
+        if (comment)
+            result.push(indent + comment, indent.trimEnd());
 
         for (const rowState of state.children) {
             tableData.push(

@@ -2,7 +2,9 @@ import type { ILexOption } from './types';
 import { Marked } from 'marked';
 import { EXPORT_DOMPURIFY_CONFIG } from '../../config';
 import { sanitize } from '../index';
+import codeFenceAnnotationsExtension from './extensions/codeFenceAnnotations';
 import fancyListsHtmlExtension from './extensions/fancyListsHtml';
+import foldBlocksExtension from './extensions/foldBlocks';
 import footnoteExtension from './extensions/footnote';
 import githubAlertsExtension from './extensions/githubAlerts';
 import inlineDelimitersExtension from './extensions/inlineDelimiters';
@@ -12,6 +14,7 @@ import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBa
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import referenceDefinitionTabs from './extensions/referenceDefinitionTabs';
 import superSubScriptExtension from './extensions/superSubscript';
+import tableLayoutExtension from './extensions/tableLayout';
 import fm, { frontMatterRender } from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
@@ -23,7 +26,9 @@ export function getClipBoardHtml(src: string, options: ILexOption = {}) {
     let html = '';
 
     // Use a fresh Marked instance; global use() chains hooks and leaks options across renders.
-    const marked = new Marked(referenceDefinitionTabs());
+    const marked = new Marked(foldBlocksExtension(true), referenceDefinitionTabs());
+    marked.use(codeFenceAnnotationsExtension());
+    marked.use(tableLayoutExtension());
 
     marked.use({
         walkTokens: walkTokens({ texMathDollars, texMathGfm }),

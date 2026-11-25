@@ -15,6 +15,7 @@
         :placeholder="t('preferences.search.placeholder')"
         :trigger-on-focus="false"
         :aria-label="t('preferences.search.placeholder')"
+        @focus="keybindings.ensureLoaded()"
         @select="handleSelect"
       >
         <template #prefix>
@@ -66,7 +67,8 @@ const state = ref('')
 const keybindings = useKeybindingsStore()
 const entries = computed(() => [...getTranslatedSearchContent(), ...getKeybindingSearchContent(keybindings.commands)])
 
-const querySearch = (query: string, callback: (results: SearchEntry[]) => void): void => {
+const querySearch = async (query: string, callback: (results: SearchEntry[]) => void): Promise<void> => {
+  await keybindings.ensureLoaded()
   callback(entries.value.filter(entry => matchesSearch(entry, query)))
 }
 const handleSelect = (item: SearchEntry | undefined): void => {
@@ -81,8 +83,8 @@ const onIpcCategoryChange = (_event: unknown, category: unknown): void => {
   if (target) void router.push({ path: target.path })
 }
 onMounted(() => {
-  void keybindings.ensureLoaded()
   window.electron.ipcRenderer.on('settings::change-tab', onIpcCategoryChange)
+  window.electron.ipcRenderer.send('mt::settings-ready')
 })
 onUnmounted(() => {
   window.electron.ipcRenderer.removeAllListeners('settings::change-tab')

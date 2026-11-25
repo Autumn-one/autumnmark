@@ -50,6 +50,7 @@ const searchSection = computed(() => typeof route.query.setting === 'string'
   : undefined)
 
 const preferenceStore = usePreferencesStore()
+window.electron.ipcRenderer.send('mt::ask-for-user-data')
 
 const { imageInsertAction } = storeToRefs(preferenceStore)
 

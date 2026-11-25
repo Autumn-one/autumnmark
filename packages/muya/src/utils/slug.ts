@@ -7,3 +7,13 @@ export function generateGithubSlug(text: string): string {
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-');
 }
+
+export function uniqueHeadingSlug(text: string, seen: Set<string>): string {
+    const base = generateGithubSlug(text) || 'heading';
+    let slug = base;
+    let suffix = 1;
+    while (seen.has(slug))
+        slug = `${base}-${suffix++}`;
+    seen.add(slug);
+    return slug;
+}

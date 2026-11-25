@@ -168,7 +168,8 @@ describe('empty-state button readability (#4774)', () => {
 
   for (const component of COMPONENTS) {
     it(`${component.name} label is at least as readable as the standard primary button, in every theme`, () => {
-      const { fgVar, bgVar } = extractButtonVars(component.path)
+      expect(readFileSync(component.path, 'utf8')).toContain('<EmptyStateButton')
+      const { fgVar, bgVar } = extractButtonVars(resolve(RENDERER, 'components/emptyStateButton.vue'))
       const failures: string[] = []
 
       for (const file of themeFiles) {

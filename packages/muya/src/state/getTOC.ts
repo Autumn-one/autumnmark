@@ -1,10 +1,11 @@
 import type Content from '../block/base/content';
 import type Parent from '../block/base/parent';
+import type { IInlineParseOptions } from '../inline/parser/types';
 import type { Muya } from '../muya';
 import { parseInline } from '../inline/parser/lexer';
 import { tokensToInlineHtml, tokensToPlainText } from '../inline/projection';
 import { getUniqueId } from '../utils';
-import { generateGithubSlug } from '../utils/slug';
+import { generateGithubSlug, uniqueHeadingSlug } from '../utils/slug';
 
 export interface ITocItem {
     content: string;
@@ -12,6 +13,7 @@ export interface ITocItem {
     lvl: number;
     slug: string;
     githubSlug: string;
+    anchor: string;
 }
 
 interface IHeadingBlock extends Parent {
@@ -19,6 +21,17 @@ interface IHeadingBlock extends Parent {
 }
 
 const slugCache = new WeakMap<Parent, string>();
+
+export function headingLabel(text: string, parseOptions: IInlineParseOptions, seen: Set<string>) {
+    const tokens = parseInline(text, parseOptions);
+    const content = tokensToPlainText(tokens).trim();
+    return {
+        content,
+        contentHtml: tokensToInlineHtml(tokens).trim(),
+        githubSlug: generateGithubSlug(content),
+        anchor: uniqueHeadingSlug(content, seen),
+    };
+}
 
 export function stableSlug(block: Parent): string {
     let slug = slugCache.get(block);
@@ -40,6 +53,7 @@ export function getTOC(muya: Muya): ITocItem[] {
     const labels = muya.editor.inlineEngine.collectReferenceDefinitions();
 
     const items: ITocItem[] = [];
+    const seen = new Set<string>();
 
     for (const node of scrollPage.children.iterator()) {
         const { blockName } = node;
@@ -48,27 +62,17 @@ export function getTOC(muya: Muya): ITocItem[] {
 
         const block = node as IHeadingBlock;
         const head = block.children.head as Content | null;
-        const text = head?.text ?? '';
+        const text = muya.editor.contentTabs.headingSource(block, head?.text ?? '');
 
-        // One token pass feeds both serializations so the outline's shown text
-        // and its slug stay in step; `githubSlug` has to match the anchor id the
-        // HTML export injects from `heading.textContent`.
         const { cjkEmphasis, superSubScript, footnote, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, highlightSyntax, inlineDiff } = muya.options;
-        const tokens = parseInline(text, {
-            profile: blockName === 'atx-heading' ? 'atx-heading' : 'setext-heading',
-            labels,
-            options: { cjkEmphasis, superSubScript, footnote, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, highlightSyntax, inlineDiff },
-        });
-
-        const content = tokensToPlainText(tokens).trim();
-        const contentHtml = tokensToInlineHtml(tokens).trim();
-
         items.push({
-            content,
-            contentHtml,
+            ...headingLabel(text, {
+                profile: blockName,
+                labels,
+                options: { cjkEmphasis, superSubScript, footnote, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, highlightSyntax, inlineDiff },
+            }, seen),
             lvl: block.meta.level,
             slug: stableSlug(block),
-            githubSlug: generateGithubSlug(content),
         });
     }
 

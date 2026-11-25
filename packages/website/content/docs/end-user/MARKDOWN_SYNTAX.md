@@ -28,6 +28,9 @@ This guide introduces Markdown syntax supported by MarkText and the optional ext
   - [Superscript and subscript](#superscript-and-subscript)
   - [Math Formulas](#math-formulas)
 - [Others](#others)
+  - [Content tabs](#content-tabs)
+  - [Fold blocks](#fold-blocks)
+  - [Code block titles and highlighted lines](#code-block-titles-and-highlighted-lines)
   - [GitHub Alerts](#github-alerts)
   - [Highlight](#highlight)
   - [Inline diff](#inline-diff)
@@ -714,6 +717,129 @@ alone.
 ## Others
 
 Additional supported conventions and editor rendering features are grouped here. GitHub Alerts and emoji shortcodes are separate from the formal GFM extensions listed above; inline diff and multiline blockquotes follow GitLab conventions.
+
+### Content tabs
+
+Wrap ordinary Markdown in standalone `<!-- tabs -->` and `<!-- /tabs -->`
+comments. Inside the group, an ATX heading whose text starts with `|` followed
+by a space or tab starts a content tab:
+
+```markdown
+<!-- tabs -->
+
+#### | Windows
+
+Windows installation instructions.
+
+#### | macOS
+
+macOS installation instructions.
+
+#### Troubleshooting
+
+This ordinary heading and its body still belong to the macOS tab.
+
+<!-- /tabs -->
+
+This paragraph is outside the group.
+```
+
+The next marked heading or closing comment ends the current tab. Heading
+levels do not determine tab boundaries. `#### \\| Windows` is equivalent to
+`#### | Windows`; `#### |Windows` and `#### || Windows` remain ordinary headings.
+Headings in code, quotes, and lists do not split an enclosing group. Complete
+groups can be nested, and each group uses only its own direct headings.
+Content before the first tab heading stays visible above the panels. An
+unclosed group or a group without tab headings keeps its ordinary Markdown
+appearance. Markers are case-sensitive and must occupy their own lines.
+
+Type `/tabs` in a top-level paragraph to insert a group and select its first tab.
+Click `+` to append and select a tab in one undo step. Click a tab to switch with
+the mouse. Press Up from the first line of a panel or Down from the block above
+the tab bar to focus the active tab. Double-click a title or press Enter on a
+focused tab to edit it. Press Enter or Escape while editing to keep the changes
+and return focus to the title. From a focused title, press Up to move above the
+tab bar or Down to enter the panel. If you came from the panel, Down returns to
+the previous caret position. Use Left/Right or Home/End to switch tabs. Right
+from the last tab or Left from the first focuses `+`. Press Enter or Space there
+to add and select a tab.
+Use the `</>` button to edit the group's source blocks. Search
+and outline navigation reveal the target tab automatically. Switching tabs
+does not modify the document or its undo history.
+
+Saving preserves the comments and heading markers. Other Markdown readers
+display ordinary headings and all content, including the visible `|` prefix.
+HTML/PDF exports and printing expand all panels in source order. HTML exports
+remove the tab prefix from recognized tab headings and need no scripts.
+
+### Fold blocks
+
+Start with a Markdown heading or a standalone bold paragraph such as
+`**View retry steps**` or `__View retry steps__`. Put it before the body,
+between two standalone comments at the document level.
+
+```markdown
+<!-- fold -->
+
+### View retry steps
+
+After a `429` response, wait as indicated by `Retry-After` before retrying.
+
+<!-- /fold -->
+```
+
+`<!-- fold -->` starts collapsed. Use `<!-- fold open -->` to start expanded.
+Type `/fold` in the editor to insert a block and edit its title. Click the title
+to toggle the current view. Use ↑ or ↓ from a neighboring line to move the
+caret into the title and edit it. The block menu's **Open by default** action
+changes the opening comment. Other Markdown readers display the title and all
+its content as ordinary Markdown. HTML exports have an interactive disclosure.
+PDF exports and printing show the complete contents.
+
+### Code block titles and highlighted lines
+
+Add a quoted `title` and a brace-delimited line selection to the opening fence.
+
+````markdown
+```ts title="request.ts" {2-3,6}
+const response = await fetch('/api/items', {
+  headers: { Accept: 'application/json' },
+  signal: AbortSignal.timeout(5000)
+})
+if (response.status === 429) {
+  console.log(response.headers.get('Retry-After'))
+}
+```
+````
+
+The title and line selection can be used independently. Line numbers start at
+1 in the source, including empty lines. Ranges include both endpoints, and
+commas can combine ranges and individual lines. The code block keeps its usual
+syntax highlighting and the extra fence metadata is saved with the Markdown.
+
+Drag the bottom edge of a code block to set the maximum number of visible rows.
+For example, `max-lines=18` on the opening fence keeps up to 18 rows visible,
+including wrapped rows. This overrides compact mode for that block. Shorter
+blocks fit their content. The expand button shows the full block temporarily.
+
+In editing and reading modes, click the arrow in the center of the bottom edge
+to expand or collapse a long block. Scroll within the preview to see more rows.
+With **Wrap Code Blocks** turned off, the horizontal scrollbar lets you read long
+lines in either mode. The copy button above the block copies all of its source.
+In editing mode, click the language to change it. Hover over the code to see
+the single horizontal grip centered on the bottom edge. Drag the grip to
+adjust the preview height, or click the arrow above it to expand or collapse.
+
+To customize the full-width gradient, find `span.mu-code-edge:not(:empty)` in
+DevTools' Elements panel. The arrow is its child button. In **Preferences →
+Theme → Custom CSS**, set `--mu-code-edge-background` on `.mu-code-block`
+to a CSS color or gradient.
+
+Right-click the bottom edge to open the block menu.
+Double-click the edge or choose **Follow compact mode** in the menu
+to remove the override. **Always show full code** writes `max-lines=none`.
+Adjusting an indented code block converts it to a fenced block. Copying code,
+printing and exporting to PDF include the full contents.
 
 ### GitHub Alerts
 

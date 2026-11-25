@@ -2,6 +2,7 @@ import type { VNode } from 'snabbdom';
 import type Content from '../../block/base/content';
 import type Parent from '../../block/base/parent';
 import type AtxHeading from '../../block/commonMark/atxHeading';
+import type CodeBlock from '../../block/commonMark/codeBlock';
 import type { Muya } from '../../index';
 import type {
     IBulletListState,
@@ -19,6 +20,7 @@ import { atxHeadingBody } from '../../state/headings';
 import { isAnyListState, isAtxHeadingState } from '../../state/types';
 
 import { deepClone, isHTMLElement } from '../../utils';
+import { getBlock } from '../../utils/dom';
 import { githubAlertBlockType } from '../../utils/githubAlerts';
 import { toListDelimiter } from '../../utils/listMarker';
 import { h, patch } from '../../utils/snabbdom';
@@ -78,6 +80,18 @@ export class ParagraphFrontMenu extends BaseFloat {
                     this.render();
                 }, 0);
             }
+        });
+
+        eventCenter.attachDOMEvent(this.muya.domNode, 'contextmenu', (event) => {
+            const handle = event.target;
+            if (this.muya.isReadOnly || !(handle instanceof HTMLElement) || !handle.classList.contains('mu-code-resize'))
+                return;
+            const block = getBlock(handle.parentElement);
+            if (block?.blockName !== 'code-block')
+                return;
+            event.preventDefault();
+            event.stopPropagation();
+            eventCenter.emit('muya-front-menu', { reference: handle, block });
         });
 
         const enterLeaveHandler = () => {
@@ -188,6 +202,14 @@ export class ParagraphFrontMenu extends BaseFloat {
         else
             children.splice(1, 0, this._renderCopyAs());
 
+        if (blockName === 'code-block') {
+            for (const [label, text] of [['follow-compact-mode', 'Follow compact mode'], ['show-full-code', 'Always show full code']]) {
+                children.push(h(`li.item.${label}`, {
+                    on: { click: event => this.selectItem(event, { label }) },
+                }, [h('span.text', i18n.t(text))]));
+            }
+        }
+
         const subMenu = canTurnIntoMenu(block!);
         if (subMenu.length) {
             const line = h('li.divider');
@@ -223,6 +245,12 @@ export class ParagraphFrontMenu extends BaseFloat {
         if (format) {
             void this.muya.editor.clipboard.copyBlockAs(block, format.copyType);
             setTimeout(this.hide.bind(this));
+            return;
+        }
+
+        if (block.blockName === 'code-block' && (label === 'follow-compact-mode' || label === 'show-full-code')) {
+            (block as CodeBlock).setMaxLines(label === 'show-full-code' ? 'none' : undefined);
+            this.hide();
             return;
         }
 

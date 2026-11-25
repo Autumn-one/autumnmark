@@ -1,0 +1,268 @@
+:root {
+  --themeColor: #15ac8e;
+  --themeColor20: rgb(21 172 142 / 20%);
+  --themeColor10: rgb(21 172 142 / 10%);
+  --codeBgColor: #e6ecf1;
+  --buttonPrimaryBgColor: #107a66;
+  --buttonPrimaryBgColorHover: #0d5748;
+  --sideBarBgColor: #f5f7f9;
+  --sideBarBorderColor: #e6ecf1;
+  --sideBarColor: #3b454e;
+  --sideBarTitleColor: #242a31;
+  --sideBarTextColor: #74818d;
+  --sideBarIconColor: #74818d;
+  --sideBarItemHoverBgColor: #e6ecf1;
+  --itemBgColor: #fff;
+  --proseAccent: #11977d;
+
+  /* The original light palette still applies inside tables and media tools. */
+  --link-color: var(--theme-color);
+  --blockquote-border-color: var(--theme-color);
+}
+
+.side-bar,
+.title-bar-editor-bg {
+  --editorColor: #3b454e;
+  font-family: Roboto, sans-serif;
+}
+
+.image-viewer .media-viewer-toolbar button.is-done {
+  color: var(--theme-color);
+}
+
+.side-bar .side-bar-file.active,
+.side-bar .side-bar-toc .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+  background: white;
+  box-shadow: inset 0 0 0 1px var(--sideBarBorderColor);
+}
+
+.side-bar .side-bar-file.active > span {
+  color: var(--proseAccent);
+}
+
+.source-code {
+  background: #183055;
+}
+
+.source-code .CodeMirror.cm-s-default {
+  color: white;
+  --selection-color: rgb(255 255 255 / 18%);
+  --floatHoverColor: #1c375f;
+}
+
+.source-code .cm-s-default .CodeMirror-cursor {
+  border-color: white;
+}
+
+.source-code .cm-s-default :is(.cm-comment, .cm-formatting) {
+  color: #9daab6;
+}
+
+.source-code .cm-s-default :is(.cm-header, .cm-tag, .cm-quote) {
+  color: #b4f6d6;
+}
+
+.source-code .cm-s-default :is(.cm-variable-2, .cm-variable-3, .cm-string, .cm-string-2) {
+  color: #71a7ff;
+}
+
+.source-code .cm-s-default :is(.cm-link, .cm-url, .cm-keyword) {
+  color: #61e3a5;
+}
+
+.source-code .cm-s-default :is(.cm-number, .cm-attribute, .cm-operator) {
+  color: #ff9d3d;
+}
+
+.source-code .cm-s-default :is(.cm-atom, .cm-def) {
+  color: #bd93f9;
+}
+
+.use-theme-font .mu-container {
+  --proseFont: Roboto, 'Noto Music', 'Noto Sans Math', sans-serif;
+}
+
+/* Each block keeps the editor's base metrics for sizing embedded content. */
+@scope (.mu-container) to (pre, figure, table, :is(.mu-paragraph, .mu-atx-heading, .mu-setext-heading):has(.mu-inline-image, .mu-embedded-image, .mu-embedded-video, video)) {
+  :scope :is(.mu-paragraph, .mu-atx-heading, .mu-setext-heading) {
+    --link-color: var(--themeColor);
+    --strong-color: var(--proseAccent);
+    font-family: var(--proseFont, var(--mu-font-family));
+  }
+
+  :scope .mu-paragraph {
+    margin-block: 0.5rem;
+    color: #3b454e;
+    font-size: calc(var(--mu-font-size) * 1.2);
+    line-height: calc(var(--mu-font-size) * var(--mu-line-height));
+  }
+
+  :scope .mu-tight-list > li > .mu-paragraph {
+    margin: 0;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading) {
+    color: #242a31;
+    line-height: 1.5;
+    margin-block: 1.5rem 0.5rem;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):not(.mu-active) > .mu-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Keep level filters weightless so ordinary heading overrides win before scoping proximity breaks a tie. */
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h1) {
+    margin-block: 3rem 2.5rem;
+    color: #10b97b;
+    font-size: calc(var(--mu-font-size) * 2.6);
+    line-height: 1.3;
+    letter-spacing: 0.3rem;
+    text-align: center;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h2) {
+    margin-block: 2rem;
+    padding: 3px 5px 3px 10px;
+    background: var(--proseAccent);
+    border-radius: 4px;
+    box-shadow: 1px 2px 2px #999;
+    color: white;
+    font-size: calc(var(--mu-font-size) * 1.7);
+    text-shadow: 1px 1px black;
+    --strong-color: inherit;
+    --link-color: inherit;
+  }
+
+  :scope .mu-atx-heading:where(h3) {
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: 100%;
+    padding: 3px 5px;
+    color: var(--proseAccent);
+    border-radius: 4px;
+    box-shadow: 1px 2px 3px #999;
+    font-size: calc(var(--mu-font-size) * 1.2);
+  }
+
+  :scope .mu-atx-heading:where(h4) {
+    font-size: calc(var(--mu-font-size) * 1.15);
+  }
+
+  :scope .mu-atx-heading:where(h5, h6) {
+    font-size: calc(var(--mu-font-size) * 0.95);
+  }
+
+  :scope .mu-atx-heading:where(h6) {
+    font-weight: 400;
+  }
+
+  :scope .mu-block-quote:not(.mu-github-alert) {
+    margin-block: 0.5rem 1.5rem;
+    background: #f5f7f9;
+    border-radius: 0.3rem;
+  }
+
+  :scope .mu-block-quote:not(.mu-github-alert):not(:has(pre, figure, table, .mu-inline-image, .mu-embedded-image, video)) {
+    padding: 1rem;
+    padding-inline-start: calc(1rem + 4px);
+  }
+
+  :scope .mu-block-quote:not(.mu-github-alert)::before {
+    inset-inline-start: 0;
+    width: 4px;
+    background: var(--themeColor);
+    border-radius: 0.3rem;
+  }
+
+  :scope .mu-thematic-break:not(.mu-active)::before {
+    height: 1px;
+    border: 0;
+    background: #e6ecf1;
+  }
+
+  :scope :is(.mu-bullet-list, .mu-order-list) > li::marker {
+    color: var(--themeColor);
+  }
+
+  :scope .mu-bullet-list > li::marker {
+    font-size: 1.375em;
+  }
+
+  :scope .mu-bullet-list > li.mu-active::marker {
+    color: #722ed1;
+  }
+
+  :scope .mu-order-list[data-delimiter='.']:not([data-style]) > .mu-list-item {
+    position: relative;
+    list-style-type: none;
+  }
+
+  :scope .mu-order-list[data-delimiter='.']:not([data-style]) > .mu-list-item::before {
+    content: counter(list-item);
+    position: absolute;
+    inset-inline-end: calc(100% + 0.35em);
+    top: 0.2em;
+    min-width: 1.65em;
+    padding-inline: 0.15em;
+    box-sizing: border-box;
+    line-height: 1.65;
+    text-align: center;
+    font-size: 0.82em;
+    font-variant-numeric: tabular-nums;
+    color: white;
+    background: var(--themeColor);
+    border-radius: 1em;
+    pointer-events: none;
+  }
+
+  :scope .mu-task-list-item > .mu-task-list-checkbox::before {
+    background: #e6ecf1;
+    border: 0;
+    border-radius: 0.2rem;
+  }
+
+  :scope .mu-task-list-item > .mu-task-list-checkbox.mu-checkbox-checked::before {
+    background: var(--themeColor);
+    box-shadow: none;
+  }
+
+  :scope :is(a.mu-inline-rule, .mu-link):hover {
+    color: var(--proseAccent);
+  }
+
+  :scope :is(a.mu-inline-rule, .mu-link) {
+    text-decoration: none;
+  }
+
+  :scope mark {
+    padding: 0.2rem 0.4rem;
+    color: white;
+    background: var(--themeColor);
+    border-radius: 0.2rem;
+    box-decoration-break: clone;
+  }
+
+  :scope code.mu-inline-rule {
+    padding: 0.2rem 0.4rem;
+    font-size: calc(var(--mu-font-size) * 0.9);
+    color: inherit;
+    background: #e6ecf1;
+    border-radius: 0.2rem;
+    box-decoration-break: clone;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading) code.mu-inline-rule {
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+  }
+
+  :scope .mu-content:not(.mu-hide)::selection,
+  :scope .mu-content :not(.mu-hide)::selection {
+    color: white;
+    background: var(--proseAccent);
+  }
+}

@@ -81,7 +81,7 @@
                 type="text"
                 size="small"
                 :aria-label="t('preferences.spellchecker.customDictionary.delete')"
-                @click="handleDeleteClick(scope.row)"
+                @click="handleDeleteClick(scope.row.word)"
               >
                 <Delete
                   width="16"
@@ -97,6 +97,7 @@
 </template>
 
 <script setup lang="ts">
+import { ElTable, ElTableColumn } from 'element-plus'
 defineProps<{ embedded?: boolean }>()
 
 import { preferenceLabel } from '@/prefComponents/registry'
@@ -179,17 +180,17 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
 // The disabled control still requires an onChange callback.
 const noop = (): void => {}
 
-const handleDeleteClick = (selectedItem: CustomDictionaryWord): void => {
-  if (selectedItem && typeof selectedItem.word === 'string') {
+const handleDeleteClick = (word: unknown): void => {
+  if (typeof word === 'string') {
     window.electron.ipcRenderer
-      .invoke('mt::spellchecker-remove-word', selectedItem.word)
+      .invoke('mt::spellchecker-remove-word', word)
       .then((result) => {
         // The IPC contract types `ret` as void, but the main handler returns
         // a boolean indicating success. Coerce to boolean for the branch.
         const success = result as unknown as boolean
         if (success) {
           wordsInCustomDictionary.value = wordsInCustomDictionary.value.filter(
-            (item) => item.word !== selectedItem.word
+            (item) => item.word !== word
           )
         } else {
           notice.notify({

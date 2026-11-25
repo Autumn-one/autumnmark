@@ -1,3 +1,5 @@
+import type { LocalTheme } from '../localTheme'
+
 /** Stable preference values shared by startup planning and the settings UI. */
 export const StartupAction = {
   RESTORE_ALL: 'restoreAll',
@@ -44,6 +46,10 @@ export interface UserPreferences extends RecoveryPreferences {
   editorFontFamily: string
   fontSize: number
   lineHeight: number
+  compactMode: boolean
+  compactImageMaxHeight: number
+  compactVideoMaxHeight: number
+  compactCodeMaxLines: number
   wrapCodeBlocks: boolean
   editorLineWidth: string
   codeFontSize: number
@@ -120,6 +126,8 @@ export interface UserPreferences extends RecoveryPreferences {
   multilineBlockquote: boolean
   isHtmlEnabled: boolean
   softNewlineAsSpace: boolean
+  embedDrawings: boolean
+  newDrawingView: 'dialog' | 'tab'
   sequenceTheme: 'hand' | 'simple'
   mermaidLightTheme:
     | 'default'
@@ -146,6 +154,8 @@ export interface UserPreferences extends RecoveryPreferences {
     | 'redux-color'
     | 'redux-dark-color'
   plantumlServer: string
+  themeSystemPrompt: string
+  localThemes?: LocalTheme[]
   theme: string
   followSystemTheme: boolean
   lightModeTheme: string
@@ -154,7 +164,8 @@ export interface UserPreferences extends RecoveryPreferences {
   spellcheckerEnabled: boolean
   spellcheckerNoUnderline: boolean
   spellcheckerLanguage: string
-  imageInsertAction: 'upload' | 'folder' | 'path'
+  imageInsertAction: 'upload' | 'folder' | 'path' | 'embed'
+  embedVideos: boolean
   imagePreferRelativeDirectory: boolean
   imageRelativeDirectoryBase: 'file' | 'folder'
   imageRelativeDirectoryName: string

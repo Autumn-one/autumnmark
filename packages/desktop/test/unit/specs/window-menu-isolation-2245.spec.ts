@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ipcMain } from 'electron'
 
 // #2245: on Windows and Linux every window draws its own menu bar, and
 // `Menu.setApplicationMenu` writes the menu into *all* of them. Switching the
@@ -14,6 +15,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 interface FakeMenu {
   template: unknown
   getMenuItemById: () => { checked: boolean; enabled: boolean }
+  items: Array<{
+    label: string
+    visible: boolean
+    enabled: boolean
+    submenu?: { popup: ReturnType<typeof vi.fn> }
+  }>
 }
 
 const {
@@ -55,6 +62,7 @@ const {
     buildFromTemplate: vi.fn(
       (template: unknown): FakeMenu => ({
         template,
+        items: [],
         getMenuItemById: () => ({ checked: false, enabled: true })
       })
     ),
@@ -75,7 +83,7 @@ vi.mock('electron', () => ({
   app: { addRecentDocument: vi.fn(), clearRecentDocuments: vi.fn() },
   ipcMain: { on: vi.fn(), handle: vi.fn(), emit: vi.fn() },
   Menu: { buildFromTemplate, setApplicationMenu, getApplicationMenu },
-  BrowserWindow: { fromId }
+  BrowserWindow: { fromId, fromWebContents: (sender: { window: unknown }) => sender.window }
 }))
 
 vi.mock('common/filesystem', () => ({
@@ -170,5 +178,65 @@ describe('Editor and Preferences keep their own menu bar on Linux (#2245)', () =
     expect(() => appMenu.updateLineEndingMenu(2, 'lf')).not.toThrow()
     expect(() => appMenu.updateAlwaysOnTopMenu(2, true)).not.toThrow()
     expect(settings.menu).toBeNull()
+  })
+})
+
+describe('Title bar menus use the requesting window', () => {
+  beforeEach(() => {
+    reset()
+    vi.mocked(ipcMain.handle).mockClear()
+  })
+
+  const setup = () => {
+    const appMenu = makeAppMenu()
+    const editor = createWindow(1)
+    appMenu.addEditorMenu(editor as never)
+    const menu = editor.menu as FakeMenu
+    const popup = vi.fn(({ callback }: { callback: () => void }) => callback())
+    menu.items = [
+      { label: 'File', visible: true, enabled: true, submenu: { popup } },
+      { label: 'Hidden', visible: false, enabled: true, submenu: { popup } },
+      { label: 'Format', visible: true, enabled: false, submenu: { popup } }
+    ]
+    const settings = createWindow(2)
+    appMenu.addSettingMenu(settings as never)
+    appMenu.setActiveWindow(2)
+    const event = { sender: { window: editor, getZoomFactor: () => 1.5 } }
+    const handler = (channel: string) => {
+      const registration = vi.mocked(ipcMain.handle).mock.calls.find(([name]) => name === channel)
+      if (!registration) throw new Error(`Missing handler: ${channel}`)
+      return registration[1]
+    }
+    return { editor, event, handler, popup }
+  }
+
+  it('lists visible categories even when another window is active', () => {
+    const { event, handler } = setup()
+    const categories = handler('mt::menu::application-categories')(event as never)
+    expect(categories).toEqual([
+      { index: 0, label: 'File', enabled: true },
+      { index: 2, label: 'Format', enabled: false }
+    ])
+  })
+
+  it('opens the existing submenu with zoom-corrected bounds', async() => {
+    const { editor, event, handler, popup } = setup()
+    await handler('mt::menu::popup-application-category')(event as never, 0, { x: 10, y: 32 })
+    expect(popup).toHaveBeenCalledWith({
+      window: editor,
+      x: 15,
+      y: 48,
+      callback: expect.any(Function)
+    })
+  })
+
+  it('ignores unavailable categories and invalid positions', async() => {
+    const { event, handler, popup } = setup()
+    const open = handler('mt::menu::popup-application-category')
+    for (const index of [-1, 1, 2, 9, 0.5]) {
+      await open(event as never, index, { x: 10, y: 32 })
+    }
+    await open(event as never, 0, { x: NaN, y: 32 })
+    expect(popup).not.toHaveBeenCalled()
   })
 })

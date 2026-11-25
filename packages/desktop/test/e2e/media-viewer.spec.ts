@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, expectNoRendererErrors, clearRendererErrors } from './helpers'
 
-const SVG_DATA_URI =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmMDAiLz48L3N2Zz4='
+const imageUrl = pathToFileURL(resolve('static/logo-96px.png')).href
 
 const viewerVisible = (page: Page): Promise<boolean> =>
   page.evaluate(() => {
@@ -11,12 +12,6 @@ const viewerVisible = (page: Page): Promise<boolean> =>
     if (!el) return false
     return getComputedStyle(el).display !== 'none'
   })
-
-const editorPointerEvents = (page: Page): Promise<string> =>
-  page.evaluate(
-    () =>
-      getComputedStyle(document.querySelector('.editor-component') as HTMLElement).pointerEvents
-  )
 
 const zoomLabel = (page: Page): Promise<string> =>
   page.locator('.media-viewer-toolbar .zoom-level').innerText()
@@ -40,7 +35,7 @@ test.describe('media viewer controls', () => {
   let page: Page
 
   test.beforeAll(async() => {
-    const launched = await launchWithMarkdown(`![alt](${SVG_DATA_URI})\n`, {
+    const launched = await launchWithMarkdown(`![alt](${imageUrl})\n`, {
       suppressErrorDialog: true
     })
     app = launched.app
@@ -257,13 +252,17 @@ test.describe('media viewer controls', () => {
   test('the editor behind the viewer stops taking pointer events', async() => {
     await openViewer(page)
 
-    await expect.poll(() => editorPointerEvents(page), { timeout: 5000 }).toBe('none')
+    await page.evaluate(() => {
+      document.body.addEventListener('mousemove', () => { document.body.dataset.editorHover = 'received' }, { once: true })
+    })
+    await page.locator('.media-viewer-stage').hover({ position: { x: 30, y: 120 } })
+    await expect(page.locator('body')).not.toHaveAttribute('data-editor-hover', 'received')
 
     await page.keyboard.press('Escape')
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)
 
-    await expect.poll(() => editorPointerEvents(page), { timeout: 5000 }).not.toBe('none')
-
+    await page.locator('.mu-inline-image img').first().hover()
+    await expect(page.locator('body')).toHaveAttribute('data-editor-hover', 'received')
     await expectNoRendererErrors(app)
   })
 })

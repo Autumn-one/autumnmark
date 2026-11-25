@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { makeRoomForOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
+import { showOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
 
 const DOC = [
   '# **Bold** and *italic*',
@@ -23,7 +23,7 @@ test.describe('TOC renders inline markdown', () => {
     const launched = await launchWithMarkdown(DOC)
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await waitForEditor(page)
 
     const sidebarVisible = await page.evaluate(() => {

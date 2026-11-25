@@ -14,6 +14,12 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
+import { registerThemeStudio } from './ipc/themeStudio'
+import { registerThemeCatalog } from './ipc/themeCatalog'
+import { registerAiModels } from './ipc/aiModels'
+import { registerDocumentChat } from './ipc/documentChat'
+import { registerAutumnMarkSkill } from './ipc/autumnmarkSkill'
+import { APP_ID, APP_NAME } from '@shared/brand'
 
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
 process.env.MARKTEXT_VERSION_STRING = MARKTEXT_VERSION_STRING
@@ -49,7 +55,7 @@ initializeLogger(appEnvironment)
 
 crashReporter.start({
   companyName: '',
-  productName: 'MarkText',
+  productName: APP_NAME,
   uploadToServer: false, // collect locally
   compress: true
 })
@@ -75,6 +81,7 @@ if (!process.mas && !import.meta.env.DEV) {
 }
 
 registerSandboxIpcHandlers({
+  isDocumentOpen: async pathname => accessor.sessionHost?.isDocumentOpen(pathname) ?? false,
   moveInProject: (sender, request) => {
     const editor = accessor.windowManager.getEditorForWebContents(sender)
     if (!accessor.sessionHost || !editor?.sessionStateId) {
@@ -91,7 +98,7 @@ registerSandboxIpcHandlers({
   }
 })
 
-electronApp.setAppUserModelId('com.electron.marktext')
+electronApp.setAppUserModelId(APP_ID)
 
 app.on('browser-window-created', (_, window) => {
   optimizer.watchWindowShortcuts(window)
@@ -120,6 +127,12 @@ try {
 // Preferences only exist now; the fetch handler refuses everything until it
 // knows which server the user configured.
 setPlantumlServerSource(() => accessor.preferences.getItem<string>('plantumlServer') ?? '')
+
+const savedModelSettings = registerAiModels(accessor)
+registerDocumentChat(accessor, savedModelSettings)
+const skillTheme = registerThemeStudio(accessor, savedModelSettings)
+registerAutumnMarkSkill(accessor, skillTheme)
+registerThemeCatalog(accessor)
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

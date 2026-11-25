@@ -169,13 +169,12 @@ If you need to invoke a script directly inside a package, use
 
 ```bash
 pnpm run build:win    # Windows x64 — NSIS installer + zip
-pnpm run build:mac    # macOS host architecture — DMG + zip
-pnpm run build:linux  # Linux — AppImage, snap, deb, rpm, tar.gz
+pnpm run build:mac    # macOS ARM64 — DMG + zip
+pnpm run build:linux  # Linux x64 — AppImage, snap, deb, rpm, tar.gz
 ```
 
-Use `build:win:x64`, `build:win:arm64`, `build:mac:x64`, `build:mac:arm64`,
-`build:linux:x64` or `build:linux:arm64` to select an architecture explicitly.
-Linux arm64 omits snap.
+The architecture-specific commands are `build:win:x64`, `build:mac:arm64` and
+`build:linux:x64`.
 
 All platform build scripts automatically run `minify-locales` and `electron-rebuild` before packaging.
 
@@ -204,9 +203,22 @@ Root test commands cover desktop only. Muya checks use
 its browser suite uses `pnpm --filter muya-e2e e2e:chromium`. Website checks use
 `pnpm --filter marktext-website lint` and `pnpm --filter marktext-website type-check`.
 
+### Preparing a release
+
+Release tests and installer builds run exclusively on GitHub-hosted runners.
+Never run tests locally during preparation of a stable release, hotfix, RC or
+preview. This includes unit, conformance, smoke and E2E tests, including headless
+or single-test runs. Local preparation covers the version, changelog, diff and
+Git operations. Reuse applicable PR results. Dispatch any additional desktop UI
+checks through the hosted `E2E Test` workflow on the release branch.
+
+Publish Windows x64, macOS ARM64 (Apple Silicon) and Linux x64. Apply this
+platform list to PR installer builds, previews, releases and updater manifests.
+Follow `packages/website/content/docs/dev/RELEASE.md` for the release steps.
+
 ## Code Style
 
-Enforced by ESLint + Prettier. Run `pnpm run lint` and `pnpm run typecheck` before committing.
+Enforced by ESLint + Prettier. Run `pnpm run lint` and `pnpm run typecheck` before committing development changes. Release preparation uses the hosted checks described above.
 
 - 2-space indentation
 - No semicolons
@@ -293,6 +305,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
 
 ## Contribution
 
+- Keep `develop` as the default branch. Branch names must never start with `codex`; use descriptive prefixes such as `build/`, `release/`, `feature/`, or `fix/`.
 - Submit PRs to the **`develop`** branch (not `main`).
 - Do not commit screenshots or recordings created as PR evidence to the repository. Keep these artifacts outside the checkout and upload them directly to the PR when needed; do not add them under `docs/assets/` or other tracked directories.
 - Reference the related issue in the PR description.

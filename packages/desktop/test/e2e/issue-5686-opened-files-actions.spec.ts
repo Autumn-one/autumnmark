@@ -97,14 +97,16 @@ test.describe('#5686 opened files actions', () => {
       { id: 'closeOtherTabs', enabled: true },
       { id: 'renameFile', enabled: true },
       { id: 'copyPath', enabled: true },
-      { id: 'showInFolder', enabled: true }
+      { id: 'showInFolder', enabled: true },
+      { id: 'openContainingFolder', enabled: true }
     ]))
+    expect(savedMenu.map(item => item.id)).not.toContain('showInSideBar')
     await expect(page.locator(`${rows}.active`)).toHaveAttribute('data-id', beforeActive ?? '')
     await sendIpcToRenderer(app, 'mt::set-view-layout', { showTabBar: true })
     expect(await openMenu(app, page.locator(tabs).first())).toEqual(savedMenu)
 
     const untitledMenu = await openMenu(app, page.locator(rows).last())
-    for (const id of ['renameFile', 'copyPath', 'showInFolder', 'showInSideBar']) {
+    for (const id of ['renameFile', 'copyPath', 'showInFolder', 'openContainingFolder']) {
       expect(untitledMenu).toContainEqual({ id, enabled: false })
     }
   })
@@ -239,15 +241,15 @@ test.describe('#5686 opened files actions', () => {
     await expect.poll(() => ids(page, tabs)).toEqual(finalOrder)
   })
 
-  test('drag handlers recover after the list is disabled and remounted', async() => {
+  test('drag handlers recover after the list is remounted and after visiting search', async() => {
     await sendIpcToRenderer(app, 'mt::user-preference', { openedFilesInSidebar: false })
     await expect(page.locator(rows)).toHaveCount(0)
     await sendIpcToRenderer(app, 'mt::user-preference', { openedFilesInSidebar: true })
     await expect(page.locator(rows)).toHaveCount(3)
     await page.locator('.side-bar .search-button').click()
-    await expect(page.locator(rows)).toHaveCount(0)
+    await expect(page.locator('#sidebar-panel-files')).toBeHidden()
     await page.locator('.side-bar .back-button').click()
-    await expect(page.locator(rows)).toHaveCount(3)
+    await expect(page.locator('#sidebar-panel-files')).toBeVisible()
     const before = await ids(page, rows)
     await drag(page, page.locator(rows).first(), page.locator(rows).last(), 'y')
     await expect.poll(() => ids(page, tabs)).toEqual([before[1], before[2], before[0]])

@@ -17,8 +17,7 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 | openFolderInNewWindow  | Boolean | `false`       | Open folder via menu in a new window.                                                                                             |
 | zoom                   | Number  | `1.0`         | The zoom level. Between `0.5` and `2.0` inclusive.                                                                                |
 | hideScrollbar          | Boolean | `false`       | Whether to hide scrollbars.                                                                                                       |
-| wordWrapInToc          | Boolean | `false`       | Whether to enable word wrap in the table of contents.                                                                             |
-| tocPosition            | String  | `left`        | Dock the table of contents to the `left` or `right` of the editor.                                                                |
+| wordWrapInToc          | Boolean | `false`       | Wrap long headings in the sidebar's Outline tab.                                                                                  |
 | fileSortBy             | String  | `created`     | Sort files in the opened folder. Optional values: `created`, `modified`, `title`.                                                 |
 | fileSortOrder          | String  | `asc`         | Sort order for files in opened folders: `asc` (ascending) or `desc` (descending).                                                 |
 | startUpAction          | String  | `restoreAll`  | Startup action: `restoreAll`, `restoreLastWindow`, `openLastFolder`, `folder` or `blank`.                                         |
@@ -38,7 +37,7 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 | editorFontFamily                   | String  | `Open Sans`        | Editor font family.                                                                                                                                   |
 | fontSize                           | Number  | `16`               | Font size in pixels. Range `12`–`32`.                                                                                                                 |
 | lineHeight                         | Number  | `1.6`              | Line height. Range `1.2`–`2.0`.                                                                                                                       |
-| wrapCodeBlocks                     | Boolean | `false`            | Wrap text inside code blocks.                                                                                                                         |
+| wrapCodeBlocks                     | Boolean | `true`             | Wrap text inside code blocks.                                                                                                                         |
 | editorLineWidth                    | String  | `""`               | Maximum editor area width. Empty or a value with a `ch`, `px` or `%` suffix.                                                                          |
 | codeFontSize                       | Number  | `14`               | Font size inside code blocks. Range `12`–`28`.                                                                                                        |
 | codeFontFamily                     | String  | `DejaVu Sans Mono` | Font family for inline code and code blocks.                                                                                                          |
@@ -91,9 +90,9 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 
 | Key               | Type    | Default           | Description                                                                                 |
 | ----------------- | ------- | ----------------- | ------------------------------------------------------------------------------------------- |
-| theme             | String  | System light/dark | Initial theme follows the system: `light` or `dark`. See [Themes](THEMES.md) for theme IDs. |
+| theme             | String  | System light/dark | Initial theme follows the system: `pine-ink` or `dark`. See [Themes](THEMES.md) for theme IDs. |
 | followSystemTheme | Boolean | `true`            | Follow the system light/dark mode and switch automatically.                                 |
-| lightModeTheme    | String  | `light`           | Theme id used when the system is in light mode (only when `followSystemTheme` is `true`).   |
+| lightModeTheme    | String  | `pine-ink`        | Theme id used when the system is in light mode (only when `followSystemTheme` is `true`).   |
 | darkModeTheme     | String  | `dark`            | Theme id used when the system is in dark mode (only when `followSystemTheme` is `true`).    |
 
 #### Spelling
@@ -108,7 +107,8 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 
 | Key                          | Type    | Default  | Description                                                                                      |
 | ---------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------ |
-| imageInsertAction            | String  | `path`   | Default action after inserting a local image: `upload`, `folder`, or `path`.                     |
+| imageInsertAction            | String  | `embed`  | Image insertion mode. Supported values are `embed`, `upload`, `folder`, and `path`.              |
+| embedVideos                  | Boolean | `false`  | Embed newly inserted video files as Base64. Available under **Preferences → Video**.             |
 | imagePreferRelativeDirectory | Boolean | `false`  | Prefer the relative image directory when copying images.                                         |
 | imageRelativeDirectoryBase   | String  | `file`   | Where relative images are anchored: `file` (next to the document) or `folder` (project root).    |
 | imageRelativeDirectoryName   | String  | `assets` | Folder name (or relative path) used for local image copies. Supports the `${filename}` variable. |

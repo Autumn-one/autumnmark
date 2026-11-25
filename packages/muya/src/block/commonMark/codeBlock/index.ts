@@ -1,19 +1,22 @@
 import type { Muya } from '../../../muya';
 import type { ICodeBlockState } from '../../../state/types';
+import type { ICodeFenceAnnotations } from '../../../utils/codeFenceAnnotations';
 import type { TBlockPath } from '../../types';
 import diff from 'fast-diff';
-import { diffToTextOp, firstWordOfInfo } from '../../../utils';
+import { diffToTextOp } from '../../../utils';
+import { codeFenceLanguage, parseCodeFenceAnnotations, replaceCodeFenceMaxLines } from '../../../utils/codeFenceAnnotations';
 import { operateClassName } from '../../../utils/dom';
 import logger from '../../../utils/logger';
-import { loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
+import { languageTitle, loadedLanguages, loadLanguage, transformAliasToOrigin } from '../../../utils/prism';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
+import { createCodeResizeHandle } from './resizeHandle';
 
 const debug = logger('codeblock:');
 
 // Must match CodeBlockContent.update() so grammar-change detection agrees with rendering.
 function renderedGrammarFor(infoString: string): string {
-    const language = firstWordOfInfo(infoString);
+    const language = codeFenceLanguage(infoString);
     if (!language)
         return '';
     const resolved = transformAliasToOrigin([language])[0];
@@ -29,6 +32,9 @@ class CodeBlock extends Parent {
     // does not change the rendering skips the rebuild. Undefined until the
     // first render, which therefore always happens.
     private _renderedGrammar: string | undefined;
+    private _annotationInfo: string | undefined;
+    private _titleNode: HTMLSpanElement | null = null;
+    public annotations: ICodeFenceAnnotations = { ranges: [] };
 
     static create(muya: Muya, state: ICodeBlockState) {
         const codeBlock = new CodeBlock(muya, state);
@@ -42,6 +48,12 @@ class CodeBlock extends Parent {
 
         codeBlock.append(langInput);
         codeBlock.append(code);
+        muya.editor.compactBlocks.track(code.domNode!, code.lastContentInDescendant()!.domNode!);
+        codeBlock.domNode!.append(createCodeResizeHandle(codeBlock, code.domNode!));
+        const edge = codeBlock.domNode!.ownerDocument.createElement('span');
+        edge.className = 'mu-code-edge mu-copy-remove mu-output-remove';
+        edge.contentEditable = 'false';
+        codeBlock.domNode!.append(edge);
         const copyButton = (code as { copyButton?: HTMLButtonElement | null }).copyButton;
         if (copyButton)
             codeBlock.domNode!.appendChild(copyButton);
@@ -50,12 +62,16 @@ class CodeBlock extends Parent {
         const lnWrapper = (code as { lineNumbersWrapper?: HTMLElement | null }).lineNumbersWrapper;
         if (lnWrapper) {
             codeBlock.domNode!.appendChild(lnWrapper);
+            code.domNode!.addEventListener('scroll', () => {
+                lnWrapper.scrollTop = code.domNode!.scrollTop;
+            });
             // Seed gutters after attachment: unknown or absent languages never trigger a language-load render.
             requestAnimationFrame(() => {
                 codeBlock.lastContentInDescendant()?.update();
             });
         }
 
+        codeBlock.refreshAnnotations();
         if (lang) {
             requestAnimationFrame(() => {
                 codeBlock._renderLanguage();
@@ -91,7 +107,69 @@ class CodeBlock extends Parent {
             operateClassName(this.domNode!, 'add', 'mu-fenced-code');
         }
 
+        this.refreshAnnotations();
         this._renderLanguage();
+    }
+
+    setMaxLines(lines: ICodeFenceAnnotations['maxLines']): void {
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const info = replaceCodeFenceMaxLines(this.lang, lines);
+        if (info === this.lang) {
+            const viewport = this.lastChild!.domNode!;
+            viewport.classList.remove('mu-compact-expanded');
+            this.muya.editor.compactBlocks.setCodeLimit(viewport, lines);
+            return;
+        }
+        this.muya.transact(() => {
+            if (this.meta.type === 'indented') {
+                // Replacing the block lets undo restore its original indentation and fence-free state.
+                const state = this.getState();
+                state.meta = { ...state.meta, type: 'fenced', fenceChar: '`', lang: info };
+                const selection = this.muya.getSelectionState();
+                this.replaceWith(CodeBlock.create(this.muya, state));
+                if (selection)
+                    this.muya.setSelection(selection);
+                return;
+            }
+            const input = this.firstContentInDescendant()!;
+            input.text = info;
+            this.meta.lang = info;
+            input.update();
+        });
+    }
+
+    refreshAnnotations(): void {
+        const info = this.meta.lang ?? '';
+        if (info === this._annotationInfo)
+            return;
+        this._annotationInfo = info;
+        const language = codeFenceLanguage(info);
+        this.domNode!.dataset.readingLanguage = language ? languageTitle(language) : this.muya.i18n.t('Plain text');
+        const previous = this.annotations;
+        const next = parseCodeFenceAnnotations(info);
+        this.annotations = next;
+        if (previous.maxLines !== next.maxLines) {
+            const viewport = this.lastChild!.domNode!;
+            viewport.classList.remove('mu-compact-expanded');
+            this.muya.editor.compactBlocks.setCodeLimit(viewport, next.maxLines);
+        }
+        this.domNode!.classList.toggle('mu-code-block-annotated', !!next.title || next.ranges.length > 0);
+        if (next.title) {
+            if (!this._titleNode) {
+                this._titleNode = this.domNode!.ownerDocument.createElement('span');
+                this._titleNode.className = 'mu-code-block-title';
+                this._titleNode.contentEditable = 'false';
+                this.domNode!.prepend(this._titleNode);
+            }
+            this._titleNode.textContent = next.title;
+        }
+        else if (this._titleNode) {
+            this._titleNode.remove();
+            this._titleNode = null;
+        }
+        if (previous.title || next.title || previous.ranges.length || next.ranges.length)
+            this.lastContentInDescendant()?.update();
     }
 
     private _renderLanguage() {
@@ -107,7 +185,7 @@ class CodeBlock extends Parent {
         };
 
         // The full info string may include attributes; Prism uses only its first word.
-        const language = firstWordOfInfo(this.meta.lang ?? '');
+        const language = codeFenceLanguage(this.meta.lang ?? '');
         if (!language) {
             rerenderIfGrammarChanged();
 

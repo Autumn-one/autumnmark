@@ -2,6 +2,55 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, clickMenuById, setSourceMarkdown } from './helpers'
 
+test('Pine Ink is the default light theme and renders its paper and heading colors', async() => {
+  const { app, page } = await launchWithMarkdown('# Title\n\n## Section', {
+    preferences: { language: 'en', followSystemTheme: false }
+  })
+  try {
+    const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(preferences).toMatchObject({ theme: 'pine-ink', lightModeTheme: 'pine-ink', darkModeTheme: 'dark', localThemes: [] })
+    const theme = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('pine-ink')?.label)
+    expect(theme).toBe('松墨（Pine Ink）')
+    const background = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--editorBgColor').trim())
+    await expect.poll(background).toBe('#faf7ef')
+    await expect(page.locator('.mu-container h2')).toHaveCSS('color', 'rgb(33, 62, 50)')
+    await expect(page.locator('.mu-container h2')).toHaveCSS('border-left-color', 'rgb(171, 121, 65)')
+    const openingSettings = app.waitForEvent('window')
+    await clickMenuById(app, 'openThemeSettings')
+    const settings = await openingSettings
+    await expect(settings.locator('.theme-card').first().getByRole('heading', { name: '松墨（Pine Ink）', exact: true })).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('GitBook Teal styles prose and keeps the table and code typography', async() => {
+  const markdown = [
+    '# Title', '## Section', 'Some **emphasis**', '> Quote', '- [x] Task',
+    '| Column |\n| --- |\n| **Cell** |', '```js\nconst n = 1\n```'
+  ].join('\n\n')
+  const { app, page } = await launchWithMarkdown(markdown, {
+    preferences: { theme: 'light', followSystemTheme: false }
+  })
+  try {
+    const editor = page.locator('.mu-container')
+    await expect(editor.locator('h1')).toHaveCSS('text-align', 'center')
+    await expect(editor.locator('h2')).toHaveCSS('background-color', 'rgb(17, 151, 125)')
+    await expect(editor.locator('.mu-paragraph strong')).toHaveCSS('color', 'rgb(17, 151, 125)')
+    await expect(editor.locator('blockquote')).toHaveCSS('background-color', 'rgb(245, 247, 249)')
+    await expect(editor.locator('td strong')).toHaveCSS('color', 'rgb(77, 77, 77)')
+    await expect(editor.locator('td strong')).toHaveCSS('font-family', /Open Sans/)
+    await expect(editor.locator('.mu-code-block')).toHaveCSS('font-family', /DejaVu Sans Mono/)
+    await expect.poll(() => editor.locator('.mu-checkbox-checked').evaluate(
+      el => getComputedStyle(el, '::before').backgroundColor
+    )).toBe('rgb(21, 172, 142)')
+    await clickMenuById(app, 'graphite')
+    await expect(editor.locator('h1')).not.toHaveCSS('text-align', 'center')
+  } finally {
+    await app.close()
+  }
+})
+
 test.describe('Theme switching', () => {
   let app: ElectronApplication
   let page: Page

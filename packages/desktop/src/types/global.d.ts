@@ -8,9 +8,10 @@ import type {
   BootInfo,
   PlantumlFetchResult,
   SaveDialogRequest,
+  ClipboardImageInput,
   ClipboardImageWriteOptions
 } from '@shared/types/ipc'
-import type { MenuTemplate, MenuPopupPosition } from '@shared/types/menu'
+import type { MenuTemplate, MenuPopupPosition, ContextMenuPopupOptions, ApplicationMenuCategory } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
 
 declare global {
@@ -46,10 +47,12 @@ declare global {
   }
 
   interface ElectronClipboardAPI {
+    hasImage(kind?: 'video'): Promise<boolean>
+    readImageInput(kind?: 'video'): Promise<ClipboardImageInput>
     writeText(text: string): Promise<boolean>
     readText(): Promise<string>
     guessFilePath(): Promise<string | null>
-    writeImage(png: Uint8Array, options?: ClipboardImageWriteOptions): Promise<boolean>
+    writeImage(bytes: Uint8Array, options?: ClipboardImageWriteOptions): Promise<boolean>
     beginImageCopy(marker?: string): Promise<number | null>
     cancelImageCopy(ticket: number): Promise<void>
     readImageSource(src: string): Promise<PlantumlFetchResult>
@@ -57,6 +60,7 @@ declare global {
 
   interface ElectronDialogAPI {
     showSave(request: SaveDialogRequest): Promise<string | null>
+    showOpenFile(request: SaveDialogRequest): Promise<string | null>
   }
 
   interface ElectronWebFrameAPI {
@@ -65,6 +69,7 @@ declare global {
   }
 
   interface ElectronWebUtilsAPI {
+    dragEmbeddedImage(src: string, name: string): Promise<void>
     getPathForFile(file: File): string
   }
 
@@ -78,8 +83,10 @@ declare global {
     toggleFullScreen(): void
     isMaximized(): Promise<boolean>
     isFullScreen(): Promise<boolean>
-    popupMenu(template: MenuTemplate, position?: MenuPopupPosition): void
+    popupMenu(template: MenuTemplate, options?: ContextMenuPopupOptions): void
     popupApplicationMenu(position?: MenuPopupPosition): void
+    getApplicationMenuCategories(): Promise<ApplicationMenuCategory[]>
+    popupApplicationMenuCategory(index: number, position: MenuPopupPosition): Promise<void>
   }
 
   interface ElectronAPI {
@@ -206,7 +213,7 @@ declare global {
     // Set by the legacy editor store at runtime; consumed by muya internals.
     DIRNAME: string
     marktext?: {
-      env?: { windowId: number; [key: string]: unknown }
+      env?: { windowId: number; type?: string | null; micaTitleBar?: boolean; [key: string]: unknown }
       initialState?: {
         codeFontFamily?: string | null
         codeFontSize?: string | null

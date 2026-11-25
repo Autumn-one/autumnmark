@@ -1,4 +1,193 @@
 {
+  "ai": {
+    "restartTools": "AutumnMark を再起動してモデルによるスクリーンショット取得を有効にしてください。",
+    "inputTypes": "対応する入力形式",
+    "image": "画像",
+    "systemPrompt": "テーマアシスタントのシステムプロンプト",
+    "systemPromptHelp": "すべてのテーマチャットの新しいメッセージと再試行に適用されます。",
+    "promptStorageError": "システムプロンプトを読み込みまたは保存できませんでした。",
+    "previewPrivacy": "モデルにはこの会話が送信され、必要に応じてサンプル Markdown、CSS、またはスクリーンショットが送信されます。スクリーンショットには、選択した要素やプレビューの表示範囲外の内容が含まれる場合があります。",
+    "checkingPreview": "プレビューを確認中…",
+    "previewFailed": "プレビューを撮影できませんでした。もう一度お試しください。",
+    "reviewLimit": "自動修正の上限に達しました。最新の変更はプレビューで確認できます。",
+    "displayName": "表示名（任意）",
+    "model": "モデル",
+    "baseUrl": "API ベース URL",
+    "requestType": "リクエスト形式",
+    "classic": "Chat Completions（従来形式）",
+    "loadFailed": "保存したモデル設定を読み込めませんでした。",
+    "restartRequired": "AutumnMark を再起動して新しいモデル設定を読み込んでください。",
+    "contextTooSmall": "テーマと最新のメッセージが推定コンテキスト長を超えています。コンテキスト長を増やすか、出力上限を下げてください。",
+    "add": "モデルを追加",
+    "edit": "モデルを編集",
+    "remove": "{model} を削除しますか？",
+    "actions": "操作",
+    "empty": "AI モデルが設定されていません。",
+    "fetch": "モデルを取得",
+    "fetched": "取得したモデル数：{count}",
+    "reasoning": "推論レベル",
+    "context": "コンテキスト長（トークン）",
+    "output": "出力上限（トークン）",
+    "default": "プロバイダーの既定値",
+    "test": "テスト",
+    "connected": "接続成功 · 応答は 1 でした",
+    "unexpectedTestReply": "サービスは応答しましたが、モデルの応答は 1 ではありませんでした。",
+    "invalidModelList": "サービスから無効なモデル一覧が返されました。",
+    "invalidSize": "正の整数を入力してください。出力上限はコンテキスト長以下にしてください。",
+    "modelChanged": "モデルが変更されました。もう一度開いて編集してください。"
+  },
+  "themeAi": {
+    "title": "テーマ AI",
+    "current": "現在のテーマ",
+    "openDocument": "ノートを開いてテーマの変更を試せます。",
+    "empty": "行間を広げる、見出しの色を変えるなど、テーマの変更を入力してください。",
+    "placeholder": "テーマをどう変えたいですか？",
+    "viewChange": "今回の変更を見る",
+    "previewStatus": "テーマをプレビュー中",
+    "previewing": "このノートでプレビュー中",
+    "previewReady": "下書きをプレビューできます",
+    "previewHere": "このノートでプレビュー",
+    "endPreview": "プレビューを終了",
+    "previewEnded": "プレビューを終了しました。変更は履歴に残ります。",
+    "apply": "テーマに適用",
+    "applied": "テーマを適用しました。",
+    "copyOnApply": "適用時に編集可能なコピーを作成します。",
+    "changed": "現在のテーマが変わりました。もう一度お試しください。"
+  },
+  "themeHistory": {
+    "empty": "このテーマにはまだ保存されたバージョンがありません。",
+    "restoreAndApply": "復元して適用",
+    "confirmApplyDetail": "このバージョンが適用されます。現在のバージョンは履歴に残ります。",
+    "appliedCollaboration": "外部 AI クライアントによる変更を適用しました。",
+    "appliedRecovered": "以前適用されていたバージョン",
+    "title": "バージョン履歴",
+    "current": "現在の下書き",
+    "loading": "バージョンを読み込み中…",
+    "storageError": "このデバイスでテーマのバージョンを読み込み、または保存できませんでした。",
+    "aiSummary": "AI による要約",
+    "changes": "変更内容",
+    "previous": "前のバージョンとの比較",
+    "noChanges": "テーマの内容は前のバージョンと同じです。",
+    "restore": "下書きとして復元",
+    "confirmRestore": "復元を確定",
+    "confirm": "{date} {time} のバージョンを復元しますか？",
+    "confirmDetail": "復元するとバージョンが追加され、現在の下書きは履歴に残ります。",
+    "restored": "{date} {time} のバージョンを復元しました。",
+    "applyHint": "使用中のテーマを更新するには「保存して適用」を選択します。",
+    "kind": {
+      "initial": "初期バージョン",
+      "manual": "手動編集",
+      "ai": "AI による編集",
+      "save": "保存",
+      "apply": "保存して適用",
+      "restore": "復元",
+      "undo": "元に戻す",
+      "collaboration": "共同編集",
+      "recovered": "復旧した下書き"
+    },
+    "description": {
+      "initial": "このテーマの最初の状態です。",
+      "manual": "テーマの下書きを手動で編集しました。",
+      "ai": "AI アシスタントが下書きを編集しました。",
+      "save": "テーマを保存しました。",
+      "apply": "テーマを保存して適用しました。",
+      "restore": "前のバージョンを復元しました。",
+      "undo": "下書きへの変更を元に戻しました。",
+      "collaboration": "共同編集フォルダーから下書きを更新しました。",
+      "recovered": "このデバイスに保存した下書きを復旧しました。"
+    },
+    "field": {
+      "name": "テーマ名",
+      "base": "ベーステーマ",
+      "css": "スタイル",
+      "sample": "プレビューの Markdown"
+    }
+  },
+  "studio": {
+    "themeFiles": "テーマファイル",
+    "composePlaceholder": "テーマで調整したい点を入力…",
+    "interrupted": "この要求は中断されました。受信済みの内容は保存されています。",
+    "selector": "セレクター",
+    "addSelector": "セレクターを追加",
+    "locateSelector": "既存のルールへ",
+    "inspect": "要素を検証",
+    "inspectHint": "プレビューまたは Elements ツリーで要素を選び、下のボタンでセレクターを追加するか既存のルールに移動します。",
+    "inspectorFailed": "プレビューの要素を検証できませんでした。",
+    "title": "テーマエディター",
+    "create": "現在のテーマから作成",
+    "edit": "現在のテーマを編集",
+    "name": "テーマ名",
+    "base": "ベーステーマ",
+    "saveOnly": "テーマとして保存のみ",
+    "saveAndApply": "保存して適用",
+    "saveOptions": "保存オプション",
+    "document": "本文",
+    "source": "Markdown ソース",
+    "preview": "テーマのプレビュー",
+    "assistant": "AI アシスタント",
+    "configure": "モデルを設定",
+    "connection": "接続設定",
+    "privacy": "モデルにはこの会話が送信され、必要に応じてテーマの CSS やサンプル Markdown が送信されます。",
+    "prompt": "テーマアシスタントへのメッセージ",
+    "composeHint": "Enter で送信、Shift+Enter で現在の行の下に空行を挿入",
+    "emptyReply": "モデルからの応答が空でした。",
+    "unchanged": "テーマは変更されていません。",
+    "user": "あなた",
+    "conversation": "会話履歴",
+    "newChat": "新しい会話",
+    "deleteChat": "会話を削除",
+    "untitledChat": "会話 · {time}",
+    "confirmDeleteChat": "「{name}」とそのスクリーンショットを完全に削除しますか？",
+    "screenshot": "プレビューのスクリーンショット {n}",
+    "retract": "取り消す",
+    "confirmBranch": "これ以降のメッセージとスクリーンショットも削除されます。続けますか？",
+    "historyError": "この端末で会話履歴を読み込みまたは保存できませんでした。",
+    "chatChanged": "会話が更新されたか、別のウィンドウで編集中です。もう一度お試しください。",
+    "diagnostics": "エラーログ",
+    "exportDiagnostics": "ログをエクスポート",
+    "replyError": {
+      "tooLarge": "モデルの応答がサイズ上限を超えました。変更を小さくして再試行してください。",
+      "missingMatch": "置換対象の文字列が現在の CSS に見つかりません。",
+      "ambiguousMatch": "置換対象の文字列が現在の CSS に複数あります。",
+      "css": "提案された CSS は検証に失敗しました",
+      "format": "応答に無効な編集指示が含まれています。",
+      "incomplete": "編集指示が完了する前に応答が終了しました。",
+      "truncated": "モデルの出力上限に達しました。上限を増やすか、変更を小さくして再試行してください。"
+    },
+    "send": "送信",
+    "stop": "停止",
+    "undo": "直前の変更を取り消す",
+    "export": "テーマを書き出す",
+    "import": "コピーとして読み込む",
+    "draft": "下書きはこの端末に保存されます",
+    "copy": "マイテーマ",
+    "sample": "プレビュー文書",
+    "endpoint": "Chat Completions API のベース URL",
+    "model": "モデル ID",
+    "apiKey": "API キー",
+    "keySaved": "保存済み。空欄で維持",
+    "keyOptional": "ローカルモデルでは省略可",
+    "clearKey": "保存したキーを削除",
+    "saveConnection": "接続を保存",
+    "httpError": "モデルの HTTP 応答",
+    "invalidEndpoint": "HTTPS または localhost の HTTP を使用し、ベース URL か chat/completions の URL を入力してください。",
+    "invalidRequest": "モデル名と設定を確認してください。",
+    "newKeyRequired": "新しい URL のキーを入力するか保存済みキーを消去してください。",
+    "keyStore": "システムの鍵ストアを解除して再試行してください。",
+    "invalidReply": "非対応の応答です。有効な変更はプレビューに表示されます。",
+    "configureFirst": "先にモデルを設定してください。",
+    "requestFailed": "接続に失敗したかタイムアウトしました。URL を確認してください。",
+    "storageError": "ローカル保存に失敗しました。下書きは開いたままです。",
+    "stopped": "生成を停止しました。",
+    "updated": "下書きに変更を適用しました。",
+    "generating": "応答を待っています…",
+    "nameRequired": "テーマ名を入力してください。",
+    "invalidFile": "1 MB 未満の対応ファイルを選んでください。",
+    "css": "CSS ソース",
+    "baseSource": "ベース CSS を表示（読み取り専用）",
+    "cssIssue": "CSS を確認してください",
+    "openFailed": "テーマエディターを開けませんでした。"
+  },
   "menu": {
     "counter": {
       "words": "単語数",
@@ -108,15 +297,15 @@
       "checkUpdates": "更新の確認"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "MarkText について",
+      "title": "AutumnMark",
+      "about": "AutumnMark について",
       "checkUpdates": "更新の確認...",
       "preferences": "環境設定",
       "services": "サービス",
-      "hide": "MarkText を隠す",
+      "hide": "AutumnMark を隠す",
       "hideOthers": "他を隠す",
       "showAll": "すべて表示",
-      "quit": "MarkText を終了"
+      "quit": "AutumnMark を終了"
     },
     "view": {
       "view": "表示",
@@ -148,6 +337,7 @@
     },
     "theme": {
       "theme": "テーマ (&T)",
+      "openSettings": "テーマ設定…",
       "dark": "ダーク",
       "followThemDisabled": "システムテーマに従う場合、テーマ選択は無効です",
       "lightThemes": "ライトテーマ",
@@ -156,7 +346,7 @@
       "ayuLight": "Ayu ライト",
       "ayuMirage": "Ayu Mirage",
       "cadmiumDark": "Cadmium ダーク",
-      "cadmiumLight": "Cadmium ライト",
+      "gitbookTeal": "GitBook Teal",
       "catppuccinLatte": "Catppuccin Latte",
       "catppuccinMocha": "Catppuccin Mocha",
       "cyberdream": "cyberdream",
@@ -188,6 +378,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "ファイルのパスをコピー",
+    "copyFolderPath": "親フォルダーのパスをコピー",
     "cut": "切り取り",
     "copy": "コピー",
     "paste": "貼り付け",
@@ -220,7 +412,8 @@
       "rename": "名前の変更",
       "copyPath": "パスのコピー",
       "showInFolder": "フォルダーの表示",
-      "showInSideBar": "サイドバーに表示"
+      "showInSideBar": "サイドバーに表示",
+      "openContainingFolder": "ファイルのあるフォルダーをサイドバーで開く"
     }
   },
   "search": {
@@ -237,6 +430,7 @@
     "searchLimited": "最初の {count} 件まで表示しています"
   },
   "sideBar": {
+    "resize": "サイドバーの幅を調整",
     "search": {
       "backToFiles": "ファイルに戻る",
       "searchInFolder": "フォルダー内の検索...",
@@ -251,6 +445,7 @@
     },
     "tree": {
       "openedFiles": "開いているファイル",
+      "folders": "フォルダー",
       "saveAll": "すべて保存",
       "closeAll": "すべて閉じる",
       "emptyProject": "空のプロジェクト",
@@ -271,6 +466,7 @@
       "expand": "目次を展開",
       "collapse": "目次を折りたたむ",
       "empty": "見出しがありません",
+      "emptyHint": "見出しを追加するとここに表示されます",
       "resize": "目次の幅を変更",
       "title": "目次",
       "expandAll": "すべて展開",
@@ -293,7 +489,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -313,6 +509,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "見出しを読み込み中…",
     "placeholder": "実行するコマンドの入力",
     "placeholders": {
       "selectOption": "オプションの選択",
@@ -410,7 +607,7 @@
   },
   "import": {
     "title": "インポートまたは開く",
-    "description": "ここにドラッグして MarkText にコンテンツをインポート"
+    "description": "ここにドラッグして AutumnMark にコンテンツをインポート"
   },
   "preferences": {
     "title": "環境設定",
@@ -419,6 +616,8 @@
       "placeholder": "設定の検索..."
     },
     "categories": {
+      "ai": "AI モデル",
+      "video": "動画",
       "general": "一般",
       "appearance": "外観",
       "editor": "編集",
@@ -578,6 +777,11 @@
         "hideLinkPopup": "リンクポップアップを隠す",
         "autoCheck": "親子タスクのチェックを連動",
         "autoNormalizeLineEndings": "開くときに改行コードを自動的に LF へ統一",
+        "compactMode": "コンパクトモード",
+        "compactLimitHint": "上限を 0 にすると、その種類のコンパクトモードが無効になります。",
+        "compactImageMaxHeight": "画像の最大高さ（px）",
+        "compactVideoMaxHeight": "動画の最大高さ（px）",
+        "compactCodeMaxLines": "コードブロックの最大表示行数",
         "wrapCodeBlocks": "コードブロックを折り返し",
         "sourceCodeLineNumbers": "ソースコードモードで行番号を表示"
       }
@@ -587,7 +791,8 @@
       "actions": {
         "upload": "クラウドにアップロード",
         "folder": "フォルダーにコピー",
-        "path": "絶対パスを使用"
+        "path": "絶対パスを使用",
+        "embed": "Markdown に埋め込む（Base64）"
       },
       "folderSetting": {
         "title": "フォルダーの設定",
@@ -633,7 +838,7 @@
         "lastSuccessTime": "最後の成功時刻",
         "invalidScript": "存在する実行可能なスクリプトのパスを入力してください。"
       },
-      "defaultBehavior": "MarkText に画像を貼り付けまたはドラッグした後のデフォルト動作"
+      "defaultBehavior": "AutumnMark に画像を貼り付けまたはドラッグした後のデフォルト動作"
     },
     "markdown": {
       "title": "Markdown",
@@ -657,6 +862,11 @@
         }
       },
       "diagrams": {
+        "newDrawingView": {
+          "title": "新規図面の表示先",
+          "dialog": "フローティングウィンドウ",
+          "tab": "新しいタブ"
+        },
         "title": "図表",
         "sequenceTheme": {
           "title": "シーケンステーマ",
@@ -664,10 +874,10 @@
           "simple": "シンプル"
         },
         "mermaidLightTheme": {
-          "title": "MarkText のライトテーマ用 Mermaid テーマ"
+          "title": "AutumnMark のライトテーマ用 Mermaid テーマ"
         },
         "mermaidDarkTheme": {
-          "title": "MarkText のダークテーマ用 Mermaid テーマ"
+          "title": "AutumnMark のダークテーマ用 Mermaid テーマ"
         },
         "plantumlServer": {
           "title": "PlantUML サーバーの URL"
@@ -707,6 +917,67 @@
     "theme": {
       "title": "テーマ",
       "followSystemTheme": "システムの外観に合わせる",
+      "mode": "テーマモード",
+      "fixed": "固定テーマ",
+      "currentTheme": "現在のテーマ",
+      "source": "テーマの取得元",
+      "local": "ローカルテーマ",
+      "online": "オンラインテーマ",
+      "builtIn": "組み込み",
+      "custom": "カスタム",
+      "installed": "インストール済み",
+      "active": "使用中",
+      "apply": "適用",
+      "refresh": "オンラインテーマを再読み込み",
+      "installOnly": "インストールのみ",
+      "installAndApply": "インストールして適用",
+      "update": "更新",
+      "setFor": {
+        "light": "ライトテーマに設定",
+        "dark": "ダークテーマに設定"
+      },
+      "installFor": {
+        "light": "インストールしてライトテーマに設定",
+        "dark": "インストールしてダークテーマに設定"
+      },
+      "assigned": {
+        "light": "ライトモードに設定済み",
+        "dark": "ダークモードに設定済み"
+      },
+      "deferred": {
+        "light": "システムがライトモードに切り替わると「{name}」が適用されます。",
+        "dark": "システムがダークモードに切り替わると「{name}」が適用されます。"
+      },
+      "applied": "「{name}」を適用しました。",
+      "installedNotice": "「{name}」をインストールしました。ローカルテーマから選択できます。",
+      "updated": "「{name}」を更新しました。",
+      "incompatible": "AutumnMark {version} が必要です",
+      "changeFailed": "テーマ設定を保存できませんでした。",
+      "installFailed": "このテーマをダウンロードまたは保存できませんでした。",
+      "deleteTheme": "テーマを削除",
+      "uninstallTheme": "テーマをアンインストール",
+      "confirmRemoval": "「{name}」はローカルテーマから削除されます。",
+      "removalFallback": "このテーマを使用している設定は「{base}」に切り替わります。",
+      "removalFailed": "このテーマを削除できませんでした。",
+      "preview": "プレビュー",
+      "compare": "現在のテーマと比較",
+      "previewing": "プレビュー中",
+      "previewLoading": "テーマのプレビューを読み込み中…",
+      "previewFailed": "テーマのプレビューを読み込めませんでした。",
+      "loading": "オンラインテーマを読み込み中…",
+      "unavailable": "オンラインテーマを読み込めませんでした。再読み込みしてください。",
+      "cached": "最後にダウンロードしたカタログを表示しています。",
+      "cachedNoResults": "最後にダウンロードしたカタログに検索条件に合うテーマがありません。",
+      "emptyCatalog": "オンラインテーマはまだありません。",
+      "sample": {
+        "title": "朝のメモ",
+        "quote": "小さな思いつきから始めよう。",
+        "section": "節",
+        "status": "状態",
+        "intro": "はじめに",
+        "draft": "下書き",
+        "code": "書き始める"
+      },
       "followSystemNote": "以下でダークモードとライトモードのテーマをそれぞれ選択できます。",
       "modeThemes": "テーマの選択",
       "lightModeTheme": "ライトモードのテーマ",
@@ -780,9 +1051,27 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "著作権貢献者"
   },
+  "remoteContent": {
+    "announcement": "お知らせ",
+    "unreadAnnouncement": "未読のお知らせ",
+    "about": "最新情報",
+    "loading": "最新の内容を取得しています…",
+    "loadFailed": "内容を取得できませんでした。",
+    "refreshFailed": "更新に失敗したため、前回取得した内容を表示しています。",
+    "unverified": "GitHub に接続できないため、お知らせが最新かどうかを確認できませんでした。",
+    "refresh": "更新",
+    "retry": "再試行",
+    "donation": {
+      "title": "AutumnMark を支援する",
+      "description": "対応するアプリで QR コードを読み取って、AutumnMark の開発を支援できます。",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "{method} の寄付用 QR コード"
+    }
+  },
   "commands": {
     "mt": {
-      "hide": "MarkText を隠す",
+      "hide": "AutumnMark を隠す",
       "hideOthers": "他を隠す"
     },
     "file": {
@@ -925,9 +1214,141 @@
       "switchLanguage": "言語の切り替え"
     }
   },
+  "documentChat": {
+    "undoChanges": "変更を取り消す",
+    "changesReverted": "変更を取り消しました",
+    "turnActions": "このやり取りの操作",
+    "deleteTurn": "このやり取りを削除",
+    "revertTurn": "このやり取りを取り消して削除",
+    "revertFailed": "文書またはテーマが変更されたため、一部の変更を取り消せませんでした。会話は保持されています。",
+    "configure": "AI モデルを設定",
+    "onboarding": {
+      "title": "AI で編集",
+      "loadingModels": "AI モデルを読み込み中…",
+      "retry": "再試行",
+      "builtIn": "AutumnMark 内で AI を使う",
+      "builtInHint": "モデルを追加すると、サイドバーでチャットしたり、文書やテーマを編集したりできます。",
+      "externalClient": "普段お使いの AI クライアントはありますか？",
+      "externalHint": "AutumnMark にモデルを設定せずに、お使いのクライアントで編集できます。",
+      "useExternal": "外部 AI クライアントを使う",
+      "target": "編集対象",
+      "editDocument": "文書を編集",
+      "editTheme": "テーマを編集",
+      "copyFailed": "クリップボードにコピーできませんでした。再試行してください。",
+      "skillIntro": "対応するクライアントで {0} Skill を呼び出すと、文書やテーマを編集できます。",
+      "documentScope": "すべてのウィンドウで文書が 1 件だけ開いている場合は、そのまま編集できます。複数ある場合は、編集対象をクライアントが確認します。",
+      "themeScope": "テーマエディターが開いている場合は現在の下書きを編集します。閉じている場合は適用中のテーマを編集します。",
+      "invokeSkill": "クライアントで Skill を呼び出す",
+      "invokeHint": "例文をクライアントに貼り付け、希望する変更に書き換えてください。",
+      "documentInstruction": "{0} Skill を使って、現在の文書の確認事項をチェックリストにしてください。",
+      "themeInstruction": "{0} Skill を使って、現在のテーマのレベル 1 見出しを少し小さくしてください。",
+      "skillHelp": "クライアントに Skill が表示されませんか？",
+      "skillHelpHint": "AutumnMark は起動時に Skill をインストールし、更新します。クライアントの Skill 一覧を更新するか、下の共有フォルダーから読み込んでください。",
+      "copyInstruction": "呼び出し指示をコピー",
+      "instructionCopied": "呼び出し指示をコピーしました。AI クライアントに貼り付けてください。"
+    }
+  },
+  "drawing": {
+    "insert": "Excalidraw 図面を挿入",
+    "openInTab": "タブで開く",
+    "new": "新しい Excalidraw 図面",
+    "open": "Excalidraw 図面を開く",
+    "untitled": "無題の図面",
+    "addDocument": "Markdown 文書を追加",
+    "addDocumentButton": "文書を追加",
+    "searchDocuments": "Markdown 文書を検索",
+    "insertIntoNote": "文書に挿入",
+    "wholeDocument": "文書全体",
+    "addCard": "カードを追加",
+    "discardChanges": "この図面の未保存の変更を破棄しますか？",
+    "discard": "変更を破棄",
+    "changedOnDisk": "ディスク上の図面が変更されています。開き直して最新版を表示してください。",
+    "invalidFile": ".excalidraw ファイルを選択してください。",
+    "openFailed": "ファイルを開けませんでした。{reason}",
+    "saveFailed": "図面の保存または挿入ができませんでした。{reason}",
+    "cardFailed": "文書カードを追加できませんでした。{reason}"
+  },
   "common": {
     "cancel": "キャンセル",
     "ok": "OK"
+  },
+  "video": {
+    "streamedSource": "保存時に動画全体（{size} MiB）が Markdown ファイルに埋め込まれます。Base64 ソースが大きいため、ここでは直接編集できません。",
+    "embed": "動画を Base64 で埋め込む",
+    "note": "新しく挿入する動画を Markdown 文書内に保存します。オフの場合はファイルを参照します。",
+    "title": "動画",
+    "insert": "動画を挿入…",
+    "preview": "動画プレビュー",
+    "replace": "動画を置換",
+    "choose": "動画を選択…",
+    "fromClipboard": "クリップボードの動画を使用",
+    "delete": "動画を削除",
+    "drop": "ドロップして置換",
+    "hint": "動画をドロップするか {shortcut} で置換",
+    "drag": "元の動画をドラッグ",
+    "invalid": "動画を読み込めないか、コーデックがサポートされていません。",
+    "location": "動画の参照先",
+    "saveAs": "名前を付けて動画を保存…",
+    "convert": "ローカル動画に変換",
+    "toEmbedded": "Markdown に動画を埋め込む",
+    "copy": "動画ファイルをコピー"
+  },
+  "batchMedia": {
+    "title": "画像と動画を一括で埋め込む",
+    "images": "画像（{count}）",
+    "videos": "動画（{count}）",
+    "scanning": "文書を検索中（{current}/{total}）…",
+    "pending": "埋め込み対象のメディアを含む文書：{count} 件",
+    "convert": "選択した項目を埋め込む（{count}）",
+    "converting": "文書を変換中（{current}/{total}）…",
+    "done": "埋め込んだメディア参照：{count} 件",
+    "issues": "問題（{count}）",
+    "locked": "この文書は読み取り専用です。",
+    "changed": "文書が変更されたか、使用中です。もう一度検索してください。",
+    "saveFailed": "変換した文書を保存できませんでした。"
+  },
+  "documentImages": {
+    "words": "{count} 語",
+    "paragraphs": "{count} 段落",
+    "title": "文書内の画像",
+    "noImages": "画像はありません",
+    "allEmbedded": "すべての画像が埋め込み済みです",
+    "pending": "未埋め込みの画像は {count} 枚です",
+    "convertAll": "文書内のすべての画像を埋め込む（{count} 枚）",
+    "summary": "埋め込み済み {embedded} 枚 · 未埋め込み {pending} 枚"
+  },
+  "embeddedImage": {
+    "setSize": "画像サイズを設定…",
+    "width": "幅",
+    "height": "高さ",
+    "lockAspect": "縦横比を固定",
+    "autoSize": "自動サイズに戻す",
+    "auto": "自動",
+    "toEmbedded": "この画像を埋め込む",
+    "pasteProgress": "画像を埋め込み中 {completed}/{total}",
+    "pasteFailed": "{total} 枚中 {failed} 枚は元のリンクを保持しました",
+    "preview": "画像プレビュー",
+    "source": "埋め込みソース",
+    "replace": "画像を置換",
+    "copyAs": "形式を指定してコピー",
+    "jpeg": "JPEG 画像",
+    "fromClipboard": "クリップボードの画像を使用",
+    "saveAs": "名前を付けて画像を保存…",
+    "convert": "ローカル画像に変換",
+    "viewSource": "埋め込みソースを表示",
+    "hint": "ホイールで拡大縮小 · 画像のドロップまたは {shortcut} で置換",
+    "drag": "元画像をドラッグ",
+    "drop": "ドロップして置換",
+    "dirty": "未適用の変更があります",
+    "discard": "変更を破棄",
+    "apply": "変更を適用",
+    "copyFailed": "画像をコピーできませんでした。",
+    "unsupported": "未対応の画像形式です。",
+    "title": "埋め込み画像",
+    "delete": "画像を削除",
+    "paste": "データ URL を貼り付け",
+    "choose": "画像を選択…",
+    "invalid": "画像を読み込めませんでした。"
   },
   "dialog": {
     "moveToTrash": "「{name}」をごみ箱に移動しますか？",
@@ -939,7 +1360,7 @@
     "fileExists": "ファイルが既に存在します: {filename}",
     "files": "ファイル",
     "importWarning": "インポート警告",
-    "installPandoc": "Pandoc が見つかりません。インストールするか、環境変数 MARKTEXT_PANDOC に pandoc の実行ファイルのパスを設定して MarkText を再起動してください。",
+    "installPandoc": "Pandoc が見つかりません。インストールするか、環境変数 MARKTEXT_PANDOC に pandoc の実行ファイルのパスを設定して AutumnMark を再起動してください。",
     "exportWarning": "エクスポートの警告",
     "exportWarningMore": "…ほか {count} 件",
     "keepOpen": "開いたままにする",
@@ -956,13 +1377,30 @@
     "configSchemaViolation": "設定スキーマ違反",
     "copyError": "コピーエラー",
     "initializationFailed": "初期化に失敗しました {hint}",
-    "otherInstanceDetected": "MarkText の別のインスタンスが既に実行中です",
+    "otherInstanceDetected": "AutumnMark の別のインスタンスが既に実行中です",
     "report": "報告",
     "startupError": "起動エラー",
     "terminatedDueToError": "エラーにより終了",
     "unexpectedErrorWithMessage": "予期しないエラー : {message}",
     "unexpectedMainProcess": "予期しないメインプロセスエラー",
     "unexpectedRendererProcess": "予期しないレンダラープロセスエラー"
+  },
+  "updates": {
+    "title": "ソフトウェアアップデート",
+    "install": "再起動してインストール",
+    "later": "後で",
+    "upToDate": "最新版を使用しています。",
+    "downloaded": "アップデートをダウンロードしました。インストールのためアプリが終了します。",
+    "checkFailed": "アップデートを確認できませんでした。後でもう一度お試しください。",
+    "installFailed": "アップデートをインストールできませんでした。後でもう一度お試しください。",
+    "checking": "アップデートを確認中…",
+    "preparing": "バージョン {version} のインストールを準備中…",
+    "downloading": "バージョン {version} をダウンロード中…",
+    "ready": "バージョン {version} をインストールできます。",
+    "background": "バックグラウンドで続行",
+    "retry": "再試行",
+    "downloadFailed": "ダウンロードに失敗しました。接続を確認して再試行してください。",
+    "waiting": "応答を待っています…"
   },
   "notifications": {
     "defaultMessage": "デフォルトメッセージ",

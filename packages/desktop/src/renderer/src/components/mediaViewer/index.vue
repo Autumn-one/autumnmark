@@ -8,6 +8,7 @@
       aria-modal="true"
       :aria-label="label"
       tabindex="-1"
+      @mousemove.stop
     >
       <el-tooltip
         :content="t('editor.mediaViewer.close')"
@@ -121,6 +122,7 @@
       <div
         ref="stageRef"
         class="media-viewer-stage"
+        @contextmenu="showImageMenu"
       />
       <span
         class="visually-hidden"
@@ -155,6 +157,8 @@ import {
 } from '@/util/diagramExport'
 import notice from '@/services/notification'
 import { copyImageToClipboard, readImagePng } from '@/util/clipboard'
+import { popupContextMenu } from '@/contextMenu/popupMenu'
+import { reportImageError, saveImage } from '@/util/embeddedImageActions'
 
 const PAN_STEP = 40
 const PAN_STEP_FAST = 160
@@ -172,7 +176,7 @@ const TOOLTIP = {
   hideAfter: 0
 } as const
 
-const emit = defineEmits<{ (event: 'openChange', open: boolean): void }>()
+const emit = defineEmits<{ open: [] }>()
 
 const { t } = useI18n()
 
@@ -316,6 +320,32 @@ const copy = async () => {
   }
 }
 
+const showImageMenu = (event: MouseEvent) => {
+  const src = imageSource.value
+  if (!src) return
+  event.preventDefault()
+  event.stopPropagation()
+  popupContextMenu([
+    { label: t('editor.mediaViewer.copyImage'), enabled: imageReady.value && !copying.value, click: copy },
+    {
+      label: t('embeddedImage.saveAs'),
+      enabled: imageReady.value,
+      click: async () => {
+        try {
+          const url = new URL(src, document.baseURI)
+          const name = url.protocol === 'data:' ? '' : window.path.basename(decodeURIComponent(url.pathname))
+          await saveImage({ src: url.href, name })
+        } catch (error) {
+          reportImageError(error)
+        }
+      }
+    },
+    { type: 'separator' },
+    { label: t('editor.mediaViewer.actualSize'), click: actualSize },
+    { label: t('editor.mediaViewer.fit'), click: fit }
+  ], { x: event.clientX, y: event.clientY })
+}
+
 // Every control the reader can reach, in the order Tab should visit them.
 const CONTROLS = '.icon-close, .media-viewer-toolbar button'
 
@@ -411,6 +441,7 @@ const open = async (
     // The toolbar and the close control are layered over the stage, and are
     // where the pointer sits after using them.
     wheelSurface: rootRef.value ?? undefined,
+    onBackdropClick: close,
     onChange: (state) => {
       scale.value = state.scale
       if (!fitting) touched.value = true
@@ -423,7 +454,7 @@ const open = async (
   // hand focus back to, and closing would then drop focus on the floor.
   if (!reopening) restoreFocusTo = document.activeElement as HTMLElement | null
   visible.value = true
-  emit('openChange', true)
+  emit('open')
   // The overlay is modal, so the keys belong to it wherever focus ended up.
   document.addEventListener('keydown', onKeydown, true)
 
@@ -432,7 +463,7 @@ const open = async (
   rootRef.value?.focus()
 }
 
-const openImage = (url: string) =>
+const openImage = (url: string, name = t('editor.mediaViewer.title')) =>
   open((stage) => {
     const img = document.createElement('img')
     imageSource.value = url
@@ -451,7 +482,7 @@ const openImage = (url: string) =>
     img.draggable = false
     stage.appendChild(img)
     return img
-  }, t('editor.mediaViewer.title'))
+  }, name)
 
 const openDiagram = (source: DiagramSource, name: string | null) =>
   open(
@@ -499,12 +530,10 @@ const close = () => {
   document.removeEventListener('keydown', onKeydown, true)
   visible.value = false
   clearStage()
-  emit('openChange', false)
   restoreFocusTo?.focus()
   restoreFocusTo = null
 }
 
-// Close on unmount too, clearing the parent viewer-open state.
 onBeforeUnmount(close)
 
 defineExpose({ openImage, openDiagram, close })
@@ -513,7 +542,7 @@ defineExpose({ openImage, openDiagram, close })
 <style>
 .image-viewer {
   position: fixed;
-  backdrop-filter: blur(5px);
+  app-region: no-drag;
   top: 0;
   right: 0;
   left: 0;

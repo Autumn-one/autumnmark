@@ -1,3 +1,4 @@
+import type { ISizedTableCell } from '../utils/marked/extensions/tableLayout';
 import type { ListItemToken, TBlockToken } from '../utils/marked/types';
 import type {
     IAtxHeadingState,
@@ -10,7 +11,8 @@ import type {
     ITaskListState,
     TState,
 } from './types';
-import { firstWordOfInfo, parseFenceLine } from '../utils';
+import { parseFenceLine } from '../utils';
+import { codeFenceLanguage, parseCodeFenceAnnotations } from '../utils/codeFenceAnnotations';
 import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
 import { toListDelimiter } from '../utils/listMarker';
 import logger from '../utils/logger';
@@ -438,25 +440,18 @@ export class MarkdownToState {
         // `` `|` `` rather than the escaped `` `\|` `` inside inline code
         // (#4849). `escapeText` re-adds the `\|` escape on serialization,
         // keeping the markdown round-trip intact.
-        tableState.children.push({
-            name: 'table.row',
-            children: header.map((h, i) => ({
-                name: 'table.cell' as const,
-                meta: { align: align[i] || 'none' },
-                text: h.text,
-            })),
-        });
-
-        tableState.children.push(
-            ...rows.map(row => ({
-                name: 'table.row' as const,
-                children: row.map((c, i) => ({
-                    name: 'table.cell' as const,
-                    meta: { align: align[i] || 'none' },
-                    text: c.text,
+        for (const row of [header, ...rows]) {
+            const { minHeight } = row[0] as ISizedTableCell;
+            tableState.children.push({
+                name: 'table.row',
+                ...(minHeight && { minHeight }),
+                children: row.map((cell: ISizedTableCell, i) => ({
+                    name: 'table.cell',
+                    meta: { align: align[i] || 'none', ...(cell.width && { width: cell.width }) },
+                    text: cell.text,
                 })),
-            })),
-        );
+            });
+        }
 
         return tableState;
     }
@@ -466,22 +461,23 @@ export class MarkdownToState {
         trimUnnecessaryCodeBlockEmptyLines: boolean,
     ): TState {
         const { codeBlockStyle, text, lang: infoString = '', raw = '' } = token;
-        // marked >=17 appends a trailing newline to indented code text
-        // (fenced text has none); strip it so indented blocks round-trip.
-        const codeText = codeBlockStyle === 'indented' ? text.replace(/\n$/, '') : text;
+        // Marked includes the final line terminator for indented code and for fences ending in a blank row.
+        // The serializer supplies that terminator when it writes the closing fence.
+        const codeText = text.replace(/\n$/, '');
         // Read the opening fence itself so its character (` or ~) and
         // run length both survive the round trip (CommonMark §4.5).
         const fence = parseFenceLine(raw);
         const { fenceLength, fenceChar } = fence ?? {};
         // Preserve info-string attributes; diagram detection uses only the first word.
-        const info = (infoString || '').trim();
-        const lang = firstWordOfInfo(info);
+        const info = (fence?.info ?? infoString).trim();
+        const lang = codeFenceLanguage(info);
 
         let value = codeText;
         // Fix: #1265.
         if (
             trimUnnecessaryCodeBlockEmptyLines
             && (value.endsWith('\n') || value.startsWith('\n'))
+            && !parseCodeFenceAnnotations(info).ranges.length
         ) {
             value = value.replace(/\n+$/, '').replace(/^\n+/, '');
         }

@@ -137,7 +137,7 @@ class JSONState {
     }
 
     getMarkdown() {
-        return this.getMarkdownFromState(this.getState());
+        return this.getMarkdownFromState(this._state);
     }
 
     getTOC() {

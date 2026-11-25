@@ -1,10 +1,11 @@
 <template>
   <div
     class="editor-wrapper"
-    :class="[
-      { typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }
-    ]"
+    :class="{ typewriter, focus, source: sourceCode, 'use-theme-font': !editorFontFamily || editorFontFamily === 'Open Sans' }"
     :dir="textDirection"
+    @click.capture="activateDrawingPreview"
+    @keydown.capture="activateDrawingByKey"
+    @contextmenu="showDocumentBackgroundMenu"
   >
     <div
       ref="editorRef"
@@ -12,7 +13,7 @@
     />
     <media-viewer
       ref="mediaViewer"
-      @open-change="viewerOpen = $event"
+      @open="editor?.hideAllFloatTools()"
     />
     <el-dialog
       v-model="dialogTableVisible"
@@ -87,6 +88,11 @@ import {
 import log from 'electron-log'
 import {
   Muya,
+  decodeInlineDrawing,
+  getImageInfo,
+  getStateSections,
+  headingLinkAt,
+  linkedImageAt,
   CodeBlockLanguageSelector,
   EmojiSelector,
   FootnoteTool,
@@ -104,7 +110,6 @@ import {
   TableColumnToolbar,
   TableDragBar,
   TableRowColumMenu,
-  wordCount as muyaWordCount,
   type TSelectionState,
   type ISelectionChangePayload,
   SelectionType,
@@ -133,6 +138,12 @@ import { isMac, animatedScrollTo } from '@/util'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath, copyImageToClipboard, readImagePng, clipboardImagePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
+import { embedImage } from '@/util/embedImage'
+import { reportImageError } from '@/util/embeddedImageActions'
+import { embedDocumentImages, embedLinkedImage } from '@/services/pastedImages'
+import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
+import { documentVideos } from '@/util/videoAttachments'
+import type { IEmbeddedImageEdit } from '@muyajs/core'
 import { getCssForOptions, type PdfCssOptions } from '@/util/pdf'
 import {
   getTocHeadingScrollTop,
@@ -140,6 +151,8 @@ import {
   TOP_LEVEL_HEADINGS_SELECTOR
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
+import type { BeginOutlineMove } from '@/util/outlineMove'
+import type { HeadingLinkRequest } from '@/util/headingLinks'
 import { addCommonStyle, setEditorWidth } from '@/util/theme'
 import { isDarkThemeId, resolveMermaidTheme } from 'common/theme'
 import { usePreferencesStore } from '@/store/preferences'
@@ -147,7 +160,13 @@ import {
   registerDocumentView,
   pruneSourceHistory
 } from '../../services/documentMode'
-import { popupContextMenu } from '../../contextMenu/popupMenu'
+import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
+import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
+import { getDocumentLocationMenuItems } from '../../contextMenu/fileLocation'
+import { invalidateDrawingPreviews, renderEmbeddedDrawingPreview, resolveDrawingPreview } from '@/services/drawingPreviews'
+import { resolveDrawingPath } from '@/util/drawingPaths'
+import { drawingInsertionAt } from '@/util/drawingInsertion'
+import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
@@ -162,7 +181,9 @@ import { type InputNumberInstance } from 'element-plus'
 const { t } = useI18n()
 const STANDAR_Y = 320
 
+const emit = defineEmits<{ editEmbeddedImage: [image: IEmbeddedImageEdit, event?: MouseEvent]; headingLink: [request: HeadingLinkRequest | null] }>()
 const props = defineProps<{
+  imageMenuItem: ContextMenuItem
   markdown?: string
   cursor?: unknown
   textDirection: string
@@ -209,6 +230,10 @@ const {
   hideLinkPopup,
   autoCheck,
   editorLineWidth,
+  compactMode,
+  compactImageMaxHeight,
+  compactVideoMaxHeight,
+  compactCodeMaxLines,
   wrapCodeBlocks,
   imageInsertAction,
   imagePreferRelativeDirectory,
@@ -256,7 +281,7 @@ const resolveEditorFont = (family: string): string =>
   family ? `${family}, ${defaultFontFamily}` : defaultFontFamily
 const resolveCodeFont = (family: string): string =>
   family ? `${family}, ${DEFAULT_CODE_FONT_FAMILY}` : DEFAULT_CODE_FONT_FAMILY
-const selectionChange = ref<ISelectionChangePayload | null>(null)
+const selectionChange = shallowRef<ISelectionChangePayload | null>(null)
 // `shallowRef`: the engine instance is `markRaw`d anyway, and a deep ref
 // would map `Muya` through `UnwrapRef` and lose the class's own type.
 const editor = shallowRef<Muya | null>(null)
@@ -272,7 +297,158 @@ const tableChecker = reactive({
 
 const editorRef = ref<HTMLDivElement | null>(null)
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
-const viewerOpen = ref(false)
+
+const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; href?: string; image?: string }): void => {
+  const muya = editor.value
+  const tab = currentFile.value
+  if (!muya || !tab) return
+  const hasSelection = document.getSelection()?.isCollapsed === false
+  const items = [
+    { label: t('menu.edit.copy'), enabled: hasSelection, click: () => document.execCommand('copy') },
+    { label: t('menu.edit.copyAsRich'), enabled: hasSelection, click: () => muya.copyAsRich() },
+    { label: t('menu.edit.copyAsHtml'), enabled: hasSelection, click: () => muya.copyAsHtml() },
+    { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
+    ...(href ? [{ label: t('readingMode.copyLink'), click: () => window.electron.clipboard.writeText(href) }] : []),
+    ...(image ? [{ label: t('readingMode.viewImage'), click: () => mediaViewer.value?.openImage(image) }] : [])
+  ]
+  const locationItems = isDocumentBackground(event) ? [{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem] : []
+  popupContextMenu([...items, ...locationItems], { x: event.clientX, y: event.clientY })
+}
+
+function readMarkdown(id: string): string | undefined {
+  const muya = editor.value
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return
+  muya.flush()
+  return muya.getMarkdown()
+}
+
+const editMarkdown: EditMarkdown = (id, prepare) => {
+  const muya = editor.value
+  const markdown = readMarkdown(id)
+  if (!muya || markdown === undefined) throw new Error(t('batchMedia.changed'))
+  const edits = prepare(markdown)
+  if (!edits.length) return
+  const folds = muya.getHeadingFoldState()
+  const expanded = muya.editor.compactBlocks.expandedPaths()
+  muya.replaceContent(applyMarkdownEdits(markdown, edits))
+  muya.setHeadingFoldState(folds)
+  muya.editor.compactBlocks.restoreExpandedPaths(expanded)
+}
+
+function drawingInsertion(id: string) {
+  const muya = editor.value
+  const markdown = readMarkdown(id)
+  if (!muya || markdown === undefined) return
+  const selection = muya.getSelection()
+  if (selection?.kind !== SelectionType.TEXT || !selection.context.isSelectionInSameBlock ||
+    !['paragraph.content', 'atxheading.content', 'setextheading.content', 'table.cell.content'].includes(selection.context.focusBlock.blockName)) return
+  const focus = muya.getCursorOffset()?.focus
+  if (!focus) return
+  const lines = markdown.split('\n')
+  const offset = lines.slice(0, focus.line).reduce((length, line) => length + line.length + 1, focus.ch)
+  return drawingInsertionAt(markdown, offset)
+}
+
+defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
+
+function openInlineDrawing(wrapper: HTMLElement, event: Event) {
+  const muya = editor.value
+  if (!muya) return
+  const { token } = getImageInfo(wrapper)
+  const source = decodeInlineDrawing(token.attrs.src ?? '')
+  if (source === undefined) return
+  const previews = [...muya.domNode.querySelectorAll('.mu-embedded-drawing, .mu-inline-drawing')]
+  const index = previews.indexOf(wrapper)
+  if (index < 0) return
+  event.preventDefault()
+  event.stopPropagation()
+  bus.emit('drawing::open-embedded', { source, index })
+}
+
+function activateDrawingByKey(event: KeyboardEvent) {
+  if (event.isComposing || !(event.target instanceof HTMLElement) || !event.target.matches('.mu-inline-drawing')) return
+  if (event.key === 'Enter' || event.key === ' ') {
+    openInlineDrawing(event.target, event)
+    return
+  }
+  const muya = editor.value
+  const parent = event.target.parentNode
+  if (!muya || muya.isReadOnly || !parent || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+    (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
+  const before = event.key === (props.textDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft')
+  const offset = [...parent.childNodes].indexOf(event.target)
+  event.preventDefault()
+  event.stopPropagation()
+  muya.domNode.focus()
+  parent.ownerDocument?.getSelection()?.collapse(parent, before ? offset : offset + 1)
+}
+
+function activateDrawingPreview(event: MouseEvent) {
+  const muya = editor.value
+  const tab = currentFile.value
+  if (!muya || !tab || !(event.target instanceof Element)) return
+  if (!event.target.matches('img')) return
+  const inline = event.target.closest<HTMLElement>('.mu-inline-drawing')
+  if (inline) {
+    openInlineDrawing(inline, event)
+    return
+  }
+  const linked = linkedImageAt(muya, event.target)
+  const path = linked && resolveDrawingPath(linked.src, tab.pathname)
+  if (path) {
+    event.preventDefault()
+    event.stopPropagation()
+    bus.emit('drawing::open-linked', { path, noteId: tab.id })
+  }
+}
+
+const showDocumentBackgroundMenu = (event: MouseEvent): void => {
+  const tab = currentFile.value
+  if (event.defaultPrevented || !tab) return
+  const muya = editor.value
+  const linked = muya && event.target instanceof Element ? linkedImageAt(muya, event.target) : undefined
+  const drawing = linked && resolveDrawingPath(linked.src, tab.pathname)
+  if (drawing) {
+    event.preventDefault()
+    popupContextMenu([{ label: t('drawing.open'), click: () => bus.emit('drawing::open-linked', { path: drawing, noteId: tab.id }) }], { x: event.clientX, y: event.clientY })
+    return
+  }
+  if (linked && !tab.readOnly) {
+    event.preventDefault()
+    const { id, pathname } = tab
+    const current = () => currentFile.value?.id === id && currentFile.value.pathname === pathname &&
+      !currentFile.value.readOnly && !sourceCode.value && linked.current()
+    popupContextMenu([{ type: 'separator' }, {
+      id: 'embedLinkedImage',
+      label: t('embeddedImage.toEmbedded'),
+      click: async() => {
+        if (!current()) return
+        try {
+          const data = await embedLinkedImage(linked.src, pathname)
+          if (current()) linked.embed(data)
+        } catch (error) {
+          if (current()) reportImageError(error)
+        }
+      }
+    }], {
+      x: event.clientX, y: event.clientY,
+      editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+    })
+    return
+  }
+  if (!isDocumentBackground(event)) return
+  event.preventDefault()
+  if (tab.readOnly) {
+    showReadingContextMenu({ event })
+    return
+  }
+  popupContextMenu([{ type: 'separator' }, ...getDocumentLocationMenuItems(tab), { type: 'separator' }, props.imageMenuItem,
+    { id: 'newDrawing', label: t('drawing.insert'), click: () => bus.emit('drawing::insert', { id: tab.id, atCaret: false }) }], {
+    x: event.clientX,
+    y: event.clientY,
+    editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+  })
+}
 const rowInput = ref<InputNumberInstance | null>(null)
 
 let printer: Printer | null = null
@@ -284,13 +460,14 @@ let scrollHandler: ((e: Event) => void) | null = null
 // Keep engine undo history per tab; the store uses a separate save-tracking history shape.
 const engineHistoryByTab = new Map<string, ISerializedHistory>()
 
-const headingFoldsByTab = new Map<string, { markdown: string; folds: IHeadingFoldState[] }>()
+const blockViewsByTab = new Map<string, { markdown: string; folds: IHeadingFoldState[]; expanded: string[] }>()
 
-const captureHeadingFolds = (): void => {
+const captureBlockViews = (): void => {
   if (!editor.value || !renderedDocumentId || !tabs.value.some(tab => tab.id === renderedDocumentId)) return
-  headingFoldsByTab.set(renderedDocumentId, {
+  blockViewsByTab.set(renderedDocumentId, {
     markdown: editor.value.getMarkdown(),
-    folds: editor.value.getHeadingFoldState()
+    folds: editor.value.getHeadingFoldState(),
+    expanded: editor.value.editor.compactBlocks.expandedPaths()
   })
 }
 
@@ -324,8 +501,8 @@ const pruneClosedTabState = (liveTabIds: Set<string>): void => {
   for (const id of syntheticHistoryByTab.keys()) {
     if (!liveTabIds.has(id)) syntheticHistoryByTab.delete(id)
   }
-  for (const id of headingFoldsByTab.keys()) {
-    if (!liveTabIds.has(id)) headingFoldsByTab.delete(id)
+  for (const id of blockViewsByTab.keys()) {
+    if (!liveTabIds.has(id)) blockViewsByTab.delete(id)
   }
 }
 
@@ -392,7 +569,7 @@ const setSelectionWordCountFromText = (selectedText: string) => {
   const hasSelection = selectedText.trim().length > 0
   if (!hasSelection && editorStore.selectionWordCount == null) return
 
-  editorStore.SET_SELECTION_WORD_COUNT(hasSelection ? muyaWordCount(selectedText) : null)
+  editorStore.SET_SELECTION_WORD_COUNT(hasSelection && currentFile.value ? documentVideos(currentFile.value.id).wordCount(selectedText) : null)
 }
 
 // Watch tab IDs to prune history maps only when tabs are added or closed.
@@ -596,6 +773,15 @@ watch(editorLineWidth, (value, oldValue) => {
   }
 })
 
+watch([compactMode, compactImageMaxHeight, compactVideoMaxHeight, compactCodeMaxLines], ([enabled, imageHeight, videoHeight, lines]) => {
+  editor.value?.setOptions({
+    compactMode: enabled,
+    compactImageMaxHeight: imageHeight,
+    compactVideoMaxHeight: videoHeight,
+    compactCodeMaxLines: lines
+  })
+})
+
 watch(wrapCodeBlocks, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ wrapCodeBlocks: value })
@@ -722,8 +908,6 @@ watch(currentFile, (value, oldValue) => {
     if (editor.value) {
       editor.value.hideAllFloatTools()
     }
-    // The viewer holds a node from the outgoing document, and keeps the
-    // incoming one at `pointer-events: none` while it is up.
     mediaViewer.value?.close()
   }
 })
@@ -733,8 +917,6 @@ watch(
   (value, oldValue) => {
     if (value && value !== oldValue) {
       if (editor.value?.isReadOnly) return
-      // The viewer holds a rendering of a document that is about to stop being
-      // shown, and holds the editor behind it inert while it is up.
       mediaViewer.value?.close()
       if (editor.value) {
         editor.value.hideAllFloatTools()
@@ -796,6 +978,11 @@ const imageAction = async (
 ): Promise<string> => {
   if (!currentFile.value) return ''
   const { filename, pathname: currentPathname } = currentFile.value
+  if (imageInsertAction.value === 'embed') {
+    const src = await embedImage(image, currentPathname)
+    if (id && sourceCode.value) bus.emit('image-action', { id, result: src, alt })
+    return src
+  }
 
   // A pasted screenshot / bitmap clipboard comes in as a `data:` URL string
   // rather than a file path. `moveImageToFolder` and `uploadImage` treat any
@@ -961,6 +1148,11 @@ const handleInvalidateImageCache = () => {
   }
 }
 
+const refreshDrawingPreviews = () => {
+  invalidateDrawingPreviews()
+  if (/\.excalidraw/i.test(currentFile.value?.markdown ?? '')) handleInvalidateImageCache()
+}
+
 const openSpellcheckerLanguageCommand = () => {
   if (!isMac) {
     bus.emit('show-command-palette', switchLanguageCommand)
@@ -999,17 +1191,11 @@ const handleSelectAll = () => {
     return
   }
 
-  if (editor.value && editor.value.hasFocus()) {
+  const focused = document.activeElement
+  if (focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement) {
+    focused.select()
+  } else if (editor.value?.hasFocus()) {
     editor.value.selectAll()
-  } else {
-    const activeElement = document.activeElement as HTMLElement | null
-    const nodeName = activeElement?.nodeName
-    if (nodeName === 'INPUT' || nodeName === 'TEXTAREA') {
-      const selectable = activeElement as HTMLInputElement | HTMLTextAreaElement | null
-      if (selectable && typeof selectable.select === 'function') {
-        selectable.select()
-      }
-    }
   }
 }
 
@@ -1108,6 +1294,19 @@ const handleUploadedImage = (url: unknown, deletionUrl?: unknown) => {
 // The engine DOM node owns scrolling as well as contenteditable.
 const getScrollContainer = (): HTMLElement | null =>
   (editor.value?.domNode as HTMLElement | undefined) ?? null
+
+const revealCodeCaret = (viewport: HTMLElement, caret: Pick<DOMRect, 'top' | 'bottom'>): number => {
+  const top = viewport.getBoundingClientRect().top + viewport.clientTop
+  const bottom = top + viewport.clientHeight
+  const previous = viewport.scrollTop
+  if (caret.top < top) {
+    viewport.scrollTop += caret.top - top
+  } else if (caret.bottom > bottom) {
+    viewport.scrollTop += caret.bottom - bottom
+  }
+  // Document scrolling uses the caret position after the inner scrollbar has moved.
+  return caret.top - (viewport.scrollTop - previous)
+}
 
 // Viewport-relative caret position for scrolling outside selection-change events.
 const getCursorY = (): number | null => {
@@ -1283,7 +1482,9 @@ const handleExport = async (options: unknown) => {
     tocIncludeTopHeading: opts.tocIncludeTopHeading
   }
   // The hidden WYSIWYG engine keeps its pre-source-mode document until the handoff.
-  const markdown = sourceCode.value ? (editorStore.currentFile?.markdown ?? '') : muya.getMarkdown()
+  const text = sourceCode.value ? (editorStore.currentFile?.markdown ?? '') : muya.getMarkdown()
+  const videos = currentFile.value && documentVideos(currentFile.value.id)
+  const markdown = videos ? (type === 'styledHtml' ? videos.expand(text) : videos.externalText(text)) : text
   const header = (opts.header ?? null) as HeaderFooterPart | null
   const footer = (opts.footer ?? null) as HeaderFooterPart | null
 
@@ -1291,6 +1492,7 @@ const handleExport = async (options: unknown) => {
     case 'styledHtml': {
       try {
         const content = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: htmlTitle || '',
           printOptimization: false,
           extraCss,
@@ -1321,6 +1523,7 @@ const handleExport = async (options: unknown) => {
         }
 
         const html = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: '',
           printOptimization: true,
           extraCss,
@@ -1347,6 +1550,7 @@ const handleExport = async (options: unknown) => {
       // NOTE: Print doesn't support page size or orientation.
       try {
         const html = await exportStyledHTML(muya, markdown, {
+          documentPath: currentFile.value?.pathname,
           title: '',
           printOptimization: true,
           extraCss,
@@ -1444,7 +1648,65 @@ const handleInlineFormat = (type: unknown) => {
   if (sourceCode.value) {
     return
   }
-  editor.value && editor.value.format(type as string)
+  const muya = editor.value
+  if (!muya || muya.isReadOnly) return
+  if (type === 'video') {
+    const path = savedVideoDocument(currentFile.value)
+    const videos = currentFile.value && documentVideos(currentFile.value.id)
+    void muya.editor.clipboard.insertVideo(pickVideo().then(file => file ? videoMarkdown(file, path, videos) : ''))
+    return
+  }
+  muya.format(type as string)
+}
+
+function beginOutlineMove(begin: unknown) {
+  const muya = editor.value
+  const id = currentFile.value?.id
+  if (!muya || !id || sourceCode.value || muya.isReadOnly || typeof begin !== 'function') return
+  muya.flush()
+  const state = muya.getState()
+  const outline = getStateSections(state)
+  const revision = muya.editor.jsonState.revision
+  const live = muya.getTOC()
+  if (live.some((item, i) => item.slug !== editorStore.listToc[i]?.slug)) return
+  const send = begin as BeginOutlineMove
+  send({ outline, apply([from, pivot, to]) {
+    muya.flush()
+    if (currentFile.value?.id !== id || sourceCode.value || muya.isReadOnly || muya.editor.jsonState.revision !== revision) return
+    muya.replaceContent([...state.slice(0, from), ...state.slice(pivot, to), ...state.slice(from, pivot), ...state.slice(to)])
+  } })
+}
+
+function updateHeadingLink({ selection }: ISelectionChangePayload) {
+  const muya = editor.value
+  if (!muya || sourceCode.value) return
+  const id = currentFile.value?.id
+  if (muya.isReadOnly || selection?.kind !== SelectionType.TEXT || !selection.context.isCollapsed ||
+      !selection.context.cursorCoords || !muya.hasFocus()) {
+    emit('headingLink', null)
+    return
+  }
+  const block = selection.context.anchorBlock
+  const text = block.text
+  const offset = selection.anchor.offset
+  const link = 'getFormatsInRange' in block ? headingLinkAt(text, offset) : undefined
+  if (!link) {
+    emit('headingLink', null)
+    return
+  }
+  emit('headingLink', { file: link.file, query: link.query, rect: selection.context.cursorCoords,
+    apply(href, title) {
+      const live = muya.getSelection()
+      if (currentFile.value?.id !== id || sourceCode.value || muya.isReadOnly || block.text !== text ||
+          live?.kind !== SelectionType.TEXT || !live.context.isCollapsed || live.context.anchorBlock !== block ||
+          live.anchor.offset !== offset) return
+      const edit = link.complete(href, title)
+      muya.transact(() => {
+        block.text = text.slice(0, edit.from) + edit.text + text.slice(edit.to)
+        block.setCursor(edit.from + edit.text.length, edit.from + edit.text.length, true)
+      })
+    }
+  })
 }
 
 const handleDialogTableConfirm = () => {
@@ -1461,7 +1723,7 @@ interface FileLoadedPayload {
 const setMarkdownToEditor = (payload: unknown) => {
   const { id, markdown: newMarkdown, cursor: newCursor } = (payload ?? {}) as FileLoadedPayload
   if (editor.value) {
-    captureHeadingFolds()
+    captureBlockViews()
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
@@ -1519,7 +1781,7 @@ const handleFileChange = (payload: unknown) => {
   if (!container) return
 
   if (typeof newMarkdown === 'string') {
-    captureHeadingFolds()
+    captureBlockViews()
     // Returning from source-code mode: the WYSIWYG engine is never unmounted
     // while source mode is up (index.vue overlays it via `v-if`), so it still
     // holds the PRE-source-mode document and undo history. Record the bulk
@@ -1598,10 +1860,11 @@ const handleFileChange = (payload: unknown) => {
       if (id) {
         getSyntheticHistory(id, editor.value.getMarkdown())
       }
-      const savedFolds = id ? headingFoldsByTab.get(id) : undefined
+      const savedViews = id ? blockViewsByTab.get(id) : undefined
       // Paths are valid only for the captured document, including after source edits or disk reloads.
-      if (savedFolds?.markdown === editor.value.getMarkdown()) {
-        editor.value.setHeadingFoldState(savedFolds.folds)
+      if (savedViews?.markdown === editor.value.getMarkdown()) {
+        editor.value.setHeadingFoldState(savedViews.folds)
+        editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
       }
     }
   } else if (newCursor) {
@@ -1704,6 +1967,17 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 }
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
+const embedPastedImages = async(sources: string[]) => {
+  const tab = currentFile.value
+  if (!tab) return new Map<string, string>()
+  const result = await embedDocumentImages(sources, tab)
+  return currentFile.value?.id === tab.id && !sourceCode.value ? result : new Map<string, string>()
+}
+
+watch(imageInsertAction, action => {
+  editor.value?.setOptions({ embedPastedImages: action === 'embed' ? embedPastedImages : undefined })
+})
+
 onMounted(() => {
   printer = new Printer()
   const ele = editorRef.value
@@ -1758,6 +2032,10 @@ onMounted(() => {
     editorFontFamily: resolveEditorFont(editorFontFamily.value),
     codeFontSize: codeFontSize.value,
     codeFontFamily: resolveCodeFont(codeFontFamily.value),
+    compactMode: compactMode.value,
+    compactImageMaxHeight: compactImageMaxHeight.value,
+    compactVideoMaxHeight: compactVideoMaxHeight.value,
+    compactCodeMaxLines: compactCodeMaxLines.value,
     wrapCodeBlocks: wrapCodeBlocks.value,
     codeBlockLineNumbers: codeBlockLineNumbers.value,
     listIndentation: listIndentation.value,
@@ -1786,14 +2064,38 @@ onMounted(() => {
     clipboardFilePath: guessClipboardFilePath,
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
-    clipboardWriteText: window.electron.clipboard.writeText,
+    clipboardWriteText: text => window.electron.clipboard.writeText(currentFile.value ? documentVideos(currentFile.value.id).externalText(text) : text),
     documentId: () => currentFile.value?.pathname || currentFile.value?.id || '',
     clipboardWriteImage: (data) => copyImageToClipboard(() => readImagePng(data.src), data),
     clipboardImageAction: (src) => imageAction(clipboardImagePath(src), null),
     fetchLinkHtml: (url) => window.electron.fetchLinkHtml(url),
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
+    resolveImagePreview: src => resolveDrawingPreview(src, currentFile.value?.pathname),
+    embeddedDrawing: {
+      preview: renderEmbeddedDrawingPreview,
+      open: (source, index) => bus.emit('drawing::open-embedded', { source, index }),
+      label: () => t('drawing.embedded'),
+      quickInsert: {
+        title: () => t('drawing.insert'),
+        open: target => {
+          const tab = currentFile.value
+          if (tab?.id === renderedDocumentId)
+            bus.emit('drawing::insert-at', { id: tab.id, target })
+        }
+      }
+    },
     beforeImageDrop,
+    importVideo: input => videoMarkdown(input, savedVideoDocument(currentFile.value), currentFile.value && documentVideos(currentFile.value.id)),
+    videoAttachments: {
+      compact: text => currentFile.value ? documentVideos(currentFile.value.id).compact(text) : text,
+      expand: text => currentFile.value ? documentVideos(currentFile.value.id).externalText(text) : text,
+      playback: src => currentFile.value ? documentVideos(currentFile.value.id).playback(src) : undefined
+    },
+    editEmbeddedImage: (image, event) => emit('editEmbeddedImage', image, event),
+    embedImage: (image) => imageInsertAction.value === 'embed'
+      ? embedImage(image, currentFile.value?.pathname) : undefined,
+    embedPastedImages: imageInsertAction.value === 'embed' ? embedPastedImages : undefined,
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
   }
 
@@ -1811,54 +2113,13 @@ onMounted(() => {
   const muya = markRaw(new Muya(ele, options))
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  muya.on('video-import-error', () => {
+    void notice.notify({ title: t('video.invalid'), type: 'error' })
+  })
   muya.on('image-drop-error', () => {
     void notice.notify({ title: t('editor.imageDrop.failed'), type: 'error' })
   })
-  muya.on(
-    'reading-context-menu',
-    ({ event, href, image }: { event: MouseEvent; href?: string; image?: string }) => {
-      const hasSelection = document.getSelection()?.isCollapsed === false
-      popupContextMenu(
-        [
-          {
-            label: t('menu.edit.copy'),
-            enabled: hasSelection,
-            click: () => {
-              document.execCommand('copy')
-            }
-          },
-          {
-            label: t('menu.edit.copyAsRich'),
-            enabled: hasSelection,
-            click: () => muya.copyAsRich()
-          },
-          {
-            label: t('menu.edit.copyAsHtml'),
-            enabled: hasSelection,
-            click: () => muya.copyAsHtml()
-          },
-          { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
-          ...(href
-            ? [
-                {
-                  label: t('readingMode.copyLink'),
-                  click: () => window.electron.clipboard.writeText(href)
-                }
-              ]
-            : []),
-          ...(image
-            ? [
-                {
-                  label: t('readingMode.viewImage'),
-                  click: () => mediaViewer.value?.openImage(image)
-                }
-              ]
-            : [])
-        ],
-        { x: event.clientX, y: event.clientY }
-      )
-    }
-  )
+  muya.on('reading-context-menu', showReadingContextMenu)
   document.addEventListener('selectionchange', readingSelectionChanged)
   registerDocumentView((value) => muya.setReadOnly(value))
   // The first document's content is set via constructor options, so no
@@ -1875,6 +2136,8 @@ onMounted(() => {
   renderedMarkdown = currentFile.value?.markdown ?? ''
   releaseViewState = registerRenderedViewState({ documentId: () => renderedDocumentId, markdown: () => renderedMarkdown, view: { engine: muya, container, refreshToc: () => editorStore.UPDATE_TOC(muya.getTOC()) } })
   muya.on('selection-change', documentViewChanged)
+  muya.on('selection-change', updateHeadingLink)
+  bus.on('begin-outline-move', beginOutlineMove)
 
   bus.on('language-changed', handleLanguageChanged)
 
@@ -1889,6 +2152,8 @@ onMounted(() => {
 
   bus.on('file-loaded', setMarkdownToEditor)
   bus.on('invalidate-image-cache', handleInvalidateImageCache)
+  bus.on('drawing::preview-changed', refreshDrawingPreviews)
+  window.addEventListener('focus', refreshDrawingPreviews)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
   bus.on('selectAll', handleSelectAll)
@@ -1924,12 +2189,14 @@ onMounted(() => {
 
   // Engine json-change emits operations; the desktop pipeline consumes a derived document snapshot.
   editor.value.on('json-change', () => {
-    if (loadingContent || currentFile.value?.readOnly) return
+    const tab = currentFile.value
     // Capture the tab ID before a later tab switch can redirect this update.
-    if (!currentFile.value || !editor.value) return
-    const { id } = currentFile.value
+    if (loadingContent || !tab || tab.readOnly || !editor.value) return
+    const { id, pathname } = tab
     if (!id) return
-    const markdown = editor.value.getMarkdown()
+    const rendered = editor.value.getMarkdown()
+    // Muya adds a line ending to its placeholder paragraph even in an empty draft.
+    const markdown = !pathname && rendered === '\n' ? '' : rendered
     renderedDocumentId = id
     renderedMarkdown = markdown
     // Persist engine undo history separately from content-based save tracking.
@@ -1938,13 +2205,12 @@ onMounted(() => {
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id,
       markdown,
-      wordCount: muyaWordCount(markdown),
+      wordCount: documentVideos(id).wordCount(markdown),
       cursor: editor.value.getSelectionState(),
       // Synthetic, desktop-shaped history so the store's save/dirty tracking
       // keeps working (the engine history shape is incompatible).
       history: makeSyntheticHistory(id, markdown),
-      toc: editor.value.getTOC(),
-      blocks: editor.value.getState()
+      toc: editor.value.getTOC()
     })
   })
 
@@ -2010,13 +2276,22 @@ onMounted(() => {
   })
 
   editor.value.on('selection-change', (changes: ISelectionChangePayload) => {
-    const y = (changes.selection?.context.cursorCoords?.y ?? null) as number | null
-    if (y != null && !currentFile.value?.readOnly) {
+    const { selection } = changes
+    const coords = selection?.context.cursorCoords
+    if (coords && !changes.preventScroll && !currentFile.value?.readOnly) {
+      const followCaret = selection.kind === SelectionType.TEXT && selection.context.isCollapsed &&
+        !updatingSearchSelection && !revealingAnchor
+      let y = coords.y
+      if (followCaret) {
+        const viewport = selection.context.focusBlock.domNode?.parentElement
+        if (viewport?.classList.contains('mu-code') && viewport.scrollHeight > viewport.clientHeight) {
+          y = revealCodeCaret(viewport, coords)
+        }
+      }
       // Before the scrolling below: a 0-duration `animatedScrollTo` assigns
       // `scrollTop` at once, moving the headings out from under `y`.
       updateActiveHeading(y)
 
-      const followCaret = !updatingSearchSelection && !revealingAnchor
       if (typewriter.value && followCaret) {
         const startPosition = container.scrollTop
         const toPosition = startPosition + y - STANDAR_Y
@@ -2041,7 +2316,9 @@ onMounted(() => {
 
     selectionChange.value = changes
     if (!sourceCode.value && editor.value) {
-      setSelectionWordCountFromText(editor.value.getSelectedText())
+      const hasRange = selection?.kind === SelectionType.TABLE ||
+        (selection?.kind === SelectionType.TEXT && !selection.context.isCollapsed)
+      setSelectionWordCountFromText(hasRange ? editor.value.getSelectedText() : '')
     }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what
@@ -2062,6 +2339,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('selectionchange', readingSelectionChanged)
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
+  bus.off('drawing::preview-changed', refreshDrawingPreviews)
+  window.removeEventListener('focus', refreshDrawingPreviews)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
   bus.off('selectAll', handleSelectAll)
@@ -2069,6 +2348,7 @@ onBeforeUnmount(() => {
   bus.off('print-service-clearup', handlePrintServiceClearup)
   bus.off('paragraph', handleEditParagraph)
   bus.off('format', handleInlineFormat)
+  bus.off('begin-outline-move', beginOutlineMove)
   bus.off('searchValue', handleSearch)
   bus.off('search-visibility', handleSearchVisibility)
   bus.off('search-focus-editor', focusSearchEditor)
@@ -2157,12 +2437,6 @@ onBeforeUnmount(() => {
      ignores stacking, so muya's mousemove-driven float tools (front button/menu,
      table drag/column toolbars, preview toolbar) still re-trigger over the source
      editor. Drop the subtree from hit-testing too so they cannot (#4731). */
-  pointer-events: none;
-}
-
-/* `document.elementsFromPoint` ignores stacking, so muya's mousemove-driven
-   float tools would keep re-triggering under the open viewer (#4731 again). */
-.editor-wrapper.viewer-open .editor-component {
   pointer-events: none;
 }
 

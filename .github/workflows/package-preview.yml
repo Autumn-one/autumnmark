@@ -1,0 +1,135 @@
+name: Package AutumnMark Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'build/*'
+      - '!build/macos-arm64'
+      - '!build/macos-arm64-intel'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Check code and types
+        run: pnpm check
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+  package:
+    name: Package (${{ matrix.name }})
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-22.04
+            platform: linux
+            command: build:linux:x64
+          - name: windows-x64
+            os: windows-latest
+            platform: windows
+            command: build:win:x64
+          - name: macos-arm64
+            os: macos-15
+            platform: macos
+            command: build:mac:arm64
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Enable long paths
+        if: matrix.platform == 'windows'
+        run: git config --global core.longpaths true
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /usr/share/keyrings/llvm.asc > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/llvm.asc] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm18.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y clang-18 libstdc++-12-dev icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+
+      - name: Use Clang for Electron 45 headers
+        if: matrix.platform == 'linux'
+        run: |
+          echo "CC=clang-18" >> "$GITHUB_ENV"
+          echo "CXX=clang++-18" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=-std=c++20" >> "$GITHUB_ENV"
+          clang++-18 --version
+          printf '#include <source_location>\nint main() { return std::source_location::current().line() == 0; }\n' | clang++-18 -std=c++20 -x c++ - -fsyntax-only
+
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+          desktop-only: 'true'
+
+      - name: Set C++20 for macOS native modules
+        if: matrix.platform == 'macos'
+        run: echo "CXXFLAGS=-std=gnu++20 -stdlib=libc++" >> "$GITHUB_ENV"
+
+      - name: Prepare Electron and native modules
+        run: pnpm tsx scripts/postinstall.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: 'pnpm'
+          USE_ELECTRON_CLANG: ${{ matrix.platform == 'linux' && '0' || '' }}
+
+      - name: Build platform packages
+        run: pnpm run ${{ matrix.command }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create platform checksums
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.name }}
+        run: |
+          node <<'NODE'
+          const { readdirSync, readFileSync, writeFileSync } = require('node:fs')
+          const { createHash } = require('node:crypto')
+          const names = readdirSync('dist').filter(name => /\.(exe|zip|dmg|AppImage|snap|deb|rpm|tar\.gz)$/.test(name)).sort()
+          if (!names.length) throw new Error('No platform packages were produced')
+          const lines = names.map(name => createHash('sha256').update(readFileSync('dist/' + name)).digest('hex') + '  ' + name)
+          writeFileSync('dist/SHA256SUMS-' + process.env.PLATFORM + '.txt', lines.join('\n') + '\n')
+          NODE
+
+      - name: Upload platform packages
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: autumnmark-${{ matrix.name }}-preview
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+            dist/SHA256SUMS-${{ matrix.name }}.txt

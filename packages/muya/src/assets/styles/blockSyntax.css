@@ -276,8 +276,38 @@
 }
 
 .mu-code-block {
+    --mu-code-caption-inset: 1em;
+    --mu-code-line-highlight: rgb(33 181 111 / 9%);
     font-size: var(--mu-code-font-size, 90%);
     font-family: var(--mu-code-font-family, var(--mu-default-code-font-family));
+}
+
+@supports (color: color-mix(in srgb, white, black)) {
+    .mu-code-block {
+        --mu-code-line-highlight: color-mix(in srgb, var(--theme-color) 10%, transparent);
+    }
+}
+
+.mu-code-block.mu-code-block-annotated {
+    border: 0;
+    border-radius: 8px;
+}
+
+.mu-code-block-title {
+    display: block;
+    margin: -1em -1em 0.65em calc(-1 * var(--mu-code-caption-inset));
+    padding: 0.45em 1em;
+
+    color: var(--editor-color-80);
+    font-weight: 600;
+    font-family: var(--mu-font-family, 'Open Sans', 'Clear Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    text-align: center;
+    overflow-wrap: anywhere;
+
+    background-color: var(--float-hover-color);
+    border-radius: 8px 8px 0 0;
 }
 
 .mu-code-block .mu-code {
@@ -290,8 +320,6 @@
 
 /* wrapCodeBlocks → `.mu-code-wrap`; wraps long lines (overrides prism's `pre`). */
 .mu-code-wrap .mu-code-block .mu-code {
-    overflow: hidden;
-
     white-space: pre-wrap;
     overflow-wrap: break-word;
 }
@@ -299,11 +327,21 @@
 .mu-code-block .mu-code::-webkit-scrollbar {
     display: block;
     height: 6px;
-    width: 3px;
+    width: 6px;
 }
 
-.mu-code-block .mu-content {
-    white-space: inherit;
+.mu-code-block .mu-code::-webkit-scrollbar-track {
+    background: var(--editor-color-10);
+    border-radius: 3px;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar-thumb {
+    background: var(--editor-color-30);
+    border-radius: 3px;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar-thumb:hover {
+    background: var(--editor-color-50);
 }
 
 .mu-code-copy {
@@ -354,26 +392,9 @@ code.mu-code .mu-code-copy:hover {
     filter: drop-shadow(16px 0 var(--icon-color));
 }
 
-.mu-fenced-code.mu-active .mu-code::after {
-    content: 'fenced';
-}
-
-.mu-indented-code.mu-active .mu-code::after {
-    content: 'indented';
-}
-
-.mu-fenced-code.mu-active .mu-code::after,
-.mu-indented-code.mu-active .mu-code::after {
-    position: absolute;
-    right: 0.5em;
-    bottom: 0;
-    z-index: 1;
-
-    color: var(--editor-color-30);
-}
-
 /* code block line numbers (option: codeBlockLineNumbers) */
 .mu-code-block:has(.mu-line-numbers-rows) {
+    --mu-code-caption-inset: 2.5em;
     padding-left: 2.5em;
 }
 
@@ -417,37 +438,6 @@ code.mu-code .mu-code-copy:hover {
     transform: scale(0.8);
 
     content: counter(mu-linenumber);
-}
-
-span.mu-language-input {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-
-    min-width: 20em;
-
-    font-weight: 600;
-    font-size: 0.8em;
-
-    opacity: 0;
-}
-
-.mu-code-block.mu-active .mu-language-input {
-    top: -1.8em;
-    z-index: initial;
-
-    opacity: 1;
-}
-
-.mu-code-block.mu-active .mu-language-input:empty::after {
-    color: var(--editor-color-10);
-
-    content: attr(hint);
-}
-
-.mu-code-block.mu-fenced-code.mu-active .mu-language-input {
-    left: 30px;
 }
 
 /* loose tight list */
@@ -725,11 +715,19 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 
 /* table */
 .mu-table {
+    position: relative;
+
     margin: 0.5em 0 0;
     padding: 0.5em 0;
+    overflow-x: auto;
 }
 
 .mu-table-inner {
+    --mu-cell-padding-x: 13px;
+    --mu-cell-auto-min-width: calc(2em + 2 * var(--mu-cell-padding-x));
+
+    width: 100%;
+    max-width: 100%;
     padding: 0;
 
     word-break: initial;
@@ -746,7 +744,7 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     position: relative;
 
     margin: 0;
-    padding: 6px 13px;
+    padding: 6px var(--mu-cell-padding-x);
 
     font-weight: bold;
     text-align: left;
@@ -756,9 +754,48 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     position: relative;
 
     margin: 0;
-    padding: 6px 13px;
+    padding: 6px var(--mu-cell-padding-x);
 
     text-align: left;
+}
+
+.mu-table-cell[style*='--mu-cell-width'] {
+    box-sizing: border-box;
+    width: var(--mu-cell-width);
+    min-width: min(var(--mu-cell-width), var(--mu-cell-auto-min-width));
+    max-width: var(--mu-cell-width);
+}
+
+/* Explicit document widths take precedence over a theme's default table width. */
+.mu-table-inner:has([style*='--mu-cell-width']) {
+    width: auto;
+}
+
+.mu-table-inner:has(.mu-table-cell-fill) {
+    width: 100%;
+}
+
+.mu-table-guide {
+    position: absolute;
+    z-index: 3;
+
+    background: var(--theme-color);
+
+    pointer-events: none;
+}
+
+.mu-table[data-resize-axis='column'] .mu-table-cell {
+    cursor: col-resize;
+}
+
+.mu-table[data-resize-axis='row'],
+.mu-table[data-resize-axis='row'] .mu-table-cell {
+    cursor: row-resize;
+}
+
+/* Let the filled column take the surplus after pixel widths and intrinsic cell minima. */
+.mu-table-inner:has(.mu-table-cell-fill) .mu-table-cell:not(.mu-table-cell-fill, [style*='--mu-cell-width']) {
+    width: 1px;
 }
 
 .mu-table-inner tr:first-child td {
@@ -788,6 +825,10 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-inner tr th:last-child,
 .mu-table-inner tr td:last-child {
     margin-bottom: 0;
+}
+
+.mu-table-inner tr > :last-child::before {
+    width: 100%;
 }
 
 .mu-table-inner tr td.mu-table-cell-selected::before {
@@ -843,7 +884,7 @@ figure.mu-diagram-block > .mu-diagram-container {
 figure.mu-active.mu-html-block .mu-html-container,
 figure.mu-disable-html-render.mu-html-block .mu-html-container,
 figure.mu-active.mu-math-block .mu-math-container,
-figure.mu-active.mu-diagram-block .mu-diagram-container {
+figure.mu-active.mu-diagram-block:not(.mu-embedded-drawing-block) .mu-diagram-container {
     position: relative;
     z-index: 1;
 
@@ -857,7 +898,8 @@ figure.mu-active.mu-diagram-block .mu-diagram-container {
 
 figure:not(.mu-active, .mu-disable-html-render).mu-html-block .mu-html-container,
 figure:not(.mu-active).mu-math-block .mu-math-container,
-figure:not(.mu-active).mu-diagram-block .mu-diagram-container {
+figure:not(.mu-active).mu-diagram-block .mu-diagram-container,
+figure.mu-embedded-drawing-block .mu-diagram-container {
     overflow: hidden;
 }
 
@@ -891,6 +933,42 @@ figure.mu-math-block .mu-math-preview .katex-display::-webkit-scrollbar {
 
     float: right;
     margin-left: 1em;
+}
+
+.mu-embedded-drawing-button {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0;
+
+    color: inherit;
+    vertical-align: top;
+
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.mu-embedded-drawing-button > img {
+    display: block;
+}
+
+.mu-embedded-drawing-gap {
+    display: none;
+}
+
+.mu-editor:not(.mu-read-only) .mu-embedded-drawing-block:has(+ .mu-embedded-drawing-block) {
+    margin-bottom: 0;
+}
+
+.mu-editor:not(.mu-read-only) .mu-embedded-drawing-block + .mu-embedded-drawing-block {
+    margin-top: 0;
+}
+
+.mu-editor:not(.mu-read-only) .mu-embedded-drawing-block:has(+ .mu-embedded-drawing-block) > .mu-embedded-drawing-gap {
+    display: block;
+    height: 0.75em;
+
+    cursor: text;
 }
 
 /* to prevent plantuml img overflow */
@@ -984,7 +1062,7 @@ figure.mu-diagram-block .mu-diagram-preview svg.sequence path[fill='#fff'] {
 }
 
 figure.mu-active.mu-math-block > div.mu-math-preview,
-figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
+figure.mu-active.mu-diagram-block > div.mu-diagram-preview:not(.mu-embedded-drawing) {
     position: absolute;
     top: calc(100% + 20px);
     left: 50%;
@@ -1035,17 +1113,9 @@ pre.mu-active[data-role='vega-lite']::before {
     content: '``` vega-lite';
 }
 
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after {
     content: '```';
-}
-
-/* A tilde-fenced code block draws its own fence character in the marker. */
-pre.mu-active.mu-fenced-code.mu-tilde-fence::before,
-pre.mu-active.mu-fenced-code.mu-tilde-fence::after {
-    content: '~~~';
 }
 
 pre.mu-active.mu-frontmatter::before,
@@ -1054,8 +1124,6 @@ pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::before,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
 pre.mu-active.mu-math-container::before,
 pre.mu-active.mu-math-container::after {
     position: absolute;
@@ -1068,16 +1136,14 @@ pre.mu-active.mu-math-container::after {
 pre.mu-active.mu-frontmatter::before,
 pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='vega-lite']::before,
-pre.mu-active.mu-math-container::before,
-pre.mu-active.mu-fenced-code::before {
+pre.mu-active.mu-math-container::before {
     top: -20px;
 }
 
 pre.mu-active.mu-frontmatter::after,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-math-container::after,
-pre.mu-active.mu-fenced-code::after {
+pre.mu-active.mu-math-container::after {
     bottom: -23px;
 }
 
@@ -1111,6 +1177,10 @@ pre.mu-active.mu-fenced-code::after {
     outline: none;
 }
 
+.mu-code-block .mu-content {
+    white-space: inherit;
+}
+
 .mu-content:empty::after {
     content: '\200B';
 }
@@ -1141,6 +1211,10 @@ pre.mu-active.mu-fenced-code::after {
     min-width: 2em;
 
     overflow-wrap: anywhere;
+}
+
+.mu-table-cell[style*='--mu-cell-width'] .mu-table-cell-content {
+    min-width: 0;
 }
 
 /* Footnote definition block — port of marktext's `figure[data-role='FOOTNOTE']`

@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/muya';
 import { getMarkdown } from '../helpers/api';
-import { slowType } from '../helpers/keyboard';
+import { lineStartKey, loadMarkdown, slowType } from '../helpers/keyboard';
 import { editor, floats, quickInsertItem, tablePickerCell } from '../helpers/selectors';
 
 /**
@@ -29,6 +29,45 @@ async function makeTwoByTwoTable(page: import('@playwright/test').Page) {
 }
 
 test.describe('table', () => {
+    test('ArrowUp from the blank line after a table enters its last cell and Backspace removes the table', async ({ page }) => {
+        const table = await makeTwoByTwoTable(page);
+        const lastCell = table.locator('.mu-table-cell-content').last();
+        await lastCell.click();
+        await page.keyboard.press('ArrowDown');
+        const paragraph = page.locator(editor.paragraph);
+        await expect(paragraph).toHaveCount(1);
+        const before = await getMarkdown(page);
+        await page.keyboard.press('ArrowUp');
+        expect(await lastCell.evaluate(el => el.contains(window.getSelection()?.focusNode ?? null))).toBe(true);
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Backspace');
+        await expect(table).toHaveCount(0);
+        expect(await paragraph.evaluate(el => el.contains(window.getSelection()?.focusNode ?? null))).toBe(true);
+        await page.keyboard.type('x');
+        await expect.poll(() => getMarkdown(page)).toBe('x\n');
+        await page.evaluate(() => window.muya!.undo());
+        await expect(paragraph).toHaveText('');
+        await expect(table).toHaveCount(0);
+        await page.evaluate(() => window.muya!.undo());
+        expect(await getMarkdown(page)).toBe(before);
+        expect(await paragraph.evaluate(el => el.contains(window.getSelection()?.focusNode ?? null))).toBe(true);
+    });
+
+    test('Backspace within the following paragraph edits text and at its start removes only the table', async ({ page }) => {
+        await loadMarkdown(page, 'Before\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\nAfter\n\nEnd');
+        const paragraph = page.locator(editor.paragraph).nth(1);
+        await paragraph.click();
+        await page.keyboard.press(lineStartKey());
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('Backspace');
+        await expect(paragraph).toHaveText('fter');
+        await expect(page.locator(editor.table)).toHaveCount(1);
+        await page.keyboard.press('Backspace');
+        await expect.poll(() => getMarkdown(page)).toBe('Before\n\nfter\n\nEnd\n');
+        await page.keyboard.type('A');
+        await expect(paragraph).toHaveText('After');
+    });
+
     test('typing `| a | b |` + Enter converts paragraph to a table', async ({ page }) => {
         await page.evaluate(() => window.muya!.setContent(''));
         await page.locator(editor.paragraph).first().click();
@@ -69,6 +108,52 @@ test.describe('table', () => {
         // as <td> (no <th>/<thead> wrappers — see the cell-typing test below).
         await expect(table.locator('tr')).toHaveCount(2);
         await expect(table.locator('tr').first().locator('td')).toHaveCount(3);
+    });
+
+    test('/table accepts arrow keys to choose dimensions and Enter to insert', async ({ page }) => {
+        await page.evaluate(() => window.muya!.setContent(''));
+        await page.locator(editor.paragraph).first().click();
+        await slowType(page, '/table');
+        await page.keyboard.press('Enter');
+
+        const picker = page.locator(floats.tablePicker);
+        const rows = picker.locator('.row-input');
+        const columns = picker.locator('.column-input');
+        await expect(rows).toHaveValue('2');
+        await expect(columns).toHaveValue('1');
+        await expect(page.locator(editor.table)).toHaveCount(0);
+
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('ArrowLeft');
+        await expect(rows).toHaveValue('1');
+        await expect(columns).toHaveValue('1');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('ArrowDown');
+        await expect(rows).toHaveValue('3');
+        await expect(columns).toHaveValue('3');
+        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('ArrowUp');
+        await expect(rows).toHaveValue('2');
+        await expect(columns).toHaveValue('2');
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('ArrowUp');
+        await expect(rows).toHaveValue('1');
+        await expect(picker.locator('.mu-table-picker-cell.selected')).toHaveCount(2);
+
+        await page.keyboard.press('Enter');
+        const table = page.locator(editor.table);
+        await expect(table).toHaveCount(1);
+        await expect(table.locator('tr')).toHaveCount(1);
+        await expect(table.locator('tr').first().locator('td')).toHaveCount(2);
+        await slowType(page, 'header');
+        await expect(table.locator('td').first()).toHaveText('header');
+        const markdown = await getMarkdown(page);
+        await page.evaluate(md => window.muya!.setContent(md), markdown);
+        await expect(table.locator('tr')).toHaveCount(1);
+        await expect(table.locator('td')).toHaveCount(2);
+        await expect(table.locator('td').first()).toHaveText('header');
     });
 
     test('typing in a table cell reflects in getMarkdown', async ({ page }) => {

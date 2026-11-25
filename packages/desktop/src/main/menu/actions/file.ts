@@ -12,7 +12,7 @@ import {
   type WebContents
 } from 'electron'
 import log from 'electron-log'
-import { isDirectory, isFile } from 'common/filesystem'
+import { isDirectory, isDirectory2, isFile } from 'common/filesystem'
 import {
   MARKDOWN_EXTENSIONS,
   isDangerousExecutableFile,
@@ -22,7 +22,9 @@ import { checkUpdates, userSetting } from './marktext'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG } from '../../config'
-import { normalizeAndResolvePath, resolveLocalLinkTarget, writeFile } from '../../filesystem'
+import { normalizeAndResolvePath, resolveLocalLinkTarget, writeFile, writeFileChunks } from '../../filesystem'
+import { expandDiskVideos } from '../../filesystem/diskVideo'
+import { diskVideoReferences } from '@shared/diskVideo'
 
 import { documentWrites } from '../../filesystem/documentWrites'
 import { getPath } from '../../utils'
@@ -137,7 +139,12 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
         if (!content) {
           throw new Error('No HTML content found.')
         }
-        await writeFile(filePath, content, extension, 'utf8')
+        if (diskVideoReferences().test(content)) {
+          const target = filePath.endsWith(extension) ? filePath : filePath + extension
+          await writeFileChunks(target, expandDiskVideos(content, 'utf8', false))
+        } else {
+          await writeFile(filePath, content, extension, 'utf8')
+        }
       }
       win.webContents.send('mt::export-success', { type, filePath })
     } catch (err) {
@@ -317,20 +324,22 @@ ipcMain.on('mt::window::drop', async(e, fileList: string[]) => {
   if (!win) {
     return
   }
+  let pandocFile: string | undefined
   for (const file of fileList) {
-    if (isMarkdownFile(file)) {
+    if (isDirectory2(file)) {
+      ipcMain.emit('app-add-directory-by-id', win.id, file)
+    } else if (isMarkdownFile(file)) {
       openFileOrFolder(win, file)
-      continue
+    } else if (!pandocFile && PANDOC_EXTENSIONS.some(ext => file.endsWith(ext))) {
+      pandocFile = file
     }
-
-    if (PANDOC_EXTENSIONS.some((ext: string) => file.endsWith(ext))) {
-      const existsPandoc = await pandoc.exists()
-      if (!existsPandoc) {
-        noticePandocNotFound(win)
-      } else {
-        openPandocFile(win.id, file)
-      }
-      break
+  }
+  if (pandocFile) {
+    const existsPandoc = await pandoc.exists()
+    if (existsPandoc) {
+      openPandocFile(win.id, pandocFile)
+    } else {
+      noticePandocNotFound(win)
     }
   }
 })
@@ -507,7 +516,7 @@ export const openFile = async(win: BrowserWindow | null): Promise<void> => {
     filters: [
       {
         name: 'Markdown document',
-        extensions: [...MARKDOWN_EXTENSIONS]
+        extensions: [...MARKDOWN_EXTENSIONS, 'excalidraw']
       }
     ]
   })

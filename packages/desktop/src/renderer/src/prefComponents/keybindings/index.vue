@@ -5,7 +5,7 @@
       {{ t('preferences.keybindings.description') }}
       <help-link
         class="shortcut-docs"
-        href="https://marktext.me/docs/key-bindings"
+        :href="`${END_USER_DOCS_URL}/KEYBINDINGS.md`"
         :label="t('preferences.keybindings.online')"
       />
     </setting-note>
@@ -109,6 +109,7 @@ import { acceleratorToLabel } from '@/util/accelerator'
 import { isMac } from '@/util'
 import HelpLink from '../common/helpLink.vue'
 import { useI18n } from 'vue-i18n'
+import { END_USER_DOCS_URL } from '@shared/brand'
 
 const { t } = useI18n()
 const keybindings = useKeybindingsStore()

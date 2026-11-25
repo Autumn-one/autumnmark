@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import {
-  makeRoomForOutline,
+  showOutline,
   launchWithMarkdown,
   clickMenuById,
   waitForEditor,
@@ -115,7 +115,7 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     })
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await waitForEditor(page)
     // Keep two files open so the editor viewport starts below the visible tab
     // bar. The TOC target must align to that viewport, not to the window.

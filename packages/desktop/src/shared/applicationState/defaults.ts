@@ -1,11 +1,15 @@
+import { blankDrawing, isDrawingPath } from '../drawing'
 import { SessionLifecycle } from '../types/applicationState'
-import type { ApplicationState, WindowLayoutState } from '../types/applicationState'
+import type { ApplicationState, DocumentSnapshot, WindowLayoutState } from '../types/applicationState'
+
+export const emptyDocumentBody = ({
+  resource,
+  title
+}: Pick<DocumentSnapshot, 'resource' | 'title'>): string =>
+  resource.kind === 'untitled' && isDrawingPath(title) ? blankDrawing : ''
 
 export const createDefaultLayout = (
-  preferences: { tocPosition: 'left' | 'right'; sourceCodeModeEnabled: boolean } = {
-    tocPosition: 'left',
-    sourceCodeModeEnabled: false
-  }
+  preferences: { sourceCodeModeEnabled: boolean } = { sourceCodeModeEnabled: false }
 ): WindowLayoutState => ({
   sidebar: {
     visible: false,
@@ -13,7 +17,6 @@ export const createDefaultLayout = (
     preferredWidthPx: 280,
     openedFiles: { expanded: true, preferredHeightPx: 112 }
   },
-  outline: { visible: true, position: preferences.tocPosition, preferredWidthPx: 220 },
   tabBar: { visible: false },
   modes: { sourceCode: preferences.sourceCodeModeEnabled, focus: false, typewriter: false }
 })

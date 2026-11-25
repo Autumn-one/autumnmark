@@ -4,7 +4,8 @@ import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
 import { ScrollPage } from '../../block/scrollPage';
 import { SelectionType } from '../../selection/types';
-import { firstWordOfInfo, parseFenceLine } from '../../utils';
+import { parseFenceLine } from '../../utils';
+import { codeFenceLanguage, replaceCodeFenceLanguage } from '../../utils/codeFenceAnnotations';
 import { createDiagramState, diagramTypeOfLang } from '../../utils/diagram/fence';
 import { search } from '../../utils/prism';
 
@@ -29,11 +30,8 @@ const defaultOptions = {
 // paragraph). The selector's fuzzy search may resolve a non-code language
 // (e.g. `vega-lite`) to an unrelated Prism language, so the diagram check
 // tries this raw text before the picked item.
-function typedFence(text: string): { lang: string; fenceChar: '`' | '~' } {
-    const fence = parseFenceLine(text);
-    if (!fence)
-        return { lang: '', fenceChar: '`' };
-    return { lang: firstWordOfInfo(fence.info), fenceChar: fence.fenceChar };
+function typedFence(text: string) {
+    return parseFenceLine(text) ?? { info: '', fenceChar: '`' as const, fenceLength: 3 };
 }
 
 // Build the state for the block a ```lang fence becomes. A diagram language,
@@ -42,24 +40,26 @@ function typedFence(text: string): { lang: string; fenceChar: '`' | '~' } {
 // math becomes a math-block; everything else a fenced code block highlighted
 // with the selector's matched language.
 function newBlockStateForLang(
-    typedLang: string,
+    info: string,
     matchedLang: string,
     isGfmMath: boolean,
     fenceChar: '`' | '~',
+    fenceLength: number,
 ) {
     if (isGfmMath)
         return { name: 'math-block', meta: { mathStyle: 'gfm' }, text: '' };
 
-    const diagramType = diagramTypeOfLang(typedLang) ?? diagramTypeOfLang(matchedLang);
+    const diagramType = diagramTypeOfLang(codeFenceLanguage(info)) ?? diagramTypeOfLang(matchedLang);
     if (diagramType)
         return createDiagramState(diagramType);
 
     return {
         name: 'code-block',
         meta: {
-            lang: matchedLang,
+            lang: replaceCodeFenceLanguage(info, matchedLang),
             type: 'fenced',
             fenceChar,
+            ...(fenceLength > 3 ? { fenceLength } : {}),
         },
         text: '',
     };
@@ -89,9 +89,9 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             const { text, domNode } = block;
             let lang = '';
             if (block.blockName === 'paragraph.content')
-                lang = typedFence(text).lang;
+                lang = codeFenceLanguage(typedFence(text).info);
             else if (block.blockName === 'language-input')
-                lang = text;
+                lang = codeFenceLanguage(text);
 
             const modes = search(lang);
             if (modes.length) {
@@ -202,12 +202,13 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
         if (isParagraphContent(block)) {
             const isGfmMath
                 = muya.options.texMathGfm && name === 'math';
-            const { lang: typedLang, fenceChar } = typedFence(block.text);
+            const { info, fenceChar, fenceLength } = typedFence(block.text);
             const state = newBlockStateForLang(
-                typedLang,
+                info,
                 name,
                 isGfmMath,
                 fenceChar,
+                fenceLength,
             );
 
             const newBlock = ScrollPage.loadBlock(state.name).create(
@@ -220,9 +221,10 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
         }
         else {
             const codeBlock = block.parent!;
-            block.text = name;
+            const info = replaceCodeFenceLanguage(block.text, name);
+            block.text = info;
             block.update();
-            codeBlock.lang = name;
+            codeBlock.lang = info;
             codeBlock.lastContentInDescendant()?.setCursor(0, 0);
         }
 

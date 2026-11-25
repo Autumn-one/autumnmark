@@ -6,13 +6,14 @@ import { isChildOfDirectory } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
 import { zoomIn, zoomOut } from './utils'
-import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx } from '../config'
+import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
 import { switchLanguage } from '../spellchecker'
 import type { TabOptions } from '@shared/types/files'
 import { ProjectRoots, resolveExistingPath } from './projectRoots'
 import { randomUUID } from 'node:crypto'
 import type { PreparedSessionWindow } from '@shared/types/applicationState'
+import { APP_NAME } from '@shared/brand'
 
 export interface FileOpenOptions extends TabOptions {
   allowMissing?: boolean
@@ -67,8 +68,14 @@ class EditorWindow extends BaseWindow {
       options,
       { show: false }
     )
-    if (isLinux) winOptions.icon = path.join(process.cwd(), 'static', 'logo-96px.png')
-    const { titleBarStyle, theme, spellcheckerEnabled, spellcheckerLanguage, sourceCodeModeEnabled } = preferences.getAll()
+    if (isLinux) {
+      winOptions.icon = path.join(
+        (global as unknown as { __static: string }).__static,
+        'logo-96px.png'
+      )
+    }
+    const initialPreferences = preferences.getAll()
+    const { titleBarStyle, theme, spellcheckerEnabled, spellcheckerLanguage, sourceCodeModeEnabled } = initialPreferences
 
     if (!isOsx) {
       winOptions.titleBarStyle = 'default'
@@ -77,12 +84,21 @@ class EditorWindow extends BaseWindow {
       }
     }
 
-    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme)
+    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme, initialPreferences.localThemes)
     if (env.disableSpellcheck) {
       ;(winOptions.webPreferences as { spellcheck: boolean }).spellcheck = false
     }
 
     const win = (this.browserWindow = new BrowserWindow(winOptions))
+    // Electron requires Windows 11 22H2 or later to show a system backdrop.
+    const micaTitleBar =
+      isWindows &&
+      titleBarStyle === 'custom' &&
+      !winOptions.frame &&
+      Number(process.getSystemVersion().split('.')[2]) >= 22621
+    if (micaTitleBar) {
+      win.setBackgroundMaterial('mica')
+    }
 
     this.id = win.id
     host.registerEditor(this)
@@ -106,8 +122,8 @@ class EditorWindow extends BaseWindow {
 
     appMenu.addEditorMenu(win, { sourceCodeModeEnabled })
 
-    win.webContents.on('context-menu', (event, params) => {
-      showEditorContextMenu(win, event, params, preferences.getItem('spellcheckerEnabled'))
+    win.webContents.on('context-menu', (_event, params) => {
+      showEditorContextMenu(win, params, preferences.getItem('spellcheckerEnabled'))
     })
 
     win.webContents.once('did-finish-load', () => {
@@ -150,7 +166,7 @@ class EditorWindow extends BaseWindow {
       const { response } = await dialog.showMessageBox(win, {
         type: 'warning',
         buttons: ['Close', 'Reload', 'Keep It Open'],
-        message: 'MarkText has crashed',
+        message: `${APP_NAME} has crashed`,
         detail: msg
       })
 
@@ -208,7 +224,11 @@ class EditorWindow extends BaseWindow {
     })
 
     this.lifecycle = WindowLifecycle.LOADING
-    win.loadURL(this._buildUrlString(this.id, env, preferences))
+    const url = this._buildUrlWithSettings(this.id, env, initialPreferences)
+    if (micaTitleBar) {
+      url.searchParams.set('micaTitleBar', '1')
+    }
+    win.loadURL(url.toString())
     win.setSheetOffset(TITLE_BAR_HEIGHT)
 
     // Disable application menu shortcuts because we want to handle key bindings ourself.

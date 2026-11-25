@@ -3,6 +3,7 @@ import type { Muya, TSelectionState } from '@muyajs/core'
 import type { DocumentViewState, SourcePosition, IFileState } from '@shared/types/files'
 import { STATE_LIMITS } from '@shared/types/applicationState'
 import { getHash } from '@/util/fileSystem'
+import { documentVideos } from '@/util/videoAttachments'
 import { adjustTrailingNewlines } from '@/util/markdown'
 
 interface SourceView {
@@ -11,12 +12,13 @@ interface SourceView {
   container: HTMLElement
 }
 interface RenderedView {
-  engine: Pick<Muya, 'getMarkdown' | 'getSelectionState' | 'setSelection' | 'setCursorByOffset'>
+  engine: Pick<Muya, 'getMarkdown' | 'getSelectionState' | 'setSelection' | 'focus'>
   container: HTMLElement
   refreshToc?(): void
 }
 /** Only the active editor is exposed; isCurrent guards asynchronous hash completion. */
 interface ViewPorts {
+  documentId?: string
   source?: SourceView
   rendered?: RenderedView
   collapsedOutlineKeys?: string[]
@@ -63,7 +65,7 @@ export class DocumentViewAdapter {
       renderedScrollTopPx: nonnegative(ports.rendered?.container.scrollTop ?? 0),
       collapsedOutlineKeys: keys(ports.collapsedOutlineKeys ?? [])
     }
-    return { ...captured, contentSha256: await this._hash(markdown) }
+    return { ...captured, contentSha256: await this._viewHash(markdown, ports.documentId) }
   }
 
   async restore(
@@ -73,7 +75,7 @@ export class DocumentViewAdapter {
     enabled = true
   ): Promise<string[]> {
     const matching =
-      enabled && state !== null && state.contentSha256 === (await this._hash(markdown))
+      enabled && state !== null && state.contentSha256 === (await this._viewHash(markdown, ports.documentId))
     if (ports.isCurrent && !ports.isCurrent()) return []
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const source = ports.source
@@ -95,8 +97,11 @@ export class DocumentViewAdapter {
           restored = false
         }
       }
-      if (!ports.preserveCaret && !restored)
-        engine.setCursorByOffset({ anchor: { line: 0, ch: 0 }, focus: { line: 0, ch: 0 } })
+      if (!ports.preserveCaret && !restored) {
+        // The first source line can be a hidden tab delimiter. Start in visible content.
+        engine.setSelection(null)
+        engine.focus()
+      }
       ports.rendered.refreshToc?.()
       container.scrollTop = enabled ? nonnegative(state?.renderedScrollTopPx ?? 0) : 0
     }
@@ -108,6 +113,11 @@ export class DocumentViewAdapter {
     )
       focused.focus({ preventScroll: true })
     return matching && state ? keys(state.collapsedOutlineKeys) : []
+  }
+
+  private async _viewHash(markdown: string, id?: string) {
+    const key = id ? await documentVideos(id).viewKey(markdown) : markdown
+    return this._hash(key)
   }
 }
 
@@ -142,6 +152,7 @@ export const documentViewChanged = (): void => {
   changed?.()
 }
 const portsFor = (id: string): ViewPorts => ({
+  documentId: id,
   source: source?.documentId() === id ? source.view : undefined,
   rendered: rendered?.documentId() === id ? rendered.view : undefined
 })

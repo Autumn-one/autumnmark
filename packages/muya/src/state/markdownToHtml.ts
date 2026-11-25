@@ -11,7 +11,7 @@ import { renderMermaid } from '../utils/diagram/mermaid';
 
 import { getHighlightHtml } from '../utils/marked';
 import { sanitizeExportHtml } from '../utils/sanitizeExportHtml';
-import { generateGithubSlug } from '../utils/slug';
+import { uniqueHeadingSlug } from '../utils/slug';
 import { transformFootnotes } from './transformFootnotes';
 
 // Inline core styles so exported documents render offline.
@@ -156,6 +156,27 @@ export class MarkdownToHtml {
         }
     }
 
+    private async _renderEmbeddedDrawings() {
+        const drawing = this._muya?.options.embeddedDrawing;
+        if (!drawing)
+            return;
+        const codes = this._exportContainer!.querySelectorAll('pre > code.language-excalidraw');
+        await Promise.all(Array.from(codes, async (code) => {
+            try {
+                const src = await drawing.preview(code.textContent ?? '');
+                const image = code.ownerDocument.createElement('img');
+                image.alt = drawing.label();
+                image.src = src;
+                const figure = code.ownerDocument.createElement('figure');
+                figure.append(image);
+                code.parentElement?.replaceWith(figure);
+            }
+            catch {
+                // An invalid scene remains available as source in the export.
+            }
+        }));
+    }
+
     // Generate unique GitHub-style heading IDs without replacing or colliding with explicit IDs.
     private _injectHeadingIds(container: HTMLElement) {
         const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
@@ -172,14 +193,7 @@ export class MarkdownToHtml {
             if (heading.id)
                 continue;
 
-            const base = generateGithubSlug(heading.textContent ?? '') || 'heading';
-            let slug = base;
-            let n = 1;
-            while (seen.has(slug))
-                slug = `${base}-${n++}`;
-
-            seen.add(slug);
-            heading.id = slug;
+            heading.id = uniqueHeadingSlug(heading.textContent ?? '', seen);
         }
 
         return [...headings].map(heading => ({
@@ -229,6 +243,7 @@ export class MarkdownToHtml {
         try {
             await this._renderMermaid();
             await this._renderDiagram();
+            await this._renderEmbeddedDrawings();
 
             // Exported TOC links require matching heading IDs; spec conformance rendering omits this pass.
             headings = this._injectHeadingIds(exportContainer);

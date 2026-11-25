@@ -8,6 +8,7 @@
 
 import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
+import type { ContextMenuPopupOptions, MenuTemplate } from '@shared/types/menu'
 import pathe from 'pathe'
 import { createPlatformPath } from 'common/filesystem/platformPath'
 
@@ -77,13 +78,15 @@ const shellAPI = {
 }
 
 const clipboardAPI = {
+  hasImage: (kind?: 'video') => invoke('mt::clipboard::has-image', kind),
+  readImageInput: (kind?: 'video') => invoke('mt::clipboard::image-input', kind),
   writeText: (text: string) => invoke('mt::clipboard::write-text', text),
   readText: () => invoke('mt::clipboard::read-text'),
   guessFilePath: () => invoke('mt::clipboard::guess-file-path'),
   writeImage: (
-    png: Uint8Array,
+    bytes: Uint8Array,
     options?: ClipboardImageWriteOptions
-  ) => invoke('mt::clipboard::write-image', png, options),
+  ) => invoke('mt::clipboard::write-image', bytes, options),
   beginImageCopy: (marker?: string) => invoke('mt::clipboard::begin-image-copy', marker),
   cancelImageCopy: (ticket: number) => invoke('mt::clipboard::cancel-image-copy', ticket),
   readImageSource: (src: string) => invoke('mt::clipboard::read-image-source', src)
@@ -99,6 +102,7 @@ const webFrameAPI = {
 }
 
 const webUtilsAPI = {
+  dragEmbeddedImage: (src: string, name: string) => invoke('mt::embedded-image::drag', src, name),
   getPathForFile: (file: File): string => webUtils.getPathForFile(file)
 }
 
@@ -112,10 +116,13 @@ const windowControlAPI = {
   toggleFullScreen: () => send('mt::win::toggle-fullscreen'),
   isMaximized: () => invoke('mt::win::is-maximized'),
   isFullScreen: () => invoke('mt::win::is-fullscreen'),
-  popupMenu: (template: unknown, position?: { x: number; y: number }) =>
-    send('mt::menu::popup', template as never, position),
+  popupMenu: (template: MenuTemplate, options?: ContextMenuPopupOptions) =>
+    send('mt::menu::popup', template, options),
   popupApplicationMenu: (position?: { x: number; y: number }) =>
-    send('mt::menu::popup-application', position)
+    send('mt::menu::popup-application', position),
+  getApplicationMenuCategories: () => invoke('mt::menu::application-categories'),
+  popupApplicationMenuCategory: (index: number, position: { x: number; y: number }) =>
+    invoke('mt::menu::popup-application-category', index, position)
 }
 
 // Keep pure path predicates synchronous for tab matching without filesystem IPC.
@@ -235,7 +242,8 @@ const fontsAPI = {
 }
 
 const dialogAPI = {
-  showSave: (request: SaveDialogRequest) => invoke('mt::dialog::show-save', request)
+  showSave: (request: SaveDialogRequest) => invoke('mt::dialog::show-save', request),
+  showOpenFile: (request: SaveDialogRequest) => invoke('mt::dialog::show-open-file', request)
 }
 
 const diagramAPI = {

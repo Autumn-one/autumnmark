@@ -15,7 +15,6 @@ vi.hoisted(() => {
 vi.mock('@/services/notification', () => ({ default: { notify: vi.fn() } }))
 vi.mock('@/store/checkpoint', () => ({ scheduleWindowCheckpoint: vi.fn() }))
 import { useLayoutStore } from '@/store/layout'
-import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
 import { createDefaultLayout } from '../../../src/shared/applicationState/defaults'
@@ -36,7 +35,6 @@ describe('window-owned layout', () => {
       preferredWidthPx: 410,
       openedFiles: { expanded: false, preferredHeightPx: 260 }
     }
-    preferred.outline = { visible: false, position: 'right', preferredWidthPx: 390 }
     preferred.tabBar.visible = true
     preferred.modes = { sourceCode: true, focus: true, typewriter: true }
     const changed = vi.fn()
@@ -49,8 +47,7 @@ describe('window-owned layout', () => {
     await nextTick()
     expect(second.CAPTURE_WINDOW_LAYOUT()).toEqual(createDefaultLayout())
     expect(first.CAPTURE_WINDOW_LAYOUT()).toMatchObject({
-      outline: { visible: true },
-      sidebar: { preferredWidthPx: 460 }
+      sidebar: { preferredWidthPx: 460, activeView: 'outline' }
     })
     expect(changed).toHaveBeenCalled()
     expect(window.electron.ipcRenderer.send).not.toHaveBeenCalledWith(
@@ -59,33 +56,25 @@ describe('window-owned layout', () => {
     )
     expect(localStorage.getItem('side-bar-width')).toBeNull()
   })
-  it('applies explicit outline-position changes without replacing other restored layout state', () => {
+  it('opens a hidden sidebar to show the outline and toggles back to files', async() => {
     const store = useLayoutStore()
-    const preferences = usePreferencesStore()
     store.INITIALIZE_WINDOW_LAYOUT(createDefaultLayout())
-    preferences.sourceCodeModeEnabled = true
-    preferences.SET_USER_PREFERENCE({ tocPosition: 'right' })
-    expect(store.outlinePosition).toBe('right')
-    expect(store.CAPTURE_WINDOW_LAYOUT().modes.sourceCode).toBe(false)
-    expect(store.showToc).toBe(true)
-    store.SET_OUTLINE_WIDTH(900)
-    expect(store.outlineWidth).toBe(600)
-  })
-  it('keeps restored placement during initialization until the user changes the preference', async() => {
-    const preferences = usePreferencesStore()
-    preferences.SET_USER_PREFERENCE({ tocPosition: 'right' })
-    const layout = useLayoutStore()
-    const restored = createDefaultLayout()
-    restored.outline.position = 'left'
-    const changed = vi.fn()
-    layout.INITIALIZE_WINDOW_LAYOUT(restored, changed)
+    store.TOGGLE_LAYOUT_ENTRY('showToc')
     await nextTick()
-    expect(layout.outlinePosition).toBe('left')
-    expect(changed).not.toHaveBeenCalled()
-    preferences.SET_USER_PREFERENCE({ tocPosition: 'left' })
-    preferences.SET_USER_PREFERENCE({ tocPosition: 'right' })
-    expect(layout.CAPTURE_WINDOW_LAYOUT().outline.position).toBe('right')
-    expect(changed).toHaveBeenCalledOnce()
+    expect(store.showToc).toBe(true)
+    expect(window.electron.ipcRenderer.send).toHaveBeenLastCalledWith(
+      'mt::view-layout-changed', expect.any(Number), { showSideBar: true, showToc: true, showTabBar: false }
+    )
+    store.TOGGLE_LAYOUT_ENTRY('showSideBar')
+    await nextTick()
+    expect(store.rightColumn).toBe('outline')
+    expect(window.electron.ipcRenderer.send).toHaveBeenLastCalledWith(
+      'mt::view-layout-changed', expect.any(Number), { showSideBar: false, showToc: false, showTabBar: false }
+    )
+    store.TOGGLE_LAYOUT_ENTRY('showToc')
+    store.TOGGLE_LAYOUT_ENTRY('showToc')
+    expect(store.showSideBar).toBe(true)
+    expect(store.rightColumn).toBe('files')
   })
   it('does not let temporary reading mode reset the preferred source mode', async() => {
     const layout = useLayoutStore()

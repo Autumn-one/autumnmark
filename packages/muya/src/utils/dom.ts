@@ -23,8 +23,8 @@ export function queryAll<T extends Element = HTMLElement>(
     return Array.from(parent.querySelectorAll<T>(selector));
 }
 
-// Embedders may scroll the editor itself or an ancestor; fall back to document scrolling.
-export function findScrollContainer(node: HTMLElement): HTMLElement {
+// Embedders may scroll the editor itself, an ancestor, or the hosting document.
+export function findScrollContainer(node: HTMLElement, fallback = node): HTMLElement {
     let el: HTMLElement | null = node;
     while (el && el !== document.body && el !== document.documentElement) {
         const { overflowY } = getComputedStyle(el);
@@ -34,7 +34,7 @@ export function findScrollContainer(node: HTMLElement): HTMLElement {
         el = el.parentElement;
     }
 
-    return node;
+    return fallback;
 }
 
 // Read the block reference stamped on rendered DOM elements.

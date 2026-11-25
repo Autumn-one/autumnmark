@@ -2,7 +2,7 @@ import type { ReferenceElement } from '@floating-ui/dom';
 import type { VNode } from 'snabbdom';
 import type { Muya } from '../../index';
 import { EVENT_KEYS } from '../../config';
-import { isHTMLElement, isHTMLInputElement } from '../../utils';
+import { isHTMLInputElement, isKeyboardEvent } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
 
 import BaseFloat from '../baseFloat';
@@ -14,6 +14,19 @@ interface ICheckerCount {
     column: number;
 }
 
+// Zero-based bottom-right cell of the initial two-row, one-column table.
+const DEFAULT_SELECTION = { row: 1, column: 0 };
+const ARROW_STEPS = new Map<string, ICheckerCount>([
+    [EVENT_KEYS.ArrowRight, { row: 0, column: 1 }],
+    [EVENT_KEYS.ArrowLeft, { row: 0, column: -1 }],
+    [EVENT_KEYS.ArrowDown, { row: 1, column: 0 }],
+    [EVENT_KEYS.ArrowUp, { row: -1, column: 0 }],
+]);
+
+function tableSelection(row: number, column: number): ICheckerCount {
+    return { row: Math.max(row, 0), column: Math.max(column, 0) };
+}
+
 class TablePicker extends BaseFloat {
     static pluginName = 'tablePicker';
     public override capturesContentKeydown = true;
@@ -21,7 +34,7 @@ class TablePicker extends BaseFloat {
     private _checkerCount: ICheckerCount;
     private _oldVNode: VNode | null;
     private _current: ICheckerCount | null;
-    private _select: ICheckerCount | null;
+    private _select = { ...DEFAULT_SELECTION };
     private _tableContainer: HTMLElement;
 
     constructor(muya: Muya) {
@@ -33,7 +46,6 @@ class TablePicker extends BaseFloat {
         };
         this._oldVNode = null;
         this._current = null;
-        this._select = null;
         const tableContainer = (this._tableContainer
             = document.createElement('div'));
         this.container!.appendChild(tableContainer);
@@ -41,8 +53,12 @@ class TablePicker extends BaseFloat {
     }
 
     override listen() {
-        const { eventCenter } = this.muya;
+        const { eventCenter, domNode } = this.muya;
         super.listen();
+        // Capture before the slash menu handles Enter, so opening the picker cannot also confirm it.
+        const keydown = this._keydownHandler.bind(this);
+        eventCenter.attachDOMEvent(domNode, 'keydown', keydown, true);
+        eventCenter.attachDOMEvent(this.container!, 'keydown', keydown);
         eventCenter.attachDOMEvent(this.container!, 'mousedown', (event) => {
             if (event.target instanceof Element && event.target.closest('.mu-table-picker-cell'))
                 event.preventDefault();
@@ -58,47 +74,38 @@ class TablePicker extends BaseFloat {
         });
     }
 
-    render() {
+    render(input: { row?: string; column?: string } = {}) {
         const { row, column } = this._checkerCount;
         const { row: cRow, column: cColumn } = this._current!;
-        const { row: sRow, column: sColumn } = this._select!;
+        const { row: sRow, column: sColumn } = this._select;
         const { _tableContainer: tableContainer, _oldVNode: oldVNode } = this;
         const tableRows = [];
-        let i;
-        let j;
-
-        for (i = 0; i < row; i++) {
+        for (let i = 0; i < row; i++) {
             let rowSelector = 'div.mu-table-picker-row';
             if (i === 0)
                 rowSelector += '.mu-table-picker-header';
 
             const cells = [];
 
-            for (j = 0; j < column; j++) {
-                let cellSelector = 'span.mu-table-picker-cell';
-                if (i <= cRow && j <= cColumn)
-                    cellSelector += '.current';
-
-                if (i <= sRow && j <= sColumn)
-                    cellSelector += '.selected';
-
+            for (let j = 0; j < column; j++) {
                 cells.push(
-                    h(cellSelector, {
+                    h('span.mu-table-picker-cell', {
                         key: j.toString(),
+                        class: {
+                            current: i <= cRow && j <= cColumn,
+                            selected: i <= sRow && j <= sColumn,
+                        },
                         dataset: {
                             row: i.toString(),
                             column: j.toString(),
                         },
                         on: {
-                            mouseenter: (event: MouseEvent) => {
-                                if (!isHTMLElement(event.target))
-                                    return;
-                                const r = event.target.getAttribute('data-row');
-                                const c = event.target.getAttribute('data-column');
-                                this._select = { row: Number(r), column: Number(c) };
+                            mouseenter: () => {
+                                this._select = tableSelection(i, j);
                                 this.render();
                             },
-                            click: (_) => {
+                            click: () => {
+                                this._select = tableSelection(i, j);
                                 this.selectItem();
                             },
                         },
@@ -113,11 +120,11 @@ class TablePicker extends BaseFloat {
             h('input.row-input', {
                 props: {
                     type: 'text',
-                    value: +this._select!.row + 1,
+                    value: input.row ?? String(sRow + 1),
                 },
                 on: {
-                    keyup: (event: KeyboardEvent) => {
-                        this._keyupHandler(event, 'row');
+                    input: (event: Event) => {
+                        this._inputHandler(event, 'row');
                     },
                 },
             }),
@@ -125,11 +132,11 @@ class TablePicker extends BaseFloat {
             h('input.column-input', {
                 props: {
                     type: 'text',
-                    value: +this._select!.column + 1,
+                    value: input.column ?? String(sColumn + 1),
                 },
                 on: {
-                    keyup: (event: KeyboardEvent) => {
-                        this._keyupHandler(event, 'column');
+                    input: (event: Event) => {
+                        this._inputHandler(event, 'column');
                     },
                 },
             }),
@@ -156,37 +163,51 @@ class TablePicker extends BaseFloat {
         this._oldVNode = vnode;
     }
 
-    private _keyupHandler(event: KeyboardEvent, type: 'row' | 'column') {
-        let number = +this._select![type];
-        const value = isHTMLInputElement(event.target) ? +event.target.value : Number.NaN;
-        if (event.key === EVENT_KEYS.ArrowUp)
-            number++;
-        else if (event.key === EVENT_KEYS.ArrowDown)
-            number--;
-        else if (event.key === EVENT_KEYS.Enter)
-            this.selectItem();
-        else if (!Number.isNaN(value))
-            number = value - 1;
+    private _keydownHandler(event: Event) {
+        if (!this.status || !isKeyboardEvent(event) || event.isComposing
+            || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+            return;
+        }
 
-        if (number !== +this._select![type]) {
-            this._select![type] = Math.max(number, 0);
+        const step = ARROW_STEPS.get(event.key);
+        if (!step && event.key !== EVENT_KEYS.Enter)
+            return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (step) {
+            const { row, column } = this._select;
+            this._select = tableSelection(row + step.row, column + step.column);
             this.render();
+        }
+        else {
+            this.selectItem();
         }
     }
 
+    private _inputHandler(event: Event, type: keyof ICheckerCount) {
+        if (!isHTMLInputElement(event.target))
+            return;
+        const { value } = event.target;
+        const count = Number(value);
+        if (Number.isSafeInteger(count))
+            this._select[type] = Math.max(count - 1, 0);
+        // Keep partial input editable, e.g. the first digit of a 12-row table.
+        this.render({ [type]: value });
+    }
+
     private _showPicker(current: ICheckerCount, reference: ReferenceElement, cb: (row: number, column: number) => void) {
-    // current { row, column } zero base
         this._current = current;
-        // Clone so footer-input edits mutating `_select` never corrupt the
-        // immutable `_current` start position (ICheckerCount is flat).
-        this._select = { ...current };
+        this._select = current.row < 0 && current.column < 0
+            ? { ...DEFAULT_SELECTION }
+            : tableSelection(current.row, current.column);
         super.show(reference, cb);
     }
 
     selectItem() {
         const { cb } = this;
-        const { row, column } = this._select!;
-        cb(Math.max(row, 0), Math.max(column, 0));
+        const { row, column } = this._select;
+        cb(row, column);
         this.hide();
     }
 }

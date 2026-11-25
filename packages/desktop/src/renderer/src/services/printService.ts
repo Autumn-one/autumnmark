@@ -21,12 +21,17 @@ class MarkdownPrint {
     }
     this.container = printContainer
     printContainer.innerHTML = html
+    for (const fold of printContainer.querySelectorAll<HTMLDetailsElement>('details.mu-export-fold')) {
+      fold.open = true
+    }
 
     document.body.appendChild(printContainer)
     // The print container is hidden on screen, so layout does not request its fonts.
     await Promise.all([
       document.fonts.load('16px "Noto Music"', '𝅗𝅥𝅘𝅥𝅯'),
-      document.fonts.load('16px "Noto Sans Math"', '⏜⏝')
+      document.fonts.load('16px "Noto Sans Math"', '⏜⏝'),
+      ...Array.from(printContainer.querySelectorAll<HTMLImageElement>('img[src^="data:image/"]'),
+        image => image.decode().catch(() => {}))
     ])
     await document.fonts.ready
   }

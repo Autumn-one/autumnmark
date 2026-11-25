@@ -4,7 +4,7 @@ import type { IHighlight } from '../inline/model/types';
 import type { Muya } from '../muya';
 import type { IAnchorFocusInfo, ISelectionEndpoint, TSelectionState } from '../selection/types';
 import type { IMatch, IReplaceOption, ISearchOption } from './types';
-import { unfoldAllSections } from '../block/folding';
+import { revealBlock, unfoldAllSections } from '../block/folding';
 import { DEFAULT_SEARCH_OPTIONS } from '../config';
 import { comparePaths, contentPath, resolveContent, resolveEndpoint } from '../selection/state';
 import { SelectionDirection, SelectionType } from '../selection/types';
@@ -406,6 +406,10 @@ export class Search {
         else if (selection) {
             this._muya.editor.selection.setSelection(selection);
         }
+
+        const activeMatch = matches[index];
+        if (query && this._visible && activeMatch)
+            revealBlock(activeMatch.block);
 
         return this;
     }

@@ -26,8 +26,11 @@ import { deepClone, hasPick, isHTMLElement } from '../utils';
 import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { isIndentShortcut, isTabKey } from '../utils/tab';
+import { CompactBlocks } from './compactBlocks';
+import { ContentTabs } from './contentTabs';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
+import { FoldBlocks } from './foldBlocks';
 import { attachLinkMouseHandlers } from './linkMouseEvents';
 import { handleIndentShortcut, handleTabSelection, shouldHandleIndentation } from './tab';
 import { EditTransactions } from './transactions';
@@ -283,6 +286,9 @@ export class Editor {
     history: History;
     scrollPage: Nullable<ScrollPage> = null;
     textDrag: TextDrag | null = null;
+    contentTabs: ContentTabs;
+    compactBlocks: CompactBlocks;
+    foldBlocks: FoldBlocks;
 
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
@@ -310,6 +316,9 @@ export class Editor {
         this.searchModule = new Search(_muya);
         this.clipboard = Clipboard.create(_muya);
         this.history = new History(_muya);
+        this.contentTabs = new ContentTabs(_muya);
+        this.compactBlocks = new CompactBlocks(_muya);
+        this.foldBlocks = new FoldBlocks(_muya);
     }
 
     get activeContentBlock() {
@@ -335,6 +344,7 @@ export class Editor {
         const state = this.jsonState.getState();
 
         this.scrollPage = ScrollPage.create(muya, state);
+        this.refreshBlockViews();
 
         this._dispatchEvents();
         // Hovering a rendered link wrapper dispatches `muya-link-tools` so the
@@ -355,6 +365,8 @@ export class Editor {
 
         // Native input moves the DOM caret before the input handler runs (#5258).
         this._muya.eventCenter.attachDOMEvent(domNode, 'beforeinput', (event) => {
+            if (!this._isContentEvent(event))
+                return;
             // Browser rich-text commands must not mutate DOM outside the document model.
             if (event instanceof InputEvent && event.inputType.startsWith('format')) {
                 event.preventDefault();
@@ -399,7 +411,7 @@ export class Editor {
                 return;
             }
 
-            if (!isSelectionInSameBlock || !anchorBlock) {
+            if (!isSelectionInSameBlock || !anchorBlock || anchorBlock.isInert) {
                 this.activeContentBlock = null;
                 if (event.type === 'keyup' && selectionResult) {
                     const { anchor, focus } = selectionResult;
@@ -448,6 +460,11 @@ export class Editor {
     }
 
     private _dispatchContentEvent(block: Content, event: Event): void {
+        const tabBoundary = event.type === 'keydown' ? this.contentTabs.deletionTarget(block, event) : undefined;
+        if (tabBoundary && event instanceof KeyboardEvent) {
+            this.contentTabs.revealDeletionTarget(tabBoundary, event);
+            return;
+        }
         switch (event.type) {
             case 'click':
                 block.clickHandler(event);
@@ -494,6 +511,7 @@ export class Editor {
         // rather than the first block of the document.
         if (
             anchorBlock
+            && !anchorBlock.isInert
             && anchor
             && focus
             && scrollPage?.queryBlock(anchorPath) === anchorBlock
@@ -502,8 +520,32 @@ export class Editor {
             return;
         }
 
+        this._focusFirstBlock();
+    }
+
+    private _focusFirstBlock() {
         // TODO: the cursor maybe passed by muya options.cursor, and no need to find the first leaf block.
-        const firstLeafBlock = scrollPage?.firstContentInDescendant();
+        let firstLeafBlock = this.scrollPage?.firstContentInDescendant();
+        if (firstLeafBlock?.isInert) {
+            const visible = firstLeafBlock.nextContentInContext(true);
+            if (!visible) {
+                firstLeafBlock.domNode?.closest('figure')?.querySelector<HTMLElement>('.mu-embedded-drawing-button')?.focus();
+                return;
+            }
+            firstLeafBlock = visible;
+        }
+        if (firstLeafBlock && (this.contentTabs.isHidden(firstLeafBlock) || this.foldBlocks.isHidden(firstLeafBlock))) {
+            const visible = firstLeafBlock.nextContentInContext(true);
+            if (!visible) {
+                const disclosure = this.foldBlocks.visibleToggleFor(firstLeafBlock);
+                if (disclosure)
+                    disclosure.focus();
+                else
+                    this.contentTabs.focusTabFor(firstLeafBlock);
+                return;
+            }
+            firstLeafBlock = visible;
+        }
 
         if (firstLeafBlock == null)
             return;
@@ -614,18 +656,27 @@ export class Editor {
         this.selection.notify(operation !== null);
     }
 
+    refreshBlockViews(): void {
+        this.compactBlocks.prune();
+        this.foldBlocks.refresh();
+        this.contentTabs.refresh();
+    }
+
     private _updateBlocks(operation: JSONOp, view: ICompletedTransaction['view'], selection: Nullable<TSelectionState>, recover: () => TState[]) {
         if (view === 'rebuild') {
             this.scrollPage!.updateState(recover());
             this._restoreSelection(selection);
             return;
         }
-        if (operation === null)
+        if (operation === null) {
+            this.refreshBlockViews();
             return;
+        }
         try {
             let completed: TState[] | undefined;
             const snapshot = pick(this.scrollPage as BlockNode, operation);
             drop(snapshot, operation, this._muya, () => completed ??= recover());
+            this.refreshBlockViews();
             this._restoreSelection(selection);
         }
         catch (error) {

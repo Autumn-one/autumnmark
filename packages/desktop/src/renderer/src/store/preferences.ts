@@ -1,8 +1,8 @@
 import type { UserPreferences } from '@shared/types/preferences'
-import { useEditorStore } from './editor'
+import type { LocalTheme } from '@shared/localTheme'
 import { defineStore } from 'pinia'
-import bus from '../bus'
-import { setLanguage } from '../i18n'
+import { pineInkTheme } from 'common/theme'
+import { getCurrentLanguage, setLanguage } from '../i18n'
 
 export type EndOfLine = 'default' | 'lf' | 'crlf'
 export type TitleBarStyle = 'custom' | 'native'
@@ -12,7 +12,7 @@ export type OrderListDelimiter = '.' | ')'
 export type PreferHeadingStyle = 'atx' | 'setext'
 export type FrontmatterType = '-' | ';' | '{' | '+'
 export type SequenceTheme = 'hand' | 'simple'
-export type ImageInsertAction = 'folder' | 'path' | 'upload'
+export type ImageInsertAction = 'folder' | 'path' | 'upload' | 'embed'
 export type ImageRelativeDirectoryBase = 'file' | 'root'
 export type FileSortBy = 'created' | 'modified' | 'title'
 export type FileSortOrder = 'asc' | 'desc'
@@ -32,6 +32,8 @@ export interface PreferencesState {
   defaultOpenMode: 'edit' | 'read'
   startUpAction: UserPreferences['startUpAction']
   restoreLayoutState: boolean
+  restoreEditors: boolean
+  restoreViewState: boolean
   defaultDirectoryToOpen: string
   treePathExcludePatterns: string[]
   language: string
@@ -45,6 +47,10 @@ export interface PreferencesState {
   codeBlockLineNumbers: boolean
   sourceCodeLineNumbers: boolean
   trimUnnecessaryCodeBlockEmptyLines: boolean
+  compactMode: boolean
+  compactImageMaxHeight: number
+  compactVideoMaxHeight: number
+  compactCodeMaxLines: number
   wrapCodeBlocks: boolean
   editorLineWidth: string
 
@@ -60,6 +66,7 @@ export interface PreferencesState {
   textDirection: TextDirection | string
   hideQuickInsertHint: boolean
   imageInsertAction: ImageInsertAction | string
+  embedVideos: boolean
   imagePreferRelativeDirectory: boolean
   imageRelativeDirectoryBase: ImageRelativeDirectoryBase | string
   imageRelativeDirectoryName: string
@@ -87,11 +94,14 @@ export interface PreferencesState {
   githubAlerts: boolean
   isHtmlEnabled: boolean
   softNewlineAsSpace: boolean
+  embedDrawings: boolean
+  newDrawingView: UserPreferences['newDrawingView']
   sequenceTheme: SequenceTheme | string
   mermaidLightTheme: string
   mermaidDarkTheme: string
   plantumlServer: string
 
+  localThemes: LocalTheme[]
   theme: string
   followSystemTheme: boolean
   lightModeTheme: string
@@ -121,6 +131,7 @@ export interface PreferencesState {
 
   imageFolderPath: string
   webImages: unknown[]
+  lastReadAnnouncement: string | null
   cloudImages: unknown[]
   currentUploader: string
   cliScript: string
@@ -157,6 +168,8 @@ export const usePreferencesStore = defineStore('preferences', {
     defaultOpenMode: 'edit',
     startUpAction: 'restoreAll',
     restoreLayoutState: true,
+    restoreEditors: true,
+    restoreViewState: true,
     defaultDirectoryToOpen: '',
     treePathExcludePatterns: [],
     language: 'en',
@@ -170,7 +183,11 @@ export const usePreferencesStore = defineStore('preferences', {
     codeBlockLineNumbers: false,
     sourceCodeLineNumbers: true,
     trimUnnecessaryCodeBlockEmptyLines: true,
-    wrapCodeBlocks: false,
+    compactMode: true,
+    compactImageMaxHeight: 0,
+    compactVideoMaxHeight: 0,
+    compactCodeMaxLines: 12,
+    wrapCodeBlocks: true,
     editorLineWidth: '',
 
     autoPairBracket: true,
@@ -184,7 +201,8 @@ export const usePreferencesStore = defineStore('preferences', {
     trimTrailingNewline: 2,
     textDirection: 'ltr',
     hideQuickInsertHint: false,
-    imageInsertAction: 'folder',
+    imageInsertAction: 'embed',
+    embedVideos: false,
     imagePreferRelativeDirectory: false,
     imageRelativeDirectoryBase: 'file',
     imageRelativeDirectoryName: 'assets',
@@ -212,14 +230,17 @@ export const usePreferencesStore = defineStore('preferences', {
     githubAlerts: false,
     isHtmlEnabled: true,
     softNewlineAsSpace: false,
+    embedDrawings: true,
+    newDrawingView: 'dialog',
     sequenceTheme: 'hand',
     mermaidLightTheme: 'default',
     mermaidDarkTheme: 'dark',
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
-    theme: 'light',
+    localThemes: [],
+    theme: pineInkTheme.id,
     followSystemTheme: true,
-    lightModeTheme: 'light',
+    lightModeTheme: pineInkTheme.id,
     darkModeTheme: 'dark',
     customCss: '',
 
@@ -247,6 +268,7 @@ export const usePreferencesStore = defineStore('preferences', {
 
     imageFolderPath: '',
     webImages: [],
+    lastReadAnnouncement: null,
     cloudImages: [],
     currentUploader: 'picgo',
     cliScript: ''
@@ -257,9 +279,7 @@ export const usePreferencesStore = defineStore('preferences', {
   },
 
   actions: {
-    SET_USER_PREFERENCE(preference: Partial<PreferencesState> | Record<string, unknown>): void {
-      const oldLanguage = this.language
-
+    SET_USER_PREFERENCE(preference: Partial<PreferencesState> | Record<string, unknown>): void | Promise<void> {
       Object.keys(preference).forEach((key) => {
         const incoming = (preference as Record<string, unknown>)[key]
         if (
@@ -271,8 +291,8 @@ export const usePreferencesStore = defineStore('preferences', {
       })
 
       const lang = (preference as { language?: string }).language
-      if (lang && lang !== oldLanguage) {
-        setLanguage(lang)
+      if (lang && lang !== getCurrentLanguage()) {
+        return setLanguage(lang)
       }
     },
 
@@ -280,23 +300,16 @@ export const usePreferencesStore = defineStore('preferences', {
       ;(this as unknown as Record<string, unknown>)[type as string] = checked
     },
 
-    TOGGLE_VIEW_MODE(entryName: keyof PreferencesState | string): void {
-      if (
-        (useEditorStore().currentFile?.readOnly || useEditorStore().currentFile?.modeChanging) &&
-        ['sourceCode', 'typewriter', 'focus'].includes(entryName)
-      )
-        return
-      const target = this as unknown as Record<string, unknown>
-      target[entryName as string] = !target[entryName as string]
-    },
-
-    ASK_FOR_USER_PREFERENCE(): void {
-      window.electron.ipcRenderer.send('mt::ask-for-user-preference')
-      window.electron.ipcRenderer.send('mt::ask-for-user-data')
-
+    LISTEN_FOR_USER_PREFERENCE(): void {
       window.electron.ipcRenderer.on('mt::user-preference', (_e, preferences) => {
         this.SET_USER_PREFERENCE(preferences as Partial<PreferencesState>)
       })
+    },
+
+    ASK_FOR_USER_PREFERENCE(): void {
+      this.LISTEN_FOR_USER_PREFERENCE()
+      window.electron.ipcRenderer.send('mt::ask-for-user-preference')
+      window.electron.ipcRenderer.send('mt::ask-for-user-data')
     },
 
     SET_SINGLE_PREFERENCE({ type, value }: SingleSetPreferencePayload): void {
@@ -315,27 +328,6 @@ export const usePreferencesStore = defineStore('preferences', {
 
     SET_IMAGE_FOLDER_PATH(value?: string): void {
       window.electron.ipcRenderer.send('mt::ask-for-modify-image-folder-path', value)
-    },
-
-    LISTEN_FOR_VIEW(): void {
-      window.electron.ipcRenderer.on('mt::show-command-palette', () => {
-        bus.emit('show-command-palette')
-      })
-      window.electron.ipcRenderer.on('mt::toggle-view-mode-entry', (_event, entryName) => {
-        this.TOGGLE_VIEW_MODE(entryName)
-        const target = this as unknown as Record<string, unknown>
-        this.DISPATCH_EDITOR_VIEW_STATE({ [entryName]: target[entryName] })
-      })
-    },
-
-    // Notify main so native menus use the updated preferences.
-    LISTEN_TOGGLE_VIEW(): void {
-      bus.on('view:toggle-view-entry', (entryName) => {
-        const name = entryName as string
-        this.TOGGLE_VIEW_MODE(name)
-        const target = this as unknown as Record<string, unknown>
-        this.DISPATCH_EDITOR_VIEW_STATE({ [name]: target[name] })
-      })
     },
 
     DISPATCH_EDITOR_VIEW_STATE(viewState: Record<string, unknown>): void {

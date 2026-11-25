@@ -6,14 +6,17 @@
     :data-tree-path="file.pathname"
     data-tree-directory="false"
     :draggable="!renameCache && !projectStore.createCache.dirname"
-    :style="{ 'padding-left': `${depth * 6 + 15}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
+    :style="{ opacity: file.isMarkdown || isDrawingPath(file.pathname) ? 1 : 0.75 }"
     :class="[
       { current: currentFile?.pathname === file.pathname, active: file.id === activeItem.id }
     ]"
     @click="handleFileClick"
     @dblclick="handleFileDblClick"
   >
-    <file-icon :name="file.name" />
+    <file-icon
+      :name="file.name"
+      aria-hidden="true"
+    />
     <input
       v-if="renameCache === file.pathname"
       ref="renameInput"
@@ -39,10 +42,10 @@ import bus from '../../bus'
 import { renameSelectionEnd } from './renameKey'
 import { useTreeRow } from './rowRegistry'
 import type { TreeFileNode } from './types'
+import { isDrawingPath } from '@/util/drawingPaths'
 
 const props = defineProps<{
   file: TreeFileNode
-  depth: number
 }>()
 
 const projectStore = useProjectStore()
@@ -66,6 +69,10 @@ const handleFileClick = (event: MouseEvent): void => {
   // A double-click's second click must not re-issue the open request.
   if (event.detail === 2) return
   const { isMarkdown, pathname } = props.file
+  if (isDrawingPath(pathname)) {
+    bus.emit('drawing::open', pathname)
+    return
+  }
   if (!isMarkdown) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
@@ -109,7 +116,7 @@ onMounted(() => {
     fileEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
       projectStore.CHANGE_ACTIVE_ITEM(props.file)
-      showContextMenu(event, !!clipboard.value)
+      showContextMenu(event, !!clipboard.value, props.file)
     })
   }
 
@@ -121,13 +128,14 @@ onMounted(() => {
 <style scoped>
 .side-bar-file {
   display: flex;
-  position: relative;
   align-items: center;
   cursor: default;
   user-select: none;
-  height: 30px;
+  height: var(--tree-node-height);
+  min-width: var(--tree-node-min-width);
   box-sizing: border-box;
-  padding-right: 15px;
+  border-radius: 5px;
+  padding-inline: var(--tree-chevron-width) 7px;
   &:hover {
     background: var(--sideBarItemHoverBgColor);
   }
@@ -136,24 +144,13 @@ onMounted(() => {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  &::before {
-    content: '';
-    position: absolute;
-    display: block;
-    left: 0;
-    background: var(--themeColor);
-    width: 2px;
-    height: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: all 0.2s ease;
+  & > .file-icon {
+    width: 16px;
   }
 }
-.side-bar-file.current::before {
-  height: 100%;
-}
 .side-bar-file.current > span {
-  color: var(--themeColor);
+  color: var(--editorColor80);
+  font-weight: 600;
 }
 /* After :hover so the selection stays visible while the pointer is over it. */
 .side-bar-file.active {
@@ -171,6 +168,7 @@ input.rename {
   border: 1px solid var(--focusColor);
   background: var(--floatBorderColor);
   width: 100%;
+  min-width: 0;
   border-radius: 3px;
 }
 </style>

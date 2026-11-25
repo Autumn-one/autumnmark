@@ -6,12 +6,14 @@ vi.mock('electron', async() => {
   class BrowserWindow extends EventEmitter {
     id = 7
     webContents = Object.assign(new EventEmitter(), {
+      ipc: new EventEmitter(),
       send: vi.fn(),
       setIgnoreMenuShortcuts: vi.fn(),
       toggleDevTools: vi.fn()
     })
 
-    loadURL = vi.fn()
+    loadURL = vi.fn().mockResolvedValue(undefined)
+    show = vi.fn()
     setSheetOffset = vi.fn()
     destroy = (): void => { this.emit('closed') }
   }
@@ -24,6 +26,7 @@ vi.mock('main_renderer/config', () => ({
   editorWinOptions: {},
   preferencesWinOptions: { width: 800, height: 600 },
   isLinux: false,
+  isWindows: false,
   isOsx: false
 }))
 vi.mock('main_renderer/windows/utils', () => ({
@@ -45,6 +48,7 @@ const makeAccessor = () => ({
     getPreferredEol: () => 'lf'
   },
   keybindings: { getAccelerator: () => null },
+  windowManager: { add: vi.fn() },
   menu: {
     addEditorMenu: vi.fn(),
     addSettingMenu: vi.fn(),
@@ -116,6 +120,7 @@ describe('settings window lifetime', () => {
     const native = settings.createWindow()
     const preventDefault = vi.fn()
 
+    settings.open()
     native.emit('focus')
     native.emit('blur')
     native.emit('close', { preventDefault })
@@ -124,6 +129,23 @@ describe('settings window lifetime', () => {
     expect(native.webContents.send).toHaveBeenNthCalledWith(2, 'mt::window-active-status', { status: false })
     expect(preventDefault).toHaveBeenCalledOnce()
     expect(ipcMain.emit).toHaveBeenCalledWith('window-close-by-id', native.id)
+    settings.destroy()
+  })
+
+  it('keeps the prepared window hidden and delivers the latest category when the sidebar mounts', () => {
+    const accessor = makeAccessor()
+    const settings = new SettingWindow(accessor as unknown as Accessor)
+    const native = settings.createWindow()
+    expect(native.show).not.toHaveBeenCalled()
+    expect(accessor.windowManager.add).not.toHaveBeenCalled()
+    expect(new URL(vi.mocked(native.loadURL).mock.calls[0][0]).pathname).toMatch(/\/settings\.html$/)
+    settings.selectCategory('markdown')
+    settings.selectCategory('editor')
+    settings.open()
+    expect(accessor.windowManager.add).toHaveBeenCalledExactlyOnceWith(settings)
+    expect(native.webContents.send).not.toHaveBeenCalled()
+    native.webContents.ipc.emit('mt::settings-ready')
+    expect(native.webContents.send).toHaveBeenCalledExactlyOnceWith('settings::change-tab', 'editor')
     settings.destroy()
   })
 

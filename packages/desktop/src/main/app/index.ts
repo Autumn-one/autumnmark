@@ -6,14 +6,13 @@ import log from 'electron-log'
 import { app, BrowserWindow, clipboard, nativeTheme, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
-import type { UserPreferencesPatch } from '@shared/types/preferences'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs, { userArguments } from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
 import { normalizeCliMarkdownPath, normalizeMarkdownPath } from '../filesystem/markdown'
 import { confirmAndTrashItem } from '../filesystem/trash'
 import { registerKeyboardListeners } from '../keyboard'
-import { selectTheme } from '../menu/actions/theme'
+import { startAutomaticUpdateChecks } from '../menu/actions/marktext'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
@@ -24,7 +23,7 @@ import EditorWindow, { type FileOpenOptions } from '../windows/editor'
 import SettingWindow from '../windows/setting'
 import { setLanguage } from '../i18n'
 import { matchSupportedLanguage } from 'common/i18n'
-import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
+import { getNativeThemeSource } from './nativeTheme'
 import type Accessor from './accessor'
 import type WindowManager from './windowManager'
 import type { PreparedSessionWindow } from '@shared/types/applicationState'
@@ -47,6 +46,7 @@ class App {
   private _windowManager: WindowManager
   private _themeListenerRegistered: boolean
   private _initialArgumentsConsumed = false
+  private _preparedSettings?: { window: SettingWindow; detach: () => void }
 
   constructor(accessor: Accessor, args: Partial<CliArgs>) {
     this._accessor = accessor
@@ -123,7 +123,7 @@ class App {
       // On OS X it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (this._windowManager.windowCount === 0) {
-        this._createEditorWindow()
+        this._startEditorWindows([])
       }
     })
 
@@ -182,10 +182,6 @@ class App {
     const { preferences } = this._accessor
 
     this._initializeLanguage()
-    const { theme } = preferences.getAll()
-    const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
-    const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-    const darkModeTheme = preferences.getItem<string>('darkModeTheme')
 
     if (!this._initialArgumentsConsumed && args._.length) {
       const readOnly = args['--read-only'] === true
@@ -203,85 +199,24 @@ class App {
 
     this._initialArgumentsConsumed = true
 
-    nativeTheme.themeSource = getNativeThemeSource({ followSystemTheme, theme })
-
-    const isDarkTheme = isDarkApplicationTheme(theme)
-    const systemIsDark = nativeTheme.shouldUseDarkColors
-
-    if (followSystemTheme && isDarkTheme !== systemIsDark) {
-      const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-      log.info(
-        `Following system theme at startup: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-      )
-      selectTheme(newTheme)
+    const syncSystemTheme = (): void => {
+      const { followSystemTheme, theme, lightModeTheme, darkModeTheme } = preferences.getAll()
+      if (!followSystemTheme) return
+      const expected = nativeTheme.shouldUseDarkColors ? darkModeTheme : lightModeTheme
+      if (theme !== expected) preferences.setItem('theme', expected)
     }
 
-    onInternalChannel(
-      'broadcast-preferences-changed',
-      (change: UserPreferencesPatch) => {
-        const nextPreferences = {
-          ...preferences.getAll(),
-          ...change
-        }
-        nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
-
-        if (change.followSystemTheme === true) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-
-          log.info(
-            `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-          )
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
-        if (
-          preferences.getItem<boolean>('followSystemTheme') &&
-        (change.lightModeTheme || change.darkModeTheme)
-        ) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-
-        // Use newly changed theme preferences before the stored values are refreshed.
-          let lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          let darkModeTheme = preferences.getItem<string>('darkModeTheme')
-
-          if (change.lightModeTheme !== undefined) {
-            lightModeTheme = change.lightModeTheme
-          }
-          if (change.darkModeTheme !== undefined) {
-            darkModeTheme = change.darkModeTheme
-          }
-
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-
-          log.info(`Theme preference changed, applying: ${newTheme}`)
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
-      })
+    nativeTheme.themeSource = getNativeThemeSource(preferences.getAll())
+    syncSystemTheme()
 
     if (!this._themeListenerRegistered) {
-      nativeTheme.on('updated', () => {
-        const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
-        const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-        const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-
-        if (followSystemTheme) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-          const currentTheme = preferences.getItem<string>('theme')
-
-          if (newTheme !== currentTheme) {
-            log.info(
-              `System theme changed, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-            )
-            selectTheme(newTheme)
-            preferences.setItem('theme', newTheme)
-          }
+      onInternalChannel('broadcast-preferences-changed', (change: Record<string, unknown>) => {
+        if ('followSystemTheme' in change || 'theme' in change) {
+          nativeTheme.themeSource = getNativeThemeSource(preferences.getAll())
         }
+        if ('followSystemTheme' in change || 'lightModeTheme' in change || 'darkModeTheme' in change) syncSystemTheme()
       })
+      nativeTheme.on('updated', syncSystemTheme)
       this._themeListenerRegistered = true
     }
 
@@ -310,10 +245,7 @@ class App {
     }
 
     const createWindow = (): void => {
-      const host = this._accessor.sessionHost
-      const paths = _openFilesCache.splice(0)
-      void host.start(paths, prepared => this._createEditorWindow(null, [], [], {}, {}, prepared), args['--new-window'] === true)
-        .catch(error => host.report(error))
+      this._startEditorWindows(_openFilesCache.splice(0), args['--new-window'] === true)
     }
 
     if (isLinux) {
@@ -332,6 +264,8 @@ class App {
     } else {
       createWindow()
     }
+
+    startAutomaticUpdateChecks(() => this._windowManager.getActiveEditor()?.browserWindow ?? null)
 
     //   try {
     //     // write screenshot image into screenshot folder.
@@ -361,6 +295,12 @@ class App {
     }
   }
 
+  private _startEditorWindows(paths: PathInfo[], forceNewWindow = false): void {
+    const host = this._accessor.sessionHost
+    void host.start(paths, prepared => this._createEditorWindow(null, [], [], {}, {}, prepared), forceNewWindow)
+      .catch(error => host.report(error))
+  }
+
   private _createEditorWindow(
     rootDirectory: string | null = null,
     fileList: string[] = [],
@@ -384,13 +324,36 @@ class App {
     return editor
   }
 
-  private _createSettingWindow(category?: string | null): void {
-    const setting = new SettingWindow(this._accessor)
-    const nativeWindow = setting.createWindow(category ?? null)
-    this._windowManager.add(setting)
-    if (this._windowManager.windowCount === 1) {
-      this._accessor.menu.setActiveWindow(nativeWindow.id)
+  private _prepareSettingsWindow(owner: BrowserWindow): void {
+    if (this._preparedSettings || this._windowManager.getWindowsByType(WindowType.SETTINGS).length) return
+    const window = new SettingWindow(this._accessor)
+    const native = window.createWindow()
+    const contents = native.webContents
+    const discard = (): void => {
+      detach()
+      window.destroy()
     }
+    // A pointer passing over the button should not retain a renderer or keep the app alive.
+    const timer = setTimeout(discard, 10_000)
+    const detach = (): void => {
+      clearTimeout(timer)
+      owner.off('blur', discard)
+      owner.off('closed', discard)
+      app.off('before-quit', discard)
+      ipcMain.off('broadcast-preferences-changed', discard)
+      native.off('closed', detach)
+      contents.off('render-process-gone', discard)
+      contents.off('did-fail-load', discard)
+      this._preparedSettings = undefined
+    }
+    owner.once('blur', discard)
+    owner.once('closed', discard)
+    app.once('before-quit', discard)
+    ipcMain.once('broadcast-preferences-changed', discard)
+    native.once('closed', detach)
+    contents.once('render-process-gone', discard)
+    contents.once('did-fail-load', discard)
+    this._preparedSettings = { window, detach }
   }
 
   private _openFilesToOpen(): void {
@@ -524,16 +487,21 @@ class App {
   private _openSettingsWindow(category?: string | null): void {
     const settingWins = this._windowManager.getWindowsByType(WindowType.SETTINGS)
     if (settingWins.length >= 1) {
-      const browserSettingWindow = settingWins[0].win.browserWindow!
-      browserSettingWindow.webContents.send('settings::change-tab', category)
-      if (isLinux) {
-        browserSettingWindow.focus()
-      } else {
-        browserSettingWindow.moveTop()
-      }
+      const settings = settingWins[0].win as SettingWindow
+      if (category) settings.selectCategory(category)
+      settings.bringToFront()
       return
     }
-    this._createSettingWindow(category)
+    const prepared = this._preparedSettings
+    if (prepared) {
+      prepared.detach()
+      if (category) prepared.window.selectCategory(category)
+      prepared.window.open()
+      return
+    }
+    const settings = new SettingWindow(this._accessor)
+    settings.createWindow(category)
+    settings.open()
   }
 
   private _listenForIpcMain(): void {
@@ -670,8 +638,12 @@ class App {
       ipcMain.emit('app-open-directory-by-id', windowId, dirPath)
     })
 
-    ipcMain.on('mt::open-setting-window', () => {
-      this._openSettingsWindow()
+    ipcMain.on('mt::prepare-setting-window', event => {
+      const owner = this._windowManager.getEditorForWebContents(event.sender)?.browserWindow
+      if (owner?.isFocused()) this._prepareSettingsWindow(owner)
+    })
+    ipcMain.on('mt::open-setting-window', (_event, category?: string) => {
+      this._openSettingsWindow(category === 'ai' || category === 'theme' ? category : undefined)
     })
 
     ipcMain.on('mt::make-screenshot', (e) => {

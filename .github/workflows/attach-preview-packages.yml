@@ -1,0 +1,184 @@
+name: Attach AutumnMark Preview Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful preview build run (empty selects the latest matching build)
+        required: false
+        type: string
+  push:
+    branches:
+      - 'release/*'
+    paths:
+      - '.github/workflows/attach-preview-packages.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attach-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Select a verified build with matching application sources
+        id: source
+        uses: actions/github-script@v9
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        with:
+          script: |
+            const { execFileSync, spawnSync } = require('node:child_process');
+            const { writeFileSync } = require('node:fs');
+            const repo = context.repo;
+            const applicationPaths = [
+              'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml',
+              'packages/desktop', 'packages/muya', 'scripts'
+            ];
+            const workflowIds = [];
+            for (const path of ['package-preview.yml', 'recover-macos-arm64.yml']) {
+              try {
+                const { data } = await github.rest.actions.getWorkflow({ ...repo, workflow_id: path });
+                workflowIds.push(data.id);
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            const requested = process.env.SOURCE_RUN_ID.trim();
+            let candidates;
+            if (requested) {
+              if (!/^\d+$/.test(requested)) throw new Error('Invalid source run ID');
+              const { data } = await github.rest.actions.getWorkflowRun({
+                ...repo, run_id: Number(requested)
+              });
+              candidates = [data];
+            } else {
+              const results = await Promise.all(workflowIds.map(workflow_id =>
+                github.rest.actions.listWorkflowRuns({ ...repo, workflow_id, status: 'success', per_page: 100 })
+              ));
+              candidates = results.flatMap(result => result.data.workflow_runs)
+                .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+            }
+            let selected;
+            for (const run of candidates) {
+              if (run.conclusion !== 'success' || !workflowIds.includes(run.workflow_id)) continue;
+              const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', run.head_sha, context.sha]);
+              if (ancestor.status !== 0) continue;
+              const changes = execFileSync('git', [
+                'diff', '--name-only', run.head_sha, context.sha, '--', ...applicationPaths
+              ], { encoding: 'utf8' }).trim();
+              if (changes) continue;
+              selected = run;
+              break;
+            }
+            if (!selected) throw new Error('No successful preview build matches this application source');
+            const readPackage = path => JSON.parse(execFileSync(
+              'git', ['show', selected.head_sha + ':' + path], { encoding: 'utf8' }
+            ));
+            const { version } = readPackage('package.json');
+            if (version !== readPackage('packages/desktop/package.json').version) {
+              throw new Error('Root and desktop versions differ');
+            }
+            if (!/^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/.test(version)) {
+              throw new Error('This workflow only attaches prerelease packages');
+            }
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              ...repo, run_id: selected.id, per_page: 100
+            });
+            const platforms = ['windows-x64', 'macos-arm64', 'linux-x64'];
+            const artifactIds = platforms.map(platform => {
+              const name = 'autumnmark-' + platform + '-preview';
+              const artifact = data.artifacts.find(item => item.name === name && !item.expired);
+              if (!artifact) throw new Error('Missing or expired platform artifact: ' + name);
+              return artifact.id;
+            });
+            const tag = 'v' + version;
+            const { data: releases } = await github.rest.repos.listReleases({ ...repo, per_page: 100 });
+            const release = releases.find(item => item.tag_name === tag);
+            if (!release) throw new Error('Create a release draft for ' + tag + ' before attaching packages');
+            if (release.immutable) throw new Error('This release is immutable; use a new version');
+            if (!release.draft) {
+              const released = execFileSync('git', ['rev-parse', 'refs/tags/' + tag + '^{}'], { encoding: 'utf8' }).trim();
+              const changes = execFileSync('git', [
+                'diff', '--name-only', released, selected.head_sha, '--', ...applicationPaths
+              ], { encoding: 'utf8' }).trim();
+              if (changes) throw new Error('The existing release contains different application sources');
+            }
+            writeFileSync('release-assets.json', JSON.stringify(release.assets));
+            core.setOutput('run-id', String(selected.id));
+            core.setOutput('artifact-ids', artifactIds.join(','));
+            core.setOutput('version', version);
+            core.setOutput('tag', tag);
+            core.info('Attaching all platform packages from ' + selected.html_url);
+
+      - name: Download all platform packages
+        uses: actions/download-artifact@v8.0.2
+        with:
+          artifact-ids: ${{ steps.source.outputs.artifact-ids }}
+          merge-multiple: true
+          path: dist
+          run-id: ${{ steps.source.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify platform checksums
+        working-directory: dist
+        run: sha256sum --check SHA256SUMS-*.txt
+
+      - name: Attach missing packages and refresh the checksum manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.source.outputs.tag }}
+          VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          node <<'NODE'
+          const { readdirSync, readFileSync, writeFileSync } = require('node:fs')
+          const { createHash } = require('node:crypto')
+          const { execFileSync } = require('node:child_process')
+          const version = process.env.VERSION
+          const expected = [
+            'autumnmark-win-x64-' + version + '-setup.exe',
+            'autumnmark-win-x64-' + version + '.zip',
+            'autumnmark-mac-arm64-' + version + '.dmg',
+            'autumnmark-mac-arm64-' + version + '.zip',
+            ...['AppImage', 'snap', 'deb', 'rpm', 'tar.gz'].map(ext => 'autumnmark-linux-' + version + '.' + ext)
+          ]
+          const files = readdirSync('dist')
+          for (const name of expected) {
+            if (!files.includes(name)) throw new Error('Missing package: ' + name)
+          }
+          const existing = new Map(JSON.parse(readFileSync('release-assets.json', 'utf8')).map(asset => [asset.name, asset]))
+          const checksums = new Map()
+          for (const [name, asset] of existing) {
+            if (name === 'SHA256SUMS.txt') continue
+            if (asset.state !== 'uploaded' || !/^sha256:[a-f0-9]{64}$/.test(asset.digest || '')) {
+              throw new Error('Cannot verify existing release asset: ' + name)
+            }
+            checksums.set(name, asset.digest.slice(7))
+          }
+          const missing = []
+          for (const name of expected) {
+            // Rebuilds can differ byte-for-byte, so keep downloads that are already published.
+            if (existing.has(name)) continue
+            const path = 'dist/' + name
+            checksums.set(name, createHash('sha256').update(readFileSync(path)).digest('hex'))
+            missing.push(path)
+          }
+          if (missing.length) {
+            execFileSync('gh', ['release', 'upload', process.env.TAG, ...missing], { stdio: 'inherit' })
+          }
+          const lines = [...checksums].sort(([a], [b]) => a.localeCompare(b)).map(([name, hash]) => hash + '  ' + name)
+          writeFileSync('dist/SHA256SUMS.txt', lines.join('\n') + '\n')
+          execFileSync('gh', ['release', 'upload', process.env.TAG, 'dist/SHA256SUMS.txt', '--clobber'], { stdio: 'inherit' })
+          console.log('Uploaded ' + missing.length + ' missing packages; checksum manifest covers ' + checksums.size + ' files')
+          NODE

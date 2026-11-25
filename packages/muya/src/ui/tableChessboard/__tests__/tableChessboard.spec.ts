@@ -124,21 +124,38 @@ describe('tableChessboard — muya-table-picker subscription + grid pick', () =>
         eventCenter.emit('muya-table-picker', { row: -1, column: -1 }, reference, cb);
         await nextTick();
 
-        // Hover the 3rd row / 4th column cell (zero-based 2,3). The mouseenter
-        // sets the selection and re-renders the grid (snabbdom patches the
-        // vnode), so the post-hover cell must be re-queried before clicking —
-        // the original node is replaced by the patch.
         const selector = 'span.mu-table-picker-cell[data-row="2"][data-column="3"]';
-        const hovered = picker.floatBox!.querySelector(selector) as HTMLElement;
-        expect(hovered).not.toBeNull();
-        hovered.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-        await nextTick();
         const cell = picker.floatBox!.querySelector(selector) as HTMLElement;
+        cell.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
         cell.click();
 
         expect(cb).toHaveBeenCalledTimes(1);
         expect(cb).toHaveBeenCalledWith(2, 3);
         // Picking dismisses the float.
+        expect(picker.status).toBe(false);
+    });
+
+    it('continues from the hovered cell or typed size when navigating with the keyboard', () => {
+        const cb = vi.fn();
+        eventCenter.emit('muya-table-picker', { row: -1, column: -1 }, stubReference(), cb);
+        const row = picker.container!.querySelector<HTMLInputElement>('.row-input')!;
+        const column = picker.container!.querySelector<HTMLInputElement>('.column-input')!;
+        const cell = picker.container!.querySelector('[data-row="2"][data-column="3"]')!;
+        cell.dispatchEvent(new MouseEvent('mouseenter'));
+        muya.domNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+        expect(row.value).toBe('3');
+        expect(column.value).toBe('3');
+
+        row.value = '1';
+        row.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(row.value).toBe('1');
+        row.value += '2';
+        row.dispatchEvent(new Event('input', { bubbles: true }));
+        row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(row.value).toBe('12');
+        expect(column.value).toBe('4');
+        row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(cb).toHaveBeenCalledExactlyOnceWith(11, 3);
         expect(picker.status).toBe(false);
     });
 

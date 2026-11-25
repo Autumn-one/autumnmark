@@ -70,9 +70,15 @@ It's sometimes hard to write and manage tables in markdown. In MarkText you can 
 
 You can insert or delete a new row or column by clicking on an existing cell and clicking on the menu on the right side for rows or bottom for columns.
 
-**Move table cells:**
+**Move rows and columns**
 
-You can simply move a row or column by clicking on the cell menu (like above) and dragging it by holding your left mouse button like this:
+Drag the handle below a column or to the right of a body row. The line marks where the column or row will land. The header stays at the top, and column headings move with their columns.
+
+**Resize rows and columns**
+
+Drag the table’s right or bottom edge to change its overall width or height. Columns or rows scale in proportion to their starting sizes until they reach their minimum. Drag an internal divider to transfer space between the two adjacent columns or rows while keeping the table’s overall size fixed. Each row needs enough height for its text. If both rows already fit their content tightly, drag the bottom edge down first to make room. Double-click a cell’s right or bottom edge to restore automatic sizing for that column or row.
+
+Custom sizes are saved above the table in an HTML comment such as `<!-- table-layout: col-widths="1:100%,3:240" row-min-heights="2:64" -->`. Positions start at 1 and include the header as row 1. Widening the table to fill the content area saves a `100%` column that takes up the remaining space when the editor width changes. Other sizes are saved in CSS pixels. Omitted positions use automatic sizing. Resetting all column widths restores the theme’s default.
 
 ![](../assets/marktext-table_drag_drop.png)
 
@@ -126,4 +132,8 @@ In the 0.24.0 development version, search covers all available sidebar folder ro
 
 Since 0.23.0, headings in the WYSIWYG editor have a fold control. Click it to hide the section beneath the heading, including deeper headings, up to the next heading of the same or a higher level. Click again to expand it. Folding changes the view only: it does not remove text from saved Markdown or exports.
 
-The independent document outline lists headings for navigation. Toggle its expanded state through the View menu or <kbd>CmdOrCtrl</kbd>+<kbd>K</kbd>. It docks to either side of the editor and supports resizing; when collapsed, hover its icon for a floating preview. See [Basics](BASICS.md) for layout controls, Reading Mode and document statistics.
+Open the **Outline** tab in the sidebar to browse the current document's headings. Select a heading to jump to it. Use <kbd>CmdOrCtrl</kbd>+<kbd>K</kbd> to switch between **Outline** and **Files**. See [Basics](BASICS.md) for sidebar controls, Reading Mode and document statistics.
+
+In either editing mode, drag a heading onto the top half of another outline row to place its section before that heading. Drop on the bottom half to place it after the entire target section. The insertion line marks a valid destination. Body text, code and subordinate headings move together, keeping their heading levels. Undo restores the previous order in one step.
+
+To link to a heading, select the link text and choose **Format → Hyperlink**. In the destination, type `#` followed by part of the heading, or type a relative path such as `guide.md#setup` for a heading in another file. Use the arrow keys and Enter to select a result, or Escape to dismiss the list. The same suggestions appear when typing a Markdown link in source mode.

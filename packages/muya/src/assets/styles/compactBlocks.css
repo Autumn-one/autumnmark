@@ -1,0 +1,372 @@
+.mu-compact-image-body {
+    display: block;
+}
+
+.mu-code-resize,
+.mu-code-edge {
+    display: none;
+}
+
+@media screen {
+    .mu-editor:not(.mu-read-only) .mu-code-resize {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+
+        display: grid;
+        width: 100%;
+        height: var(--mu-code-edge-height);
+        padding: 0;
+
+        color: var(--editor-color-80);
+
+        background: transparent;
+        border: 0;
+        cursor: ns-resize;
+
+        user-select: none;
+        touch-action: none;
+        place-items: center;
+    }
+
+    .mu-code-resize::before {
+        width: 32px;
+        height: 3px;
+
+        background: currentcolor;
+        border-radius: 2px;
+        opacity: 0;
+
+        content: '';
+    }
+
+    .mu-code-resize:focus-visible::before,
+    .mu-code-resize[data-lines]::before,
+    .mu-code-block:hover > .mu-code-resize::before {
+        opacity: 0.7;
+    }
+
+    .mu-editor:not(.mu-read-only) .mu-compact-limited ~ .mu-code-resize {
+        align-items: end;
+        padding-block-end: 1px;
+    }
+
+    .mu-code-resize[data-lines]::after {
+        position: absolute;
+        right: 8px;
+        bottom: 100%;
+
+        padding: 2px 6px;
+
+        color: var(--editor-color);
+        font: inherit;
+
+        background: var(--editor-bg-color);
+        border: 1px solid var(--editor-color-10);
+        border-radius: 3px;
+
+        content: attr(data-lines);
+    }
+
+    .mu-embedded-picture-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+
+        display: grid;
+        width: min(17px, 45%);
+        max-height: 75%;
+
+        color: var(--editor-color);
+
+        background: var(--editor-bg-color);
+        border-radius: 3px;
+        box-shadow: 0 0 0 1px var(--editor-color-10);
+        opacity: 0.86;
+
+        aspect-ratio: 1;
+        place-items: center;
+    }
+
+    .mu-embedded-picture-badge::before {
+        width: 80%;
+        height: 80%;
+
+        background: currentcolor;
+
+        content: '';
+        mask: url('../icons/embedded-picture.svg') center / contain no-repeat;
+    }
+
+    .mu-compact-mode.mu-compact-video-limit .mu-container video {
+        max-width: 100%;
+        max-height: var(--mu-compact-video-height);
+        object-fit: contain;
+    }
+
+    .mu-compact-mode.mu-compact-video-limit .mu-container video[height] {
+        width: auto;
+    }
+
+    .mu-compact-limited > .mu-compact-image-body {
+        text-align: center;
+
+        cursor: zoom-in;
+    }
+
+    .mu-compact-limited > .mu-compact-image-body .mu-embedded-image {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0;
+
+        background: transparent;
+        border: 0;
+        cursor: zoom-in;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-surface {
+        display: inline-grid;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-surface > * {
+        grid-area: 1 / 1;
+    }
+
+    .mu-compact-limited:not(.mu-compact-expanded) .mu-embedded-picture-badge {
+        position: sticky;
+
+        margin: 2px 2px 0 0;
+        place-self: start end;
+    }
+
+    .mu-code.mu-compact-limited:not(.mu-compact-expanded) {
+        background-attachment: local;
+    }
+
+    .mu-editor .mu-paragraph-content.mu-compact-limited:not(.mu-compact-expanded) {
+        max-height: var(--mu-compact-height);
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+    }
+
+    .mu-code.mu-compact-limited:not(.mu-compact-expanded) ~ .mu-line-numbers-rows {
+        height: var(--mu-gutter-height);
+        overflow: hidden;
+    }
+
+    .mu-paragraph-content.mu-compact-limited:not(.mu-compact-expanded) {
+        mask-image: linear-gradient(to bottom, black calc(100% - 24px), rgb(0 0 0 / 45%));
+    }
+}
+
+.mu-compact-toggle {
+    display: grid;
+    width: 40px;
+    height: 24px;
+    margin: 3px auto 0;
+    padding: 0;
+
+    color: var(--editor-color-80);
+
+    background: linear-gradient(transparent, var(--float-hover-color));
+    border: 1px solid var(--editor-color-10);
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0.72;
+
+    transition: opacity 120ms ease;
+    place-items: center;
+}
+
+.mu-compact-toggle::before {
+    width: 7px;
+    height: 7px;
+
+    border-right: 2px solid currentcolor;
+    border-bottom: 2px solid currentcolor;
+
+    transform: translateY(-2px) rotate(45deg);
+
+    content: '';
+}
+
+.mu-compact-toggle[aria-expanded='true']::before {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.mu-compact-toggle:hover,
+.mu-compact-toggle:focus-visible {
+    color: var(--editor-color);
+
+    background: var(--float-hover-color);
+    opacity: 1;
+}
+
+.mu-compact-toggle:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
+}
+
+@media print {
+    .mu-language-input,
+    .mu-compact-toggle {
+        display: none;
+    }
+}
+
+@media screen {
+    .mu-editor .mu-code-block {
+        --mu-code-edge-height: 14px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: minmax(34px, auto) auto;
+        align-items: center;
+        column-gap: 6px;
+        padding: 0 1em max(1em, var(--mu-code-edge-height));
+        border-radius: 8px;
+    }
+
+    .mu-editor .mu-code-block::before {
+        grid-area: 1 / 1;
+        overflow: hidden;
+        color: var(--editor-color-80);
+        font: 500 13px/1.4 var(--mu-font-family, system-ui, sans-serif);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        user-select: none;
+        content: '‹›  ' attr(data-reading-language);
+    }
+
+    .mu-editor .mu-code-block:has(> .mu-code-block-title)::before {
+        grid-column: 1 / -1;
+        max-width: calc(30% - 6px);
+    }
+
+    .mu-editor .mu-code-block::after {
+        grid-area: 1 / 1 / 2 / -1;
+        align-self: stretch;
+        margin-inline: -1em;
+        border-bottom: 1px solid var(--editor-color-10);
+        pointer-events: none;
+        content: '';
+    }
+
+    .mu-editor .mu-code-block > .mu-language-input {
+        grid-area: 1 / 1;
+        z-index: 1;
+        min-width: 0;
+        overflow: hidden;
+        font: 500 13px/1.4 var(--mu-font-family, system-ui, sans-serif);
+        white-space: nowrap;
+        cursor: text;
+        opacity: 0;
+    }
+
+    .mu-editor:focus-within:not(.mu-read-only) .mu-code-block.mu-active:not(:has(> .mu-code.mu-active)) {
+        & > .mu-language-input {
+            opacity: 1;
+        }
+
+        &::before,
+        & > .mu-code-block-title {
+            visibility: hidden;
+        }
+    }
+
+    .mu-code-block > .mu-language-input:empty::after {
+        color: var(--editor-color-50);
+        content: attr(hint);
+    }
+
+    .mu-read-only .mu-code-block > .mu-language-input {
+        display: none;
+    }
+
+    .mu-code-edge:not(:empty) {
+        position: absolute;
+        inset: auto 0 0;
+        display: grid;
+        height: var(--mu-code-edge-height);
+        place-items: center;
+        background: var(--mu-code-edge-background, linear-gradient(to bottom, transparent, #eee));
+        border-radius: 0 0 7px 7px;
+        pointer-events: none;
+    }
+
+    .mu-code-edge > .mu-compact-toggle {
+        position: relative;
+        z-index: 2;
+        width: min(52px, 100%);
+        height: 100%;
+        margin: 0;
+        background: transparent;
+        border: 0;
+        border-radius: 2px;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .mu-code-edge > .mu-compact-toggle::before {
+        border-width: 1.5px;
+        pointer-events: none;
+    }
+
+    .mu-editor:not(.mu-read-only) .mu-code-edge > .mu-compact-toggle {
+        /* The last 5px belong to the centered resize grip underneath the arrow. */
+        align-self: start;
+        min-height: 0;
+        height: calc(var(--mu-code-edge-height) - 5px);
+        overflow: clip;
+    }
+
+    .mu-code-edge > .mu-compact-toggle:focus-visible {
+        outline-offset: -2px;
+    }
+
+    .mu-editor .mu-code-block > .mu-code-copy {
+        position: relative;
+        inset: auto;
+        grid-area: 1 / 2;
+        opacity: 1;
+    }
+
+    .mu-editor .mu-code-block > .mu-code-block-title {
+        grid-area: 1 / 1 / 2 / -1;
+        min-width: 0;
+        margin: 0 max(30%, 30px);
+        padding: 0;
+        overflow: hidden;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        background: transparent;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .mu-editor .mu-code-block > .mu-code {
+        grid-area: 2 / 1 / 3 / -1;
+        min-width: 0;
+        margin-top: 0.85em;
+    }
+
+    .mu-editor .mu-code-block > .mu-code.mu-compact-limited:not(.mu-compact-expanded) {
+        max-height: var(--mu-compact-height);
+    }
+
+    .mu-editor .mu-code-block:has(.mu-line-numbers-rows) > .mu-code {
+        margin-left: 1.5em;
+    }
+
+    .mu-read-only.mu-code-wrap .mu-reading-code-line {
+        --mu-wrap-indent: min(var(--mu-line-indent, 0ch), 50%);
+        display: block;
+        padding-inline-start: var(--mu-wrap-indent);
+        text-indent: calc(-1 * var(--mu-wrap-indent));
+        overflow-wrap: anywhere;
+    }
+}

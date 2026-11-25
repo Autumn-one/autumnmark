@@ -117,6 +117,14 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
         }
       },
       {
+        id: 'videoMenuItem',
+        label: t('video.insert'),
+        click(_item, win) {
+          const window = win as BrowserWindow | undefined
+          window?.webContents.send('mt::editor-format-action', { type: 'video' })
+        }
+      },
+      {
         type: 'separator'
       },
       {

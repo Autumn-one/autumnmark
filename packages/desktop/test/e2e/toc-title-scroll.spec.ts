@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { makeRoomForOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
+import { showOutline, launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
 
 const sections: string[] = []
 for (let i = 1; i <= 30; i++) {
@@ -11,7 +11,7 @@ const DOC = ['# Long outline', '', 'Intro.', '', ...sections].join('\n')
 const probe = (page: Page) =>
   page.evaluate(() => {
     const panel = document.querySelector('.side-bar-toc') as HTMLElement
-    const toggle = document.querySelector('.outline-toggle') as HTMLElement
+    const toggle = document.querySelector('#sidebar-tab-outline') as HTMLElement
     const tree = document.querySelector('.side-bar-toc .el-tree') as HTMLElement
     const panelBox = panel.getBoundingClientRect()
     const toggleBox = toggle.getBoundingClientRect()
@@ -30,7 +30,7 @@ test.describe('TOC panel scrolling', () => {
     const launched = await launchWithMarkdown(DOC)
     app = launched.app
     page = launched.page
-    await makeRoomForOutline(app, page)
+    await showOutline(app, page)
     await waitForEditor(page)
     const sidebarVisible = await page.evaluate(() => {
       const el = document.querySelector('.side-bar') as HTMLElement | null
@@ -49,7 +49,7 @@ test.describe('TOC panel scrolling', () => {
     if (app) await app.close()
   })
 
-  test('the outline toggle stays above the scrolling entries', async() => {
+  test('the outline tab stays above the scrolling entries', async() => {
     const before = await probe(page)
     expect(before.treeScrolls, 'the outline must overflow for this to mean anything').toBe(true)
     expect(before.toggleVisible).toBe(true)

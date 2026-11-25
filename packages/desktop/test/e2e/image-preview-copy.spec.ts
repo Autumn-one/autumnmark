@@ -79,6 +79,21 @@ test.describe('image preview copying', () => {
     if (fixture) rmSync(fixture, { recursive: true, force: true })
   })
 
+  test('closes on a backdrop click and stays open after panning', async() => {
+    await openPreview()
+    const stage = page.locator('.media-viewer-stage')
+    await stage.locator('img').click()
+    const bounds = await stage.boundingBox()
+    if (!bounds) throw new Error('Preview not visible')
+    await page.mouse.move(bounds.x + 12, bounds.y + 12)
+    await page.mouse.down()
+    await page.mouse.move(bounds.x + 60, bounds.y + 25, { steps: 4 })
+    await page.mouse.up()
+    await expect(stage).toBeVisible()
+    await stage.click({ position: { x: 12, y: 12 } })
+    await expect(stage).toBeHidden()
+  })
+
   test('copies the natural-size bitmap and pastes it as a new external image', async() => {
     await openPreview()
     await copyPreview()

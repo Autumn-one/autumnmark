@@ -30,7 +30,7 @@
         <bool
           id="setting-imagePreferRelativeDirectory"
           :description="preferenceLabel('imagePreferRelativeDirectory')"
-          more="https://marktext.me/docs/images"
+          :more="`${END_USER_DOCS_URL}/IMAGES.md`"
           :bool="imagePreferRelativeDirectory"
           :on-change="(value) => onSelectChange('imagePreferRelativeDirectory', value)"
         />
@@ -74,6 +74,7 @@ import Compound from '@/prefComponents/common/compound/index.vue'
 import CurSelect from '@/prefComponents/common/select/index.vue'
 import TextBox from '@/prefComponents/common/textBox/index.vue'
 import type { PrefSelectOption } from '@/prefComponents/common/types'
+import { END_USER_DOCS_URL } from '@shared/brand'
 
 const { t } = useI18n()
 

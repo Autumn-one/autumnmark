@@ -7,6 +7,7 @@ import Store, { type Schema } from 'electron-store'
 import log from 'electron-log'
 import { ensureDirSync } from 'common/filesystem'
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
+import { APP_PROFILE_NAME } from '@shared/brand'
 import { TypedEmitter } from '@shared/types/typedEmitter'
 
 const DATA_CENTER_NAME = 'dataCenter'
@@ -21,7 +22,7 @@ interface DataCenterPaths {
 }
 
 class DataCenter extends TypedEmitter<DataCenterEvents> {
-  private readonly _serviceName = 'marktext'
+  private readonly _serviceName = APP_PROFILE_NAME
   private readonly _encryptKeys: string[] = []
   private readonly _defaults: Record<string, unknown>
   // Unavailable storage uses detached defaults without allowing writes to replace the original.
@@ -35,6 +36,7 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       imageFolderPath: path.join(userDataPath, 'images'),
       screenshotFolderPath: path.join(userDataPath, 'screenshot'),
       webImages: [],
+      lastReadAnnouncement: '',
       cloudImages: [],
       currentUploader: 'picgo'
     }
@@ -184,15 +186,15 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       this.setItems(userData)
     })
 
-    ipcMain.handle('mt::ask-for-image-path', async(e) => {
+    ipcMain.handle('mt::ask-for-image-path', async(e, kind?: 'video') => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return ''
       const { filePaths } = await dialog.showOpenDialog(win, {
         properties: ['openFile'],
         filters: [
           {
-            name: 'Images',
-            extensions: [...IMAGE_EXTENSIONS]
+            name: kind === 'video' ? 'Video' : 'Images',
+            extensions: kind === 'video' ? ['mp4', 'webm', 'ogv', 'mov', 'm4v', 'mkv', 'avi', 'mpeg', 'mpg', '3gp'] : [...IMAGE_EXTENSIONS]
           }
         ]
       })

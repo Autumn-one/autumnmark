@@ -37,14 +37,18 @@ const createFixture = (): Fixture => {
   return { root, bulk, target, deep, top, bulkFile }
 }
 
-const treeRow = (page: Page, filePath: string) =>
-  page.locator(`.tree-wrapper .side-bar-file[title="${filePath}"]`)
+const fileSelector = (filePath: string) =>
+  `.tree-wrapper .side-bar-file[title=${JSON.stringify(filePath)}]`
 
-const folderHeader = (page: Page, folderPath: string) =>
-  page.locator(`.tree-wrapper .folder-name[title="${folderPath}"]`)
+const folderSelector = (folderPath: string) =>
+  `.tree-wrapper .folder-name[title=${JSON.stringify(folderPath)}]`
+
+const treeRow = (page: Page, filePath: string) => page.locator(fileSelector(filePath))
+
+const folderHeader = (page: Page, folderPath: string) => page.locator(folderSelector(folderPath))
 
 const tab = (page: Page, filePath: string) =>
-  page.locator(`.editor-tabs .tabs-container li[title="${filePath}"]`)
+  page.locator(`.editor-tabs .tabs-container li[title=${JSON.stringify(filePath)}]`)
 
 const sideBarWidth = (page: Page): Promise<number> =>
   page.evaluate(() => {
@@ -65,7 +69,7 @@ const isFolderCollapsed = (page: Page, folderPath: string): Promise<boolean> =>
   page.evaluate((selector) => {
     const arrow = document.querySelector(`${selector} .icon-arrow`)
     return !!arrow && arrow.classList.contains('fold')
-  }, `.tree-wrapper .folder-name[title="${folderPath}"]`)
+  }, folderSelector(folderPath))
 
 const setFolderExpanded = async(
   page: Page,
@@ -84,7 +88,7 @@ const isRowVisible = (page: Page, filePath: string): Promise<boolean> =>
     const rowRect = row.getBoundingClientRect()
     const containerRect = container.getBoundingClientRect()
     return rowRect.top >= containerRect.top - 1 && rowRect.bottom <= containerRect.bottom + 1
-  }, `.tree-wrapper .side-bar-file[title="${filePath}"]`)
+  }, fileSelector(filePath))
 
 const openProject = async(app: ElectronApplication, page: Page, root: string): Promise<void> => {
   await page.waitForSelector('.side-bar', { timeout: 15000 })
@@ -198,7 +202,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
     page = launched.page
     await openProject(app, page, fixture.root)
 
-    // The state the manual "Show in Side Bar" command has to fix up.
+    // The state the manual folder command has to fix up.
     await setFolderExpanded(page, fixture.bulk, true)
     await setFolderExpanded(page, fixture.target, true)
     await openFileFromTree(page, fixture.deep)
@@ -221,7 +225,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
   })
 
   test('the tab context menu reveals the file anyway', async() => {
-    await clickNextPopupItem(app, 'showInSideBar')
+    await clickNextPopupItem(app, 'openContainingFolder')
 
     await clickMenuById(app, 'sideBarMenuItem')
     await expect(page.locator('.side-bar')).toBeHidden()

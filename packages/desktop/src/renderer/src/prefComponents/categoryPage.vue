@@ -3,11 +3,9 @@
     class="pref-category"
     :class="`pref-${category}`"
   >
-    <h4>{{ t(`preferences.categories.${category}`) }}</h4>
-    <theme-settings
-      v-if="category === 'appearance'"
-      embedded
-    />
+    <h4 v-if="category !== 'theme'">{{ t(`preferences.categories.${category}`) }}</h4>
+    <ai-models v-if="category === 'ai'" />
+    <theme-settings v-if="category === 'theme'" />
     <general-settings
       v-if="generalGroups[category]"
       :key="`general-${category}`"
@@ -31,18 +29,32 @@
       v-if="category === 'images'"
       embedded
     />
+    <Bool
+      v-if="category === 'video'"
+      id="setting-embedVideos"
+      :description="t('video.embed')"
+      :notes="t('video.note')"
+      :bool="preferenceStore.embedVideos"
+      :on-change="value => preferenceStore.SET_SINGLE_PREFERENCE({ type: 'embedVideos', value })"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { generalGroups, editorGroups, type PreferenceCategoryId } from './categories'
 import GeneralSettings from './general/index.vue'
-import EditorSettings from './editor/index.vue'
-import ThemeSettings from './theme/index.vue'
-import SpellcheckerSettings from './spellchecker/index.vue'
-import ImageSettings from './image/index.vue'
+import Bool from './common/bool/index.vue'
+import { usePreferencesStore } from '@/store/preferences'
+
+const EditorSettings = defineAsyncComponent(() => import('./editor/index.vue'))
+const AiModels = defineAsyncComponent(() => import('./ai/index.vue'))
+const ThemeSettings = defineAsyncComponent(() => import('./theme/index.vue'))
+const SpellcheckerSettings = defineAsyncComponent(() => import('./spellchecker/index.vue'))
+const ImageSettings = defineAsyncComponent(() => import('./image/index.vue'))
 
 defineProps<{ category: PreferenceCategoryId }>()
 const { t } = useI18n()
+const preferenceStore = usePreferencesStore()
 </script>

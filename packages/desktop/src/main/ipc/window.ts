@@ -3,22 +3,23 @@ import {
   Menu,
   MenuItem,
   ipcMain,
-  type IpcMainEvent,
+  screen,
   type WebContents
 } from 'electron'
 import log from 'electron-log'
-import type { MenuTemplate, MenuTemplateItem, MenuPopupPosition } from '@shared/types/menu'
+import type { IpcInvokeChannels } from '@shared/types/ipc'
+import type { MenuTemplate, MenuTemplateItem, MenuPopupPosition, ContextMenuPopupOptions } from '@shared/types/menu'
+import { buildEditorContextMenu } from '../contextMenu/editor'
 
-const windowFromEvent = (event: IpcMainEvent): BrowserWindow | null =>
-  BrowserWindow.fromWebContents(event.sender)
+const windowFromEvent = ({ sender }: { sender: WebContents }): BrowserWindow | null =>
+  BrowserWindow.fromWebContents(sender)
 
 interface PopupEntry {
   sender: WebContents
 }
 const popups = new Map<number, PopupEntry>()
 
-const buildMenu = (template: MenuTemplate | undefined, windowId: number): Menu => {
-  const menu = new Menu()
+const buildMenu = (template: MenuTemplate | undefined, windowId: number, menu = new Menu()): Menu => {
   for (const item of template || []) {
     if (item.type === 'separator') {
       menu.append(new MenuItem({ type: 'separator' }))
@@ -79,15 +80,32 @@ export const registerWindowHandlers = (): void => {
     if (win) win.setFullScreen(!win.isFullScreen())
   })
   ipcMain.handle('mt::win::is-maximized', (event) => {
-    const win = windowFromEvent(event as unknown as IpcMainEvent)
+    const win = windowFromEvent(event)
     return !!win && win.isMaximized()
   })
   ipcMain.handle('mt::win::is-fullscreen', (event) => {
-    const win = windowFromEvent(event as unknown as IpcMainEvent)
+    const win = windowFromEvent(event)
     return !!win && win.isFullScreen()
   })
+  ipcMain.handle(
+    'mt::win::is-cursor-over',
+    (event, bounds: IpcInvokeChannels['mt::win::is-cursor-over']['args'][0]) => {
+      const win = windowFromEvent(event)
+      if (!win?.isFocused()) return false
 
-  ipcMain.on('mt::menu::popup', (event, template: MenuTemplate, position?: MenuPopupPosition) => {
+      const cursor = screen.getCursorScreenPoint()
+      // Electron returns the origin when Wayland cannot supply screen coordinates.
+      if (process.platform === 'linux' && cursor.x === 0 && cursor.y === 0) return null
+
+      const content = win.getContentBounds()
+      const zoom = event.sender.getZoomFactor()
+      const x = (cursor.x - content.x) / zoom
+      const y = (cursor.y - content.y) / zoom
+      return x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom
+    }
+  )
+
+  ipcMain.on('mt::menu::popup', (event, template: MenuTemplate, options?: ContextMenuPopupOptions) => {
     const win = windowFromEvent(event)
     if (!win) return
     // Stash sender BEFORE menu.popup so buildMenu click handlers can resolve
@@ -96,11 +114,13 @@ export const registerWindowHandlers = (): void => {
     // route clicks to a dead sender.
     popups.set(win.id, { sender: event.sender })
     try {
-      const menu = buildMenu(template, win.id)
+      const editor = options?.editor
+      const prefix = editor ? buildEditorContextMenu(editor.selectionText, editor.spellcheckerEnabled) : undefined
+      const menu = buildMenu(template, win.id, prefix)
       menu.popup({
         window: win,
-        x: position?.x,
-        y: position?.y,
+        x: options?.x,
+        y: options?.y,
         callback: () => {
           popups.delete(win.id)
           try {

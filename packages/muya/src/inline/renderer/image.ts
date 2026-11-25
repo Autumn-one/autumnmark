@@ -6,7 +6,8 @@ import DeleteIcon from '../../assets/icons/delete/2.png';
 import ImageIcon from '../../assets/icons/image/2.png';
 import ImageFailIcon from '../../assets/icons/image_fail/2.png';
 import { CLASS_NAMES } from '../../config';
-import { getImageSrc, usesDefaultObjectSize } from '../../utils/image';
+import { isInlineDrawingImage } from '../../utils/diagram/drawingData';
+import { usesDefaultObjectSize } from '../../utils/image';
 
 function renderIcon(h: H, className: string, icon: string) {
     // A `<span>`, not an `<a>`: these hover controls carry no href, and an `<a>`
@@ -64,7 +65,7 @@ export default function image(
     this: Renderer,
     { h, block, token }: ISyntaxRenderOptions & { token: TSelectableImageToken },
 ) {
-    const imageSrc = getImageSrc(token.attrs.src ?? '');
+    const imageSrc = this.imageSource(token.attrs.src ?? '');
     const selectedImage = this.environment.selectedImage;
     const { translate } = this.environment;
     const data = {
@@ -109,6 +110,11 @@ export default function image(
             CLASS_NAMES.MU_INLINE_IMAGE
         }`
         : `span.${CLASS_NAMES.MU_INLINE_IMAGE}`;
+
+    if ('load' in imageSrc && isInlineDrawingImage(token)) {
+        wrapperSelector += '.mu-inline-drawing';
+        Object.assign(data.attrs, { 'role': 'button', 'tabindex': '0', 'aria-label': alt });
+    }
 
     const imageIcons = [
         renderIcon(h, 'mu-image-icon-success', ImageIcon),

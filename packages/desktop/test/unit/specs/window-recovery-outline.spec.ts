@@ -18,7 +18,9 @@ vi.mock('@/components/sideBar/toc.vue', () => ({ default: { template: '<div>Head
 vi.mock('@/components/iconTooltip/index.vue', () => ({
   default: { template: '<span><slot /></span>' }
 }))
-import Outline from '@/components/editorWithTabs/outline.vue'
+vi.mock('@/components/sideBar/tree.vue', () => ({ default: { template: '<div>Files</div>' } }))
+vi.mock('@/components/sideBar/search.vue', () => ({ default: { template: '<div>Search</div>' } }))
+import SideBar from '@/components/sideBar/index.vue'
 import { useLayoutStore } from '@/store/layout'
 import { createDefaultLayout } from '../../../src/shared/applicationState/defaults'
 let app: App | undefined
@@ -26,32 +28,30 @@ afterEach(() => {
   app?.unmount()
   document.body.innerHTML = ''
 })
-it('mounts restored outline placement and applies collapse and keyboard resizing to window intent', async() => {
+it('restores the outline tab and supports switching sidebar tabs with the keyboard', async() => {
   const pinia = createPinia()
   setActivePinia(pinia)
   const store = useLayoutStore()
   const layout = createDefaultLayout()
-  layout.outline = { visible: true, position: 'right', preferredWidthPx: 390 }
+  layout.sidebar.visible = true
+  layout.sidebar.activeView = 'outline'
   store.INITIALIZE_WINDOW_LAYOUT(layout)
   const root = document.createElement('div')
   document.body.append(root)
-  app = createApp(Outline)
+  app = createApp(SideBar)
   app
     .use(pinia)
     .use(createI18n({ legacy: false, locale: 'en', missingWarn: false, fallbackWarn: false }))
   app.mount(root)
   await nextTick()
-  const outline = root.querySelector<HTMLElement>('.document-outline')
-  expect(outline?.classList.contains('is-right')).toBe(true)
-  expect(outline?.style.getPropertyValue('--outline-width')).toBe('180px')
-  expect(store.outlineWidth).toBe(390)
-  root
-    .querySelector('.outline-resizer')
-    ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }))
-  await nextTick()
-  expect(store.outlineWidth).toBe(180)
-  root.querySelector<HTMLButtonElement>('.outline-toggle')?.click()
+  const outline = root.querySelector<HTMLButtonElement>('#sidebar-tab-outline')
+  const files = root.querySelector<HTMLButtonElement>('#sidebar-tab-files')
+  if (!outline || !files) throw new Error('Missing sidebar tabs')
+  expect(outline.getAttribute('aria-selected')).toBe('true')
+  expect(files.tabIndex).toBe(-1)
+  outline.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))
   await nextTick()
   expect(store.showToc).toBe(false)
-  expect(outline?.classList.contains('is-expanded')).toBe(false)
+  expect(files.getAttribute('aria-selected')).toBe('true')
+  expect(document.activeElement).toBe(files)
 })

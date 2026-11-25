@@ -1,4 +1,193 @@
 {
+  "ai": {
+    "restartTools": "모델이 스크린샷을 요청할 수 있도록 AutumnMark를 다시 시작하세요.",
+    "inputTypes": "지원하는 입력 유형",
+    "image": "이미지",
+    "systemPrompt": "테마 도우미 시스템 프롬프트",
+    "systemPromptHelp": "모든 테마 대화의 새 메시지와 재시도에 적용됩니다.",
+    "promptStorageError": "시스템 프롬프트를 읽거나 저장할 수 없습니다.",
+    "previewPrivacy": "모델은 이 대화를 받으며 필요한 경우 예제 Markdown, CSS 또는 스크린샷을 요청할 수 있습니다. 스크린샷에는 선택한 요소나 미리보기의 화면 밖 콘텐츠가 포함될 수 있습니다.",
+    "checkingPreview": "미리보기 확인 중…",
+    "previewFailed": "미리보기를 캡처할 수 없습니다. 다시 시도하세요.",
+    "reviewLimit": "자동 수정 횟수 한도에 도달했습니다. 미리보기에서 마지막 변경 사항을 확인하세요.",
+    "displayName": "표시 이름(선택 사항)",
+    "model": "모델",
+    "baseUrl": "API 기본 URL",
+    "requestType": "요청 유형",
+    "classic": "Chat Completions (기본 방식)",
+    "loadFailed": "저장된 모델 설정을 읽을 수 없습니다.",
+    "restartRequired": "업데이트된 모델 설정을 불러오려면 AutumnMark를 다시 시작하세요.",
+    "contextTooSmall": "테마와 최근 메시지가 예상 컨텍스트 한도를 초과합니다. 컨텍스트 크기를 늘리거나 출력 한도를 줄이세요.",
+    "add": "모델 추가",
+    "edit": "모델 편집",
+    "remove": "{model} 모델을 삭제할까요?",
+    "actions": "작업",
+    "empty": "설정된 AI 모델이 없습니다.",
+    "fetch": "모델 가져오기",
+    "fetched": "찾은 모델 수: {count}",
+    "reasoning": "추론 수준",
+    "context": "컨텍스트 크기(토큰)",
+    "output": "출력 한도(토큰)",
+    "default": "서비스 기본값",
+    "test": "테스트",
+    "connected": "연결 성공 · 응답: 1",
+    "unexpectedTestReply": "서비스가 응답했지만 모델의 답변이 1이 아닙니다.",
+    "invalidModelList": "서비스가 잘못된 모델 목록을 반환했습니다.",
+    "invalidSize": "양의 정수를 입력하세요. 출력 한도는 컨텍스트 크기를 넘을 수 없습니다.",
+    "modelChanged": "모델이 변경되었습니다. 다시 열어 편집하세요."
+  },
+  "themeAi": {
+    "title": "테마 AI",
+    "current": "현재 테마",
+    "openDocument": "노트를 열어 테마 변경을 시험해 보세요.",
+    "empty": "줄 간격이나 제목 색처럼 바꾸고 싶은 부분을 설명하세요.",
+    "placeholder": "테마에서 무엇을 바꾸고 싶나요?",
+    "viewChange": "이 변경 사항 보기",
+    "previewStatus": "테마 미리 보기 중",
+    "previewing": "이 노트에서 미리 보는 중",
+    "previewReady": "미리 볼 수 있는 테마 초안",
+    "previewHere": "이 노트에서 미리 보기",
+    "endPreview": "미리 보기 종료",
+    "previewEnded": "미리 보기가 종료되었습니다. 변경 사항은 버전 기록에 남습니다.",
+    "apply": "테마에 적용",
+    "applied": "테마가 적용되었습니다.",
+    "copyOnApply": "적용하면 편집 가능한 테마 사본이 생성됩니다.",
+    "changed": "현재 테마가 변경되었습니다. 다시 시도해 주세요."
+  },
+  "themeHistory": {
+    "empty": "이 테마에 저장된 버전이 없습니다.",
+    "restoreAndApply": "복원 및 적용",
+    "confirmApplyDetail": "이 버전이 적용됩니다. 현재 버전은 기록에 남습니다.",
+    "appliedCollaboration": "외부 AI 클라이언트의 변경 사항을 적용했습니다.",
+    "appliedRecovered": "이전에 적용된 버전",
+    "title": "버전 기록",
+    "current": "현재 초안",
+    "loading": "버전을 불러오는 중…",
+    "storageError": "이 기기에서 테마 버전을 읽거나 저장할 수 없습니다.",
+    "aiSummary": "AI 요약",
+    "changes": "변경 사항",
+    "previous": "이전 버전과 비교",
+    "noChanges": "테마 내용이 이전 버전과 같습니다.",
+    "restore": "초안으로 복원",
+    "confirmRestore": "복원 확인",
+    "confirm": "{date} {time} 버전을 복원할까요?",
+    "confirmDetail": "복원하면 버전이 추가되며 현재 초안은 기록에 남습니다.",
+    "restored": "{date} {time} 버전을 복원했습니다.",
+    "applyHint": "사용 중인 테마를 업데이트하려면 ‘저장 및 적용’을 선택하세요.",
+    "kind": {
+      "initial": "초기 버전",
+      "manual": "수동 편집",
+      "ai": "AI 편집",
+      "save": "저장",
+      "apply": "저장 및 적용",
+      "restore": "복원",
+      "undo": "실행 취소",
+      "collaboration": "협업 편집",
+      "recovered": "복구된 초안"
+    },
+    "description": {
+      "initial": "이 테마의 초기 상태입니다.",
+      "manual": "테마 초안을 직접 편집했습니다.",
+      "ai": "AI 도우미가 초안을 편집했습니다.",
+      "save": "테마를 저장했습니다.",
+      "apply": "테마를 저장하고 적용했습니다.",
+      "restore": "이전 버전을 복원했습니다.",
+      "undo": "초안의 변경 사항을 취소했습니다.",
+      "collaboration": "협업 폴더의 파일로 초안을 업데이트했습니다.",
+      "recovered": "이 기기에 저장된 초안을 복구했습니다."
+    },
+    "field": {
+      "name": "테마 이름",
+      "base": "기본 테마",
+      "css": "스타일",
+      "sample": "미리 보기 Markdown"
+    }
+  },
+  "studio": {
+    "themeFiles": "테마 파일",
+    "composePlaceholder": "테마에서 바꾸고 싶은 점을 입력하세요…",
+    "interrupted": "요청이 중단되었습니다. 이미 받은 내용은 저장되었습니다.",
+    "selector": "선택자",
+    "addSelector": "선택자 추가",
+    "locateSelector": "규칙으로 이동",
+    "inspect": "요소 검사",
+    "inspectHint": "미리 보기 또는 Elements 트리에서 요소를 선택한 뒤 아래에서 선택자를 추가하거나 기존 규칙으로 이동하세요.",
+    "inspectorFailed": "미리 보기 요소를 검사할 수 없습니다.",
+    "title": "테마 편집기",
+    "create": "현재 테마로 만들기",
+    "edit": "현재 테마 편집",
+    "name": "테마 이름",
+    "base": "기본 테마",
+    "saveOnly": "테마로 저장만 하기",
+    "saveAndApply": "저장하고 적용",
+    "saveOptions": "저장 옵션",
+    "document": "본문",
+    "source": "Markdown 소스",
+    "preview": "테마 미리 보기",
+    "assistant": "AI 도우미",
+    "configure": "모델 설정",
+    "connection": "연결 설정",
+    "privacy": "모델은 이 대화를 받으며 필요한 경우 테마 CSS나 예제 Markdown을 요청할 수 있습니다.",
+    "prompt": "테마 도우미에게 메시지 보내기",
+    "composeHint": "Enter로 전송 · Shift+Enter로 현재 줄 아래에 빈 줄 삽입",
+    "emptyReply": "모델이 빈 응답을 반환했습니다.",
+    "unchanged": "테마가 변경되지 않았습니다.",
+    "user": "나",
+    "conversation": "대화 기록",
+    "newChat": "새 대화",
+    "deleteChat": "대화 삭제",
+    "untitledChat": "대화 · {time}",
+    "confirmDeleteChat": "“{name}” 대화와 스크린샷을 영구적으로 삭제할까요?",
+    "screenshot": "미리보기 스크린샷 {n}",
+    "retract": "보내기 취소",
+    "confirmBranch": "이후의 모든 메시지와 스크린샷도 삭제됩니다. 계속할까요?",
+    "historyError": "이 기기에서 대화 기록을 읽거나 저장할 수 없습니다.",
+    "chatChanged": "대화가 변경되었거나 다른 창에서 편집 중입니다. 다시 시도하세요.",
+    "diagnostics": "오류 로그",
+    "exportDiagnostics": "로그 내보내기",
+    "replyError": {
+      "tooLarge": "모델 응답이 크기 제한을 초과했습니다. 변경 범위를 줄여 다시 시도하세요.",
+      "missingMatch": "현재 CSS에서 바꿀 텍스트를 찾을 수 없습니다.",
+      "ambiguousMatch": "현재 CSS에 바꿀 텍스트가 여러 번 나타납니다.",
+      "css": "제안된 CSS가 검사를 통과하지 못했습니다",
+      "format": "응답에 잘못된 편집 지시가 포함되어 있습니다.",
+      "incomplete": "편집 지시가 완료되기 전에 응답이 끝났습니다.",
+      "truncated": "모델의 출력 한도에 도달했습니다. 한도를 높이거나 변경 범위를 줄여 다시 시도하세요."
+    },
+    "send": "보내기",
+    "stop": "중지",
+    "undo": "마지막 변경 취소",
+    "export": "테마 내보내기",
+    "import": "복사본 가져오기",
+    "draft": "초안을 이 기기에 저장합니다",
+    "copy": "내 테마",
+    "sample": "미리 보기 문서",
+    "endpoint": "Chat Completions API 기본 URL",
+    "model": "모델 ID",
+    "apiKey": "API 키",
+    "keySaved": "저장됨 · 비워 두면 유지",
+    "keyOptional": "로컬 모델은 선택 사항",
+    "clearKey": "저장된 키 삭제",
+    "saveConnection": "연결 저장",
+    "httpError": "모델의 HTTP 응답",
+    "invalidEndpoint": "HTTPS 또는 localhost HTTP를 사용하고 기본 URL이나 chat/completions 주소를 입력하세요.",
+    "invalidRequest": "모델 이름과 설정을 확인하세요.",
+    "newKeyRequired": "새 주소의 키를 입력하거나 기존 키를 삭제하세요.",
+    "keyStore": "시스템 키 저장소의 잠금을 해제하고 다시 시도하세요.",
+    "invalidReply": "지원하지 않는 변경입니다. 유효한 변경은 미리 보기에 표시됩니다.",
+    "configureFirst": "먼저 모델을 설정하세요.",
+    "requestFailed": "연결이 실패했거나 시간이 초과되었습니다. 주소를 확인하세요.",
+    "storageError": "저장할 수 없습니다. 초안은 계속 열려 있습니다.",
+    "stopped": "생성을 중지했습니다.",
+    "updated": "초안에 변경을 적용했습니다.",
+    "generating": "모델 응답 대기 중…",
+    "nameRequired": "테마 이름을 입력하세요.",
+    "invalidFile": "1 MB 미만의 지원 파일을 선택하세요.",
+    "css": "CSS 소스",
+    "baseSource": "기본 CSS 보기 (읽기 전용)",
+    "cssIssue": "CSS를 확인하세요",
+    "openFailed": "테마 편집기를 열 수 없습니다."
+  },
   "menu": {
     "counter": {
       "words": "단어 수",
@@ -108,15 +297,15 @@
       "checkUpdates": "업데이트 확인"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "MarkText 정보",
+      "title": "AutumnMark",
+      "about": "AutumnMark 정보",
       "checkUpdates": "업데이트 확인...",
       "preferences": "환경설정",
       "services": "서비스",
-      "hide": "MarkText 숨기기",
+      "hide": "AutumnMark 숨기기",
       "hideOthers": "다른 앱 숨기기",
       "showAll": "모두 보기",
-      "quit": "MarkText 종료"
+      "quit": "AutumnMark 종료"
     },
     "view": {
       "view": "보기",
@@ -148,6 +337,7 @@
     },
     "theme": {
       "theme": "&테마",
+      "openSettings": "테마 설정…",
       "dark": "어둡게",
       "followThemDisabled": "시스템 테마를 따를 때는 테마 선택이 비활성화됩니다",
       "lightThemes": "라이트 테마",
@@ -156,7 +346,7 @@
       "ayuLight": "Ayu 라이트",
       "ayuMirage": "Ayu Mirage",
       "cadmiumDark": "카드뮴 다크",
-      "cadmiumLight": "카드뮴 라이트",
+      "gitbookTeal": "GitBook Teal",
       "catppuccinLatte": "Catppuccin Latte",
       "catppuccinMocha": "Catppuccin Mocha",
       "cyberdream": "cyberdream",
@@ -188,6 +378,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "파일 경로 복사",
+    "copyFolderPath": "상위 폴더 경로 복사",
     "cut": "잘라내기",
     "copy": "복사",
     "paste": "붙여넣기",
@@ -220,7 +412,8 @@
       "rename": "이름 바꾸기",
       "copyPath": "경로 복사",
       "showInFolder": "폴더에서 보기",
-      "showInSideBar": "사이드바에서 보기"
+      "showInSideBar": "사이드바에서 보기",
+      "openContainingFolder": "사이드바에서 파일이 있는 폴더 열기"
     }
   },
   "search": {
@@ -237,6 +430,7 @@
     "searchLimited": "처음 {count}개의 결과까지만 검색"
   },
   "sideBar": {
+    "resize": "사이드바 크기 조절",
     "search": {
       "backToFiles": "파일로 돌아가기",
       "searchInFolder": "폴더에서 검색...",
@@ -251,6 +445,7 @@
     },
     "tree": {
       "openedFiles": "열린 파일",
+      "folders": "폴더",
       "saveAll": "모두 저장",
       "closeAll": "모두 닫기",
       "emptyProject": "빈 프로젝트",
@@ -271,6 +466,7 @@
       "expand": "목차 펼치기",
       "collapse": "목차 접기",
       "empty": "제목 없음",
+      "emptyHint": "제목을 추가하면 여기에 표시됩니다",
       "resize": "목차 너비 조절",
       "title": "목차",
       "expandAll": "모두 펼치기",
@@ -293,7 +489,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -313,6 +509,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "제목을 불러오는 중…",
     "placeholder": "실행할 명령을 입력하세요",
     "placeholders": {
       "selectOption": "옵션 선택",
@@ -410,7 +607,7 @@
   },
   "import": {
     "title": "가져오기 또는 열기",
-    "description": "여기에 드롭하여 MarkText로 가져오세요"
+    "description": "여기에 드롭하여 AutumnMark로 가져오세요"
   },
   "preferences": {
     "title": "환경설정",
@@ -419,6 +616,8 @@
       "placeholder": "환경설정 검색..."
     },
     "categories": {
+      "ai": "AI 모델",
+      "video": "동영상",
       "general": "일반",
       "appearance": "모양",
       "editor": "편집",
@@ -578,6 +777,11 @@
         "hideLinkPopup": "링크 팝업 숨기기",
         "autoCheck": "상위·하위 작업 체크 연동",
         "autoNormalizeLineEndings": "열 때 줄 바꿈을 자동으로 LF로 정규화",
+        "compactMode": "간결 모드",
+        "compactLimitHint": "값을 0으로 설정하면 해당 유형에 간결 모드를 적용하지 않습니다.",
+        "compactImageMaxHeight": "이미지 최대 높이(px)",
+        "compactVideoMaxHeight": "동영상 최대 높이(px)",
+        "compactCodeMaxLines": "표시할 최대 코드 줄 수",
         "wrapCodeBlocks": "코드 블록 줄바꿈",
         "sourceCodeLineNumbers": "소스 코드 모드에서 줄 번호 표시"
       }
@@ -587,7 +791,8 @@
       "actions": {
         "upload": "클라우드에 업로드",
         "folder": "폴더에 복사",
-        "path": "절대 경로 사용"
+        "path": "절대 경로 사용",
+        "embed": "Markdown에 포함 (Base64)"
       },
       "folderSetting": {
         "title": "폴더 설정",
@@ -633,7 +838,7 @@
         "lastSuccessTime": "마지막 성공 시간",
         "invalidScript": "실행 가능한 기존 스크립트의 경로를 입력하세요."
       },
-      "defaultBehavior": "이미지를 MarkText에 붙여넣거나 드래그한 후의 기본 동작"
+      "defaultBehavior": "이미지를 AutumnMark에 붙여넣거나 드래그한 후의 기본 동작"
     },
     "markdown": {
       "title": "마크다운",
@@ -657,6 +862,11 @@
         }
       },
       "diagrams": {
+        "newDrawingView": {
+          "title": "새 그림을 여는 방식",
+          "dialog": "플로팅 창",
+          "tab": "새 탭"
+        },
         "title": "다이어그램",
         "sequenceTheme": {
           "title": "시퀀스 테마",
@@ -664,10 +874,10 @@
           "simple": "간단"
         },
         "mermaidLightTheme": {
-          "title": "MarkText 라이트 테마용 Mermaid 테마"
+          "title": "AutumnMark 라이트 테마용 Mermaid 테마"
         },
         "mermaidDarkTheme": {
-          "title": "MarkText 다크 테마용 Mermaid 테마"
+          "title": "AutumnMark 다크 테마용 Mermaid 테마"
         },
         "plantumlServer": {
           "title": "PlantUML 서버 URL"
@@ -707,6 +917,67 @@
     "theme": {
       "title": "테마",
       "followSystemTheme": "시스템 모양 따르기",
+      "mode": "테마 모드",
+      "fixed": "고정 테마",
+      "currentTheme": "현재 테마",
+      "source": "테마 출처",
+      "local": "로컬 테마",
+      "online": "온라인 테마",
+      "builtIn": "기본 제공",
+      "custom": "사용자 지정",
+      "installed": "설치됨",
+      "active": "사용 중",
+      "apply": "적용",
+      "refresh": "온라인 테마 새로 고침",
+      "installOnly": "설치만",
+      "installAndApply": "설치 및 적용",
+      "update": "업데이트",
+      "setFor": {
+        "light": "라이트 테마로 설정",
+        "dark": "다크 테마로 설정"
+      },
+      "installFor": {
+        "light": "설치 후 라이트 테마로 설정",
+        "dark": "설치 후 다크 테마로 설정"
+      },
+      "assigned": {
+        "light": "라이트 모드에 설정됨",
+        "dark": "다크 모드에 설정됨"
+      },
+      "deferred": {
+        "light": "시스템이 라이트 모드로 전환되면 {name} 테마가 적용됩니다.",
+        "dark": "시스템이 다크 모드로 전환되면 {name} 테마가 적용됩니다."
+      },
+      "applied": "{name} 테마를 적용했습니다.",
+      "installedNotice": "{name} 테마를 설치했습니다. 로컬 테마에서 찾을 수 있습니다.",
+      "updated": "{name} 테마를 업데이트했습니다.",
+      "incompatible": "AutumnMark {version} 필요",
+      "changeFailed": "테마 설정을 저장할 수 없습니다.",
+      "installFailed": "이 테마를 다운로드하거나 저장할 수 없습니다.",
+      "deleteTheme": "테마 삭제",
+      "uninstallTheme": "테마 제거",
+      "confirmRemoval": "로컬 테마에서 ‘{name}’ 테마가 제거됩니다.",
+      "removalFallback": "이 테마를 사용 중인 설정은 {base}(으)로 전환됩니다.",
+      "removalFailed": "이 테마를 제거할 수 없습니다.",
+      "preview": "미리보기",
+      "compare": "현재 테마와 비교",
+      "previewing": "미리 보는 중",
+      "previewLoading": "테마 미리보기를 불러오는 중…",
+      "previewFailed": "테마 미리보기를 불러올 수 없습니다.",
+      "loading": "온라인 테마를 불러오는 중…",
+      "unavailable": "온라인 테마를 불러올 수 없습니다. 새로 고침해 보세요.",
+      "cached": "마지막으로 다운로드한 카탈로그를 표시하고 있습니다.",
+      "cachedNoResults": "마지막으로 다운로드한 카탈로그에 검색 조건과 일치하는 테마가 없습니다.",
+      "emptyCatalog": "아직 온라인 테마가 없습니다.",
+      "sample": {
+        "title": "아침 노트",
+        "quote": "작은 생각에서 시작하세요.",
+        "section": "섹션",
+        "status": "상태",
+        "intro": "소개",
+        "draft": "초안",
+        "code": "글쓰기 시작"
+      },
       "followSystemNote": "아래에서 다크 모드와 라이트 모드의 테마를 각각 선택할 수 있습니다.",
       "modeThemes": "테마 선택",
       "lightModeTheme": "라이트 모드 테마",
@@ -780,9 +1051,27 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "저작권 기여자"
   },
+  "remoteContent": {
+    "announcement": "공지 사항",
+    "unreadAnnouncement": "읽지 않은 공지 사항",
+    "about": "최신 정보",
+    "loading": "최신 내용을 가져오는 중…",
+    "loadFailed": "내용을 불러오지 못했습니다.",
+    "refreshFailed": "새로 고치지 못했습니다. 마지막으로 가져온 내용을 표시합니다.",
+    "unverified": "GitHub에 연결할 수 없어 최신 공지인지 확인하지 못했습니다.",
+    "refresh": "새로 고침",
+    "retry": "다시 시도",
+    "donation": {
+      "title": "AutumnMark 후원하기",
+      "description": "해당 앱으로 QR 코드를 스캔하여 AutumnMark 개발을 후원할 수 있습니다.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "{method} 후원용 QR 코드"
+    }
+  },
   "commands": {
     "mt": {
-      "hide": "MarkText 숨기기",
+      "hide": "AutumnMark 숨기기",
       "hideOthers": "다른 앱 숨기기"
     },
     "file": {
@@ -925,9 +1214,141 @@
       "switchLanguage": "언어 전환"
     }
   },
+  "documentChat": {
+    "undoChanges": "변경 사항 되돌리기",
+    "changesReverted": "변경 사항을 되돌렸습니다",
+    "turnActions": "이 대화 차례의 작업",
+    "deleteTurn": "이 대화 차례 삭제",
+    "revertTurn": "이 대화 차례의 변경을 되돌리고 삭제",
+    "revertFailed": "문서나 테마가 변경되어 일부 변경 사항을 되돌리지 못했습니다. 대화는 유지됩니다.",
+    "configure": "AI 모델 설정",
+    "onboarding": {
+      "title": "AI로 편집",
+      "loadingModels": "AI 모델을 불러오는 중…",
+      "retry": "다시 시도",
+      "builtIn": "AutumnMark에서 AI 사용",
+      "builtInHint": "모델을 추가하면 사이드바에서 대화하고 문서나 테마를 편집할 수 있습니다.",
+      "externalClient": "이미 사용 중인 AI 클라이언트가 있나요?",
+      "externalHint": "AutumnMark에서 모델을 설정하지 않고도 원하는 클라이언트를 사용할 수 있습니다.",
+      "useExternal": "외부 AI 클라이언트 사용",
+      "target": "편집 대상",
+      "editDocument": "문서 편집",
+      "editTheme": "테마 편집",
+      "copyFailed": "클립보드에 복사할 수 없습니다. 다시 시도하세요.",
+      "skillIntro": "호환되는 클라이언트에서 {0} Skill을 호출하면 문서나 테마를 편집할 수 있습니다.",
+      "documentScope": "모든 창에서 열린 문서가 하나뿐이면 바로 편집합니다. 여러 개면 클라이언트가 어떤 문서를 편집할지 확인합니다.",
+      "themeScope": "테마 편집기가 열려 있으면 현재 초안을 편집합니다. 닫혀 있으면 적용된 테마를 편집합니다.",
+      "invokeSkill": "클라이언트에서 Skill 호출",
+      "invokeHint": "예시를 클라이언트에 붙여넣고 원하는 변경 내용으로 수정하세요.",
+      "documentInstruction": "{0} Skill을 사용해 현재 문서의 확인 사항을 체크리스트로 정리해 주세요.",
+      "themeInstruction": "{0} Skill을 사용해 현재 테마의 1단계 제목을 조금 작게 만들어 주세요.",
+      "skillHelp": "클라이언트에서 Skill을 찾을 수 없나요?",
+      "skillHelpHint": "AutumnMark는 시작할 때 Skill을 자동으로 설치하고 업데이트합니다. 클라이언트의 Skill 목록을 새로 고치거나 아래 공유 폴더에서 가져오세요.",
+      "copyInstruction": "호출 지시 복사",
+      "instructionCopied": "호출 지시를 복사했습니다. AI 클라이언트에 붙여넣으세요."
+    }
+  },
+  "drawing": {
+    "insert": "Excalidraw 그림 삽입",
+    "openInTab": "탭에서 열기",
+    "new": "새 Excalidraw 그림",
+    "open": "Excalidraw 그림 열기",
+    "untitled": "제목 없는 그림",
+    "addDocument": "Markdown 문서 추가",
+    "addDocumentButton": "문서 추가",
+    "searchDocuments": "Markdown 문서 검색",
+    "insertIntoNote": "문서에 삽입",
+    "wholeDocument": "문서 전체",
+    "addCard": "카드 추가",
+    "discardChanges": "이 그림의 저장하지 않은 변경 사항을 버리시겠습니까?",
+    "discard": "변경 사항 버리기",
+    "changedOnDisk": "디스크의 그림이 변경되었습니다. 최신 버전을 보려면 다시 여세요.",
+    "invalidFile": ".excalidraw 파일을 선택하세요.",
+    "openFailed": "파일을 열 수 없습니다. {reason}",
+    "saveFailed": "그림을 저장하거나 삽입할 수 없습니다. {reason}",
+    "cardFailed": "문서 카드를 추가할 수 없습니다. {reason}"
+  },
   "common": {
     "cancel": "취소",
     "ok": "확인"
+  },
+  "video": {
+    "streamedSource": "저장하면 Markdown 파일에 동영상 전체({size} MiB)가 포함됩니다. Base64 소스가 너무 커서 여기에서 편집할 수 없습니다.",
+    "embed": "동영상을 Base64로 삽입",
+    "note": "새 동영상을 Markdown 문서에 저장합니다. 끄면 파일 참조를 삽입합니다.",
+    "title": "동영상",
+    "insert": "동영상 삽입…",
+    "preview": "동영상 미리보기",
+    "replace": "동영상 교체",
+    "choose": "동영상 선택…",
+    "fromClipboard": "클립보드 동영상 사용",
+    "delete": "동영상 삭제",
+    "drop": "놓아서 교체",
+    "hint": "동영상을 놓거나 {shortcut} 키로 교체",
+    "drag": "원본 동영상 끌어내기",
+    "invalid": "동영상을 읽을 수 없거나 코덱이 지원되지 않습니다.",
+    "location": "동영상 원본",
+    "saveAs": "다른 이름으로 동영상 저장…",
+    "convert": "로컬 동영상으로 변환",
+    "toEmbedded": "Markdown에 동영상 삽입",
+    "copy": "동영상 파일 복사"
+  },
+  "batchMedia": {
+    "title": "이미지와 동영상 일괄 포함",
+    "images": "이미지 ({count})",
+    "videos": "동영상 ({count})",
+    "scanning": "문서 검색 중 ({current}/{total})…",
+    "pending": "포함할 미디어가 있는 문서 수: {count}",
+    "convert": "선택 항목 포함 ({count})",
+    "converting": "문서 변환 중 ({current}/{total})…",
+    "done": "포함된 미디어 참조 수: {count}",
+    "issues": "문제 ({count})",
+    "locked": "읽기 전용 문서입니다.",
+    "changed": "문서가 변경되었거나 사용 중입니다. 다시 검색하세요.",
+    "saveFailed": "변환된 문서를 저장할 수 없습니다."
+  },
+  "documentImages": {
+    "words": "{count}단어",
+    "paragraphs": "{count}문단",
+    "title": "문서 이미지",
+    "noImages": "이미지 없음",
+    "allEmbedded": "모든 이미지가 포함됨",
+    "pending": "포함할 이미지 {count}개",
+    "convertAll": "문서의 모든 이미지 포함 ({count}개)",
+    "summary": "포함됨 {embedded}개 · 포함되지 않음 {pending}개"
+  },
+  "embeddedImage": {
+    "setSize": "이미지 크기 설정…",
+    "width": "너비",
+    "height": "높이",
+    "lockAspect": "가로세로 비율 고정",
+    "autoSize": "자동 크기로 복원",
+    "auto": "자동",
+    "toEmbedded": "이 이미지 포함",
+    "pasteProgress": "이미지 포함 중 {completed}/{total}",
+    "pasteFailed": "이미지 {total}개 중 {failed}개는 원본 링크를 유지했습니다",
+    "preview": "이미지 미리보기",
+    "source": "내장 소스",
+    "replace": "이미지 교체",
+    "copyAs": "다른 형식으로 복사",
+    "jpeg": "JPEG 이미지",
+    "fromClipboard": "클립보드 이미지 사용",
+    "saveAs": "다른 이름으로 이미지 저장…",
+    "convert": "로컬 이미지로 변환",
+    "viewSource": "내장 소스 보기",
+    "hint": "휠로 확대/축소 · 이미지를 놓거나 {shortcut} 키로 교체",
+    "drag": "원본 끌어내기",
+    "drop": "놓아서 이미지 교체",
+    "dirty": "적용하지 않은 변경 사항",
+    "discard": "변경 취소",
+    "apply": "변경 적용",
+    "copyFailed": "이미지를 복사할 수 없습니다.",
+    "unsupported": "지원하지 않는 이미지 형식입니다.",
+    "title": "포함된 이미지",
+    "delete": "이미지 삭제",
+    "paste": "데이터 URL 붙여넣기",
+    "choose": "이미지 선택…",
+    "invalid": "이미지를 읽을 수 없습니다."
   },
   "dialog": {
     "moveToTrash": "\"{name}\"을(를) 휴지통으로 이동하시겠습니까?",
@@ -939,7 +1360,7 @@
     "fileExists": "파일이 이미 존재합니다: {filename}",
     "files": "파일",
     "importWarning": "가져오기 경고",
-    "installPandoc": "Pandoc를 찾을 수 없습니다. 설치하거나 환경 변수 MARKTEXT_PANDOC에 pandoc 실행 파일 경로를 설정한 뒤 MarkText를 다시 시작하세요.",
+    "installPandoc": "Pandoc를 찾을 수 없습니다. 설치하거나 환경 변수 MARKTEXT_PANDOC에 pandoc 실행 파일 경로를 설정한 뒤 AutumnMark를 다시 시작하세요.",
     "exportWarning": "내보내기 경고",
     "exportWarningMore": "…외 {count}건",
     "keepOpen": "열어두기",
@@ -956,13 +1377,30 @@
     "configSchemaViolation": "구성 스키마 위반",
     "copyError": "복사 오류",
     "initializationFailed": "초기화 실패 {hint}",
-    "otherInstanceDetected": "MarkText의 다른 인스턴스가 이미 실행 중입니다",
+    "otherInstanceDetected": "AutumnMark의 다른 인스턴스가 이미 실행 중입니다",
     "report": "신고",
     "startupError": "시작 오류",
     "terminatedDueToError": "오류로 인해 종료됨",
     "unexpectedErrorWithMessage": "예기치 않은 오류: {message}",
     "unexpectedMainProcess": "예상치 못한 메인 프로세스 오류",
     "unexpectedRendererProcess": "예상치 못한 렌더러 프로세스 오류"
+  },
+  "updates": {
+    "title": "소프트웨어 업데이트",
+    "install": "다시 시작하여 설치",
+    "later": "나중에",
+    "upToDate": "최신 버전을 사용 중입니다.",
+    "downloaded": "업데이트를 다운로드했습니다. 설치를 위해 앱이 종료됩니다.",
+    "checkFailed": "업데이트를 확인할 수 없습니다. 나중에 다시 시도해 주세요.",
+    "installFailed": "업데이트를 설치할 수 없습니다. 나중에 다시 시도해 주세요.",
+    "checking": "업데이트 확인 중…",
+    "preparing": "버전 {version} 설치 준비 중…",
+    "downloading": "버전 {version} 다운로드 중…",
+    "ready": "버전 {version}을 설치할 준비가 되었습니다.",
+    "background": "백그라운드에서 계속",
+    "retry": "다시 시도",
+    "downloadFailed": "다운로드하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
+    "waiting": "응답을 기다리는 중…"
   },
   "notifications": {
     "defaultMessage": "기본 메시지",

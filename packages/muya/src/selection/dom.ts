@@ -3,6 +3,7 @@ import type { IAnchorFocusInfo } from './types';
 import { CLASS_NAMES } from '../config';
 import { isElement, lineBounds } from '../utils';
 import { getBlock } from '../utils/dom';
+import { embeddedImageSource } from '../utils/embeddedImage';
 
 export function isContentDOM(element: HTMLElement) {
     return (
@@ -35,6 +36,14 @@ export function resolveEndpoint(node: Node, offset: number): IAnchorFocusInfo | 
     if (!block?.isContent() || !block.outMostBlock)
         return null;
 
+    const element = node instanceof Element ? node : node.parentElement;
+    const atom = element?.closest('.mu-embedded-image, .mu-inline-image');
+    const raw = atom ? embeddedImageSource.get(atom) ?? atom.getAttribute('data-raw') : undefined;
+    if (atom && raw != null) {
+        const start = getOffsetOfParagraph(atom, contentDOM);
+        return { offset: start + (offset > 0 ? raw.length : 0), block, path: block.path };
+    }
+
     // The extra line a trailing break paints has no offset of its own — a caret
     // inside the span would read as the end of the line above (#3203).
     const trailingLineEnd = contentDOM.lastElementChild;
@@ -52,7 +61,9 @@ export function resolveEndpoint(node: Node, offset: number): IAnchorFocusInfo | 
     // A selection anchored to an element carries a child index in `offset`,
     // not a character offset (#5239).
     const base = getOffsetOfParagraph(node, contentDOM);
-    const within = node === contentDOM ? textLengthBeforeChild(contentDOM, offset) : offset;
+    const within = node instanceof Element
+        ? textLengthBeforeChild(node, offset)
+        : offset;
 
     return {
         offset: base + within,
@@ -140,8 +151,11 @@ export function compareParagraphsOrder(paragraph1: HTMLElement, paragraph2: HTML
     );
 }
 
-export function getTextContent(node: Node, blackList: string[] = []) {
-    if (node.nodeType === Node.TEXT_NODE || blackList.length === 0)
+export function getTextContent(node: Node, blackList?: string[]) {
+    const embedded = embeddedImageSource.get(node);
+    if (embedded !== undefined)
+        return embedded;
+    if (node.nodeType === Node.TEXT_NODE || !blackList)
         return node.textContent!;
 
     let text = '';
@@ -229,6 +243,8 @@ export function getNodeAndOffset(
 
     for (i = 0; i < len; i++) {
         const child = childNodes[i];
+        if (child instanceof HTMLElement && child.matches('.mu-inline-image-caret:empty'))
+            continue;
         const textContent = getTextContent(child, [
             CLASS_NAMES.MU_MATH_RENDER,
             CLASS_NAMES.MU_RUBY_RENDER,
@@ -241,6 +257,8 @@ export function getNodeAndOffset(
                 ? count + textLength > offset
                 : count + textLength >= offset
         ) {
+            if (embeddedImageSource.has(child))
+                return { node, offset: i + (offset === count ? 0 : 1) };
             if (
                 isElement(child)
                 && child.classList
@@ -251,39 +269,18 @@ export function getNodeAndOffset(
                 )!;
                 const hasImg = imageContainer.querySelector('img');
 
-                if (!hasImg) {
+                if (!hasImg && !child.classList.contains('mu-inline-drawing')) {
                     return {
                         node: child,
                         offset: 0,
                     };
                 }
 
-                if (count + textLength === offset) {
-                    if (child.nextElementSibling) {
-                        return {
-                            node: child.nextElementSibling,
-                            offset: 0,
-                        };
-                    }
-                    else {
-                        return {
-                            node: imageContainer,
-                            offset: 1,
-                        };
-                    }
-                }
-                else if (count === offset && count === 0) {
-                    return {
-                        node: imageContainer,
-                        offset: 0,
-                    };
-                }
-                else {
-                    return {
-                        node: child,
-                        offset: 0,
-                    };
-                }
+                // A range inside contenteditable=false has no editable insertion point.
+                const gap = child.nextSibling;
+                if (offset === count + textLength && gap instanceof HTMLElement && gap.matches('.mu-drawing-gap'))
+                    return { node: gap, offset: 0 };
+                return { node, offset: i + (offset === count ? 0 : 1) };
             }
             else {
                 return getNodeAndOffset(child, offset - count);

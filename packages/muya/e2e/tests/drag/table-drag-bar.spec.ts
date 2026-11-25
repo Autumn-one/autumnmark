@@ -105,9 +105,6 @@ test.describe('TableDragBar column reorder', () => {
             return Number.parseFloat(wrapper.style.opacity || '0');
         }), { timeout: 5_000, intervals: [50, 100, 250, 500] }).toBeGreaterThan(0);
 
-        // Position the cursor over the drag bar itself, then mousedown +
-        // hold for >300 ms (TableDragBar.mousedown wraps startDrag in a
-        // setTimeout(_, 300) — the timer is what arms the drag).
         const barBox = await dragBar.boundingBox();
         if (!barBox)
             throw new Error('drag bar has no bounding box');
@@ -115,22 +112,12 @@ test.describe('TableDragBar column reorder', () => {
         const barCy = barBox.y + barBox.height / 2;
         await page.mouse.move(barCx, barCy);
         await page.mouse.down();
-        // Hold past the 300 ms arming threshold.
-        await page.waitForTimeout(400);
 
-        // Now drag horizontally PAST the second column's midpoint. The bar's
-        // calculateCurIndex compares the cumulative aspect deltas against
-        // the current offset, so we overshoot a touch to be safe across
-        // engines.
         const dragTargetX = secondCx + secondBox.width / 2 + 10;
-        // A couple of intermediate move steps help the throttled handler
-        // observe the displacement on every engine.
         await page.mouse.move((barCx + dragTargetX) / 2, barCy, { steps: 5 });
         await page.mouse.move(dragTargetX, barCy, { steps: 5 });
         await page.mouse.up();
 
-        // switchTableData runs from a setTimeout(_, 300) at the end of
-        // docMouseup, so poll on the markdown rather than reading once.
         await expect.poll(async () => getMarkdown(page), {
             timeout: 5_000,
             intervals: [50, 100, 250, 500],

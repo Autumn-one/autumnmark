@@ -1,3 +1,5 @@
+export const pineInkTheme = { id: 'pine-ink', name: '松墨（Pine Ink）' } as const
+
 export const railscastsThemes: readonly string[] = Object.freeze([
   'dark',
   'material-dark',
@@ -25,9 +27,11 @@ export const railscastsThemes: readonly string[] = Object.freeze([
 
 export const oneDarkThemes: readonly string[] = Object.freeze(['one-dark'])
 
+export const themeBaseId = (id: string): string => id.startsWith('local:') ? id.split(':')[1] || 'light' : id
+
 export const isDarkThemeId = (theme: unknown): theme is string => {
   return (
-    typeof theme === 'string' && (railscastsThemes.includes(theme) || oneDarkThemes.includes(theme))
+    typeof theme === 'string' && (railscastsThemes.includes(themeBaseId(theme)) || oneDarkThemes.includes(themeBaseId(theme)))
   )
 }
 
@@ -61,6 +65,7 @@ const themeBackgroundColors: ReadonlyMap<string, string> = new Map([
   ['one-dark', '#282c34'],
   ['oxocarbon-dark', '#161616'],
   ['palenight', '#292d3e'],
+  [pineInkTheme.id, '#faf7ef'],
   ['rose-pine', '#191724'],
   ['rose-pine-dawn', '#faf4ed'],
   ['rose-pine-moon', '#232136'],
@@ -83,7 +88,7 @@ const LIGHT_FALLBACK_BACKGROUND = '#ffffff'
  * explicit colour (e.g. the default light theme or a future/custom theme).
  */
 export const getThemeBackgroundColor = (theme: string | undefined): string => {
-  const exact = typeof theme === 'string' ? themeBackgroundColors.get(theme) : undefined
+  const exact = typeof theme === 'string' ? themeBackgroundColors.get(themeBaseId(theme)) : undefined
   if (exact) return exact
   return isDarkThemeId(theme) ? DARK_FALLBACK_BACKGROUND : LIGHT_FALLBACK_BACKGROUND
 }

@@ -1,3 +1,4 @@
+import type { IHighlight } from '../../../inline/model/types';
 import type { Muya } from '../../../muya';
 import type { IRenderCursor } from '../../../selection/types';
 import type {
@@ -9,14 +10,18 @@ import type {
 import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
 import { CLASS_NAMES, HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
+import { projectEmbeddedImages } from '../../../inline/embeddedImages';
+import { getTextContent } from '../../../selection/dom';
 import { ChangeSource } from '../../../types';
-import { adjustOffset, escapeHTML, firstGraphemeLength, firstWordOfInfo, lastGraphemeLength, lineBounds } from '../../../utils';
-import { computeLineCount, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
+import { adjustOffset, escapeHTML, firstGraphemeLength, lastGraphemeLength, lineBounds } from '../../../utils';
+import { computeLineCount, lineHighlightBackground, measureLineTops, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
+import { codeFenceLanguage } from '../../../utils/codeFenceAnnotations';
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
 import { tabText } from '../../../utils/tab';
 import Content from '../../base/content';
 import { ScrollPage } from '../../scrollPage';
+import { indentReadingLines } from './readingLines';
 
 function checkAutoIndent(text: string, offset: number) {
     const pairStr = text.substring(offset - 1, offset + 1);
@@ -102,7 +107,7 @@ class CodeBlockContent extends Content {
     private get _lang() {
         const { _codeContainer: codeContainer } = this;
 
-        return firstWordOfInfo(codeContainer ? codeContainer.lang : this._initialLang);
+        return codeFenceLanguage(codeContainer ? codeContainer.lang : this._initialLang);
     }
 
     private get _codeContainer() {
@@ -151,14 +156,16 @@ class CodeBlockContent extends Content {
             (this.outContainer?.attachments?.head as HTMLPreview).update(text);
     }
 
-    override update(_cursor?: IRenderCursor, highlights = []) {
+    override update(cursor?: IRenderCursor, highlights: IHighlight[] = []) {
         const { _lang: lang, text } = this;
         const parentCode = this.parent as Code | null;
         if (parentCode?.copyButton && parentCode.parent?.blockName === 'code-block')
             parentCode.copyButton.hidden = !text;
         const fullLengthLang = transformAliasToOrigin([lang])[0];
         const domNode = this.domNode!;
-        const code = escapeHTML(getHighlightHtml(text, highlights, true))
+        const projection = projectEmbeddedImages(this);
+        const ranges = projection ? highlights.map(h => ({ ...h, start: projection.offset(h.start), end: projection.offset(h.end) })) : highlights;
+        const code = escapeHTML(getHighlightHtml(projection?.text ?? text, ranges, true))
             .replace(new RegExp(MARKER_HASH['<'], 'g'), '<')
             .replace(new RegExp(MARKER_HASH['>'], 'g'), '>')
             .replace(new RegExp(MARKER_HASH['"'], 'g'), '"')
@@ -174,6 +181,12 @@ class CodeBlockContent extends Content {
             ? `<span class="${CLASS_NAMES.MU_TRAILING_BREAK}"><br></span>`
             : '';
 
+        const indentWrappedLines = this.muya.isReadOnly && parentCode?.parent?.blockName === 'code-block' && /^[\t ]/m.test(text);
+        const renderCode = (html: string) => {
+            replaceIfChanged(domNode, (indentWrappedLines ? indentReadingLines(html) : html) + trailingBreak);
+            projection?.mount(domNode, false);
+        };
+
         if (
             fullLengthLang
             && /\S/.test(code)
@@ -183,55 +196,89 @@ class CodeBlockContent extends Content {
             wrapper.classList.add(`language-${fullLengthLang}`);
             wrapper.innerHTML = code;
             prism.highlightElement(wrapper, false, function (this: HTMLElement) {
-                replaceIfChanged(domNode, this.innerHTML + trailingBreak);
+                renderCode(this.innerHTML);
             });
         }
         else {
-            replaceIfChanged(domNode, code + trailingBreak);
+            renderCode(code);
         }
 
-        this._updateLineNumbers(text);
+        // Caret restoration can scroll the document before ResizeObserver caps newly pasted lines.
+        const viewport = parentCode?.domNode;
+        if (cursor && viewport && parentCode.parent?.blockName === 'code-block' && !viewport.classList.contains('mu-compact-limited'))
+            this.muya.editor.compactBlocks.refresh([viewport]);
+        this._updateCodeDecorations(text);
         // Re-render the math/diagram/html preview too; undo/redo reaches this
         // block only through update(), not inputHandler (#1632).
         this._updatePreviewIfHave(text);
     }
 
     private _lastLineCount = -1;
-    private _lineNumberResizeObserver: ResizeObserver | null = null;
+    private _codeResizeObserver: ResizeObserver | null = null;
+    private _codeLayoutFrame: number | null = null;
 
-    private _updateLineNumbers(text: string) {
-        if (!this.muya.options.codeBlockLineNumbers)
+    private _updateCodeDecorations(text: string) {
+        const parent = this.parent;
+        const code = parent?.domNode;
+        const owner = parent?.parent;
+        if (!code || owner?.blockName !== 'code-block')
             return;
-        const wrapper = this.parent?.lineNumbersWrapper;
-        if (wrapper == null)
-            return;
-        const count = computeLineCount(text);
-        if (count !== this._lastLineCount) {
-            syncLineNumbersSpans(wrapper, count);
-            this._lastLineCount = count;
+        const wrapper = parent.lineNumbersWrapper;
+        if (wrapper) {
+            const count = computeLineCount(text);
+            if (count !== this._lastLineCount) {
+                syncLineNumbersSpans(wrapper, count);
+                this._lastLineCount = count;
+            }
         }
-        this._observeLineNumberResize(wrapper);
+        if (!owner.annotations.ranges.length && code.style.backgroundImage)
+            code.style.backgroundImage = '';
+        if ((!wrapper && !owner.annotations.ranges.length) || typeof Range.prototype.getBoundingClientRect !== 'function')
+            return;
+        if (!this._codeResizeObserver && typeof ResizeObserver !== 'undefined') {
+            this._codeResizeObserver = new ResizeObserver(() => this._scheduleCodeLayout());
+            this._codeResizeObserver.observe(code);
+        }
+        this._scheduleCodeLayout();
     }
 
-    // Measure after layout so code gutters follow content, wrapping and font changes.
-    private _observeLineNumberResize(wrapper: HTMLElement) {
-        if (this._lineNumberResizeObserver != null || typeof ResizeObserver === 'undefined')
+    private _scheduleCodeLayout(): void {
+        if (this._codeLayoutFrame !== null)
             return;
-        const codeEl = this.domNode!;
-        this._lineNumberResizeObserver = new ResizeObserver(() => {
-            if (codeEl.isConnected && wrapper.isConnected)
-                repositionLineNumberSpans(wrapper, codeEl);
-            else
-                this._lineNumberResizeObserver?.disconnect();
+        this._codeLayoutFrame = requestAnimationFrame(() => {
+            this._codeLayoutFrame = null;
+            const parent = this.parent;
+            const code = parent?.domNode;
+            const owner = parent?.parent;
+            const content = this.domNode;
+            if (!parent || !code?.isConnected || !content?.isConnected || owner?.blockName !== 'code-block') {
+                this._codeResizeObserver?.disconnect();
+                this._codeResizeObserver = null;
+                return;
+            }
+            const wrapper = parent.lineNumbersWrapper;
+            const ranges = owner.annotations.ranges;
+            if (!wrapper && !ranges.length)
+                return;
+
+            const tops = measureLineTops(content);
+            if (wrapper) {
+                const frame = owner.domNode!;
+                wrapper.style.top = `${code.getBoundingClientRect().top - frame.getBoundingClientRect().top - frame.clientTop}px`;
+                wrapper.style.setProperty('--mu-gutter-height', `${code.clientHeight}px`);
+                repositionLineNumberSpans(wrapper, content, tops);
+                wrapper.scrollTop = code.scrollTop;
+            }
+            code.style.backgroundImage = lineHighlightBackground(tops, code.scrollHeight, ranges);
         });
-        this._lineNumberResizeObserver.observe(codeEl);
     }
 
     override inputHandler(event: Event): void {
         if (this.isComposed)
             return;
 
-        const textContent = this.domNode!.textContent!;
+        // Chromium can insert the next line's text inside the trailing <br> wrapper.
+        const textContent = getTextContent(this.domNode!, []);
         const { start, end } = this.getCursor()!;
         const { text } = this.autoPair(
             event,

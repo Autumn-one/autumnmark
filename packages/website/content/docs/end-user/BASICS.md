@@ -10,9 +10,11 @@ MarkText is a realtime preview editor for markdown with various markdown extensi
 
 #### Toggle sidebar
 
-Toggle the sidebar with <kbd>CmdOrCtrl</kbd>+<kbd>J</kbd>. It contains the filesystem explorer and find-in-files search. The file tree also has a collapsible _Opened Files_ section, controlled by the `openedFilesInSidebar` preference.
+Toggle the sidebar with <kbd>CmdOrCtrl</kbd>+<kbd>J</kbd>. The **Files** tab contains the file tree, find-in-files search, and a collapsible _Opened Files_ section controlled by the `openedFilesInSidebar` preference.
 
-The document outline is independent of the sidebar. Use `View → Show Table of Contents` or <kbd>CmdOrCtrl</kbd>+<kbd>K</kbd> to expand or collapse it. When expanded, it occupies a separate column even in narrow windows. Choose its left or right position in Preferences → General → Sidebar, and drag the divider beside the editor to resize it. If the columns cannot fit, scroll the workspace horizontally to keep the document readable. When collapsed, hover or focus its icon to preview the outline in a floating panel. Documents without headings show an empty state in the outline.
+The **Outline** tab lists the current document's headings. Select a heading to jump to it. **View → Show Outline** and <kbd>CmdOrCtrl</kbd>+<kbd>K</kbd> open the sidebar to the outline and switch back to **Files** when the outline is already visible. Drag the sidebar divider to resize either tab.
+
+Right-click a document tab or the blank area around its contents to find its location. **Show in Folder** selects the file in your system file manager. **Open Containing Folder in Side Bar** shows its folder and selects the file in the **Files** tab.
 
 #### Toggle tabs
 

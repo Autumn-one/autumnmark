@@ -1,7 +1,7 @@
 {
   "name": "marktext",
-  "version": "0.24.0-dev",
-  "description": "MarkText",
+  "version": "0.24.0-preview.20261118.1",
+  "description": "AutumnMark — a Markdown editor based on MarkText",
   "main": "./out/main/index.js",
   "author": {
     "name": "Jocs",
@@ -25,10 +25,10 @@
       "url": "https://github.com/Tkaixiang"
     }
   ],
-  "homepage": "https://github.com/marktext/marktext",
+  "homepage": "https://github.com/Autumn-one/autumnmark",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marktext/marktext.git"
+    "url": "git+https://github.com/Autumn-one/autumnmark.git"
   },
   "scripts": {
     "minify-locales": "tsx ../../scripts/minify-locales.ts",
@@ -39,13 +39,10 @@
     "build:unpack": "tsx ../../scripts/minify-locales.ts && electron-vite build",
     "build:win": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --x64 --publish never",
     "build:win:x64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --x64 --publish never",
-    "build:win:arm64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --arm64 --publish never",
-    "build:mac": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --publish never",
-    "build:mac:x64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --x64 --publish never",
-    "build:mac:arm64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --arm64 --publish never",
-    "build:linux": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux --publish never",
-    "build:linux:x64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux --x64 --publish never",
-    "build:linux:arm64": "tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux AppImage deb rpm tar.gz --arm64 -c.linux.artifactName='marktext-linux-arm64-${version}.${ext}' --publish never",
+    "build:mac": "pnpm run build:mac:arm64",
+    "build:mac:arm64": "tsx ../../scripts/minify-locales.ts && electron-rebuild --arch=arm64 && electron-vite build && electron-builder --mac --arm64 --publish never",
+    "build:linux": "pnpm run build:linux:x64",
+    "build:linux:x64": "tsx ../../scripts/minify-locales.ts && electron-rebuild --arch=x64 && electron-vite build && electron-builder --linux --x64 --publish never",
     "perf:inspect": "electron-vite preview -- --inspect=5858",
     "perf:inspect-brk": "electron-vite preview -- --inspect-brk=5858",
     "test": "vitest run",
@@ -55,8 +52,10 @@
     "typecheck:watch": "pnpm --filter @muyajs/core build:types && vue-tsc --noEmit -p tsconfig.json --watch"
   },
   "dependencies": {
+    "@csstools/css-tokenizer": "4.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@element-plus/icons-vue": "^2.3.2",
+    "@excalidraw/excalidraw": "0.18.1",
     "@intlify/core-base": "^11.4.16",
     "@jsr/std__path": "^1.1.6",
     "@marktext/file-icons": "^1.1.0",
@@ -76,6 +75,7 @@
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.12",
     "element-plus": "^2.14.7",
+    "fast-diff": "1.3.0",
     "flowchart.js": "^1.18.1",
     "font-list": "^2.1.0",
     "fs-extra": "^11.4.1",
@@ -92,7 +92,12 @@
     "pako": "^3.0.3",
     "pathe": "^2.0.3",
     "pinia": "^4.1.0",
+    "postcss": "8.5.29",
+    "postcss-selector-parser": "7.1.6",
     "prismjs": "^1.30.0",
+    "proper-lockfile": "4.1.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "snabbdom": "^3.6.4",
     "snabbdom-to-html": "^7.1.0",
     "snapsvg-cjs": "^0.0.6",
@@ -116,6 +121,9 @@
     "@types/lodash": "^4.17.27",
     "@types/ms": "^2.1.0",
     "@types/node": "^26.6.5",
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@types/webfontloader": "^1.6.38",
     "@types/write-file-atomic": "^4.0.3",
     "@vitejs/plugin-vue": "^6.0.10",
@@ -128,6 +136,7 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.5",
+    "vite-plugin-static-copy": "^4.1.1",
     "vite-svg-loader": "^5.1.3",
     "vitest": "^5.0.5",
     "vue": "^3.5.44",

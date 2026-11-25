@@ -29,7 +29,7 @@ export const revealSetting = async(key: string): Promise<void> => {
     highlight(target)
     return
   }
-  // Recovery controls mount after their acknowledged preference request resolves.
+  // The destination panel may still be loading after the route has changed.
   await new Promise<void>((resolve) => {
     const observer = new MutationObserver(() => {
       const element = findTarget()

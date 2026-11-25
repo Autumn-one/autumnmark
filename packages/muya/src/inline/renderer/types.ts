@@ -36,6 +36,7 @@ export interface IInlineEnvironment {
     readonly readOnly: boolean;
     readonly softNewlineAsSpace: boolean;
     readonly references: Labels;
+    readonly resolveImagePreview?: (src: string) => { key: string; load: () => Promise<string> } | undefined;
     readonly selectedImage: { block: object; range: ITokenRange } | null;
     readonly translate: (text: string) => string;
 }

@@ -112,7 +112,18 @@ describe('muya.createTable()', () => {
         expect(firstBlock(muya).name).toBe('paragraph');
     });
 
-    it('clamps zero/negative dimensions to a valid table (rows >= 2, columns >= 1)', async () => {
+    it('round-trips an empty one-cell table through Markdown', () => {
+        const muya = bootMuya('\n');
+        placeCursorOnFirstBlock(muya);
+        muya.createTable({ rows: 1, columns: 1 });
+        muya.flush();
+        muya.setContent(muya.getMarkdown());
+        const table = firstTable(muya);
+        expect(table.children).toHaveLength(1);
+        expect(table.children[0].children).toHaveLength(1);
+    });
+
+    it('uses the default two rows and one column for invalid dimensions', async () => {
         const muya = bootMuya('\n');
         placeCursorOnFirstBlock(muya);
         // rows = 0 would otherwise build a table with no rows and crash

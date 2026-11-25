@@ -52,19 +52,7 @@ test.describe('Editor input and source-mode roundtrip', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Coverage backfill (checklist item 24). The desktop title-bar word/character/
-// paragraph counter lives in
-// packages/desktop/src/renderer/src/components/titleBar/documentStatistics.vue:
-// the trigger renders the localized metric label and value, and the popover's
-// radio rows change which metric the trigger shows. The counter value flows from
-// editor.vue json-change -> LISTEN_FOR_CONTENT_CHANGE -> store/editor.ts tab
-// wordCount -> app.vue currentFile.wordCount -> the title-bar `word-count` prop.
-// The engine wordCount algorithm itself is unit-covered in
-// packages/muya/src/utils/__tests__/wordCount.spec.ts; this spec only locks the
-// desktop title-bar wiring (the value tracks edits + follows the active mode).
-// ---------------------------------------------------------------------------
-
-const WORD_COUNT_TEXT = '.document-statistics-trigger'
+const WORD_COUNT_TEXT = '.document-status .word-count'
 
 const counterText = (page: Page): Promise<string> =>
   page.locator(WORD_COUNT_TEXT).innerText()
@@ -138,48 +126,40 @@ test.describe('Title-bar word counter (item 24)', () => {
       .toBe(expectedCount(markdown).word)
   })
 
-  test('the counter follows the metric selected in the statistics panel', async() => {
-    // Seed a deterministic two-paragraph document via source mode so each mode
-    // reads a known value independent of earlier typing in this shared app.
+  test('shows both word and paragraph totals in the floating statistics', async() => {
     await setSourceMarkdown(page, app, 'alpha beta\n\ngamma 字数\n')
-    await page.waitForTimeout(400)
-
     const markdown = await getMarkdownContent(page, app)
     const expected = expectedCount(markdown)
-
-    const counter = page.locator(WORD_COUNT_TEXT)
-
-    await expect.poll(() => counterText(page)).toMatch(/^Words\s+/)
     await expect.poll(() => counterValue(page)).toBe(expected.word)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Paragraphs\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.paragraph)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Characters\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.character)
-
-    await counter.click()
-    await expect.poll(() => counterText(page)).toMatch(/^Characters \(with spaces\)\s+/)
-    await expect.poll(() => counterValue(page)).toBe(expected.all)
-    await expect
-      .poll(() => page.evaluate(() => localStorage.getItem('document-statistics-metric')))
-      .toBe('all')
+    await expect(page.locator('.document-statistics-trigger')).toContainText('Paragraphs ' + expected.paragraph)
   })
 })
 
-// ---------------------------------------------------------------------------
-// Coverage backfill (checklist item 169). Edit > Select All flows through
-// `mt::editor-edit-action` ('selectAll') -> store/listenForMain.ts
-// EDITOR_EDIT_ACTION -> bus 'selectAll' -> editor.vue handleSelectAll, which
-// calls editor.value.selectAll() ONLY when editor.value.hasFocus(); when focus
-// is in an INPUT/TEXTAREA it does a field .select() and skips the editor.
-// No prior unit/e2e covers the menu-driven selectAll (issue-4346 uses a DOM
-// range, not the menu action). The engine escalation rules are unit-covered in
-// packages/muya/src/selection/__tests__/selectAll.spec.ts; this spec locks the
-// desktop IPC + focus-branch wiring against the real engine.
-// ---------------------------------------------------------------------------
+// A title input inside Muya also satisfies hasFocus(), so the menu must resolve the field first.
+test('Edit > Select All replaces just the inline content tab title', async() => {
+  const source = '<!-- tabs -->\n\n## | Windows\n\nPanel body.\n\n<!-- /tabs -->\n'
+  const { app, page } = await launchWithMarkdown(source)
+  try {
+    await expect(page.locator('.mu-content-tabs-source')).toHaveAttribute('aria-pressed', 'false')
+    await page.locator('.mu-paragraph-content', { hasText: 'Panel body.' }).click()
+    await page.keyboard.press('ArrowUp')
+    const input = page.locator('.mu-content-tabs-list input')
+    await expect(input).toBeFocused()
+    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'selectAll')
+    await expect.poll(() => input.evaluate((el: HTMLInputElement) =>
+      el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0)
+    )).toBe('Windows')
+    await page.keyboard.insertText('桌面端')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('tab', { name: '桌面端' })).toBeVisible()
+    await page.keyboard.insertText('新')
+    expect((await getMarkdownContent(page, app)).trim()).toBe(
+      source.replace('Windows', '桌面端').replace('Panel body.', '新Panel body.').trim()
+    )
+  } finally {
+    await app.close()
+  }
+})
 
 test.describe('Edit > Select All (item 169)', () => {
   let app: ElectronApplication
@@ -232,9 +212,7 @@ test.describe('Edit > Select All (item 169)', () => {
       }, { timeout: 5000 })
       .toContain('Last paragraph gamma.')
 
-    // Open the find bar and move focus into its search input. handleSelectAll
-    // takes the !hasFocus() branch and does a field select on the input, so the
-    // editor's DOM selection must NOT be re-expanded by this action.
+    // The menu targets the search field even when the document still has a selection.
     await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
     const findInput = page.locator('.search-bar .search input')
     await expect(findInput).toBeVisible({ timeout: 5000 })

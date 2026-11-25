@@ -1,4 +1,193 @@
 {
+  "ai": {
+    "restartTools": "Herstart AutumnMark om schermafbeeldingen op verzoek van het model in te schakelen.",
+    "inputTypes": "Ondersteunde invoer",
+    "image": "Afbeelding",
+    "systemPrompt": "Systeemprompt voor de thema-assistent",
+    "systemPromptHelp": "Geldt voor nieuwe berichten en nieuwe pogingen in alle themachats.",
+    "promptStorageError": "De systeemprompt kon niet worden gelezen of opgeslagen.",
+    "previewPrivacy": "Het model ontvangt dit gesprek en kan voorbeeld-Markdown, CSS of schermafbeeldingen opvragen. Schermafbeeldingen kunnen geselecteerde inhoud of delen van het voorbeeld buiten beeld bevatten.",
+    "checkingPreview": "Voorbeeld controleren…",
+    "previewFailed": "Kan geen schermafbeelding van het voorbeeld maken. Probeer het opnieuw.",
+    "reviewLimit": "De controlelimiet is bereikt. De laatste wijzigingen staan in het voorbeeld.",
+    "displayName": "Weergavenaam (optioneel)",
+    "model": "Model",
+    "baseUrl": "API-basis-URL",
+    "requestType": "Verzoektype",
+    "classic": "Chat Completions (klassiek)",
+    "loadFailed": "De opgeslagen modelinstellingen konden niet worden gelezen.",
+    "restartRequired": "Start AutumnMark opnieuw om de bijgewerkte modelinstellingen te laden.",
+    "contextTooSmall": "Het thema en het laatste bericht overschrijden de geschatte context. Vergroot de context of verlaag de uitvoerlimiet.",
+    "add": "Model toevoegen",
+    "edit": "Model bewerken",
+    "remove": "{model} verwijderen?",
+    "actions": "Acties",
+    "empty": "Er zijn geen AI-modellen ingesteld.",
+    "fetch": "Modellen ophalen",
+    "fetched": "Gevonden modellen: {count}",
+    "reasoning": "Redeneerniveau",
+    "context": "Contextgrootte (tokens)",
+    "output": "Uitvoerlimiet (tokens)",
+    "default": "Standaard van aanbieder",
+    "test": "Testen",
+    "connected": "Verbonden · antwoord: 1",
+    "unexpectedTestReply": "De dienst reageerde, maar het model antwoordde niet met 1.",
+    "invalidModelList": "De dienst gaf een ongeldige modellenlijst terug.",
+    "invalidSize": "Voer positieve gehele getallen in. De uitvoerlimiet mag niet groter zijn dan de context.",
+    "modelChanged": "Het model is gewijzigd. Open het opnieuw om het te bewerken."
+  },
+  "themeAi": {
+    "title": "Thema-AI",
+    "current": "Huidig thema",
+    "openDocument": "Open een notitie om wijzigingen aan het thema uit te proberen.",
+    "empty": "Beschrijf een wijziging, zoals meer regelafstand of een andere kopkleur.",
+    "placeholder": "Wat wil je aan het thema veranderen?",
+    "viewChange": "Deze wijziging bekijken",
+    "previewStatus": "Themavoorbeeld actief",
+    "previewing": "Voorbeeld in deze notitie",
+    "previewReady": "Themaverkenning beschikbaar",
+    "previewHere": "Voorbeeld in deze notitie tonen",
+    "endPreview": "Voorbeeld sluiten",
+    "previewEnded": "Voorbeeld gesloten. De wijziging staat in de versiegeschiedenis.",
+    "apply": "Toepassen op thema",
+    "applied": "Thema toegepast.",
+    "copyOnApply": "Bij toepassen wordt een bewerkbare kopie gemaakt.",
+    "changed": "Het huidige thema is gewijzigd. Probeer het opnieuw."
+  },
+  "themeHistory": {
+    "empty": "Er zijn nog geen versies van dit thema opgeslagen.",
+    "restoreAndApply": "Herstellen en toepassen",
+    "confirmApplyDetail": "Deze versie wordt toegepast. De huidige versie blijft in de geschiedenis staan.",
+    "appliedCollaboration": "Wijzigingen van een externe AI-client toegepast.",
+    "appliedRecovered": "Eerder toegepaste versie",
+    "title": "Versiegeschiedenis",
+    "current": "Huidig concept",
+    "loading": "Versies laden…",
+    "storageError": "De themaversies konden op dit apparaat niet worden gelezen of opgeslagen.",
+    "aiSummary": "AI-samenvatting",
+    "changes": "Wijzigingen",
+    "previous": "Vergelijking met de vorige versie",
+    "noChanges": "De thema-inhoud komt overeen met de vorige versie.",
+    "restore": "Herstellen als concept",
+    "confirmRestore": "Herstellen bevestigen",
+    "confirm": "De versie van {date} om {time} herstellen?",
+    "confirmDetail": "Bij het herstellen wordt een versie toegevoegd. Het huidige concept blijft in de geschiedenis staan.",
+    "restored": "De versie van {date} om {time} is hersteld.",
+    "applyHint": "Gebruik ‘Opslaan en toepassen’ om het actieve thema bij te werken.",
+    "kind": {
+      "initial": "Eerste versie",
+      "manual": "Handmatige bewerking",
+      "ai": "AI-bewerking",
+      "save": "Opslaan",
+      "apply": "Opslaan en toepassen",
+      "restore": "Herstellen",
+      "undo": "Ongedaan maken",
+      "collaboration": "Samenwerking",
+      "recovered": "Hersteld concept"
+    },
+    "description": {
+      "initial": "Beginpunt van dit thema.",
+      "manual": "Het concept is handmatig bewerkt.",
+      "ai": "De AI-assistent heeft het concept bewerkt.",
+      "save": "Het thema is opgeslagen.",
+      "apply": "Het thema is opgeslagen en toegepast.",
+      "restore": "Een eerdere versie is hersteld.",
+      "undo": "Een wijziging in het concept is ongedaan gemaakt.",
+      "collaboration": "Het concept is bijgewerkt vanuit de samenwerkingsmap.",
+      "recovered": "Een op dit apparaat opgeslagen concept is hersteld."
+    },
+    "field": {
+      "name": "Themanaam",
+      "base": "Basisthema",
+      "css": "Stijl",
+      "sample": "Markdown-voorbeeld"
+    }
+  },
+  "studio": {
+    "themeFiles": "Themabestanden",
+    "composePlaceholder": "Beschrijf wat je aan het thema wilt aanpassen…",
+    "interrupted": "Deze aanvraag is onderbroken. De ontvangen inhoud is opgeslagen.",
+    "selector": "Selector",
+    "addSelector": "Selector toevoegen",
+    "locateSelector": "Naar regel",
+    "inspect": "Element inspecteren",
+    "inspectHint": "Selecteer een element in het voorbeeld of de Elements-boom. Voeg hieronder de selector toe of ga naar de regel.",
+    "inspectorFailed": "Het voorbeeld kan niet worden geïnspecteerd.",
+    "title": "Thema-editor",
+    "create": "Maken vanuit huidig thema",
+    "edit": "Huidig thema bewerken",
+    "name": "Themanaam",
+    "base": "Basisthema",
+    "saveOnly": "Alleen thema opslaan",
+    "saveAndApply": "Opslaan en toepassen",
+    "saveOptions": "Opslagopties",
+    "document": "Document",
+    "source": "Markdown-broncode",
+    "preview": "Themavoorbeeld",
+    "assistant": "AI-assistent",
+    "configure": "Model instellen",
+    "connection": "Verbinding",
+    "privacy": "Het model ontvangt dit gesprek en kan de thema-CSS of het voorbeeld-Markdown opvragen.",
+    "prompt": "Bericht aan de thema-assistent",
+    "composeHint": "Enter om te versturen · Shift+Enter voor een lege regel eronder",
+    "emptyReply": "Het model gaf een leeg antwoord.",
+    "unchanged": "Het thema is ongewijzigd.",
+    "user": "Jij",
+    "conversation": "Gesprek",
+    "newChat": "Nieuwe chat",
+    "deleteChat": "Chat verwijderen",
+    "untitledChat": "Chat · {time}",
+    "confirmDeleteChat": "‘{name}’ en de bijbehorende schermafbeeldingen definitief verwijderen?",
+    "screenshot": "Schermafbeelding van voorbeeld {n}",
+    "retract": "Intrekken",
+    "confirmBranch": "Ook alle volgende berichten en schermafbeeldingen worden verwijderd. Doorgaan?",
+    "historyError": "De chatgeschiedenis kan op dit apparaat niet worden gelezen of opgeslagen.",
+    "chatChanged": "Deze chat is gewijzigd of wordt in een ander venster bewerkt. Probeer het opnieuw.",
+    "diagnostics": "Foutenlogboek",
+    "exportDiagnostics": "Logboek exporteren",
+    "replyError": {
+      "tooLarge": "Het antwoord van het model is te groot. Vraag om een kleinere wijziging.",
+      "missingMatch": "De te vervangen tekst ontbreekt in de huidige CSS.",
+      "ambiguousMatch": "De te vervangen tekst komt meerdere keren voor in de huidige CSS.",
+      "css": "De voorgestelde CSS is afgekeurd",
+      "format": "Het antwoord bevat een ongeldige bewerkingsopdracht.",
+      "incomplete": "Het antwoord eindigde voordat de bewerkingsopdracht compleet was.",
+      "truncated": "De uitvoerlimiet van het model is bereikt. Verhoog de limiet of vraag om een kleinere wijziging."
+    },
+    "send": "Versturen",
+    "stop": "Stoppen",
+    "undo": "Laatste wijziging ongedaan maken",
+    "export": "Thema exporteren",
+    "import": "Als kopie importeren",
+    "draft": "Concept op dit apparaat opgeslagen",
+    "copy": "Mijn thema",
+    "sample": "Voorbeelddocument",
+    "endpoint": "Basis-URL van de Chat Completions API",
+    "model": "Model-ID",
+    "apiKey": "API-sleutel",
+    "keySaved": "Opgeslagen · leeg laten om te behouden",
+    "keyOptional": "Optioneel voor lokale modellen",
+    "clearKey": "Opgeslagen sleutel verwijderen",
+    "saveConnection": "Verbinding opslaan",
+    "httpError": "HTTP-antwoord van de modeldienst",
+    "invalidEndpoint": "Gebruik HTTPS of HTTP op localhost. Voer de basis-URL of de chat/completions-URL in.",
+    "invalidRequest": "Controleer de modelnaam en instellingen.",
+    "newKeyRequired": "Voer de sleutel voor het nieuwe adres in of wis de opgeslagen sleutel.",
+    "keyStore": "Ontgrendel de systeemsleutelbos en probeer het opnieuw.",
+    "invalidReply": "Onverwacht modelantwoord. Geldige wijzigingen staan in het voorbeeld.",
+    "configureFirst": "Stel eerst een model in.",
+    "requestFailed": "Verbinding mislukt of verlopen. Controleer het adres.",
+    "storageError": "Lokaal opslaan mislukt. Het concept blijft open.",
+    "stopped": "Genereren gestopt.",
+    "updated": "Wijzigingen op het concept toegepast.",
+    "generating": "Wachten op het model…",
+    "nameRequired": "Voer een themanaam in.",
+    "invalidFile": "Kies een ondersteund bestand kleiner dan 1 MB.",
+    "css": "CSS-broncode",
+    "baseSource": "Basis-CSS bekijken (alleen-lezen)",
+    "cssIssue": "Controleer de CSS",
+    "openFailed": "De thema-editor kan niet worden geopend."
+  },
   "menu": {
     "counter": {
       "words": "Woorden",
@@ -108,15 +297,15 @@
       "checkUpdates": "Controleer op updates"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "Over MarkText",
+      "title": "AutumnMark",
+      "about": "Over AutumnMark",
       "checkUpdates": "Controleer op updates...",
       "preferences": "Voorkeuren",
       "services": "Diensten",
-      "hide": "Verberg MarkText",
+      "hide": "Verberg AutumnMark",
       "hideOthers": "Verberg overige",
       "showAll": "Toon alles",
-      "quit": "MarkText afsluiten"
+      "quit": "AutumnMark afsluiten"
     },
     "view": {
       "view": "Weergave",
@@ -148,6 +337,7 @@
     },
     "theme": {
       "theme": "&Thema",
+      "openSettings": "Thema-instellingen…",
       "dark": "Donker",
       "followThemDisabled": "Themaselectie uitgeschakeld bij het volgen van systeemthema",
       "lightThemes": "Lichte thema's",
@@ -156,7 +346,7 @@
       "ayuLight": "Ayu Light",
       "ayuMirage": "Ayu Mirage",
       "cadmiumDark": "Cadmium Dark",
-      "cadmiumLight": "Cadmium Light",
+      "gitbookTeal": "GitBook Teal",
       "catppuccinLatte": "Catppuccin Latte",
       "catppuccinMocha": "Catppuccin Mocha",
       "cyberdream": "cyberdream",
@@ -188,6 +378,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "Bestandspad kopiëren",
+    "copyFolderPath": "Pad van de bovenliggende map kopiëren",
     "cut": "Knippen",
     "copy": "Kopiëren",
     "paste": "Plakken",
@@ -220,7 +412,8 @@
       "rename": "Hernoemen",
       "copyPath": "Pad kopiëren",
       "showInFolder": "Tonen in map",
-      "showInSideBar": "Tonen in zijbalk"
+      "showInSideBar": "Tonen in zijbalk",
+      "openContainingFolder": "Bovenliggende map openen in zijbalk"
     }
   },
   "search": {
@@ -237,6 +430,7 @@
     "searchLimited": "Zoeken beperkt tot eerste {count} resultaten"
   },
   "sideBar": {
+    "resize": "Zijbalkformaat wijzigen",
     "search": {
       "backToFiles": "Terug naar bestanden",
       "searchInFolder": "Zoeken in map...",
@@ -251,6 +445,7 @@
     },
     "tree": {
       "openedFiles": "Geopende bestanden",
+      "folders": "Mappen",
       "saveAll": "Alles opslaan",
       "closeAll": "Alles sluiten",
       "emptyProject": "Leeg project",
@@ -271,6 +466,7 @@
       "expand": "Inhoudsopgave uitklappen",
       "collapse": "Inhoudsopgave inklappen",
       "empty": "Geen koppen",
+      "emptyHint": "Toegevoegde koppen verschijnen hier",
       "resize": "Breedte van inhoudsopgave aanpassen",
       "title": "Inhoudsopgave",
       "expandAll": "Alles uitklappen",
@@ -293,7 +489,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -313,6 +509,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Koppen laden…",
     "placeholder": "Typ een opdracht om uit te voeren",
     "placeholders": {
       "selectOption": "Selecteer een optie",
@@ -410,7 +607,7 @@
   },
   "import": {
     "title": "Importeren of openen",
-    "description": "Sleep hier om je bestanden in MarkText te openen"
+    "description": "Sleep hier om je bestanden in AutumnMark te openen"
   },
   "preferences": {
     "title": "Voorkeuren",
@@ -419,6 +616,8 @@
       "placeholder": "Voorkeuren zoeken..."
     },
     "categories": {
+      "ai": "AI-modellen",
+      "video": "Video",
       "general": "Algemeen",
       "appearance": "Uiterlijk",
       "editor": "Bewerken",
@@ -578,6 +777,11 @@
         "hideLinkPopup": "Link-popup verbergen",
         "autoCheck": "Bovenliggende taken en subtaken koppelen",
         "autoNormalizeLineEndings": "Regeleindes automatisch normaliseren naar LF bij openen",
+        "compactMode": "Compacte modus",
+        "compactLimitHint": "Stel een limiet in op 0 om de compacte modus voor dat type uit te schakelen.",
+        "compactImageMaxHeight": "Maximale afbeeldingshoogte (px)",
+        "compactVideoMaxHeight": "Maximale videohoogte (px)",
+        "compactCodeMaxLines": "Maximaal aantal zichtbare coderegels",
         "wrapCodeBlocks": "Codeblokken terugloopbaar",
         "sourceCodeLineNumbers": "Regelnummers tonen in broncodeweergave"
       }
@@ -587,7 +791,8 @@
       "actions": {
         "upload": "Uploaden naar cloud",
         "folder": "Kopiëren naar map",
-        "path": "Absoluut pad gebruiken"
+        "path": "Absoluut pad gebruiken",
+        "embed": "In Markdown insluiten (Base64)"
       },
       "folderSetting": {
         "title": "Mapinstelling",
@@ -633,7 +838,7 @@
         "scriptPath": "Scriptpad",
         "invalidScript": "Voer het pad naar een bestaand uitvoerbaar script in."
       },
-      "defaultBehavior": "Het standaardgedrag na plakken of slepen van een afbeelding naar MarkText"
+      "defaultBehavior": "Het standaardgedrag na plakken of slepen van een afbeelding naar AutumnMark"
     },
     "markdown": {
       "title": "Markdown",
@@ -657,6 +862,11 @@
         }
       },
       "diagrams": {
+        "newDrawingView": {
+          "title": "Nieuwe tekeningen openen in",
+          "dialog": "Zwevend venster",
+          "tab": "Nieuw tabblad"
+        },
         "title": "Diagrammen",
         "sequenceTheme": {
           "title": "Sequentiethema",
@@ -664,10 +874,10 @@
           "simple": "Eenvoudig"
         },
         "mermaidLightTheme": {
-          "title": "Mermaid-thema voor lichte MarkText-thema's"
+          "title": "Mermaid-thema voor lichte AutumnMark-thema's"
         },
         "mermaidDarkTheme": {
-          "title": "Mermaid-thema voor donkere MarkText-thema's"
+          "title": "Mermaid-thema voor donkere AutumnMark-thema's"
         },
         "plantumlServer": {
           "title": "PlantUML server"
@@ -707,6 +917,67 @@
     "theme": {
       "title": "Thema",
       "followSystemTheme": "Systeemweergave volgen",
+      "mode": "Themamodus",
+      "fixed": "Vast thema",
+      "currentTheme": "Huidig thema",
+      "source": "Themabron",
+      "local": "Lokale thema’s",
+      "online": "Online thema’s",
+      "builtIn": "Ingebouwd",
+      "custom": "Aangepast",
+      "installed": "Geïnstalleerd",
+      "active": "In gebruik",
+      "apply": "Toepassen",
+      "refresh": "Online thema’s vernieuwen",
+      "installOnly": "Alleen installeren",
+      "installAndApply": "Installeren en toepassen",
+      "update": "Bijwerken",
+      "setFor": {
+        "light": "Instellen als licht thema",
+        "dark": "Instellen als donker thema"
+      },
+      "installFor": {
+        "light": "Installeren en instellen als licht thema",
+        "dark": "Installeren en instellen als donker thema"
+      },
+      "assigned": {
+        "light": "Ingesteld voor lichte modus",
+        "dark": "Ingesteld voor donkere modus"
+      },
+      "deferred": {
+        "light": "{name} wordt toegepast zodra het systeem overschakelt naar de lichte modus.",
+        "dark": "{name} wordt toegepast zodra het systeem overschakelt naar de donkere modus."
+      },
+      "applied": "{name} is toegepast.",
+      "installedNotice": "{name} is geïnstalleerd en staat bij de lokale thema’s.",
+      "updated": "{name} is bijgewerkt.",
+      "incompatible": "Vereist AutumnMark {version}",
+      "changeFailed": "De thema-instelling kon niet worden opgeslagen.",
+      "installFailed": "Dit thema kon niet worden gedownload of opgeslagen.",
+      "deleteTheme": "Thema verwijderen",
+      "uninstallTheme": "Thema de-installeren",
+      "confirmRemoval": "‘{name}’ wordt uit de lokale thema’s verwijderd.",
+      "removalFallback": "Instellingen die dit thema gebruiken, schakelen over naar {base}.",
+      "removalFailed": "Dit thema kon niet worden verwijderd.",
+      "preview": "Voorbeeld",
+      "compare": "Vergelijken met huidig thema",
+      "previewing": "Wordt bekeken",
+      "previewLoading": "Themavoorbeeld laden…",
+      "previewFailed": "Het themavoorbeeld kon niet worden geladen.",
+      "loading": "Online thema’s laden…",
+      "unavailable": "Online thema’s konden niet worden geladen. Probeer te vernieuwen.",
+      "cached": "De laatst gedownloade catalogus wordt weergegeven.",
+      "cachedNoResults": "In de laatst gedownloade catalogus komen geen thema’s overeen met je zoekopdracht.",
+      "emptyCatalog": "Er zijn nog geen online thema’s.",
+      "sample": {
+        "title": "Ochtendnotities",
+        "quote": "Begin met een klein idee.",
+        "section": "Sectie",
+        "status": "Status",
+        "intro": "Inleiding",
+        "draft": "Concept",
+        "code": "Begin met schrijven"
+      },
       "followSystemNote": "Kies hieronder afzonderlijke thema’s voor de donkere en lichte modus.",
       "modeThemes": "Themaselectie",
       "lightModeTheme": "Thema lichte modus",
@@ -780,9 +1051,27 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Gemaakt met <3 door GitHub-bijdragers"
   },
+  "remoteContent": {
+    "announcement": "Aankondigingen",
+    "unreadAnnouncement": "Ongelezen aankondiging",
+    "about": "Actuele informatie",
+    "loading": "Nieuwste inhoud wordt opgehaald…",
+    "loadFailed": "De inhoud kon niet worden geladen.",
+    "refreshFailed": "Vernieuwen is mislukt. De laatst opgehaalde inhoud wordt getoond.",
+    "unverified": "GitHub is niet bereikbaar. Er kon niet worden gecontroleerd of de aankondiging actueel is.",
+    "refresh": "Vernieuwen",
+    "retry": "Opnieuw proberen",
+    "donation": {
+      "title": "Steun AutumnMark",
+      "description": "Scan de code met de bijbehorende app om de ontwikkeling van AutumnMark te steunen.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "QR-code voor donaties via {method}"
+    }
+  },
   "commands": {
     "mt": {
-      "hide": "MarkText verbergen",
+      "hide": "AutumnMark verbergen",
       "hideOthers": "Overige verbergen"
     },
     "file": {
@@ -925,9 +1214,141 @@
       "switchLanguage": "Taal wisselen"
     }
   },
+  "documentChat": {
+    "undoChanges": "Wijzigingen terugdraaien",
+    "changesReverted": "Wijzigingen teruggedraaid",
+    "turnActions": "Acties voor dit gespreksonderdeel",
+    "deleteTurn": "Dit gespreksonderdeel verwijderen",
+    "revertTurn": "Dit gespreksonderdeel terugdraaien en verwijderen",
+    "revertFailed": "Sommige wijzigingen konden niet worden teruggedraaid doordat het document of thema is gewijzigd. Het gesprek is behouden.",
+    "configure": "AI-modellen instellen",
+    "onboarding": {
+      "title": "Bewerken met AI",
+      "loadingModels": "AI-modellen laden…",
+      "retry": "Opnieuw proberen",
+      "builtIn": "AI gebruiken in AutumnMark",
+      "builtInHint": "Voeg een model toe om in de zijbalk te chatten en je document of thema te bewerken.",
+      "externalClient": "Gebruik je al een AI-client?",
+      "externalHint": "Gebruik je eigen client zonder een model in AutumnMark in te stellen.",
+      "useExternal": "Een externe AI-client gebruiken",
+      "target": "Wat wil je bewerken?",
+      "editDocument": "Document bewerken",
+      "editTheme": "Thema bewerken",
+      "copyFailed": "Kopiëren naar het klembord is mislukt. Probeer opnieuw.",
+      "skillIntro": "Roep de {0}-skill aan in een geschikte client om een document of thema te bewerken.",
+      "documentScope": "Als er in alle vensters maar één document open is, kan de skill het direct bewerken. Bij meerdere documenten vraagt de client je er één te kiezen.",
+      "themeScope": "Als de thema-editor open is, bewerkt de skill het huidige concept. Anders bewerkt de skill het toegepaste thema.",
+      "invokeSkill": "Skill aanroepen in je client",
+      "invokeHint": "Plak het voorbeeld in je client en pas het aan voor de gewenste wijziging.",
+      "documentInstruction": "Gebruik de {0}-skill om van de openstaande punten in het huidige document een checklist te maken.",
+      "themeInstruction": "Gebruik de {0}-skill om de koppen van het eerste niveau in het huidige thema iets kleiner te maken.",
+      "skillHelp": "Kun je de skill niet vinden in je client?",
+      "skillHelpHint": "AutumnMark installeert en werkt de skill bij bij het opstarten. Vernieuw de lijst met skills of importeer de skill uit de gedeelde map hieronder.",
+      "copyInstruction": "Aanroep kopiëren",
+      "instructionCopied": "Aanroep gekopieerd. Plak deze in je AI-client."
+    }
+  },
+  "drawing": {
+    "insert": "Excalidraw-tekening invoegen",
+    "openInTab": "Openen in tabblad",
+    "new": "Nieuwe Excalidraw-tekening",
+    "open": "Excalidraw-tekening openen",
+    "untitled": "Naamloze tekening",
+    "addDocument": "Markdown-document toevoegen",
+    "addDocumentButton": "Document toevoegen",
+    "searchDocuments": "Markdown-documenten zoeken",
+    "insertIntoNote": "In document invoegen",
+    "wholeDocument": "Volledig document",
+    "addCard": "Kaart toevoegen",
+    "discardChanges": "Niet-opgeslagen wijzigingen aan deze tekening verwerpen?",
+    "discard": "Wijzigingen verwerpen",
+    "changedOnDisk": "De tekening op schijf is gewijzigd. Open deze opnieuw om de nieuwste versie te zien.",
+    "invalidFile": "Selecteer een .excalidraw-bestand.",
+    "openFailed": "Kan het bestand niet openen. {reason}",
+    "saveFailed": "Kan de tekening niet opslaan of invoegen. {reason}",
+    "cardFailed": "Kan de documentkaart niet toevoegen. {reason}"
+  },
   "common": {
     "cancel": "Annuleren",
     "ok": "OK"
+  },
+  "video": {
+    "streamedSource": "Bij het opslaan wordt de volledige video ({size} MiB) in het Markdown-bestand opgenomen. De Base64-bron is te groot om hier te bewerken.",
+    "embed": "Video’s als Base64 insluiten",
+    "note": "Slaat nieuwe video’s op in het Markdown-document. Uitgeschakeld wordt een bestandsverwijzing ingevoegd.",
+    "title": "Video",
+    "insert": "Video invoegen…",
+    "preview": "Videovoorbeeld",
+    "replace": "Video vervangen",
+    "choose": "Video kiezen…",
+    "fromClipboard": "Video van klembord gebruiken",
+    "delete": "Video verwijderen",
+    "drop": "Loslaten om te vervangen",
+    "hint": "Sleep een video of druk op {shortcut} om te vervangen",
+    "drag": "Originele video slepen",
+    "invalid": "Video onleesbaar of codec niet ondersteund.",
+    "location": "Videobron",
+    "saveAs": "Video opslaan als…",
+    "convert": "Omzetten naar lokale video",
+    "toEmbedded": "Video insluiten in Markdown",
+    "copy": "Videobestand kopiëren"
+  },
+  "batchMedia": {
+    "title": "Afbeeldingen en video's in bulk insluiten",
+    "images": "Afbeeldingen ({count})",
+    "videos": "Video's ({count})",
+    "scanning": "Documenten doorzoeken ({current}/{total})…",
+    "pending": "Documenten met in te sluiten media: {count}",
+    "convert": "Selectie insluiten ({count})",
+    "converting": "Documenten omzetten ({current}/{total})…",
+    "done": "Ingesloten mediaverwijzingen: {count}",
+    "issues": "Problemen ({count})",
+    "locked": "Dit document is alleen-lezen.",
+    "changed": "Het document is gewijzigd of in gebruik. Zoek opnieuw.",
+    "saveFailed": "Het omgezette document kon niet worden opgeslagen."
+  },
+  "documentImages": {
+    "words": "{count} woorden",
+    "paragraphs": "{count} alinea’s",
+    "title": "Documentafbeeldingen",
+    "noImages": "Geen afbeeldingen",
+    "allEmbedded": "Alle afbeeldingen zijn ingesloten",
+    "pending": "Nog {count} afbeeldingen in te sluiten",
+    "convertAll": "Alle documentafbeeldingen insluiten ({count})",
+    "summary": "Ingesloten: {embedded} · Niet ingesloten: {pending}"
+  },
+  "embeddedImage": {
+    "setSize": "Afbeeldingsgrootte instellen…",
+    "width": "Breedte",
+    "height": "Hoogte",
+    "lockAspect": "Verhouding behouden",
+    "autoSize": "Automatische grootte herstellen",
+    "auto": "Automatisch",
+    "toEmbedded": "Deze afbeelding insluiten",
+    "pasteProgress": "Afbeeldingen insluiten {completed}/{total}",
+    "pasteFailed": "Originele links behouden voor {failed} van {total} afbeeldingen",
+    "preview": "Afbeeldingsvoorbeeld",
+    "source": "Ingesloten bron",
+    "replace": "Afbeelding vervangen",
+    "copyAs": "Kopiëren als",
+    "jpeg": "JPEG-afbeelding",
+    "fromClipboard": "Afbeelding van klembord gebruiken",
+    "saveAs": "Afbeelding opslaan als…",
+    "convert": "Omzetten naar lokale afbeelding",
+    "viewSource": "Ingesloten bron bekijken",
+    "hint": "Scroll om te zoomen · Sleep een afbeelding of druk op {shortcut} om te vervangen",
+    "drag": "Origineel slepen",
+    "drop": "Loslaten om te vervangen",
+    "dirty": "Niet-toegepaste wijzigingen",
+    "discard": "Wijzigingen verwerpen",
+    "apply": "Wijzigingen toepassen",
+    "copyFailed": "Kopiëren van de afbeelding is mislukt.",
+    "unsupported": "Niet-ondersteunde afbeeldingsindeling.",
+    "title": "Ingesloten afbeelding",
+    "delete": "Afbeelding verwijderen",
+    "paste": "Gegevens-URL plakken",
+    "choose": "Afbeelding kiezen…",
+    "invalid": "De afbeelding kan niet worden gelezen."
   },
   "dialog": {
     "moveToTrash": "Weet je zeker dat je \"{name}\" naar de prullenbak wilt verplaatsen?",
@@ -939,7 +1360,7 @@
     "fileExists": "Bestand bestaat al: {filename}",
     "files": "Bestanden",
     "importWarning": "Importwaarschuwing",
-    "installPandoc": "Pandoc is niet gevonden. Installeer het, of stel de omgevingsvariabele MARKTEXT_PANDOC in op het pad naar het pandoc-programma en herstart MarkText.",
+    "installPandoc": "Pandoc is niet gevonden. Installeer het, of stel de omgevingsvariabele MARKTEXT_PANDOC in op het pad naar het pandoc-programma en herstart AutumnMark.",
     "exportWarning": "Exportwaarschuwing",
     "exportWarningMore": "…en nog {count}",
     "keepOpen": "Open houden",
@@ -956,13 +1377,30 @@
     "configSchemaViolation": "Configuratieschemaovertreding",
     "copyError": "Kopieerfout",
     "initializationFailed": "Initialisatie mislukt {hint}",
-    "otherInstanceDetected": "Er draait al een andere instantie van MarkText",
+    "otherInstanceDetected": "Er draait al een andere instantie van AutumnMark",
     "report": "Melden",
     "startupError": "Opstartfout",
     "terminatedDueToError": "Beëindigd door fout",
     "unexpectedErrorWithMessage": "Onverwachte fout: {message}",
     "unexpectedMainProcess": "Onverwachte fout in hoofdproces",
     "unexpectedRendererProcess": "Onverwachte fout in rendererproces"
+  },
+  "updates": {
+    "title": "Software-update",
+    "install": "Opnieuw starten en installeren",
+    "later": "Later",
+    "upToDate": "Je gebruikt de nieuwste versie.",
+    "downloaded": "De update is gedownload. De app wordt afgesloten om de update te installeren.",
+    "checkFailed": "Controleren op updates is mislukt. Probeer het later opnieuw.",
+    "installFailed": "De update kon niet worden geïnstalleerd. Probeer het later opnieuw.",
+    "checking": "Zoeken naar updates…",
+    "preparing": "Installatie van versie {version} wordt voorbereid…",
+    "downloading": "Versie {version} wordt gedownload…",
+    "ready": "Versie {version} staat klaar voor installatie.",
+    "background": "Doorgaan op de achtergrond",
+    "retry": "Opnieuw proberen",
+    "downloadFailed": "Downloaden is mislukt. Controleer de verbinding en probeer het opnieuw.",
+    "waiting": "Nog steeds aan het wachten op een antwoord…"
   },
   "notifications": {
     "defaultMessage": "Standaardbericht",

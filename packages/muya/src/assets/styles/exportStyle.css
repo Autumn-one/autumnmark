@@ -46,6 +46,56 @@
     );
 }
 
+.markdown-body .mu-export-code {
+    margin: 0 0 16px;
+
+    background-color: #f5f7f6;
+    border-radius: 8px;
+}
+
+.markdown-body .mu-export-code figcaption {
+    padding: 7px 16px;
+
+    font-weight: 600;
+    font-size: 0.875em;
+    text-align: center;
+    overflow-wrap: anywhere;
+
+    background-color: #ecefed;
+    border-radius: 8px 8px 0 0;
+}
+
+.markdown-body .mu-export-code-line {
+    display: block;
+    min-height: 1.45em;
+}
+
+.markdown-body .mu-export-code-highlight {
+    background-color: #eaf2ec;
+}
+
+.markdown-body .mu-export-fold {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+
+    background-color: #f1f8f4;
+    border-radius: 8px;
+}
+
+.markdown-body .mu-export-fold > summary {
+    cursor: pointer;
+}
+
+.markdown-body .mu-export-fold > summary > :is(h1, h2, h3, h4, h5, h6) {
+    display: inline;
+    margin: 0;
+    padding: 0;
+
+    font-size: inherit;
+
+    border: 0;
+}
+
 /* GitLab inline diff washes, matching GitLab's `.idiff` rendering. */
 .markdown-body .idiff.addition {
     color: #1f1f1f;
@@ -144,6 +194,12 @@
     white-space: pre-wrap;
 }
 
+.markdown-body .mu-export-code pre {
+    margin: 0;
+
+    background-color: transparent;
+}
+
 /* Render soft line breaks (Shift+Enter → a bare `\n` inside a block) the way
    the editor does (`.mu-content` is pre-wrap) instead of emitting a
    non-standard `<br>`, so the exported HTML stays CommonMark-conformant (the
@@ -162,6 +218,7 @@
 
 .markdown-body table {
     display: table;
+    max-width: 100%;
 }
 
 .markdown-body table th,

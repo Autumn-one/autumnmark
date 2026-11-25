@@ -1,6 +1,6 @@
 # Image support
 
-MarkText can automatically copy your images into a specified directory or handle images from clipboard.
+By default, MarkText embeds inserted images in the Markdown file. You can change this in **Preferences → Images & Export**. Existing saved preferences continue to apply.
 
 ### Upload to cloud using selected uploader
 
@@ -27,6 +27,28 @@ Examples for relative paths:
 ### Keep original location
 
 Existing path strings are kept unchanged. Binary images, including pasted clipboard images, are written to the configured image folder; a saved document can use its configured relative image folder.
+
+### Embed in Markdown (Base64)
+
+In this mode, inserting a local image or a screenshot stores its bytes as a data URL. Inserting a web image downloads and embeds it so the document can display it offline.
+
+Pasting Markdown such as `![map](images/map.png)` or `<img src="images/map.png" width="240">` also embeds the images in both editing modes. Relative paths use the folder of the Markdown file you are editing. You can continue typing while web images download. Longer pastes show an image count in the bottom corner. If an image cannot be read, its original link stays in the document.
+
+Click an embedded image to open **Image preview**. Scroll to zoom, drag the image to pan at any zoom level, or select **Fit to window**. Drop or paste an image into the preview to replace it. The **Embedded source** tab lets you copy or edit the data URL. Select **Apply changes** to update the image. Each replacement can be undone, including after the preview closes.
+
+Right-click the image in either editor to copy it as PNG, JPEG, or a data URL. **Save image as…** exports a copy. **Convert to local image** writes the original bytes into the configured relative assets folder and updates the document reference. Undo restores the embedded reference and keeps the saved file.
+
+Drag an image from the document into a file manager or an application that accepts dropped files. In the preview, **Drag original out** works at any zoom level. The exported file retains the original format.
+
+## Video files
+
+Use **Format → Insert video…**, drop a video file into the editor, or paste one from the clipboard. By default the document references the video file. If the clipboard supplies only video data or a temporary copy, choose where to save it so the reference continues to work. Enable **Preferences → Video → Embed videos as Base64** to store new videos inside the Markdown file. This setting applies independently of the image setting.
+
+Hover over a video in the editor to play, pause, seek, or enter fullscreen. In compact mode, **Maximum video height (px)** scales the player proportionally. By default, compact mode limits only code blocks to 12 lines. Image and video height limits are both 0.
+
+Click the filename beneath the player to open the preview. The source tab lets you edit Base64 for smaller embedded videos. Right-click to copy the video as a file, save it in its original format, replace it, or switch between an embedded video and a local file reference. Drag the filename, or use **Drag original video out** in the preview, to drop a copy into another application. Playback depends on the codec available in the desktop player.
+
+For local videos of 32 MiB or more, the editor streams the original bytes into the Markdown file when you save. You can move the Markdown file alone and reopen it in AutumnMark. The source tab shows the video size for these attachments. Use **Replace** to change the video.
 
 ## Media viewer
 

@@ -1,3 +1,12 @@
+.mu-transformer {
+    position: fixed;
+
+    overflow: hidden;
+
+    pointer-events: none;
+    inset: 0;
+}
+
 .mu-transformer .bar {
     position: absolute;
 
@@ -10,6 +19,8 @@
     border: 2px solid var(--editor-bg-color);
     border-radius: 5px;
     box-shadow: 0 2px 2px 0 rgb(0 0 0 / 15%);
+
+    pointer-events: auto;
 }
 
 .mu-transformer .left {
@@ -18,4 +29,27 @@
 
 .mu-transformer .right {
     cursor: ew-resize;
+}
+
+.mu-image-size-readout {
+    position: absolute;
+    z-index: 1;
+
+    padding: 3px 7px;
+
+    color: var(--editor-color);
+    font: 12px/1.4 system-ui, sans-serif;
+    white-space: nowrap;
+
+    background: var(--editor-bg-color);
+    border: 1px solid var(--editor-color-10);
+    border-radius: 4px;
+
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.mu-image-snap-target {
+    outline: 1px dashed var(--theme-color);
+    outline-offset: 1px;
 }

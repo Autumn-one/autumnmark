@@ -120,7 +120,7 @@ Modifier keys use their full macOS names and appear in this order: Control, Opti
 | `view.toggle-sidebar`   | <kbd>Command</kbd>+<kbd>J</kbd>                    | Toggle sidebar                           |
 | `view.toggle-tabbar`    | <kbd>Option</kbd>+<kbd>Command</kbd>+<kbd>B</kbd>  | Toggle tabbar                            |
 | `view.toggle-toc`       | <kbd>Command</kbd>+<kbd>K</kbd>                    | Toggle table of contents                 |
-| `view.toggle-dev-tools` | <kbd>Option</kbd>+<kbd>Command</kbd>+<kbd>I</kbd>  | Toggle developer tools (debug mode only) |
+| `view.toggle-dev-tools` | <kbd>Option</kbd>+<kbd>Command</kbd>+<kbd>I</kbd>  | Toggle developer tools                   |
 | `view.dev-reload`       | <kbd>Option</kbd>+<kbd>Command</kbd>+<kbd>R</kbd>  | Reload window (debug mode only)          |
 | `view.reload-images`    | <kbd>Command</kbd>+<kbd>R</kbd>                    | Reload images                            |
 

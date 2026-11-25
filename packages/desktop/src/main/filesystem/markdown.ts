@@ -4,10 +4,14 @@ import path from 'path'
 import log from 'electron-log'
 import iconv from 'iconv-lite'
 import { LINE_ENDING_REG, LF_LINE_ENDING_REG, CRLF_LINE_ENDING_REG } from '../config'
-import { isDirectory2 } from 'common/filesystem'
+import { isDirectory2, isFile2 } from 'common/filesystem'
 import { hasMarkdownExtension, isMarkdownFile } from 'common/filesystem/paths'
-import { normalizeAndResolvePath, writeFile } from '../filesystem'
+import { isDrawingPath } from '@shared/drawing'
+import { normalizeAndResolvePath, writeFile, writeFileChunks } from '../filesystem'
+import { diskVideoReferences, diskVideoThreshold } from '@shared/diskVideo'
+import { expandDiskVideos, readVideoMarkdown } from './diskVideo'
 import { guessEncoding } from './encoding'
+import { writePreservingHardlinks } from './hardlinkWrite'
 import { getEncodingName, type Encoding } from 'common/encoding'
 import type { LineEnding } from '@shared/types/files'
 import type { DiskBaseline } from '@shared/types/files'
@@ -74,7 +78,7 @@ export const normalizeMarkdownPath = (
   pathname: string
 ): { isDir: boolean; path: string } | null => {
   const isDir = isDirectory2(pathname)
-  if (isDir || isMarkdownFile(pathname)) {
+  if (isDir || isMarkdownFile(pathname) || (isDrawingPath(pathname) && isFile2(pathname))) {
     const resolved = normalizeAndResolvePath(pathname)
     if (resolved) {
       return { isDir, path: resolved }
@@ -158,7 +162,33 @@ export const writeMarkdownFile = (
     return Promise.reject(error)
   }
 
-  return writeFile(pathname, buffer)
+  return writePreservingHardlinks(pathname, target => diskVideoReferences().test(content)
+    ? writeFileChunks(target, expandDiskVideos(content, encoding, !!isBom))
+    : writeFile(target, buffer))
+}
+
+export const readMarkdownSource = async(pathname: string, autoGuessEncoding: boolean, requireLossless = false) => {
+  const diskStat = await fsPromises.stat(path.resolve(pathname))
+  const streamed = diskStat.size >= diskVideoThreshold ? await readVideoMarkdown(pathname) : null
+  const buffer = streamed?.buffer ?? await fsPromises.readFile(pathname)
+
+  const wideEncoding = streamed?.wideEncoding
+  const encoding = wideEncoding
+    ? { encoding: wideEncoding, isBom: buffer.indexOf(iconv.encode('\uFEFF', wideEncoding)) === 0 }
+    : guessEncoding(buffer, autoGuessEncoding)
+  const supported = iconv.encodingExists(encoding.encoding)
+  if (!supported) {
+    throw new Error(`"${encoding.encoding}" encoding is not supported.`)
+  }
+
+  const markdown = iconv.decode(buffer, encoding.encoding)
+  if (requireLossless && !iconv.encode(markdown, encoding.encoding, { addBOM: encoding.isBom }).equals(buffer))
+    throw new Error('Could not decode the document without changing its original bytes')
+  return {
+    markdown,
+    encoding,
+    rawBaseline: { exists: true as const, sizeBytes: streamed?.sizeBytes ?? buffer.byteLength, mtimeMs: diskStat.mtimeMs, rawSha256: streamed?.rawSha256 ?? contentSha256(buffer) }
+  }
 }
 
 export const loadMarkdownFile = async(
@@ -168,20 +198,9 @@ export const loadMarkdownFile = async(
   trimTrailingNewline: number = 2,
   autoNormalizeLineEndings: boolean = false
 ): Promise<MarkdownDocumentRaw> => {
-  // TODO: Use streams to not buffer the file multiple times and only guess
-  //       encoding on the first 256/512 bytes.
-
-  const buffer = await fsPromises.readFile(path.resolve(pathname))
-  const diskStat = await fsPromises.stat(path.resolve(pathname))
-
-  const encoding = guessEncoding(buffer, autoGuessEncoding)
-  const supported = iconv.encodingExists(encoding.encoding)
-  if (!supported) {
-    throw new Error(`"${encoding.encoding}" encoding is not supported.`)
-  }
-
-  let markdown = iconv.decode(buffer, encoding.encoding)
-
+  const source = await readMarkdownSource(pathname, autoGuessEncoding)
+  const { encoding, rawBaseline } = source
+  let { markdown } = source
   const isLf = LF_LINE_ENDING_REG.test(markdown)
   const isCrlf = CRLF_LINE_ENDING_REG.test(markdown)
   const isMixedLineEndings = isLf && isCrlf
@@ -221,7 +240,7 @@ export const loadMarkdownFile = async(
 
   return {
     markdown,
-    rawBaseline: { exists: true, sizeBytes: buffer.byteLength, mtimeMs: diskStat.mtimeMs, rawSha256: contentSha256(buffer) },
+    rawBaseline,
     filename,
     pathname,
     encoding,

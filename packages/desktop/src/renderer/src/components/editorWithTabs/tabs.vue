@@ -12,6 +12,7 @@
           v-for="file of tabs"
           :key="file.id"
           :title="file.pathname"
+          :aria-current="currentFile?.id === file.id || undefined"
           :aria-label="
             file.isPreview ? t('editor.tabs.preview', { name: file.filename }) : file.filename
           "
@@ -172,12 +173,15 @@ onBeforeUnmount(() => {
 }
 
 .editor-tabs {
+  --file-tab-height: 26px;
   position: relative;
   display: flex;
-  flex-direction: row;
-  height: 28px;
+  align-items: center;
+  gap: 4px;
+  height: var(--editorToolbarHeight);
+  padding-inline: 8px;
+  flex-shrink: 0;
   user-select: none;
-  box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   &:hover > .new-file {
     opacity: 1 !important;
@@ -185,7 +189,7 @@ onBeforeUnmount(() => {
 }
 .scrollable-tabs {
   flex: 0 1 auto;
-  height: 28px;
+  height: 100%;
   overflow: hidden;
 }
 .tabs-container {
@@ -193,25 +197,26 @@ onBeforeUnmount(() => {
   list-style: none;
   margin: 0;
   padding: 0;
-  height: 28px;
+  height: 100%;
   position: relative;
   display: flex;
-  flex-direction: row;
+  align-items: center;
+  gap: 4px;
   overflow-y: hidden;
   z-index: 2;
   &::-webkit-scrollbar:horizontal {
     display: none;
   }
   & > li {
-    transition: all 0.15s ease-in-out;
+    transition: background-color 0.15s ease-in-out;
     position: relative;
     padding: 0 28px 0 8px;
     cursor: pointer;
-    color: var(--editorColor50);
+    color: var(--editorColor60);
     font-size: 12px;
-    line-height: 28px;
-    height: 28px;
+    height: var(--file-tab-height);
     max-width: 280px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     &[aria-grabbed='true'] {
@@ -219,8 +224,9 @@ onBeforeUnmount(() => {
     }
     & > .close-icon {
       position: absolute;
-      top: 4px;
+      top: 50%;
       right: 4px;
+      transform: translateY(-50%);
       width: 20px;
       height: 20px;
       margin: 0;
@@ -231,7 +237,7 @@ onBeforeUnmount(() => {
       outline: none;
     }
     &:hover {
-      background: var(--floatBgColor) !important;
+      background: var(--editorColor04);
     }
     &:hover > .close-icon,
     & > .close-icon:focus-visible {
@@ -245,8 +251,9 @@ onBeforeUnmount(() => {
     & > .unsaved-dot {
       display: none;
       position: absolute;
-      top: 11px;
+      top: 50%;
       right: 11px;
+      transform: translateY(-50%);
       width: 6px;
       height: 6px;
       border-radius: 50%;
@@ -271,17 +278,8 @@ onBeforeUnmount(() => {
     }
   }
   & > li.active {
-    background: var(--itemBgColor);
-    z-index: 3;
-    &:after {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      height: 2px;
-      background: var(--themeColor);
-    }
+    background: var(--themeColor10);
+    color: var(--editorColor80);
   }
   & > li.preview > span {
     font-style: italic;
@@ -290,26 +288,21 @@ onBeforeUnmount(() => {
 .editor-tabs > .new-file {
   flex: 0 0 28px;
   width: 28px;
-  height: 28px;
-  border-right: none;
-  background: transparent;
+  height: var(--file-tab-height);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: space-around;
   cursor: pointer;
-  color: var(--editorColor50);
+  color: var(--editorColor60);
   opacity: 0;
-  &.always-visible,
   &:focus-visible {
     opacity: 1;
   }
 }
 
 .editor-tabs > .new-file:hover {
-  transition: all 0.15s ease-in-out;
-  & > svg {
-    fill: var(--focusColor);
-  }
+  background: var(--editorColor04);
+  color: var(--editorColor);
 }
-
 </style>

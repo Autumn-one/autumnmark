@@ -12,7 +12,7 @@ pnpm -C packages/desktop exec electron-vite --sourcemap --inspect 5858 --remoteD
 
 Open `chrome://inspect`, configure `localhost:5858` and `localhost:8315`, then select the main-process or renderer target. Use `--inspectBrk 5858` instead of `--inspect 5858` to pause the main process before startup code executes.
 
-The ordinary `pnpm run dev` command does not explicitly enable those ports. The renderer also has built-in developer tools, available through the View menu in debug mode.
+The ordinary `pnpm run dev` command does not explicitly enable those ports. Open **View → Show Developer Tools** to inspect the editor window in development or packaged builds.
 
 ## Production bundle debugging
 

@@ -2,6 +2,8 @@ import type { SessionState, WindowSnapshot } from '@shared/types/applicationStat
 import { unsavedDocuments } from '@shared/applicationState/startupPlan'
 import { createStateId } from './identity'
 
+export class WindowCloseCanceled extends Error {}
+
 /** Native close operations; persistence must succeed before any window is destroyed. */
 export interface ClosePorts {
   getSession(): SessionState
@@ -89,6 +91,8 @@ export class CloseCoordinator {
       )
       if (!committed) return
       for (const entry of prepared) await this._ports.destroy(entry.snapshot.id)
+    } catch (error) {
+      if (!(error instanceof WindowCloseCanceled)) throw error
     } finally {
       this._pending = false
     }

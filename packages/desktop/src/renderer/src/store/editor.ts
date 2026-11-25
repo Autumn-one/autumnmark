@@ -1,5 +1,7 @@
-import equal from 'deep-equal'
+import isEqual from 'lodash/isEqual'
+import { toRaw } from 'vue'
 import { adjustTrailingNewlines } from '@/util/markdown'
+import { documentVideos, releaseDocumentVideos } from '@/util/videoAttachments'
 import { prepareReading, applyReadOnly } from '../services/documentMode'
 import bus from '../bus'
 import { getUniqueId, deepClone } from '../util'
@@ -19,15 +21,18 @@ import { useProjectStore } from './project'
 
 import { t } from '../i18n'
 import { scheduleWindowCheckpoint } from './checkpoint'
+import type { PersistResult } from '@shared/types/applicationState'
 import type { IFileState, FileNotification, FileWordCount, LineEnding, PageOptions, TabOptions } from '@shared/types/files'
 import type { SaveDocumentResult } from '@shared/types/ipc'
+import { isDrawingPath } from '@shared/drawing'
+import { drawingDialog } from '@/services/drawingEditors'
 
 export interface SessionActions {
-  checkpoint(transactionId?: string): Promise<unknown>
+  checkpoint(transactionId?: string): Promise<PersistResult>
   scheduleCheckpoint(): void
   captureView(): void
   save(id: string, saveAs?: boolean): Promise<SaveDocumentResult>
-  create(markdown: string, selected: boolean): Promise<void>
+  create(markdown: string, selected: boolean, title?: string): Promise<void>
   close(ids: string[]): Promise<void>
   saveAll(closeTabs: boolean): Promise<void>
 }
@@ -40,6 +45,7 @@ export const setSessionActions = (value: SessionActions | null): void => {
 interface TocItem extends ListItem {
   slug?: string
   githubSlug?: string
+  anchor?: string
   content?: string
   contentHtml?: string
   lvl: number | null
@@ -262,7 +268,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (item) {
         try {
-          return await window.electron.clipboard.writeText(`#${item.githubSlug}`)
+          return await window.electron.clipboard.writeText(`#${item.anchor ?? item.githubSlug}`)
         } catch {
           return false
         }
@@ -332,16 +338,6 @@ export const useEditorStore = defineStore('editor', {
         markdown,
         filename
       } = data
-      const newFileState = createDocumentState({
-        markdown,
-        filename,
-        pathname,
-        encoding,
-        lineEnding,
-        adjustLineEndingOnSave,
-        trimTrailingNewline
-      })
-
       const tab = tabs.find((t) => window.fileUtils.isSamePathSync(t.pathname, pathname))
       if (!tab) {
         console.error('loadChange: Cannot find tab in tab list.')
@@ -356,6 +352,9 @@ export const useEditorStore = defineStore('editor', {
       }
 
       const oldId = tab.id
+      const newFileState = createDocumentState({
+        markdown, filename, pathname, encoding, lineEnding, adjustLineEndingOnSave, trimTrailingNewline
+      }, oldId)
       const oldNotifications = tab.notifications.filter(
         (item) => item.exclusiveType !== 'file_changed'
       )
@@ -405,9 +404,10 @@ export const useEditorStore = defineStore('editor', {
       if (currentFile && pathname === currentFile.pathname) {
         this.currentFile = tab
         const { id, cursor, history, scrollTop, muyaIndexCursor } = tab // Should not use blocks history as this is loaded from disk
-        bus.emit('file-changed', {
+        if (isDrawingPath(pathname || currentFile.filename)) this.UPDATE_TOC([])
+        else bus.emit('file-changed', {
           id,
-          markdown,
+          markdown: tab.markdown,
           muyaIndexCursor,
           cursor,
           renderCursor: true,
@@ -444,7 +444,7 @@ export const useEditorStore = defineStore('editor', {
       }
       if (!anchorSlug) return
 
-      const heading = this.listToc.find((item) => item.githubSlug === anchorSlug)
+      const heading = this.listToc.find((item) => (item.anchor ?? item.githubSlug) === anchorSlug)
       if (heading) {
         bus.emit('scroll-to-header', heading.slug)
         return
@@ -539,7 +539,21 @@ export const useEditorStore = defineStore('editor', {
       bus.emit('flush-active-editor')
     },
 
+    UPDATE_DRAWING(id: string, content: string): void {
+      const file = this.tabs.find(tab => tab.id === id)
+      if (!file || file.readOnly || file.markdown === content || !isDrawingPath(file.pathname || file.filename)) return
+      file.markdown = content
+      file.isPreview = false
+      file.isSaved = false
+      if (file.pathname && usePreferencesStore().autoSave) this.HANDLE_AUTO_SAVE(file)
+      scheduleWindowCheckpoint()
+    },
+
     FILE_SAVE({ waitForResult = false } = {}): Promise<SaveDocumentResult> | void {
+      if (!waitForResult && drawingDialog.value) {
+        void drawingDialog.value.save?.()
+        return
+      }
       if (!this.currentFile || this.currentFile.readOnly || this.currentFile.modeChanging) return
       const session = getSessionActions()
       if (!session) return
@@ -678,7 +692,8 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        bus.emit('file-changed', {
+        if (isDrawingPath(pathname || currentFile.filename)) this.UPDATE_TOC([])
+        else bus.emit('file-changed', {
           id,
           markdown,
           cursor,
@@ -776,6 +791,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     FORCE_CLOSE_TAB(file: IFileState): void {
+      releaseDocumentVideos(file.id)
       window.electron.ipcRenderer.send('mt::forget-document', file.id)
       const { tabs, currentFile } = this
       const index = tabs.findIndex((t) => t.id === file.id)
@@ -1144,7 +1160,7 @@ export const useEditorStore = defineStore('editor', {
       if (history) tab.history = history
       if (blocks) tab.blocks = blocks
 
-      if (id === this.currentFile?.id && toc && !equal(toc, this.listToc)) {
+      if (id === this.currentFile?.id && toc && !isEqual(toc, toRaw(this.listToc))) {
         this.listToc = toc
         this.toc = listToTree<TocItem>(toc)
       }
@@ -1248,7 +1264,7 @@ export const useEditorStore = defineStore('editor', {
       const preferencesStore = usePreferencesStore()
       window.electron.ipcRenderer.send('mt::response-pandoc-export', {
         target,
-        markdown,
+        markdown: documentVideos(this.currentFile.id).externalText(markdown),
         superSubScript: preferencesStore.superSubScript === true,
         githubAlerts: preferencesStore.githubAlerts === true,
         footnote: preferencesStore.footnote === true,
@@ -1372,7 +1388,7 @@ export const useEditorStore = defineStore('editor', {
               // that left the content byte-identical) — there is nothing to
               // reload and no reason to warn the user (#1861).
               const newMarkdown = (change as unknown as FileChangePayload).data?.markdown
-              if (typeof newMarkdown === 'string' && newMarkdown === tab.markdown) {
+              if (typeof newMarkdown === 'string' && newMarkdown === documentVideos(id).expand(tab.markdown)) {
                 if (wasMissing)
                   tab.notifications = tab.notifications.filter(
                     (item) => item.exclusiveType !== 'file_changed'
@@ -1419,7 +1435,7 @@ export const useEditorStore = defineStore('editor', {
       })
     },
 
-    ASK_FOR_IMAGE_PATH(): Promise<string[]> {
+    ASK_FOR_IMAGE_PATH(): Promise<string> {
       return window.electron.ipcRenderer.invoke('mt::ask-for-image-path')
     },
 

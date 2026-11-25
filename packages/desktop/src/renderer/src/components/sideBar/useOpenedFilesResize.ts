@@ -13,6 +13,7 @@ export const useOpenedFilesResize = (
 ) => {
   const preferredHeight = state.preferredHeight
   const treeView = ref<HTMLElement | null>(null)
+  const openedFilesSection = ref<HTMLElement | null>(null)
   const openedFilesList = ref<HTMLElement | null>(null)
   const resizeHandle = ref<HTMLElement | null>(null)
   const availableHeight = ref(DEFAULT_HEIGHT)
@@ -24,12 +25,14 @@ export const useOpenedFilesResize = (
 
   const updateHeightLimit = (): void => {
     const view = treeView.value
+    const section = openedFilesSection.value
     const list = openedFilesList.value
-    if (!visible.value || !view || !list || list.offsetParent === null) return
-    const listTop = list.getBoundingClientRect().top - view.getBoundingClientRect().top
+    if (!visible.value || !view || !section || !list || list.offsetParent === null) return
+    const sectionBottom = section.getBoundingClientRect().bottom - view.getBoundingClientRect().top
+    const framingHeight = sectionBottom - list.getBoundingClientRect().height
     availableHeight.value = Math.max(
       0,
-      view.clientHeight - listTop - (resizeHandle.value?.offsetHeight ?? 0) - PROJECT_TREE_RESERVE
+      view.clientHeight - framingHeight - PROJECT_TREE_RESERVE
     )
   }
 
@@ -134,6 +137,7 @@ export const useOpenedFilesResize = (
 
   return {
     treeView,
+    openedFilesSection,
     openedFilesList,
     resizeHandle,
     openedFilesMaxHeight,

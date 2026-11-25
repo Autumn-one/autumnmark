@@ -1,5 +1,6 @@
 import type { Muya } from '../../../muya';
-import type { ITableRowState, ITableState } from '../../../state/types';
+import type { TSelectionState } from '../../../selection/types';
+import type { ITableRowState, ITableState, TTableColumnWidth } from '../../../state/types';
 import type { Nullable } from '../../../types';
 import type Content from '../../base/content';
 import type TableCellContent from '../../content/tableCell';
@@ -14,6 +15,8 @@ import logger from '../../../utils/logger';
 import { LinkedList } from '../../base/linkedList/linkedList';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
+import { selectionAfterTableMove } from './moveSelection';
+import { attachTableResize } from './resize';
 
 const debug = logger('table:');
 
@@ -78,6 +81,7 @@ class Table extends Parent {
         this.classList = ['mu-table'];
         this.createDomNode();
         this._listenDomEvent();
+        attachTableResize(this);
     }
 
     isEmpty() {
@@ -126,6 +130,65 @@ class Table extends Parent {
         });
     }
 
+    setColumnWidths(widths: ReadonlyMap<number, TTableColumnWidth | undefined>) {
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const state = this.getState();
+        for (const row of state.children) {
+            for (const [index, width] of widths) {
+                if (width !== undefined)
+                    row.children[index].meta.width = width;
+                else
+                    delete row.children[index].meta.width;
+            }
+        }
+        this._replaceTable(state, this.muya.getSelectionState());
+    }
+
+    setRowHeights(heights: ReadonlyMap<number, number | undefined>) {
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const state = this.getState();
+        for (const [index, height] of heights) {
+            if (height !== undefined)
+                state.children[index].minHeight = height;
+            else
+                delete state.children[index].minHeight;
+        }
+        this._replaceTable(state, this.muya.getSelectionState());
+    }
+
+    move(axis: 'row' | 'column', from: number, to: number) {
+        const min = axis === 'row' ? 1 : 0;
+        const count = axis === 'row' ? this.rowCount : this.columnCount;
+        if (!this.muya.canMutate || !this.muya.isBlockInDocument(this) || from === to
+            || from < min || to < min || from >= count || to >= count) {
+            return;
+        }
+        const state = this.getState();
+        function moveItem<T>(items: T[]) {
+            const [item] = items.splice(from, 1);
+            items.splice(to, 0, item);
+        }
+        if (axis === 'row')
+            moveItem(state.children);
+        else
+            state.children.forEach(row => moveItem(row.children));
+        const selection = selectionAfterTableMove(this.muya.getSelectionState(), this.path, axis, from, to);
+        this._replaceTable(state, selection);
+    }
+
+    private _replaceTable(state: ITableState, selection: TSelectionState | null) {
+        const scrollLeft = this.domNode!.scrollLeft;
+        this.muya.transact(() => {
+            const replacement = Table.create(this.muya, state);
+            this.replaceWith(replacement);
+            replacement.domNode!.scrollLeft = scrollLeft;
+            if (selection)
+                this.muya.setSelection(selection, { preventScroll: true });
+        });
+    }
+
     insertRow(offset: number) {
         const { columnCount } = this;
         const firstRowState = this.getState().children[0];
@@ -139,9 +202,7 @@ class Table extends Parent {
             children: [...new Array(columnCount)].map((_, i) => {
                 return {
                     name: 'table.cell',
-                    meta: {
-                        align: firstRowState.children[i].meta.align,
-                    },
+                    meta: { ...firstRowState.children[i].meta },
                     text: '',
                 };
             }),
@@ -175,6 +236,7 @@ class Table extends Parent {
                 firstCellInNewColumn = cell;
         });
 
+        tableInner.updateMinWidth();
         return firstCellInNewColumn!.firstChild as TableCellContent;
     }
 
@@ -228,6 +290,7 @@ class Table extends Parent {
                 cell.remove();
         });
 
+        table.updateMinWidth();
         return (neighbourCell?.firstChild as TableCellContent | undefined) ?? null;
     }
 
@@ -291,7 +354,8 @@ class Table extends Parent {
                 if (cell)
                     cells.push(cell.getState());
             }
-            children.push({ name: 'table.row', children: cells });
+            const minHeight = this.cellAt(r, minColumn)?.row.minHeight;
+            children.push({ name: 'table.row', ...(minHeight && { minHeight }), children: cells });
         }
 
         return { name: 'table', children };

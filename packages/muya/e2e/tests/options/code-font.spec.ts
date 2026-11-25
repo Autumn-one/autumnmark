@@ -85,10 +85,6 @@ test.describe('code-block font options', () => {
             return code.scrollWidth > code.clientWidth + 2;
         });
 
-        // Off: the long line overflows horizontally.
-        await expect.poll(overflowing).toBe(true);
-
-        await page.evaluate(() => window.muya!.setOptions({ wrapCodeBlocks: true }));
         await expect.poll(overflowing).toBe(false);
 
         await page.evaluate(() => window.muya!.setOptions({ wrapCodeBlocks: false }));

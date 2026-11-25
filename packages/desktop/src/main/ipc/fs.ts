@@ -1,14 +1,21 @@
 import fs from 'fs-extra'
 import { type Stats } from 'fs'
+import path from 'node:path'
 import { ipcMain, type WebContents } from 'electron'
 import {
   isFile as commonIsFile,
   isDirectory as commonIsDirectory,
   isExecutableFile
 } from 'common/filesystem'
+import { hasMarkdownExtension } from 'common/filesystem/paths'
 import type { SerializedStat } from '@shared/types/files'
 import type { SidebarMoveRequest, SidebarMoveResult } from '@shared/types/project'
 import { copyFileWithContentHash } from '../filesystem'
+import { loadMarkdownFile, readMarkdownSource, writeMarkdownFile } from '../filesystem/markdown'
+import { applyMarkdownEdits, type MarkdownEdit } from '@shared/markdownEdits'
+import { listMediaDocuments, mediaFileKey } from '../filesystem/mediaDocuments'
+import { isDrawingPath } from '@shared/drawing'
+import { t } from '../i18n'
 
 const serializeStat = (stats: Stats): SerializedStat => ({
   size: stats.size,
@@ -37,10 +44,63 @@ const toBuffer = (data: unknown): unknown => {
 }
 
 export interface FileOperations {
+  isDocumentOpen(pathname: string): Promise<boolean>
   move(sender: WebContents, src: string, dest: string, write: () => Promise<void>): Promise<void>
   moveInProject(sender: WebContents, request: SidebarMoveRequest): Promise<SidebarMoveResult>
 }
 export const registerFsHandlers = (operations?: FileOperations): void => {
+  const updating = new Set<string>()
+  ipcMain.handle('mt::drawing::write', async(_event, pathname: string, content: string, expected?: string) => {
+    if (typeof pathname !== 'string' || !path.isAbsolute(pathname) || !isDrawingPath(pathname) ||
+        typeof content !== 'string' || (expected !== undefined && typeof expected !== 'string'))
+      throw new Error(t('drawing.invalidFile'))
+    const target = await fs.realpath(pathname).catch(error => {
+      if (expected !== undefined || error.code !== 'ENOENT') throw error
+      return pathname
+    })
+    const key = process.platform === 'win32' ? target.toLowerCase() : target
+    if (updating.has(key)) throw new Error(t('drawing.changedOnDisk'))
+    updating.add(key)
+    try {
+      const opened = await operations?.isDocumentOpen(target)
+      if (opened || (expected !== undefined && await fs.readFile(target, 'utf8') !== expected))
+        throw new Error(t('drawing.changedOnDisk'))
+      await writeMarkdownFile(target, content, { encoding: { encoding: 'utf8', isBom: false }, adjustLineEndingOnSave: false, lineEnding: 'lf' })
+    } finally {
+      updating.delete(key)
+    }
+  })
+  ipcMain.handle('mt::media::list-documents', (_event, target: string, directory: boolean, excludes: string[], openPaths: string[]) =>
+    listMediaDocuments(target, directory, excludes, openPaths))
+  ipcMain.handle('mt::media::read-document', async(_event, pathname: string, guessEncoding: boolean) => {
+    if (!hasMarkdownExtension(pathname)) throw new Error('Expected a Markdown document')
+    const target = await fs.realpath(pathname)
+    const key = mediaFileKey(await fs.stat(target, { bigint: true }), target)
+    const source = await readMarkdownSource(target, guessEncoding, true)
+    return { markdown: source.markdown, hash: key + '/' + source.rawBaseline.rawSha256 }
+  })
+  ipcMain.handle('mt::media::update-document', async(_event, pathname: string, guessEncoding: boolean, hash: string, edits: MarkdownEdit[]) => {
+    if (!hasMarkdownExtension(pathname)) throw new Error('Expected a Markdown document')
+    const target = await fs.realpath(pathname)
+    const key = mediaFileKey(await fs.stat(target, { bigint: true }), target)
+    if (updating.has(key)) return 'changed'
+    updating.add(key)
+    try {
+      const opened = await operations?.isDocumentOpen(target)
+      if (opened) return 'changed'
+      const source = await readMarkdownSource(target, guessEncoding, true)
+      if (key + '/' + source.rawBaseline.rawSha256 !== hash) return 'changed'
+      const markdown = applyMarkdownEdits(source.markdown, edits)
+      await writeMarkdownFile(target, markdown, { encoding: source.encoding, adjustLineEndingOnSave: false, lineEnding: 'lf' })
+      return 'saved'
+    } finally {
+      updating.delete(key)
+    }
+  })
+  ipcMain.handle('mt::read-heading-link-document', async(_event, pathname: string, guessEncoding: boolean) => {
+    if (!hasMarkdownExtension(pathname) || !commonIsFile(pathname)) return null
+    return (await loadMarkdownFile(pathname, 'lf', guessEncoding)).markdown
+  })
   ipcMain.handle('mt::project-move-item', (event, request: SidebarMoveRequest) => {
     if (!operations) throw new Error('Project operations unavailable')
     return operations.moveInProject(event.sender, request)

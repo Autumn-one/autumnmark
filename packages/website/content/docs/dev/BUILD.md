@@ -6,7 +6,7 @@ MarkText is built from the pnpm workspace at the repository root. Compiling the 
 
 - Node.js `>=22.12.0` and pnpm `>=10`. Use the pnpm version pinned by `packageManager` in the root `package.json`.
 - Python 3 and a C++ toolchain for native dependencies. Release CI selects Python 3.12.
-- Build on the target operating system: Linux, macOS or Windows. The release workflow builds x64 and arm64 on native runners.
+- The release workflow builds Windows x64, macOS ARM64 (Apple Silicon), and Linux x64 on GitHub-hosted runners.
 
 ### Linux
 
@@ -56,18 +56,15 @@ Compiled bundles are written to `packages/desktop/out/`. The shorter `pnpm run b
 
 Run the command for your host platform:
 
-| Command                      | Output                                        |
-| ---------------------------- | --------------------------------------------- |
-| `pnpm run build:win:x64`     | Windows x64 NSIS installer and zip            |
-| `pnpm run build:win:arm64`   | Windows arm64 NSIS installer and zip          |
-| `pnpm run build:mac:x64`     | Intel macOS DMG and zip                       |
-| `pnpm run build:mac:arm64`   | Apple Silicon macOS DMG and zip               |
-| `pnpm run build:linux:x64`   | Linux x64 AppImage, snap, deb, rpm and tar.gz |
-| `pnpm run build:linux:arm64` | Linux arm64 AppImage, deb, rpm and tar.gz     |
+| Command                    | Output                                        |
+| -------------------------- | --------------------------------------------- |
+| `pnpm run build:win:x64`   | Windows x64 NSIS installer and zip            |
+| `pnpm run build:mac:arm64` | Apple Silicon macOS DMG and zip               |
+| `pnpm run build:linux:x64` | Linux x64 AppImage, snap, deb, rpm and tar.gz |
 
 Each packaging script minifies locales, rebuilds native modules, compiles the app and runs electron-builder with publishing disabled. Installers land in the repository-root `dist/`, configured by `directories.output: ../../dist` in `packages/desktop/electron-builder.yml`.
 
-The shorter commands remain available: `build:win` selects x64; `build:mac` and `build:linux` use their electron-builder configuration without an explicit architecture argument. Use the architecture-specific scripts to match CI.
+The shorter commands `build:win`, `build:mac` and `build:linux` produce the same architectures as the release workflow.
 
 ## Development and checks
 

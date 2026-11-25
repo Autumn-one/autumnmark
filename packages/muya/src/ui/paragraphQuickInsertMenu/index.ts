@@ -5,8 +5,10 @@ import type {
     IQuickInsertMenuItem,
 } from './config';
 import Fuse from 'fuse.js';
+import { replaceOp, type } from 'ot-json1';
 import { canInsertLabel, replaceBlockByLabel } from '../../block/blockTransforms';
 import ParagraphContent from '../../block/content/paragraphContent';
+import { asDoc, asState } from '../../state';
 import { deepClone } from '../../utils';
 import { query } from '../../utils/dom';
 import { h, patch } from '../../utils/snabbdom';
@@ -14,6 +16,8 @@ import BaseScrollFloat from '../baseScrollFloat';
 import { renderMenuIcon } from '../menuIcon';
 import { getShortcutHint } from '../shortcuts';
 import {
+    DRAWING_INSERT_ITEM,
+    DRAWING_INSERT_LABEL,
     getLabelFromEvent,
     MENU_CONFIG,
 } from './config';
@@ -212,6 +216,13 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
         const { i18n } = muya;
         const canInsertFrontMatter = checkCanInsertFrontMatter(muya, block!);
         const menuConfig = deepClone(MENU_CONFIG);
+        const drawing = muya.options.embeddedDrawing?.quickInsert;
+        if (drawing) {
+            menuConfig.find(menu => menu.name === 'diagrams')?.children.push({
+                ...DRAWING_INSERT_ITEM,
+                title: drawing.title(),
+            });
+        }
 
         if (!canInsertFrontMatter) {
             menuConfig
@@ -224,7 +235,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
             menu.children = menu.children.filter(({ label }) => {
                 if (!canInsertLabel(label, muya))
                     return false;
-                return !label.startsWith('github-alert ') || block?.parent?.parent?.isScrollPage;
+                return !(label.startsWith('github-alert ') || label === 'content-tabs' || label === 'fold-block') || block?.parent?.parent?.isScrollPage;
             });
         }
         const availableMenus = menuConfig.filter(menu => menu.children.length);
@@ -266,14 +277,38 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
     override selectItem({ label }: IQuickInsertMenuItem['children'][number]) {
         const { _block: block, muya } = this;
         if (block?.outMostBlock) {
-            replaceBlockByLabel({
-                label,
-                block: block.parent!,
-                muya,
-            });
+            if (label === DRAWING_INSERT_LABEL)
+                this._insertDrawing(block);
+            else
+                replaceBlockByLabel({ label, block: block.parent!, muya });
         }
         // delay hide to avoid dispatch enter handler
         setTimeout(this.hide.bind(this));
+    }
+
+    private _insertDrawing(block: ParagraphContent) {
+        const { muya } = this;
+        const insert = muya.options.embeddedDrawing?.quickInsert?.open;
+        muya.flush();
+        const paragraph = block.parent;
+        if (!insert || muya.isReadOnly || !paragraph || !muya.isBlockInDocument(block) || !checkQuickInsert(block.text))
+            return;
+        const { jsonState } = muya.editor;
+        const snapshot = jsonState.rawState;
+        const path = paragraph.path;
+        const previous = paragraph.getState();
+        const embeddedIndex = [...muya.domNode.querySelectorAll('.mu-embedded-drawing, .mu-inline-drawing')].filter(preview =>
+            preview.compareDocumentPosition(paragraph.domNode!) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).length;
+        insert({
+            markdown: jsonState.getMarkdown(),
+            embeddedIndex,
+            replace: (markup) => {
+                const [replacement] = jsonState.markdownToState(markup);
+                const op = replaceOp(path, asDoc(previous), asDoc(replacement));
+                return jsonState.getMarkdownFromState(asState(type.apply(asDoc(snapshot), op)));
+            },
+        });
     }
 
     getItemElement(item: IQuickInsertMenuItem['children'][number]) {

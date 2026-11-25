@@ -24,21 +24,9 @@ jobs:
             os: ubuntu-latest
             platform: linux
             arch: x64
-          - name: linux-arm64
-            os: ubuntu-24.04-arm
-            platform: linux
-            arch: arm64
           - name: windows-x64
             os: windows-latest
             platform: windows
-            arch: x64
-          - name: windows-arm64
-            os: windows-11-arm
-            platform: windows
-            arch: arm64
-          - name: macos-x64
-            os: macos-15-intel
-            platform: macos
             arch: x64
           - name: macos-arm64
             os: macos-15
@@ -86,7 +74,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: marktext-${{ matrix.name }}
+          name: autumnmark-${{ matrix.name }}
           retention-days: 30
           path: |
             dist/*.exe

@@ -15,6 +15,7 @@ import type Keybindings from '../keyboard/shortcutHandler'
 import type { UserPreferencesPatch } from '@shared/types/preferences'
 import { RecentDocumentsStore, type RecentDocument } from './recentDocuments'
 import type { ResourceMove } from 'common/filesystem/resourceMove'
+import type { ApplicationMenuCategory, MenuPopupPosition } from '@shared/types/menu'
 
 const RECENTLY_USED_DOCUMENTS_FILE_NAME = 'recently-used-documents.json'
 
@@ -403,12 +404,42 @@ class AppMenu {
   }
 
   _listenForIpcMain(): void {
+    ipcMain.handle('mt::menu::application-categories', (event): ApplicationMenuCategory[] => {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      const menu = window && this.windowMenus.get(window.id)?.menu
+      return menu?.items.flatMap((item, index) =>
+        item.visible && item.submenu ? [{ index, label: item.label, enabled: item.enabled }] : []
+      ) ?? []
+    })
+    ipcMain.handle(
+      'mt::menu::popup-application-category',
+      async(event, index: number, position: MenuPopupPosition): Promise<void> => {
+        const window = BrowserWindow.fromWebContents(event.sender)
+        if (!window || !Number.isInteger(index)) return
+        const item = this.windowMenus.get(window.id)?.menu?.items[index]
+        if (!item?.visible || !item.enabled || !item.submenu) return
+        if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return
+
+        // Renderer bounds are CSS pixels; native menus use device-independent pixels.
+        const zoom = event.sender.getZoomFactor()
+        const submenu = item.submenu
+        await new Promise<void>((resolve) => {
+          submenu.popup({
+            window,
+            x: Math.round(position.x * zoom),
+            y: Math.round(position.y * zoom),
+            callback: resolve
+          })
+        })
+      }
+    )
     ipcMain.on('mt::update-document-mode', (event, readOnly: boolean, hasDocument = true) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return
       this._documentModes.set(win.id, readOnly)
       this._documentPresence.set(win.id, hasDocument)
       this._applyDocumentMode(win.id)
+      event.sender.send('mt::menu::application-categories-changed')
     })
     ipcMain.on('mt::add-recently-used-document', (_e, pathname: string) => {
       this.addRecentlyUsedDocument(pathname)
@@ -457,15 +488,13 @@ class AppMenu {
       this._applyDocumentMode(windowId, (menu) => updateSelectionMenus(menu, changes))
     })
 
-    // In source-code mode the Paragraph and Format commands act on the hidden
-    // WYSIWYG engine, so grey them out; on return to WYSIWYG they are re-enabled
-    // and the next selection change refines them (#3531).
+    // Source mode owns video insertion. Other formatting commands target the hidden Muya view.
     ipcMain.on('mt::set-editor-format-menus-enabled', (_e, windowId: number, enabled: boolean) => {
       if (!this.has(windowId)) return
       this._applyDocumentMode(windowId, (menu) => {
         for (const id of ['paragraphMenuEntry', 'formatMenuItem']) {
           const entry = menu.getMenuItemById(id)
-          entry?.submenu?.items.forEach((item) => (item.enabled = enabled))
+          entry?.submenu?.items.forEach((item) => { item.enabled = enabled || item.id === 'videoMenuItem' })
         }
       })
     })
@@ -478,7 +507,7 @@ class AppMenu {
     })
 
     onInternalChannel('broadcast-preferences-changed', async(prefs: UserPreferencesPatch) => {
-      if (prefs.theme !== undefined || prefs.followSystemTheme !== undefined) {
+      if (prefs.theme !== undefined || prefs.followSystemTheme !== undefined || prefs.localThemes !== undefined) {
         this.updateAppMenu()
       }
       if (prefs.autoSave !== undefined) {

@@ -3,20 +3,21 @@ import type Format from '../block/base/format';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import { CLASS_NAMES } from '../config';
+import { equalSelections } from '../selection/state';
 import { getUniqueId } from '../utils';
 import { getImageInfo, imageToMarkdown } from '../utils/image';
 import { readFileAsDataURL, resolveClipboardImagePath } from '../utils/paste';
 
 // Replace the current range with image Markdown and return the inserted text.
 // Escape the source so path delimiters survive Markdown parsing.
-function insertImageText(anchorBlock: Content, src: string, alt = ''): string {
+function insertImageText(anchorBlock: Content, src: string, alt = '', title = ''): string {
     const cursor = anchorBlock.getCursor();
     if (!cursor)
         return '';
 
     const { start, end } = cursor;
     const { text: content } = anchorBlock;
-    const imageText = imageToMarkdown({ alt, src });
+    const imageText = imageToMarkdown({ alt, src, title });
 
     anchorBlock.text
         = content.substring(0, start.offset)
@@ -60,6 +61,11 @@ export async function insertImageSrc(
     if (clipboard.muya.isReadOnly || !clipboard.muya.isBlockInDocument(anchorBlock))
         return;
     const { imageAction } = clipboard.muya.options;
+    const embedded = clipboard.muya.options.embedImage?.(src);
+    if (embedded) {
+        await pasteEmbeddedImage(clipboard, anchorBlock, embedded);
+        return;
+    }
 
     if (!imageAction) {
         insertImageText(anchorBlock, src);
@@ -78,6 +84,34 @@ export async function insertImageSrc(
         finalSrc = resolved;
 
     replacePlaceholderImage(anchorBlock, placeholderText, finalSrc);
+}
+
+export async function pasteEmbeddedImage(clipboard: Clipboard, target: Content, pending: Promise<string>, alt = '', title = ''): Promise<void> {
+    const { muya, selection } = clipboard;
+    const before = selection.getSelectionState();
+    const text = target.text;
+    try {
+        const src = await pending;
+        if (!src || muya.isReadOnly || !muya.isBlockInDocument(target) || target.text !== text
+            || !equalSelections(before, selection.getSelectionState())) {
+            return;
+        }
+        muya.transact(() => {
+            const selected = selection.image;
+            if (selected) {
+                selected.block.replaceImage(selected.imageInfo, { src });
+                return;
+            }
+            if (selection.getTextSelection()?.isSelectionInSameBlock === false)
+                clipboard.cutHandler();
+            const block = selection.getTextSelection()?.anchor.block;
+            if (block)
+                insertImageText(block, src, alt, title);
+        });
+    }
+    catch (error) {
+        muya.eventCenter.emit('image-drop-error', error);
+    }
 }
 
 // Resolve a pasted image to an `src`: a clipboard FILE path (via the

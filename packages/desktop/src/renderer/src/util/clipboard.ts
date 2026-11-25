@@ -16,6 +16,10 @@ export const readImagePng = async(src: string): Promise<Uint8Array> => {
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
   }
+  return rasterizeImage(`data:${result.mime};base64,${btoa(binary)}`, 'image/png')
+}
+
+export async function rasterizeImage(src: string, mime: 'image/png' | 'image/jpeg') {
   const image = new Image()
   await new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => reject(new Error('Image decoding timed out')), 15_000)
@@ -27,7 +31,7 @@ export const readImagePng = async(src: string): Promise<Uint8Array> => {
       window.clearTimeout(timer)
       reject(new Error('Image could not be decoded'))
     }
-    image.src = `data:${result.mime};base64,${btoa(binary)}`
+    image.src = src
   })
   const { naturalWidth: width, naturalHeight: height } = image
   if (!width || !height || width * height > MAX_PIXELS)
@@ -38,8 +42,12 @@ export const readImagePng = async(src: string): Promise<Uint8Array> => {
   try {
     const context = canvas.getContext('2d')
     if (!context) throw new Error('Image could not be copied')
+    if (mime === 'image/jpeg') {
+      context.fillStyle = '#fff'
+      context.fillRect(0, 0, width, height)
+    }
     context.drawImage(image, 0, 0)
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.92))
     if (!blob) throw new Error('Image could not be copied')
     return new Uint8Array(await blob.arrayBuffer())
   } finally {
@@ -50,15 +58,16 @@ export const readImagePng = async(src: string): Promise<Uint8Array> => {
 export const copyImageToClipboard = async(
   load: () => Promise<Uint8Array>,
   data?: ImageClipboardFallback,
-  isCurrent: () => boolean = () => true
+  isCurrent: () => boolean = () => true,
+  mime: 'image/png' | 'image/jpeg' = 'image/png'
 ): Promise<boolean> => {
   const clipboard = window.electron.clipboard
   const ticket = await clipboard.beginImageCopy(data?.marker)
   if (ticket === null) return false
   try {
-    const png = await load()
+    const bytes = await load()
     if (!isCurrent()) return false
-    return await clipboard.writeImage(png, { ticket, text: data?.text, html: data?.html })
+    return await clipboard.writeImage(bytes, { ticket, mime, text: data?.text, html: data?.html })
   } finally {
     await clipboard.cancelImageCopy(ticket)
   }

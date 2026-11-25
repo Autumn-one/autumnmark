@@ -74,6 +74,7 @@ export function wheelZoomFactor(event: WheelEvent): number {
 
 export interface ZoomPanOptions {
   onChange?: (state: ZoomState) => void
+  onBackdropClick?: () => void
   /**
    * Where wheel events are listened for. Defaults to the viewport, which is
    * wrong wherever something is layered on top of it: the wheel would then be
@@ -91,11 +92,13 @@ export class ZoomPanController {
   private _dragging = false
   private _originX = 0
   private _originY = 0
+  private _backdropPress?: { x: number; y: number }
   private readonly _wheelSurface: HTMLElement
   private readonly _onWheel: (event: WheelEvent) => void
   private readonly _onMouseDown: (event: MouseEvent) => void
   private readonly _onMouseMove: (event: MouseEvent) => void
   private readonly _onMouseUp: () => void
+  private readonly _onClick: (event: MouseEvent) => void
 
   constructor(
     private readonly viewport: HTMLElement,
@@ -112,6 +115,9 @@ export class ZoomPanController {
       this._apply(zoomAt(this._state, factor, event.clientX, event.clientY, cx, cy))
     }
     this._onMouseDown = (event) => {
+      this._backdropPress = event.button === 0 && event.target === viewport
+        ? { x: event.clientX, y: event.clientY }
+        : undefined
       if (event.button !== 0) return
       this._dragging = true
       this._originX = event.clientX - this._state.x
@@ -120,6 +126,10 @@ export class ZoomPanController {
       event.preventDefault()
     }
     this._onMouseMove = (event) => {
+      const press = this._backdropPress
+      if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 4) {
+        this._backdropPress = undefined
+      }
       if (!this._dragging) return
       this._apply({
         ...this._state,
@@ -128,12 +138,19 @@ export class ZoomPanController {
       })
     }
     this._onMouseUp = () => this._endDrag()
+    this._onClick = (event) => {
+      const pressed = this._backdropPress
+      this._backdropPress = undefined
+      if (pressed && event.target === viewport) this.options.onBackdropClick?.()
+    }
 
     this._wheelSurface.addEventListener('wheel', this._onWheel, { passive: false })
     this.viewport.addEventListener('mousedown', this._onMouseDown)
+    this.viewport.addEventListener('click', this._onClick)
     // A drag released outside the window still has to finish (#5393): once the
     // pointer hit-tests <html>, `document.body` stops seeing these events.
-    document.addEventListener('mousemove', this._onMouseMove)
+    // The modal stops bubbling mouse moves before they reach editor hover tools.
+    document.addEventListener('mousemove', this._onMouseMove, true)
     document.addEventListener('mouseup', this._onMouseUp)
   }
 
@@ -168,7 +185,8 @@ export class ZoomPanController {
     this._endDrag()
     this._wheelSurface.removeEventListener('wheel', this._onWheel)
     this.viewport.removeEventListener('mousedown', this._onMouseDown)
-    document.removeEventListener('mousemove', this._onMouseMove)
+    this.viewport.removeEventListener('click', this._onClick)
+    document.removeEventListener('mousemove', this._onMouseMove, true)
     document.removeEventListener('mouseup', this._onMouseUp)
   }
 

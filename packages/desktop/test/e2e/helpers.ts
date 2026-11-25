@@ -23,9 +23,6 @@ const getTempPath = (suffix = ''): string => {
 }
 
 export const getElectronPath = (): string => {
-  if (process.platform === 'win32') {
-    return path.resolve(path.join('node_modules', '.bin', 'electron.cmd'))
-  }
   const pathTxt = path.join(projectRoot, 'node_modules/electron/path.txt')
   const relPath = fs.readFileSync(pathTxt, 'utf-8').trim()
   return path.join(projectRoot, 'node_modules/electron/dist', relPath)
@@ -99,6 +96,7 @@ export const launchElectron = async(
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
   if (options.suppressErrorDialog) env.MARKTEXT_ERROR_INTERACTION = '1'
+  env.MARKTEXT_TEST_SKILL_HOME = path.join(userDataDir, 'skill-home')
   Object.assign(env, options.env)
   const app = await _electron.launch({
     executablePath,
@@ -456,10 +454,8 @@ export const sendIpcToRenderer = async<K extends keyof IpcMainEventChannels>(
   )
 }
 
-export const makeRoomForOutline = async(app: ElectronApplication, page: Page): Promise<void> => {
-  const window = await app.browserWindow(page)
-  await window.evaluate((window) => {
-    const [, height] = window.getContentSize()
-    window.setContentSize(1600, height)
-  })
+export const showOutline = async(app: ElectronApplication, page: Page): Promise<void> => {
+  const outline = page.locator('#sidebar-panel-outline')
+  if (!(await outline.isVisible())) await clickMenuById(app, 'tocMenuItem')
+  await expect(outline).toBeVisible()
 }

@@ -1,6 +1,17 @@
 name: E2E Test
 
 on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Hosted OS for the desktop test
+        type: choice
+        options: [linux, windows]
+        default: linux
+      grep:
+        description: Playwright test title pattern (empty runs the full desktop suite)
+        type: string
+        required: false
   pull_request:
     types: [opened, synchronize, reopened]
     # This is the desktop electron Playwright suite. packages/muya has its
@@ -9,16 +20,21 @@ on:
       - 'packages/muya/**'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
   e2e:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.platform == 'windows' && 'windows-latest' || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v7
 
+      - name: Enable long paths on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.longpaths true
+
       - name: Install System Dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -27,6 +43,8 @@ jobs:
             libdrm2 libgtk-3-0 libgbm1 libasound2t64
 
       - uses: ./.github/actions/setup
+        with:
+          desktop-only: 'true'
 
       # Run the full postinstall: Electron binary download, patch-package,
       # electron-rebuild, and minify-locales.
@@ -41,4 +59,13 @@ jobs:
         run: pnpm build
 
       - name: Run E2E Tests
-        run: xvfb-run --auto-servernum pnpm test:e2e
+        shell: bash
+        env:
+          TEST_GREP: ${{ inputs.grep }}
+        run: |
+          tests=(pnpm test:e2e --grep="${TEST_GREP:-.*}")
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run --auto-servernum "${tests[@]}"
+          else
+            "${tests[@]}"
+          fi

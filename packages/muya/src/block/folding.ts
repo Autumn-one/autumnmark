@@ -85,6 +85,7 @@ export function refreshFoldVisibility(parent: Parent, foldChanged = false): void
     blocks.forEach((block, index) => {
         block.domNode?.classList.toggle(CLASS_NAMES.MU_FOLDED_CONTENT, hidden[index]);
     });
+    parent.muya.editor.contentTabs?.refreshBarVisibility();
 }
 
 function getContainingFoldedHeadings(block: TreeNode): IFoldableHeading[] {
@@ -132,6 +133,8 @@ export function isHiddenByFold(block: TreeNode): boolean {
 
 /** Reveal a target without unfolding unrelated sections or the target heading itself. */
 export function revealBlock(block: TreeNode): void {
+    block.muya.editor.contentTabs.reveal(block);
+    block.muya.editor.foldBlocks.reveal(block);
     if (!isHiddenByFold(block))
         return;
     for (const heading of getContainingFoldedHeadings(block))

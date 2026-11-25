@@ -1,5 +1,15 @@
-appId: com.github.marktext.marktext
-productName: MarkText
+# NSIS derives the Windows uninstall key from appId. Keep it in sync with APP_ID in src/shared/brand.ts.
+appId: io.github.autumn-one.autumnmark
+productName: AutumnMark
+# The packaged name determines the updater cache and Linux package name.
+extraMetadata:
+  name: autumnmark
+publish:
+  provider: github
+  owner: Autumn-one
+  repo: autumnmark
+  # Older releases used MarkText's install identity. Match scripts/merge-release-artifacts.py.
+  channel: autumnmark
 directories:
   buildResources: build
   output: ../../dist
@@ -68,6 +78,8 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
   - zh_TW
 
 electronFuses:
+  # The installed Skill invokes its bundled bridge with the app's Electron runtime.
+  runAsNode: true
   # Node's CLI parser inside Electron rejects `--debug` (DEP0062, exit 9) before
   # MarkText can read it (#5409). With this fuse off the packaged app ignores
   # Node's inspector flags, so `--debug` reaches MarkText.
@@ -79,52 +91,17 @@ electronFuses:
 
 asarUnpack:
   - resources/**
-fileAssociations:
-  - ext: md
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: markdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mmd
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtxt
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtext
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
 win:
-  executableName: marktext
-  artifactName: 'marktext-win-${arch}-${version}.${ext}'
+  executableName: autumnmark
+  artifactName: 'autumnmark-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
+      arch: [x64]
     - target: 'zip'
+      arch: [x64]
   icon: static/icon.ico
 nsis:
-  artifactName: 'marktext-win-${arch}-${version}-setup.${ext}'
+  artifactName: 'autumnmark-win-${arch}-${version}-setup.${ext}'
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: true
@@ -134,7 +111,14 @@ nsis:
   perMachine: false
   include: windows/installer.nsh
 mac:
-  artifactName: 'marktext-mac-${arch}-${version}.${ext}'
+  fileAssociations:
+    - ext: [md, markdown, mmd, mdown, mdtxt, mdtext]
+      name: Markdown
+      description: Markdown document
+      mimeType: text/markdown
+      role: Editor
+      icon: icons/md.ico
+  artifactName: 'autumnmark-mac-${arch}-${version}.${ext}'
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -143,10 +127,12 @@ mac:
   icon: static/icon.icns
   notarize: false
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
 dmg:
-  artifactName: 'marktext-mac-${arch}-${version}.${ext}'
+  artifactName: 'autumnmark-mac-${arch}-${version}.${ext}'
   contents:
     - x: 410
       y: 240
@@ -156,8 +142,8 @@ dmg:
       y: 240
       type: 'file'
 linux:
-  artifactName: 'marktext-linux-${version}.${ext}'
-  executableName: 'marktext'
+  artifactName: 'autumnmark-linux-${version}.${ext}'
+  executableName: 'autumnmark'
   description: 'A simple and elegant open-source markdown editor that focused on speed and usability.'
   maintainer: 'MarkText Contributors'
   category: 'Office;TextEditor;Utility'
@@ -166,14 +152,19 @@ linux:
   icon: 'static/icon.png'
   desktop:
     entry:
-      StartupWMClass: 'marktext'
-      Keywords: 'marktext;'
+      StartupWMClass: 'AutumnMark'
+      Keywords: 'autumnmark;markdown;'
   target:
-    - AppImage
-    - snap
-    - deb
-    - rpm
-    - tar.gz
+    - target: AppImage
+      arch: [x64]
+    - target: snap
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+    - target: rpm
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
   fileAssociations:
     - ext: 'md'
       name: 'Markdown'

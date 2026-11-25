@@ -53,6 +53,10 @@ class TreeNode implements ILinkedNode {
         return this.blockName === 'scrollpage';
     }
 
+    get isInert(): boolean {
+        return !!this.domNode?.closest('[inert]');
+    }
+
     get isOutMostBlock(): boolean {
         return this.parent ? this.parent.isScrollPage : false;
     }
@@ -102,14 +106,14 @@ class TreeNode implements ILinkedNode {
         this.domNode = domNode;
     }
 
-    /** Pass skipFolded for caret navigation; editing defaults to the full block tree. */
-    previousContentInContext(skipFolded = false): Nullable<Content> {
+    /** Pass visibleOnly for caret navigation; editing defaults to the full block tree. */
+    previousContentInContext(visibleOnly = false): Nullable<Content> {
         if (this.isScrollPage || !this.parent)
             return null;
 
-        if (skipFolded) {
+        if (visibleOnly) {
             let content = this.previousContentInContext();
-            while (content && isHiddenByFold(content))
+            while (content && !content._isCaretVisible)
                 content = content.previousContentInContext();
             return content;
         }
@@ -136,14 +140,14 @@ class TreeNode implements ILinkedNode {
         return parent.previousContentInContext();
     }
 
-    /** Pass skipFolded for caret navigation; editing defaults to the full block tree. */
-    nextContentInContext(skipFolded = false): Nullable<Content> {
+    /** Pass visibleOnly for caret navigation; editing defaults to the full block tree. */
+    nextContentInContext(visibleOnly = false): Nullable<Content> {
         if (this.isScrollPage || !this.parent)
             return null;
 
-        if (skipFolded) {
+        if (visibleOnly) {
             let content = this.nextContentInContext();
-            while (content && isHiddenByFold(content))
+            while (content && !content._isCaretVisible)
                 content = content.nextContentInContext();
             return content;
         }
@@ -169,6 +173,10 @@ class TreeNode implements ILinkedNode {
         }
 
         return parent.nextContentInContext();
+    }
+
+    private get _isCaretVisible(): boolean {
+        return !this.isInert && !isHiddenByFold(this) && !this.muya.editor.contentTabs.isHidden(this) && !this.muya.editor.foldBlocks.isHidden(this);
     }
 
     isOnlyChild() {

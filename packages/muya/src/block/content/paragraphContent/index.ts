@@ -20,7 +20,8 @@ import { tokenEvents } from '../../../inline/model/traversal';
 import { parseInline } from '../../../inline/parser/lexer';
 import { isListItemState, isTaskListItemState } from '../../../state/types';
 import { ChangeSource } from '../../../types';
-import { firstWordOfInfo, isKeyboardEvent, isLengthEven, parseFenceLine } from '../../../utils';
+import { isKeyboardEvent, isLengthEven, parseFenceLine } from '../../../utils';
+import { codeFenceLanguage } from '../../../utils/codeFenceAnnotations';
 import { createDiagramState, diagramTypeOfLang } from '../../../utils/diagram/fence';
 import { matchGithubAlertMarker } from '../../../utils/githubAlerts';
 import logger from '../../../utils/logger';
@@ -58,7 +59,7 @@ const TABLE_BLOCK_REG = /^\|.*?(\\*)\|.*?(\\*)\|/;
 
 type BlockConversion
     = | { kind: 'math' }
-        | { kind: 'code'; lang: string; fenceChar: '`' | '~' }
+        | { kind: 'code'; info: string; fenceChar: '`' | '~'; fenceLength: number }
         | { kind: 'table' }
         | { kind: 'html'; tagName: string }
         | { kind: 'multiline-blockquote' }
@@ -85,7 +86,7 @@ function matchBlockConversion(
 
     const fence = parseFenceLine(text);
     if (fence)
-        return { kind: 'code', lang: firstWordOfInfo(fence.info), fenceChar: fence.fenceChar };
+        return { kind: 'code', ...fence };
 
     const tableMatch = TABLE_BLOCK_REG.exec(text);
     if (tableMatch && isLengthEven(tableMatch[1]) && isLengthEven(tableMatch[2]))
@@ -309,8 +310,8 @@ class ParagraphContent extends Format {
             }
 
             case 'code': {
-                const { lang, fenceChar } = match;
-                const diagramType = diagramTypeOfLang(lang);
+                const { info, fenceChar, fenceLength } = match;
+                const diagramType = diagramTypeOfLang(codeFenceLanguage(info));
                 if (diagramType) {
                     const state = createDiagramState(diagramType);
                     const diagramBlock = ScrollPage.loadBlock(state.name).create(
@@ -326,9 +327,10 @@ class ParagraphContent extends Format {
                     const state = {
                         name: 'code-block',
                         meta: {
-                            lang,
+                            lang: info.trim(),
                             type: 'fenced',
                             fenceChar,
+                            ...(fenceLength > 3 ? { fenceLength } : {}),
                         },
                         text: '',
                     };
@@ -642,6 +644,15 @@ class ParagraphContent extends Format {
     }
 
     private _handleBackspaceInParagraph(this: ParagraphContent) {
+        const previousBlock = this.parent!.prev;
+        if (previousBlock?.blockName === 'table') {
+            this.muya.transact(() => {
+                previousBlock.remove();
+                this.setCursor(0, 0);
+            });
+            return;
+        }
+
         const previousContentBlock = this.previousContentInContext();
         if (!previousContentBlock)
             return;

@@ -202,6 +202,14 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
     label: string;
     text?: string;
 }) {
+    if (label === 'content-tabs') {
+        insertContentTabs(block, muya, text);
+        return;
+    }
+    if (label === 'fold-block') {
+        insertFoldBlock(block, muya, text);
+        return;
+    }
     if (label.startsWith('github-alert ') || (['block-quote', 'github-alert'].includes(block.blockName) && muya.options.githubAlerts && (label === 'paragraph' || label === 'block-quote'))) {
         convertGithubAlert(block, label, text);
         return;
@@ -234,6 +242,34 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
 
     block.replaceWith(newBlock);
     finishInsertedBlock(newBlock, muya, label);
+}
+
+function insertContentTabs(block: Parent, muya: Muya, text: string): void {
+    if (!block.parent?.isScrollPage)
+        return;
+    const title = muya.i18n.t('Tab');
+    const replacements = muya.editor.scrollPage!.replaceBlock(block, [
+        { name: 'html-block', text: '<!-- tabs -->' },
+        { name: 'atx-heading', meta: { level: 4 }, text: `#### | ${title} 1` },
+        { name: 'paragraph', text },
+        { name: 'atx-heading', meta: { level: 4 }, text: `#### | ${title} 2` },
+        { name: 'paragraph', text: '' },
+        { name: 'html-block', text: '<!-- /tabs -->' },
+    ]);
+    muya.editor.contentTabs.selectTitle(replacements[1]);
+}
+
+function insertFoldBlock(block: Parent, muya: Muya, text: string): void {
+    if (!block.parent?.isScrollPage)
+        return;
+    const title = muya.i18n.t('Fold block');
+    const replacements = muya.editor.scrollPage!.replaceBlock(block, [
+        { name: 'html-block', text: '<!-- fold -->' },
+        { name: 'atx-heading', meta: { level: 3 }, text: `### ${title}` },
+        { name: 'paragraph', text },
+        { name: 'html-block', text: '<!-- /fold -->' },
+    ]);
+    muya.editor.foldBlocks.editTitle(replacements[1]);
 }
 
 // A thematic break needs a trailing paragraph so the user can continue typing.

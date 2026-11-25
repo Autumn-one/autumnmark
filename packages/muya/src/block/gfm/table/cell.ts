@@ -1,6 +1,6 @@
 import type Table from '.';
 import type { Muya } from '../../../muya';
-import type { ITableCellMeta, ITableCellState } from '../../../state/types';
+import type { ITableCellMeta, ITableCellState, TTableColumnWidth } from '../../../state/types';
 import type TableCellContent from '../../content/tableCell';
 import type Row from './row';
 import type TableInner from './table';
@@ -9,6 +9,11 @@ import { LinkedList } from '../../base/linkedList/linkedList';
 import Parent from '../../base/parent';
 import LeafQueryBlock from '../../mixins/leafQueryBlock';
 import { ScrollPage } from '../../scrollPage';
+
+export function displayColumnWidth(cell: HTMLElement, width?: TTableColumnWidth) {
+    cell.classList.toggle('mu-table-cell-fill', width === '100%');
+    cell.style.setProperty('--mu-cell-width', typeof width === 'number' ? `${width}px` : '');
+}
 
 @mixins(LeafQueryBlock)
 class TableBodyCell extends Parent {
@@ -71,6 +76,8 @@ class TableBodyCell extends Parent {
         };
         this.classList = ['mu-table-cell'];
         this.createDomNode();
+        if (meta.width)
+            displayColumnWidth(this.domNode!, meta.width);
     }
 
     override getState(): ITableCellState {

@@ -1,5 +1,5 @@
 import { shell } from 'electron'
-import { GITHUB_REPO_URL } from '../config'
+import { GITHUB_REPO_URL } from '@shared/brand'
 
 export const createGitHubIssueUrl = (title?: string, msg?: string): string => {
   const issueUrl = new URL(`${GITHUB_REPO_URL}/issues/new`)

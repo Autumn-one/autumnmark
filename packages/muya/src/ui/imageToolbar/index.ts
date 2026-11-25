@@ -48,7 +48,7 @@ export class ImageToolBar extends BaseFloat {
         super.listen();
         eventCenter.on('selection-change', ({ selection }) => {
             const image = selection?.kind === SelectionType.IMAGE ? selection.context : null;
-            if (this.muya.isReadOnly || !image?.domNode) {
+            if (this.muya.isReadOnly || !image?.domNode || image.domNode.closest('.mu-inline-drawing')) {
                 this.hide();
                 return;
             }

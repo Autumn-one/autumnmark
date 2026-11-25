@@ -267,7 +267,7 @@ test('closing one window removes it from restoreAll without reviving discarded c
   }
 })
 
-test('stale ordinary-file windows collapse to one blank fallback and an explicit file wins over recovery', async() => {
+test('stale files fall back to one window and opening a file keeps its recovered draft', async() => {
   const directory = mkdtempSync(join(tmpdir(), 'mt-session-stale-'))
   const firstPath = join(directory, 'first.md')
   const secondPath = join(directory, 'second.md')
@@ -318,7 +318,8 @@ test('stale ordinary-file windows collapse to one blank fallback and an explicit
       explicit.page.getByRole('textbox', { name: 'Document', exact: true })
     ).toContainText('Explicit requested file')
     expect(explicit.app.windows()).toHaveLength(1)
-    expect(state(directory).session.windows[0].documents).toHaveLength(1)
+    expect(state(directory).session.windows[0].documents).toHaveLength(2)
+    expect(state(directory).session.windows[0].id).toBe(previous.id)
     expect(
       readFileSync(
         join(directory, 'recovery', previous.id, `${previous.documents[0].id}.json`),

@@ -35,6 +35,8 @@ class DiagramContainer extends Parent {
         this.tagName = 'pre';
         this.meta = meta;
         this.classList = ['mu-diagram-container'];
+        if (meta.type === 'excalidraw' && muya.options.embeddedDrawing)
+            this.attributes.inert = '';
         this.createDomNode();
     }
 

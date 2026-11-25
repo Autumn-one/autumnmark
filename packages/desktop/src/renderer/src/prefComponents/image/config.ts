@@ -13,5 +13,9 @@ export const getImageActions = (): PrefSelectOption<string>[] => [
   {
     label: t('preferences.image.actions.path'),
     value: 'path'
+  },
+  {
+    label: t('preferences.image.actions.embed'),
+    value: 'embed'
   }
 ]

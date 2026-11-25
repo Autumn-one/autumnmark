@@ -177,7 +177,7 @@ export type MuyaSelection =
 
 /** Independent rendered/source positions plus folding state for one document. */
 export interface DocumentViewState {
-  // Hash of the editor's Markdown string encoded as UTF-8, not the raw disk bytes.
+  // SHA-256 of the UTF-8 editor text, with stable payload digests in place of session-local video references.
   contentSha256: string
   sourceSelection: SourceSelection | null
   muyaSelection: MuyaSelection | null

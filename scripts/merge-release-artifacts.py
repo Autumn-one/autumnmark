@@ -8,73 +8,56 @@ import yaml
 
 
 def merge_artifacts(source: Path, destination: Path, version: str) -> None:
-    manifests = {}
-    for name, count in [
-        ('latest.yml', 2),
-        ('latest-mac.yml', 2),
-        ('latest-linux.yml', 1),
-        ('latest-linux-arm64.yml', 1),
-    ]:
-        documents = [yaml.safe_load(path.read_text()) for path in sorted(source.glob(f'*/{name}'))]
-        if len(documents) != count:
-            raise ValueError(f'{name}: expected {count} architecture manifests')
-        if any(document['version'] != version for document in documents):
-            raise ValueError(f'{name}: version does not match release {version}')
-        manifests[name] = documents
+    targets = [
+        ('linux-x64', 'autumnmark-linux.yml', f'autumnmark-linux-{version}',
+         ('.AppImage', '.deb', '.rpm', '.snap', '.tar.gz')),
+        ('macos-arm64', 'autumnmark-mac.yml', f'autumnmark-mac-arm64-{version}',
+         ('.dmg', '.dmg.blockmap', '.zip', '.zip.blockmap')),
+        ('windows-x64', 'autumnmark.yml', f'autumnmark-win-x64-{version}',
+         ('-setup.exe', '-setup.exe.blockmap', '.zip')),
+    ]
+    assets = {}
+    for target, manifest_name, basename, suffixes in targets:
+        directory = source / f'autumnmark-{target}'
+        manifest_path = directory / manifest_name
+        document = yaml.safe_load(manifest_path.read_text(encoding='utf-8'))
+        if document['version'] != version:
+            raise ValueError(f'{manifest_name}: version does not match release {version}')
 
-    destination.mkdir(parents=True, exist_ok=True)
-    for file in sorted(source.glob('*/*')):
-        if file.name in manifests:
-            continue
-        target = destination / file.name
-        if target.exists():
-            # Each builder emits platform-specific diagnostics under the same name.
-            if file.name == 'builder-debug.yml':
-                continue
-            raise ValueError(f'Duplicate release asset: {file.name}')
-        shutil.copy2(file, target)
+        names = {basename + suffix for suffix in suffixes}
+        for name in names:
+            path = directory / name
+            if not path.is_file():
+                raise ValueError(f'{target}: missing release asset {name}')
+            assets[name] = path
 
-    for name, documents in manifests.items():
-        files = sorted(
-            (file for document in documents for file in document['files']),
-            key=lambda file: file['url'],
-        )
-        by_url = {file['url']: file for file in files}
-        if len(by_url) != len(files):
-            raise ValueError(f'{name}: duplicate assets')
-        if len(documents) == 2:
-            for arch in ['arm64', 'x64']:
-                if not any(f'-{arch}-' in url for url in by_url):
-                    raise ValueError(f'{name}: missing {arch}')
-        for file in files:
-            path = destination / file['url']
-            if (
-                Path(file['url']).name != file['url']
-                or not path.is_file()
-                or path.stat().st_size != file['size']
-            ):
-                raise ValueError(f'{name}: missing or truncated asset {file["url"]}')
+        checksums = {}
+        for file in document['files']:
+            name = file['url']
+            if name not in names or name in checksums:
+                raise ValueError(f'{manifest_name}: unexpected or duplicate asset {name}')
+            path = directory / name
+            if path.stat().st_size != file['size']:
+                raise ValueError(f'{manifest_name}: incorrect size for {name}')
             with path.open('rb') as stream:
                 digest = base64.b64encode(hashlib.file_digest(stream, 'sha512').digest()).decode()
             if digest != file['sha512']:
-                raise ValueError(f'{name}: incorrect checksum for {file["url"]}')
+                raise ValueError(f'{manifest_name}: incorrect checksum for {name}')
+            checksums[name] = digest
 
-        # Older updaters use the top-level path rather than the files list.
-        fallback = documents[0]
-        if len(documents) == 2:
-            fallback = next(
-                (document for document in documents if '-x64-' in document.get('path', '')),
-                None,
-            )
-        if fallback is None:
-            raise ValueError(f'{name}: missing legacy x64 fallback')
-        entry = by_url.get(fallback.get('path'))
-        if entry is None or fallback.get('sha512') != entry['sha512']:
-            raise ValueError(f'{name}: legacy path/checksum does not match a verified file')
-        merged = dict(fallback)
-        merged['files'] = files
-        merged['releaseDate'] = max(document['releaseDate'] for document in documents)
-        (destination / name).write_text(yaml.safe_dump(merged, sort_keys=False))
+        # Older updater clients read the top-level path and checksum.
+        legacy_path = document.get('path')
+        if legacy_path not in checksums or checksums[legacy_path] != document.get('sha512'):
+            raise ValueError(f'{manifest_name}: legacy path/checksum does not match a verified file')
+        assets[manifest_name] = manifest_path
+
+        diagnostics = directory / 'builder-debug.yml'
+        if diagnostics.is_file():
+            assets.setdefault(diagnostics.name, diagnostics)
+
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, path in assets.items():
+        shutil.copy2(path, destination / name)
 
 
 if __name__ == '__main__':

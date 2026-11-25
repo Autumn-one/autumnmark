@@ -5,6 +5,7 @@ import path from 'path'
 import { Transform } from 'stream'
 import { pipeline } from 'stream/promises'
 import writeFileAtomic from 'write-file-atomic'
+import { open, realpath, stat } from 'node:fs/promises'
 import { isDirectory, isFile, isSymbolicLink } from 'common/filesystem'
 
 /**
@@ -123,7 +124,39 @@ export const writeFile = async(
   // write-file-atomic also preserves the target's mode/owner, writes through a
   // symlink to its target, and uses a unique temp name — all of which a plain
   // temp+rename dropped.
-  await writeFileAtomicWithRetry(pathname, content, options)
+  await retryAtomicSave(() => writeFileAtomic(pathname, content, options))
+}
+
+export async function writeFileChunks(pathname: string, chunks: AsyncIterable<Uint8Array>) {
+  let target = pathname
+  try {
+    target = await realpath(pathname)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+  const dir = path.dirname(target)
+  if (!isDirectory(dir)) await ensureDir(dir)
+  const previous = await stat(target).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'ENOENT') throw error
+  })
+  const temporary = path.join(dir, '.' + randomUUID() + '.tmp')
+  const file = await open(temporary, 'wx', previous?.mode)
+  try {
+    await file.writeFile(chunks)
+    if (previous) {
+      const current = await file.stat()
+      if (current.uid !== previous.uid || current.gid !== previous.gid) {
+        await file.chown(previous.uid, previous.gid)
+      }
+      if (current.mode !== previous.mode) await file.chmod(previous.mode)
+    }
+    await file.sync()
+    await file.close()
+    await retryAtomicSave(() => rename(temporary, target))
+  } finally {
+    await file.close()
+    await rm(temporary, { force: true })
+  }
 }
 
 // Windows refuses MoveFileEx(REPLACE_EXISTING) — what the atomic save's rename
@@ -150,14 +183,10 @@ const RENAME_RACE_CODES = new Set(['EPERM', 'EACCES', 'EBUSY'])
 // is strictly worse: the last two land on the failing phase again.
 const RENAME_RETRY_DELAYS_MS = [50, 75, 50]
 
-const writeFileAtomicWithRetry = async(
-  pathname: string,
-  content: string | Buffer,
-  options: BufferEncoding | undefined
-): Promise<void> => {
+const retryAtomicSave = async(operation: () => Promise<void>): Promise<void> => {
   for (let attempt = 0; ; attempt++) {
     try {
-      await writeFileAtomic(pathname, content, options)
+      await operation()
       return
     } catch (error) {
       const { code } = error as NodeJS.ErrnoException

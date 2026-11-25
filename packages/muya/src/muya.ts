@@ -45,6 +45,9 @@ import './assets/styles/blockSyntax.css';
 import './assets/styles/index.css';
 import './assets/styles/inlineSyntax.css';
 import './assets/styles/githubAlerts.css';
+import './assets/styles/contentTabs.css';
+import './assets/styles/compactBlocks.css';
+import './assets/styles/foldBlocks.css';
 import './assets/styles/dragDropText.css';
 import './assets/styles/prismjs/light.theme.css';
 
@@ -196,7 +199,8 @@ export class Muya {
         this.hideAllFloatTools();
         this.editor.selection.clearImage();
         this.editor.selection.table.clear();
-        this._refreshReadingPresentation();
+        this._refreshReadingPresentation(true);
+        this.editor.compactBlocks.refresh();
         this.eventCenter.emit('read-only-changed', readOnly);
     }
 
@@ -211,7 +215,7 @@ export class Muya {
         this._cancelReadingLink = attachReadingEvents(this);
     }
 
-    private _refreshReadingPresentation(): void {
+    private _refreshReadingPresentation(modeChanged = false): void {
         const { domNode, isReadOnly } = this;
         const contentEditable = String(!isReadOnly);
         // Reassigning editability on a connected tree makes Chromium revisit every descendant (#5860).
@@ -227,7 +231,7 @@ export class Muya {
             if (node.isContent()) {
                 if (node.domNode?.getAttribute('contenteditable') !== contentEditable)
                     node.domNode?.setAttribute('contenteditable', contentEditable);
-                if (isReadOnly)
+                if (isReadOnly || (modeChanged && node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block'))
                     node.update({});
             }
         });
@@ -437,6 +441,8 @@ export class Muya {
         }
 
         applyAppearance(this.domNode, options);
+        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options)
+            this.editor.compactBlocks.refresh();
         if (!forceRender)
             return;
 
@@ -455,7 +461,9 @@ export class Muya {
 
     private _forceRender() {
         this._prepareDocumentRebuild();
+        const expanded = this.editor.compactBlocks.expandedPaths();
         this.runDocumentUpdate(() => this._renderDocument());
+        this.editor.compactBlocks.restoreExpandedPaths(expanded);
         this._refreshReadingPresentation();
     }
 
@@ -664,8 +672,8 @@ export class Muya {
         return this.editor.selection.getSelectionState();
     }
 
-    setSelection(state: TSelectionState | null): boolean {
-        return this.editor.selection.setSelection(state);
+    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean }): boolean {
+        return this.editor.selection.setSelection(state, options);
     }
 
     /**
@@ -1046,7 +1054,7 @@ export class Muya {
         if (!block?.outMostBlock)
             return;
 
-        const safeRows = Math.max(2, Number.isFinite(rows) ? Math.floor(rows) : 0);
+        const safeRows = Number.isFinite(rows) && rows >= 1 ? Math.floor(rows) : 2;
         const safeColumns = Math.max(1, Number.isFinite(columns) ? Math.floor(columns) : 0);
 
         const makeRow = (): ITableState['children'][number] => ({
@@ -1124,9 +1132,11 @@ export class Muya {
         // without an intermediate paint. setContent clears history, so preserve it here.
         const savedHistory = this.getHistory();
 
+        const expanded = this.editor.compactBlocks.expandedPaths();
         this.editor.setContent(sentinelMarkdown);
         const cursor = resolveSentinelCursor(this.editor.scrollPage!);
         this.editor.setContent(cleanMarkdown);
+        this.editor.compactBlocks.restoreExpandedPaths(expanded);
         this.setHistory(savedHistory);
 
         if (!cursor)
@@ -1587,6 +1597,9 @@ export class Muya {
     }
 
     destroy() {
+        this.editor.compactBlocks.dispose();
+        this.editor.contentTabs.dispose();
+        this.editor.foldBlocks.dispose();
         this.editor.inlineEngine.dispose();
         this.editor.textDrag?.destroy();
         this.editor.selection.cancel();
@@ -1613,6 +1626,12 @@ export class Muya {
 
 function applyAppearance(domNode: HTMLElement, options: Partial<IMuyaOptions>) {
     const { style } = domNode;
+    if ('compactMode' in options)
+        domNode.classList.toggle('mu-compact-mode', !!options.compactMode);
+    if (typeof options.compactVideoMaxHeight === 'number') {
+        domNode.classList.toggle('mu-compact-video-limit', options.compactVideoMaxHeight > 0);
+        style.setProperty('--mu-compact-video-height', `${options.compactVideoMaxHeight}px`);
+    }
     if (typeof options.fontSize === 'number')
         style.setProperty('--mu-font-size', `${options.fontSize}px`);
     if (typeof options.lineHeight === 'number')

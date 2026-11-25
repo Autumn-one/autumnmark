@@ -2,15 +2,18 @@
   <div class="about-dialog">
     <el-dialog
       v-model="showAboutDialog"
-      :show-close="false"
       :modal="true"
       custom-class="ag-dialog-table"
-      width="400px"
+      width="min(460px, calc(100vw - 32px))"
+      :title="name"
     >
-      <img
-        class="logo"
-        :src="MarkTextLogo"
-      >
+      <template #header>
+        <img
+          class="logo"
+          :src="AppLogo"
+          alt=""
+        >
+      </template>
       <el-row>
         <el-col :span="24">
           <h3 class="title">
@@ -36,6 +39,11 @@
           </div>
         </el-col>
       </el-row>
+      <remote-content
+        class="about-remote-content"
+        kind="about"
+        :active="showAboutDialog"
+      />
     </el-dialog>
   </div>
 </template>
@@ -44,12 +52,14 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useMainStore } from '@/store'
 import bus from '../../bus'
-import MarkTextLogo from '../../assets/images/logo.png'
+import AppLogo from '../../assets/images/logo.png'
 import { useI18n } from 'vue-i18n'
+import { APP_NAME } from '@shared/brand'
+import RemoteContent from '@/components/remoteContent/index.vue'
 
 const { t } = useI18n()
 
-const name = 'MarkText'
+const name = `${APP_NAME} · 秋笺`
 const copyright = t('about.copyright', { year: new Date().getFullYear() })
 const copyrightContributors = t('about.copyrightContributors')
 const showAboutDialog = ref(false)
@@ -95,5 +105,10 @@ onBeforeUnmount(() => {
 
 .about-dialog .text {
   color: var(--floatFontColor);
+}
+
+.about-remote-content {
+  border-top: 1px solid var(--floatBorderColor);
+  padding-top: 16px;
 }
 </style>

@@ -2,9 +2,6 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown } from './helpers'
 
-// The fix for #4210 hid the whole in-app title bar under the native style, so
-// the word counter it hosts disappeared with the duplicated filename. Only the
-// filename may go: the OS title bar shows it, but nothing else shows the count.
 test.describe('Native title bar keeps the word counter', () => {
   test.skip(process.platform === 'darwin', 'macOS windows are always frameless')
 
@@ -25,7 +22,7 @@ test.describe('Native title bar keeps the word counter', () => {
   })
 
   test('shows the word counter without repeating the filename', async() => {
-    await expect(page.locator('.title-bar .word-count')).toHaveText('Words 3')
+    await expect(page.locator('.document-status .word-count')).toHaveText('Words 3')
     await expect(page.locator('.title-bar .title')).toHaveCount(0)
   })
 })

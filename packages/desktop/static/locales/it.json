@@ -1,4 +1,193 @@
 {
+  "ai": {
+    "restartTools": "Riavvia AutumnMark per attivare le schermate richieste dal modello.",
+    "inputTypes": "Input supportati",
+    "image": "Immagine",
+    "systemPrompt": "Istruzioni di sistema per l’assistente dei temi",
+    "systemPromptHelp": "Si applicano ai nuovi messaggi e ai nuovi tentativi in tutte le chat dei temi.",
+    "promptStorageError": "Impossibile leggere o salvare le istruzioni di sistema.",
+    "previewPrivacy": "Il modello riceve questa conversazione e può richiedere il Markdown di esempio, il CSS o delle schermate. Le schermate possono includere contenuti selezionati o fuori dall’area visibile dell’anteprima.",
+    "checkingPreview": "Controllo dell’anteprima…",
+    "previewFailed": "Impossibile acquisire l’anteprima. Riprova.",
+    "reviewLimit": "Limite di revisioni raggiunto. Le ultime modifiche sono visibili nell’anteprima.",
+    "displayName": "Nome visualizzato (facoltativo)",
+    "model": "Modello",
+    "baseUrl": "URL di base API",
+    "requestType": "Tipo di richiesta",
+    "classic": "Chat Completions (classico)",
+    "loadFailed": "Impossibile leggere le impostazioni dei modelli salvate.",
+    "restartRequired": "Riavvia AutumnMark per caricare le impostazioni dei modelli aggiornate.",
+    "contextTooSmall": "Il tema e l’ultimo messaggio superano il contesto stimato. Aumenta il contesto o riduci il limite di output.",
+    "add": "Aggiungi modello",
+    "edit": "Modifica modello",
+    "remove": "Eliminare {model}?",
+    "actions": "Azioni",
+    "empty": "Nessun modello IA configurato.",
+    "fetch": "Carica modelli",
+    "fetched": "Modelli trovati: {count}",
+    "reasoning": "Livello di ragionamento",
+    "context": "Dimensione del contesto (token)",
+    "output": "Limite di output (token)",
+    "default": "Predefinito del fornitore",
+    "test": "Verifica",
+    "connected": "Connesso · risposta: 1",
+    "unexpectedTestReply": "Il servizio ha risposto, ma il modello non ha restituito 1.",
+    "invalidModelList": "Il servizio ha restituito un elenco di modelli non valido.",
+    "invalidSize": "Inserisci interi positivi. Il limite di output non può superare la dimensione del contesto.",
+    "modelChanged": "Il modello è cambiato. Riaprilo per modificarlo."
+  },
+  "themeAi": {
+    "title": "IA dei temi",
+    "current": "Tema corrente",
+    "openDocument": "Apri una nota per provare a modificare il tema.",
+    "empty": "Descrivi una modifica, ad esempio un’interlinea più ampia o un altro colore per i titoli.",
+    "placeholder": "Che cosa vuoi modificare nel tema?",
+    "viewChange": "Vedi questa modifica",
+    "previewStatus": "Anteprima del tema attiva",
+    "previewing": "Anteprima in questa nota",
+    "previewReady": "Bozza pronta per l’anteprima",
+    "previewHere": "Mostra anteprima in questa nota",
+    "endPreview": "Chiudi anteprima",
+    "previewEnded": "Anteprima chiusa. La modifica è nella cronologia.",
+    "apply": "Applica al tema",
+    "applied": "Tema applicato.",
+    "copyOnApply": "L’applicazione crea una copia modificabile del tema.",
+    "changed": "Il tema corrente è cambiato. Riprova con questo tema."
+  },
+  "themeHistory": {
+    "empty": "Non sono ancora state salvate versioni di questo tema.",
+    "restoreAndApply": "Ripristina e applica",
+    "confirmApplyDetail": "Questa versione verrà applicata. La versione attuale resterà nella cronologia.",
+    "appliedCollaboration": "Sono state applicate le modifiche di un client IA esterno.",
+    "appliedRecovered": "Versione applicata in precedenza",
+    "title": "Cronologia delle versioni",
+    "current": "Bozza corrente",
+    "loading": "Caricamento delle versioni…",
+    "storageError": "Impossibile leggere o salvare le versioni del tema su questo dispositivo.",
+    "aiSummary": "Riepilogo IA",
+    "changes": "Modifiche",
+    "previous": "Confronto con la versione precedente",
+    "noChanges": "Il contenuto del tema coincide con quello della versione precedente.",
+    "restore": "Ripristina come bozza",
+    "confirmRestore": "Conferma ripristino",
+    "confirm": "Ripristinare la versione del {date} alle {time}?",
+    "confirmDetail": "Il ripristino aggiunge una versione. La bozza corrente resterà nella cronologia.",
+    "restored": "È stata ripristinata la versione del {date} alle {time}.",
+    "applyHint": "Usa «Salva e applica» per aggiornare il tema in uso.",
+    "kind": {
+      "initial": "Versione iniziale",
+      "manual": "Modifica manuale",
+      "ai": "Modifica con IA",
+      "save": "Salva",
+      "apply": "Salva e applica",
+      "restore": "Ripristina",
+      "undo": "Annulla modifica",
+      "collaboration": "Modifica collaborativa",
+      "recovered": "Bozza recuperata"
+    },
+    "description": {
+      "initial": "Punto di partenza di questo tema.",
+      "manual": "La bozza del tema è stata modificata manualmente.",
+      "ai": "L’assistente IA ha modificato la bozza.",
+      "save": "Il tema è stato salvato.",
+      "apply": "Il tema è stato salvato e applicato.",
+      "restore": "È stata ripristinata una versione precedente.",
+      "undo": "È stata annullata una modifica alla bozza.",
+      "collaboration": "La bozza è stata aggiornata dalla cartella di collaborazione.",
+      "recovered": "È stata recuperata una bozza salvata su questo dispositivo."
+    },
+    "field": {
+      "name": "Nome del tema",
+      "base": "Tema di base",
+      "css": "Stile",
+      "sample": "Markdown di anteprima"
+    }
+  },
+  "studio": {
+    "themeFiles": "File del tema",
+    "composePlaceholder": "Descrivi cosa vuoi modificare nel tema…",
+    "interrupted": "La richiesta è stata interrotta. Il contenuto già ricevuto è stato salvato.",
+    "selector": "Selettore",
+    "addSelector": "Aggiungi selettore",
+    "locateSelector": "Vai alla regola",
+    "inspect": "Ispeziona elemento",
+    "inspectHint": "Seleziona un elemento nell’anteprima o nell’albero Elements. In basso puoi aggiungere il selettore o aprire la regola.",
+    "inspectorFailed": "Impossibile ispezionare l’anteprima.",
+    "title": "Editor dei temi",
+    "create": "Crea dal tema attuale",
+    "edit": "Modifica il tema attuale",
+    "name": "Nome del tema",
+    "base": "Tema di base",
+    "saveOnly": "Salva solo il tema",
+    "saveAndApply": "Salva e applica",
+    "saveOptions": "Opzioni di salvataggio",
+    "document": "Documento",
+    "source": "Sorgente Markdown",
+    "preview": "Anteprima del tema",
+    "assistant": "Assistente IA",
+    "configure": "Configura modello",
+    "connection": "Connessione",
+    "privacy": "Il modello riceve questa conversazione e può richiedere il CSS del tema o il Markdown di esempio.",
+    "prompt": "Messaggio all’assistente del tema",
+    "composeHint": "Invio per inviare · Maiusc+Invio per inserire una riga sotto",
+    "emptyReply": "Il modello ha restituito una risposta vuota.",
+    "unchanged": "Il tema è rimasto invariato.",
+    "user": "Tu",
+    "conversation": "Conversazione",
+    "newChat": "Nuova chat",
+    "deleteChat": "Elimina chat",
+    "untitledChat": "Chat · {time}",
+    "confirmDeleteChat": "Eliminare definitivamente «{name}» e le sue schermate?",
+    "screenshot": "Schermata di anteprima {n}",
+    "retract": "Ritira",
+    "confirmBranch": "Verranno rimossi anche tutti i messaggi e le schermate successivi. Continuare?",
+    "historyError": "Impossibile leggere o salvare la cronologia su questo dispositivo.",
+    "chatChanged": "La chat è cambiata o è in modifica in un’altra finestra. Riprova.",
+    "diagnostics": "Registro errori",
+    "exportDiagnostics": "Esporta registro",
+    "replyError": {
+      "tooLarge": "La risposta del modello è troppo grande. Richiedi una modifica più piccola.",
+      "missingMatch": "Il testo da sostituire non è presente nel CSS attuale.",
+      "ambiguousMatch": "Il testo da sostituire compare più volte nel CSS attuale.",
+      "css": "Il CSS proposto non ha superato la convalida",
+      "format": "La risposta contiene un’istruzione di modifica non valida.",
+      "incomplete": "La risposta è terminata prima di completare l’istruzione di modifica.",
+      "truncated": "La risposta ha raggiunto il limite di output del modello. Aumenta il limite o richiedi una modifica più piccola."
+    },
+    "send": "Invia",
+    "stop": "Interrompi",
+    "undo": "Annulla ultima modifica",
+    "export": "Esporta tema",
+    "import": "Importa come copia",
+    "draft": "Bozza salvata su questo dispositivo",
+    "copy": "Il mio tema",
+    "sample": "Documento di anteprima",
+    "endpoint": "URL di base dell’API Chat Completions",
+    "model": "ID modello",
+    "apiKey": "Chiave API",
+    "keySaved": "Salvata · lascia vuoto per mantenerla",
+    "keyOptional": "Facoltativa per i modelli locali",
+    "clearKey": "Rimuovi chiave salvata",
+    "saveConnection": "Salva connessione",
+    "httpError": "Risposta HTTP del modello",
+    "invalidEndpoint": "Usa HTTPS o HTTP su localhost. Inserisci l’URL di base o quello di chat/completions.",
+    "invalidRequest": "Controlla il nome del modello e le impostazioni.",
+    "newKeyRequired": "Inserisci la chiave del nuovo indirizzo o cancella quella salvata.",
+    "keyStore": "Sblocca il portachiavi di sistema e riprova.",
+    "invalidReply": "Risposta non supportata. Le modifiche valide sono visibili in anteprima.",
+    "configureFirst": "Configura prima un modello.",
+    "requestFailed": "Connessione fallita o scaduta. Controlla l’indirizzo e riprova.",
+    "storageError": "Salvataggio non riuscito. La bozza rimane aperta.",
+    "stopped": "Generazione interrotta.",
+    "updated": "Modifiche applicate alla bozza.",
+    "generating": "In attesa del modello…",
+    "nameRequired": "Inserisci un nome per il tema.",
+    "invalidFile": "Scegli un file supportato inferiore a 1 MB.",
+    "css": "Sorgente CSS",
+    "baseSource": "Visualizza CSS di base (sola lettura)",
+    "cssIssue": "Controlla il CSS",
+    "openFailed": "Impossibile aprire l’editor dei temi."
+  },
   "menu": {
     "counter": {
       "words": "Parole",
@@ -108,12 +297,12 @@
       "checkUpdates": "Controllo aggiornamenti"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "Informazioni su MarkText",
+      "title": "AutumnMark",
+      "about": "Informazioni su AutumnMark",
       "checkUpdates": "Controllo aggiornamenti…",
       "preferences": "Preferenze",
       "services": "Servizi",
-      "hide": "Nascondi MarkText",
+      "hide": "Nascondi AutumnMark",
       "hideOthers": "Nascondi altri",
       "showAll": "Mostra tutti",
       "quit": "Esci"
@@ -148,6 +337,7 @@
     },
     "theme": {
       "theme": "&Tema",
+      "openSettings": "Impostazioni dei temi…",
       "dark": "Scuro",
       "followThemDisabled": "Quando si segue il tema di sistema, la selezione dei temi sottostanti è disabilitata",
       "lightThemes": "— Temi Chiari —",
@@ -156,7 +346,7 @@
       "ayuLight": "Ayu chiaro",
       "ayuMirage": "Ayu Mirage",
       "cadmiumDark": "Cadmium scuro",
-      "cadmiumLight": "Cadmium chiaro",
+      "gitbookTeal": "GitBook Teal",
       "catppuccinLatte": "Catppuccin Latte",
       "catppuccinMocha": "Catppuccin Mocha",
       "cyberdream": "Cyberdream",
@@ -188,6 +378,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "Copia il percorso del file",
+    "copyFolderPath": "Copia il percorso della cartella che lo contiene",
     "cut": "Taglia",
     "copy": "Copia",
     "paste": "Incolla",
@@ -220,7 +412,8 @@
       "rename": "Rinomina",
       "copyPath": "Copia percorso",
       "showInFolder": "Mostra nella cartella",
-      "showInSideBar": "Mostra nella barra laterale"
+      "showInSideBar": "Mostra nella barra laterale",
+      "openContainingFolder": "Apri la cartella contenente nella barra laterale"
     }
   },
   "search": {
@@ -237,6 +430,7 @@
     "searchLimited": "Ricerca limitata ai primi {count} risultati"
   },
   "sideBar": {
+    "resize": "Ridimensiona la barra laterale",
     "search": {
       "backToFiles": "Ritorna ai file",
       "searchInFolder": "Cerca nella cartella…",
@@ -251,6 +445,7 @@
     },
     "tree": {
       "openedFiles": "File aperti",
+      "folders": "Cartelle",
       "resizeOpenedFiles": "Ridimensiona l’elenco dei file aperti",
       "saveAll": "Salva tutti",
       "closeAll": "Chiudi tutti",
@@ -271,6 +466,7 @@
       "expand": "Espandi sommario",
       "collapse": "Comprimi sommario",
       "empty": "Nessuna intestazione",
+      "emptyHint": "Le intestazioni aggiunte appariranno qui",
       "resize": "Ridimensiona il sommario",
       "title": "Sommario",
       "expandAll": "Espandi tutto",
@@ -293,7 +489,7 @@
       "conflict": "La destinazione scelta contiene già un elemento con lo stesso nome. Rinominarlo prima di riprovare.",
       "missing": "L’origine o la destinazione non esiste più. Aggiornare la cartella e riprovare.",
       "permission": "L’elemento non può essere spostato. Controllare i permessi della cartella o se è in uso da parte di un’altra applicazione.",
-      "openElsewhere": "Prima di effettuare lo spostamento chiudere, in altre finestre MarkText, questo file e qualsiasi documento all’interno di questa cartella.",
+      "openElsewhere": "Prima di effettuare lo spostamento chiudere, in altre finestre AutumnMark, questo file e qualsiasi documento all’interno di questa cartella.",
       "destinationOpen": "Nel percorso (path) di destinazione è già aperto un documento. Chiuderlo prima di riprovare."
     }
   },
@@ -313,6 +509,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Caricamento dei titoli…",
     "placeholder": "Digita il comando da eseguire",
     "placeholders": {
       "selectOption": "Seleziona un’opzione",
@@ -410,7 +607,7 @@
   },
   "import": {
     "title": "Importa o apri",
-    "description": "Rilascia qui il materiale per importarlo in MarkText"
+    "description": "Rilascia qui il materiale per importarlo in AutumnMark"
   },
   "preferences": {
     "title": "Preferenze",
@@ -419,6 +616,8 @@
       "placeholder": "Cerca preferenze…"
     },
     "categories": {
+      "ai": "Modelli IA",
+      "video": "Video",
       "general": "Generali",
       "appearance": "Aspetto",
       "editor": "Modifica",
@@ -578,6 +777,11 @@
         "hideLinkPopup": "Nasconde il pop-up del link",
         "autoCheck": "Collega attività principali e secondarie",
         "autoNormalizeLineEndings": "All’apertura converte automaticamente i caratteri di fine riga in LF",
+        "compactMode": "Modalità compatta",
+        "compactLimitHint": "Imposta il limite a 0 per disattivare la modalità compatta per quel tipo.",
+        "compactImageMaxHeight": "Altezza massima delle immagini (px)",
+        "compactVideoMaxHeight": "Altezza massima dei video (px)",
+        "compactCodeMaxLines": "Numero massimo di righe di codice visibili",
         "wrapCodeBlocks": "Nei blocchi di codice è possibile andare a capo (word wrap)",
         "sourceCodeLineNumbers": "Mostra i numeri di linea in modalità codice-sorgente"
       }
@@ -587,7 +791,8 @@
       "actions": {
         "upload": "Carica l’immagine nel cloud",
         "folder": "Copia l’immagine nella cartella predefinita",
-        "path": "Usa l’immagine da un percorso (path) assoluto"
+        "path": "Usa l’immagine da un percorso (path) assoluto",
+        "embed": "Incorpora in Markdown (Base64)"
       },
       "folderSetting": {
         "title": "Impostazione cartella",
@@ -633,7 +838,7 @@
         "scriptPath": "Percorso (path) dello script",
         "invalidScript": "Inserisci il percorso di uno script esistente ed eseguibile."
       },
-      "defaultBehavior": "Comportamento predefinito dopo aver incollato o trascinato un’immagine in MarkText"
+      "defaultBehavior": "Comportamento predefinito dopo aver incollato o trascinato un’immagine in AutumnMark"
     },
     "markdown": {
       "title": "Markdown",
@@ -657,6 +862,11 @@
         }
       },
       "diagrams": {
+        "newDrawingView": {
+          "title": "Apri i nuovi disegni in",
+          "dialog": "Finestra mobile",
+          "tab": "Nuova scheda"
+        },
         "title": "Diagrammi",
         "sequenceTheme": {
           "title": "Tema js-Sequence",
@@ -664,10 +874,10 @@
           "simple": "Semplice"
         },
         "mermaidLightTheme": {
-          "title": "Tema Mermaid per temi chiari MarkText"
+          "title": "Tema Mermaid per temi chiari AutumnMark"
         },
         "mermaidDarkTheme": {
-          "title": "Tema Mermaid per temi scuri MarkText"
+          "title": "Tema Mermaid per temi scuri AutumnMark"
         },
         "plantumlServer": {
           "title": "URL del server PlantUML"
@@ -707,6 +917,67 @@
     "theme": {
       "title": "Tema",
       "followSystemTheme": "Segui l’aspetto del sistema",
+      "mode": "Modalità tema",
+      "fixed": "Tema fisso",
+      "currentTheme": "Tema attuale",
+      "source": "Origine del tema",
+      "local": "Temi locali",
+      "online": "Temi online",
+      "builtIn": "Integrato",
+      "custom": "Personalizzato",
+      "installed": "Installato",
+      "active": "In uso",
+      "apply": "Applica",
+      "refresh": "Ricarica i temi online",
+      "installOnly": "Installa soltanto",
+      "installAndApply": "Installa e applica",
+      "update": "Aggiorna",
+      "setFor": {
+        "light": "Imposta come tema chiaro",
+        "dark": "Imposta come tema scuro"
+      },
+      "installFor": {
+        "light": "Installa e imposta come tema chiaro",
+        "dark": "Installa e imposta come tema scuro"
+      },
+      "assigned": {
+        "light": "Assegnato alla modalità chiara",
+        "dark": "Assegnato alla modalità scura"
+      },
+      "deferred": {
+        "light": "{name} verrà applicato quando il sistema passerà alla modalità chiara.",
+        "dark": "{name} verrà applicato quando il sistema passerà alla modalità scura."
+      },
+      "applied": "Tema {name} applicato.",
+      "installedNotice": "Tema {name} installato. È disponibile in Temi locali.",
+      "updated": "Tema {name} aggiornato.",
+      "incompatible": "Richiede AutumnMark {version}",
+      "changeFailed": "Impossibile salvare l’impostazione del tema.",
+      "installFailed": "Impossibile scaricare o salvare questo tema.",
+      "deleteTheme": "Elimina tema",
+      "uninstallTheme": "Disinstalla tema",
+      "confirmRemoval": "«{name}» verrà rimosso dai temi locali.",
+      "removalFallback": "Le impostazioni che usano questo tema passeranno a {base}.",
+      "removalFailed": "Impossibile rimuovere questo tema.",
+      "preview": "Anteprima",
+      "compare": "Confronta con il tema attuale",
+      "previewing": "In anteprima",
+      "previewLoading": "Caricamento dell’anteprima del tema…",
+      "previewFailed": "Impossibile caricare l’anteprima del tema.",
+      "loading": "Caricamento dei temi online…",
+      "unavailable": "Impossibile caricare i temi online. Prova a ricaricare.",
+      "cached": "È visualizzato l’ultimo catalogo scaricato.",
+      "cachedNoResults": "Nessun tema nell’ultimo catalogo scaricato corrisponde alla ricerca.",
+      "emptyCatalog": "Non ci sono ancora temi online.",
+      "sample": {
+        "title": "Note del mattino",
+        "quote": "Inizia con una piccola idea.",
+        "section": "Sezione",
+        "status": "Stato",
+        "intro": "Introduzione",
+        "draft": "Bozza",
+        "code": "Inizia a scrivere"
+      },
       "followSystemNote": "Scegli qui sotto tra i temi distinti per modalità (scura e chiara).",
       "modeThemes": "Selezione tema",
       "lightModeTheme": "Tema chiaro",
@@ -780,9 +1051,27 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Creato con <3 dai Collaboratori di GitHub"
   },
+  "remoteContent": {
+    "announcement": "Annunci",
+    "unreadAnnouncement": "Annuncio da leggere",
+    "about": "Informazioni aggiornate",
+    "loading": "Caricamento dei contenuti più recenti…",
+    "loadFailed": "Impossibile caricare il contenuto.",
+    "refreshFailed": "Aggiornamento non riuscito. È visualizzato l’ultimo contenuto ricevuto.",
+    "unverified": "GitHub non è disponibile. Impossibile verificare che l’annuncio sia aggiornato.",
+    "refresh": "Aggiorna",
+    "retry": "Riprova",
+    "donation": {
+      "title": "Sostieni AutumnMark",
+      "description": "Scansiona il codice con l’app corrispondente per sostenere lo sviluppo di AutumnMark.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "Codice QR per donare con {method}"
+    }
+  },
   "commands": {
     "mt": {
-      "hide": "Nascondi MarkText",
+      "hide": "Nascondi AutumnMark",
       "hideOthers": "Nascondi altri"
     },
     "file": {
@@ -925,9 +1214,141 @@
       "switchLanguage": "Cambia lingua"
     }
   },
+  "documentChat": {
+    "undoChanges": "Annulla modifiche",
+    "changesReverted": "Modifiche annullate",
+    "turnActions": "Azioni per questo scambio",
+    "deleteTurn": "Elimina questo scambio",
+    "revertTurn": "Annulla ed elimina questo scambio",
+    "revertFailed": "Non è stato possibile annullare alcune modifiche perché il documento o il tema è cambiato. La conversazione è stata conservata.",
+    "configure": "Configura i modelli IA",
+    "onboarding": {
+      "title": "Modifica con l’IA",
+      "loadingModels": "Caricamento dei modelli IA…",
+      "retry": "Riprova",
+      "builtIn": "Usa l’IA in AutumnMark",
+      "builtInHint": "Aggiungi un modello per chattare e modificare il documento o il tema dalla barra laterale.",
+      "externalClient": "Usi già un client IA?",
+      "externalHint": "Usa il tuo client preferito senza configurare un modello in AutumnMark.",
+      "useExternal": "Usa un client IA esterno",
+      "target": "Cosa modificare",
+      "editDocument": "Modifica documento",
+      "editTheme": "Modifica tema",
+      "copyFailed": "Impossibile copiare negli appunti. Riprova.",
+      "skillIntro": "Richiama lo Skill {0} in un client compatibile per modificare un documento o un tema.",
+      "documentScope": "Con un solo documento aperto tra tutte le finestre, lo Skill può modificarlo direttamente. Se ce ne sono più di uno, il client chiede quale scegliere.",
+      "themeScope": "Se l’editor dei temi è aperto, lo Skill modifica la bozza attuale. Altrimenti modifica il tema applicato.",
+      "invokeSkill": "Richiama lo Skill nel client",
+      "invokeHint": "Incolla l’esempio nel client e adattalo alla modifica desiderata.",
+      "documentInstruction": "Usa lo Skill {0} per trasformare i punti da confermare nel documento corrente in un elenco di controllo.",
+      "themeInstruction": "Usa lo Skill {0} per ridurre leggermente le intestazioni di primo livello del tema corrente.",
+      "skillHelp": "Non trovi lo Skill nel client?",
+      "skillHelpHint": "AutumnMark installa e aggiorna lo Skill all’avvio. Aggiorna l’elenco degli Skill del client o importalo dalla cartella condivisa qui sotto.",
+      "copyInstruction": "Copia istruzione",
+      "instructionCopied": "Istruzione copiata. Incollala nel client IA."
+    }
+  },
+  "drawing": {
+    "insert": "Inserisci disegno Excalidraw",
+    "openInTab": "Apri in una scheda",
+    "new": "Nuovo disegno Excalidraw",
+    "open": "Apri disegno Excalidraw",
+    "untitled": "Disegno senza titolo",
+    "addDocument": "Aggiungi documento Markdown",
+    "addDocumentButton": "Aggiungi documento",
+    "searchDocuments": "Cerca documenti Markdown",
+    "insertIntoNote": "Inserisci nel documento",
+    "wholeDocument": "Intero documento",
+    "addCard": "Aggiungi scheda",
+    "discardChanges": "Scartare le modifiche non salvate al disegno?",
+    "discard": "Scarta modifiche",
+    "changedOnDisk": "Il disegno è stato modificato su disco. Riaprilo per vedere la versione più recente.",
+    "invalidFile": "Seleziona un file .excalidraw.",
+    "openFailed": "Impossibile aprire il file. {reason}",
+    "saveFailed": "Impossibile salvare o inserire il disegno. {reason}",
+    "cardFailed": "Impossibile aggiungere la scheda del documento. {reason}"
+  },
   "common": {
     "cancel": "Annulla",
     "ok": "OK"
+  },
+  "video": {
+    "streamedSource": "Al salvataggio, il file Markdown include l’intero video ({size} MiB). Il contenuto Base64 è troppo grande per essere modificato qui.",
+    "embed": "Incorpora video in Base64",
+    "note": "Salva i nuovi video nel documento Markdown. Se disattivato, inserisce un riferimento al file.",
+    "title": "Video",
+    "insert": "Inserisci video…",
+    "preview": "Anteprima video",
+    "replace": "Sostituisci video",
+    "choose": "Scegli video…",
+    "fromClipboard": "Usa video dagli appunti",
+    "delete": "Elimina video",
+    "drop": "Rilascia per sostituire",
+    "hint": "Trascina un video o premi {shortcut} per sostituire",
+    "drag": "Trascina il video originale",
+    "invalid": "Video illeggibile o codec non supportato.",
+    "location": "Sorgente video",
+    "saveAs": "Salva video come…",
+    "convert": "Converti in video locale",
+    "toEmbedded": "Incorpora video in Markdown",
+    "copy": "Copia file video"
+  },
+  "batchMedia": {
+    "title": "Incorpora immagini e video in blocco",
+    "images": "Immagini ({count})",
+    "videos": "Video ({count})",
+    "scanning": "Analisi dei documenti ({current}/{total})…",
+    "pending": "Documenti con contenuti da incorporare: {count}",
+    "convert": "Incorpora selezione ({count})",
+    "converting": "Conversione dei documenti ({current}/{total})…",
+    "done": "Riferimenti multimediali incorporati: {count}",
+    "issues": "Problemi ({count})",
+    "locked": "Questo documento è di sola lettura.",
+    "changed": "Il documento è cambiato o è in uso. Ripeti l’analisi.",
+    "saveFailed": "Impossibile salvare il documento convertito."
+  },
+  "documentImages": {
+    "words": "{count} parole",
+    "paragraphs": "{count} paragrafi",
+    "title": "Immagini del documento",
+    "noImages": "Nessuna immagine",
+    "allEmbedded": "Tutte le immagini sono incorporate",
+    "pending": "Immagini da incorporare: {count}",
+    "convertAll": "Incorpora tutte le immagini del documento ({count})",
+    "summary": "Incorporate: {embedded} · Non incorporate: {pending}"
+  },
+  "embeddedImage": {
+    "setSize": "Imposta dimensioni…",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "lockAspect": "Mantieni proporzioni",
+    "autoSize": "Ripristina dimensioni automatiche",
+    "auto": "Automatico",
+    "toEmbedded": "Incorpora questa immagine",
+    "pasteProgress": "Incorporamento immagini {completed}/{total}",
+    "pasteFailed": "Link originali mantenuti per {failed} immagini su {total}",
+    "preview": "Anteprima immagine",
+    "source": "Sorgente incorporato",
+    "replace": "Sostituisci immagine",
+    "copyAs": "Copia come",
+    "jpeg": "Immagine JPEG",
+    "fromClipboard": "Usa immagine dagli appunti",
+    "saveAs": "Salva immagine come…",
+    "convert": "Converti in immagine locale",
+    "viewSource": "Visualizza sorgente incorporato",
+    "hint": "Rotella per lo zoom · Trascina un’immagine o premi {shortcut} per sostituire",
+    "drag": "Trascina originale",
+    "drop": "Rilascia per sostituire",
+    "dirty": "Modifiche in sospeso",
+    "discard": "Scarta modifiche",
+    "apply": "Applica modifiche",
+    "copyFailed": "Impossibile copiare l’immagine.",
+    "unsupported": "Formato immagine non supportato.",
+    "title": "Immagine incorporata",
+    "delete": "Elimina immagine",
+    "paste": "Incolla URL dati",
+    "choose": "Scegli immagine…",
+    "invalid": "Impossibile leggere l’immagine."
   },
   "dialog": {
     "moveToTrash": "Si vuole veramente spostare \"{name}\" nel cestino?",
@@ -939,7 +1360,7 @@
     "fileExists": "Il file {filename} esiste",
     "files": "File",
     "importWarning": "Avviso per l’importazione",
-    "installPandoc": "Pandoc non trovato. Installarlo o impostare la variabile d’ambiente MARKTEXT_PANDOC per l’eseguibile pandoc e riavviare MarkText.",
+    "installPandoc": "Pandoc non trovato. Installarlo o impostare la variabile d’ambiente MARKTEXT_PANDOC per l’eseguibile pandoc e riavviare AutumnMark.",
     "exportWarning": "Avviso per l’esportazione",
     "exportWarningMore": "…e {count} più",
     "keepOpen": "Mantieni aperto",
@@ -956,13 +1377,30 @@
     "configSchemaViolation": "Violazione dello schema di configurazione",
     "copyError": "Copia l’errore",
     "initializationFailed": "Inizializzazione non riuscita: {hint}",
-    "otherInstanceDetected": "Un’altra istanza di MarkText è già in esecuzione",
+    "otherInstanceDetected": "Un’altra istanza di AutumnMark è già in esecuzione",
     "report": "Rapporto",
     "startupError": "Errore iniziale",
     "terminatedDueToError": "Terminato a causa di un errore",
     "unexpectedErrorWithMessage": "Errore imprevisto con questo messaggio: {message}",
     "unexpectedMainProcess": "Errore imprevisto del processo principale",
     "unexpectedRendererProcess": "Errore imprevisto del processo di rendering"
+  },
+  "updates": {
+    "title": "Aggiornamento software",
+    "install": "Riavvia e installa",
+    "later": "Più tardi",
+    "upToDate": "Stai usando la versione più recente.",
+    "downloaded": "L’aggiornamento è stato scaricato. L’applicazione si chiuderà per installarlo.",
+    "checkFailed": "Impossibile verificare la disponibilità di aggiornamenti. Riprova più tardi.",
+    "installFailed": "Impossibile installare l’aggiornamento. Riprova più tardi.",
+    "checking": "Ricerca di aggiornamenti…",
+    "preparing": "Preparazione dell’installazione della versione {version}…",
+    "downloading": "Download della versione {version}…",
+    "ready": "La versione {version} è pronta per l’installazione.",
+    "background": "Continua in background",
+    "retry": "Riprova",
+    "downloadFailed": "Download non riuscito. Controlla la connessione e riprova.",
+    "waiting": "In attesa di una risposta…"
   },
   "notifications": {
     "defaultMessage": "Messaggio predefinito",

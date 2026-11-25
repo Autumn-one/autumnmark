@@ -11,11 +11,14 @@ import {
   getShowInFolder
 } from './menuItems'
 import { t } from '../../i18n'
+import { batchMediaMenuItem } from '../batchMedia'
+import type { TreeFileNode, TreeFolderNode } from '@/components/sideBar/types'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 
 export const showContextMenu = (
   event: { clientX: number; clientY: number },
-  hasPathCache: boolean
+  hasPathCache: boolean,
+  target: TreeFileNode | TreeFolderNode
 ): void => {
   const contextItems: ContextMenuItem[] = [
     getNewFile(),
@@ -28,6 +31,7 @@ export const showContextMenu = (
     getRENAME(),
     getDELETE(),
     SEPARATOR,
+    ...(target.isDirectory || target.isMarkdown ? [batchMediaMenuItem(target), SEPARATOR] : []),
     getCopyPath(),
     getShowInFolder()
   ]
@@ -51,11 +55,12 @@ export const showRootContextMenu = (
   hasClipboard: boolean,
   ready: boolean,
   remove: () => void,
-  retry: () => void
+  retry: () => void,
+  folder: TreeFolderNode
 ): void => {
   const paste = getPASTE()
   const items: ContextMenuItem[] = ready
-    ? [getNewFile(), getNewDirectory(), { ...paste, enabled: hasClipboard }, SEPARATOR]
+    ? [getNewFile(), getNewDirectory(), { ...paste, enabled: hasClipboard }, SEPARATOR, batchMediaMenuItem(folder), SEPARATOR]
     : [{ label: t('sideBar.tree.retryFolder'), click: retry }, SEPARATOR]
   items.push(getCopyPath(), getShowInFolder(), SEPARATOR, { label: t('sideBar.tree.removeFolder'), click: remove })
   popupContextMenu(items.map(item => {

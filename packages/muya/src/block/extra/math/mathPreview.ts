@@ -4,6 +4,7 @@ import katex from 'katex';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES } from '../../../config';
 import { escapeHTML } from '../../../utils';
+import { abbreviateEmbeddedImages } from '../../../utils/embeddedImage';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 import 'katex/dist/contrib/mhchem.mjs';
@@ -68,7 +69,8 @@ class MathPreview extends Parent {
 
         if (math) {
             try {
-                const html = katex.renderToString(math, {
+                const preview = this.muya.options.editEmbeddedImage ? abbreviateEmbeddedImages(math) : math;
+                const html = katex.renderToString(preview, {
                     displayMode: true,
                 });
                 this.domNode!.innerHTML = html;

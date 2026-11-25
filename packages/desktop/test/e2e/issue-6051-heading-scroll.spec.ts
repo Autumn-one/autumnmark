@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { launchWithMarkdown, makeRoomForOutline, sendIpcToRenderer } from './helpers'
+import { launchWithMarkdown, showOutline, sendIpcToRenderer } from './helpers'
 
 for (const count of [103, 511]) {
   test(`scrolling with ${count} headings reads logarithmically many heading positions`, async() => {
@@ -9,7 +9,7 @@ for (const count of [103, 511]) {
     ).join('\n')
     const { app, page } = await launchWithMarkdown(markdown, { preferences: { language: 'en' } })
     try {
-      await makeRoomForOutline(app, page)
+      await showOutline(app, page)
       await expect(page.locator('.mu-container > h1')).toHaveCount(count)
       await expect(page.locator('.side-bar-toc .el-tree-node__label')).toHaveCount(count)
 

@@ -1,4 +1,12 @@
 import type { ProjectRootsSnapshot, ProjectTreeEvent, SidebarMoveRequest, SidebarMoveResult } from './project'
+import type { MarkdownEdit } from '../markdownEdits'
+import type { AiConnectionDraft, AiModelDraft, AiModelProfile } from '../aiModel'
+import type { DocumentChat, DocumentChatEffects, DocumentChatHistoryEntry, DocumentChatRequest, DocumentChatSummary, DocumentChatTarget, DocumentChatThemeEffect, DocumentChatTurn } from '../documentChat'
+import type { LocalTheme, PreparedPreview, ThemeGenerationResult, ThemeModelEvent, ThemeModelRequest } from '../localTheme'
+import type { AppliedThemeHistory, ThemeVersionChange } from '../themeVersion'
+import type { ThemeCatalogSnapshot } from '../themeCatalog'
+import type { ThemeCollaborationCapture, ThemeCollaborationConnection, ThemeCollaborationFiles, ThemeCollaborationState } from '../themeCollaboration'
+import type { UserPreferences } from './preferences'
 /**
  * Cross-process IPC contract: invoke returns a Promise, send is fire-and-forget,
  * sync returns directly, and main events push payloads to renderer listeners.
@@ -6,7 +14,7 @@ import type { ProjectRootsSnapshot, ProjectTreeEvent, SidebarMoveRequest, Sideba
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type { TabOptions, SidebarOpenOptions, PageOptions, ExportType, SerializedStat, LineEnding, FileChangeDetail, PandocExportPayload } from './files'
-import type { MenuTemplate, MenuPopupPosition } from './menu'
+import type { MenuTemplate, MenuPopupPosition, ContextMenuPopupOptions, ApplicationMenuCategory } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 
 export interface SaveDialogRequest {
@@ -17,12 +25,40 @@ export interface SaveDialogRequest {
 
 export interface ClipboardImageWriteOptions {
   ticket: number
+  mime?: 'image/png' | 'image/jpeg'
   text?: string
   html?: string
 }
 
+export type ClipboardImageInput = string | { mime: string; data: Uint8Array } | null
+
 export type PlantumlFetchResult =
   { ok: true; mime: string; data: Uint8Array } | { ok: false; error: string }
+
+export type RemoteContentKind = 'announcement' | 'about'
+
+export interface RemoteContent {
+  markdown: string
+  verified: boolean
+}
+
+export interface RemoteContentSnapshot {
+  content: RemoteContent | null
+  status: 'ready' | 'unverified' | 'failed'
+  announcementRevision?: string
+}
+
+export interface UpdateProgress {
+  transferred: number
+  total: number
+  bytesPerSecond: number
+}
+
+export type UpdateState =
+  | { phase: 'idle' | 'checking' | 'current' }
+  | { phase: 'downloading'; version: string; progress: UpdateProgress | null }
+  | { phase: 'ready' | 'installing'; version: string }
+  | { phase: 'error'; stage: 'check' | 'download' | 'install'; version?: string }
 
 export interface RecentDocument {
   pathname: string
@@ -34,31 +70,93 @@ export type SaveDocumentResult =
   | { status: 'canceled' | 'failed' }
 
 import type { StateIpcInvokeChannels, StateIpcMainEvents } from './applicationState'
+import type { SkillWindowRequest, SkillWindowResponse } from '../autumnmarkSkill'
 
 export interface IpcInvokeChannels extends StateIpcInvokeChannels {
+  'mt::autumnmark-skill::status': { args: []; ret: 'ready' | 'conflict' | 'failed' }
+  'mt::theme::open': { args: [id: string, editing: boolean]; ret: void }
+  'mt::theme::catalog': { args: [refresh: boolean]; ret: ThemeCatalogSnapshot }
+  'mt::theme::preview': { args: [id: string, revision: number]; ret: LocalTheme }
+  'mt::theme::install': { args: [id: string, revision: number, apply: boolean]; ret: UserPreferences | null }
+  'mt::theme::save': { args: [theme: LocalTheme, apply: boolean]; ret: LocalTheme | null }
+  'mt::theme::active-history': { args: []; ret: AppliedThemeHistory }
+  'mt::theme::restore-active-version': { args: [themeId: string, revision: string, version: string]; ret: AppliedThemeHistory | null }
+  'mt::theme::apply-in-editor': { args: [theme: LocalTheme, sourceId: string, source: LocalTheme | null]; ret: LocalTheme | null }
+  'mt::theme::delete': { args: [id: string]; ret: UserPreferences | null }
+  'mt::theme::inspector-state': { args: []; ret: boolean }
+  'mt::theme::set-inspector': { args: [open: boolean]; ret: void }
+  'mt::theme::inspect-element': { args: [x: number, y: number]; ret: void }
+  'mt::theme::collaboration-start': { args: [draftId: string, files: ThemeCollaborationFiles, baseCss: string]; ret: ThemeCollaborationConnection }
+  'mt::theme::collaboration-write': { args: [id: string, revision: number, files: ThemeCollaborationFiles, baseCss: string]; ret: { saved: boolean; state: ThemeCollaborationState } }
+  'mt::theme::collaboration-stop': { args: [id: string]; ret: void }
+  'mt::ai::list': { args: []; ret: AiModelProfile[] }
+  'mt::ai::save': { args: [draft: AiModelDraft]; ret: AiModelProfile[] }
+  'mt::ai::copy': { args: [id: string]; ret: AiModelProfile[] }
+  'mt::ai::delete': { args: [id: string]; ret: AiModelProfile[] }
+  'mt::ai::discover': { args: [draft: AiConnectionDraft]; ret: string[] }
+  'mt::ai::test': { args: [draft: AiModelDraft | string]; ret: void }
+  'mt::document-chat::list': { args: []; ret: DocumentChatSummary[] }
+  'mt::document-chat::read': { args: [id: string]; ret: (DocumentChat & { inFlight: boolean }) | null }
+  'mt::document-chat::history': { args: [target?: Pick<DocumentChatTarget, 'id' | 'pathname'>]; ret: DocumentChatHistoryEntry[] }
+  'mt::document-chat::new': { args: []; ret: string }
+  'mt::document-chat::send': { args: [request: DocumentChatRequest]; ret: DocumentChatTurn }
+  'mt::document-chat::stop': { args: [id: string]; ret: void }
+  'mt::document-chat::capture': { args: [id: string, turnId: string]; ret: void }
+  'mt::document-chat::effects': { args: [id: string, turnId: string, patch: DocumentChatEffects]; ret: void }
+  'mt::document-chat::delete': { args: [id: string, turnId?: string]; ret: void }
+  'mt::document-chat::apply-theme': { args: [theme: LocalTheme, sourceId: string, source: LocalTheme | null, beforeCss: string]; ret: DocumentChatThemeEffect | null }
+  'mt::document-chat::revert-theme': { args: [effect: DocumentChatThemeEffect]; ret: boolean }
+  // Renderer hot reload can leave the earlier main handler running. Its string result is the final CSS.
+  'mt::theme::generate': { args: [request: ThemeModelRequest]; ret: ThemeGenerationResult | string }
+  'mt::theme::generate-with-tools': { args: [request: ThemeModelRequest]; ret: ThemeGenerationResult }
+  'mt::theme::summarize-version': { args: [profileId: string, locale: string, changes: ThemeVersionChange[]]; ret: string }
+  'mt::theme::cancel': { args: [id: string]; ret: void }
+  'mt::menu::application-categories': { args: []; ret: ApplicationMenuCategory[] }
+  'mt::menu::popup-application-category': {
+    args: [index: number, position: MenuPopupPosition]
+    ret: void
+  }
   'mt::get-recently-used-documents': { args: []; ret: RecentDocument[] }
+  'mt::read-heading-link-document': { args: [pathname: string, guessEncoding: boolean]; ret: string | null }
+  'mt::media::read-document': { args: [pathname: string, guessEncoding: boolean]; ret: { markdown: string; hash: string } }
+  'mt::media::list-documents': { args: [target: string, directory: boolean, excludes: string[], openPaths: string[]]; ret: { files: string[][]; issues: string[] } }
+  'mt::media::update-document': { args: [pathname: string, guessEncoding: boolean, hash: string, edits: MarkdownEdit[]]; ret: 'saved' | 'changed' }
   'mt::project-remove-root': { args: [key: string]; ret: boolean }
   'mt::project-retry-root': { args: [key: string]; ret: boolean }
+  'mt::project-open-containing-folder': { args: [documentId: string]; ret: string | null }
+  'mt::drawing::create': { args: [documentId: string, content: string, filename?: string]; ret: string }
+  'mt::drawing::write': { args: [pathname: string, content: string, expected?: string]; ret: void }
   'mt::clipboard::write-text': { args: [text: string]; ret: boolean }
   'mt::set-document-read-only': { args: [tabId: string, readOnly: boolean]; ret: void }
-  'mt::ask-for-image-path': { args: []; ret: string[] }
+  'mt::ask-for-image-path': { args: [kind?: 'video']; ret: string }
+  'mt::video::download': { args: [url: string]; ret: { mime: string; data: Uint8Array } }
+  'mt::video::embed-file': { args: [pathname: string]; ret: string }
+  'mt::video::copy-file': { args: [src: string, name: string]; ret: void }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
   'mt::link::fetch-html': { args: [url: string]; ret: string }
+  'mt::remote-content::fetch': {
+    args: [kind: RemoteContentKind, refresh: boolean]
+    ret: RemoteContentSnapshot
+  }
   'mt::clipboard::write-image': {
-    args: [png: Uint8Array, options?: ClipboardImageWriteOptions]
+    args: [bytes: Uint8Array, options?: ClipboardImageWriteOptions]
     ret: boolean
   }
   'mt::clipboard::begin-image-copy': { args: [marker?: string]; ret: number | null }
   'mt::clipboard::cancel-image-copy': { args: [ticket: number]; ret: void }
   'mt::clipboard::read-image-source': { args: [src: string]; ret: PlantumlFetchResult }
+  'mt::clipboard::has-image': { args: [kind?: 'video']; ret: boolean }
+  'mt::clipboard::image-input': { args: [kind?: 'video']; ret: ClipboardImageInput }
+  'mt::embedded-image::drag': { args: [src: string, name: string]; ret: void }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::diagram::fetch-plantuml': {
     args: [server: string, encoded: string, format: 'svg' | 'png']
     ret: PlantumlFetchResult
   }
   'mt::dialog::show-save': { args: [request: SaveDialogRequest]; ret: string | null }
+  'mt::dialog::show-open-file': { args: [request: SaveDialogRequest]; ret: string | null }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::fs-trash-item': { args: [pathname: string]; ret: boolean }
   'mt::project-move-item': { args: [request: SidebarMoveRequest]; ret: SidebarMoveResult }
@@ -97,6 +195,10 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
   'mt::spellchecker-set-enabled': { args: [enabled: boolean]; ret: void }
   'mt::spellchecker-switch-language': { args: [language: string]; ret: void }
   'mt::uploader::upload': { args: [req: unknown]; ret: unknown }
+  'mt::win::is-cursor-over': {
+    args: [bounds: { left: number; top: number; right: number; bottom: number }]
+    ret: boolean | null
+  }
   'mt::win::is-fullscreen': { args: []; ret: boolean }
   'mt::win::is-maximized': { args: []; ret: boolean }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
@@ -104,6 +206,7 @@ export interface IpcInvokeChannels extends StateIpcInvokeChannels {
 }
 
 export interface IpcSendChannels {
+  'mt::autumnmark-skill::response': [id: string, response: SkillWindowResponse]
   'mt::cmd-add-folder': []
   'mt::project-renderer-ready': []
   'mt::forget-document': [tabId: string]
@@ -119,7 +222,6 @@ export interface IpcSendChannels {
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
   'mt::remove-recently-used-document': [pathname: string]
-  'mt::NEED_UPDATE': [payload?: unknown]
   'mt::add-recently-used-document': [filePath: string]
   'mt::app-try-quit': []
   'mt::ask-for-image-auto-path': [payload: unknown]
@@ -128,6 +230,9 @@ export interface IpcSendChannels {
   'mt::ask-for-user-data': []
   'mt::ask-for-user-preference': []
   'mt::check-for-update': []
+  'mt::update-listen': []
+  'mt::update-background': []
+  'mt::update-install': [version: string]
   'mt::cancel-pending-preview': [requestId: number]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
@@ -141,13 +246,17 @@ export interface IpcSendChannels {
   'mt::handle-renderer-error': [error: unknown]
   'mt::keybinding-debug-dump-keyboard-info': []
   'mt::make-screenshot': []
-  'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
+  'mt::menu::popup': [template: MenuTemplate, options?: ContextMenuPopupOptions]
   'mt::menu::popup-application': [position?: MenuPopupPosition]
   'mt::open-file': [filePath: string, options?: SidebarOpenOptions]
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-directory-by-window-id': [windowId: number, dirPath: string]
   'mt::open-keybindings-config': []
-  'mt::open-setting-window': []
+  'mt::open-setting-window': [category?: 'ai' | 'theme']
+  'mt::prepare-setting-window': []
+  'mt::settings-ready': []
+  'mt::theme::ready': []
+  'mt::theme::preview-painted': [token: string, result: PreparedPreview]
   'mt::rename': [
     payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }
   ]
@@ -209,12 +318,20 @@ export interface IpcSyncChannels {
 }
 
 export interface IpcMainEventChannels extends StateIpcMainEvents {
+  'mt::autumnmark-skill::request': [id: string, request: SkillWindowRequest]
+  'mt::ai::changed': [profiles: AiModelProfile[]]
+  'mt::document-chat::changed': []
+  'mt::theme::show': [id: string, editing: boolean]
+  'mt::theme::show-active-history': []
+  'mt::theme::progress': [id: string, change: ThemeModelEvent]
+  'mt::theme::inspector-changed': [open: boolean]
+  'mt::theme::collaboration-state': [id: string, state: ThemeCollaborationState]
+  'mt::theme::collaboration-capture': [id: string, event: ThemeCollaborationCapture]
+  'mt::announcement-changed': [snapshot: RemoteContentSnapshot]
+  'mt::menu::application-categories-changed': []
   'mt::toggle-read-only': []
   'language-changed': [language: string]
-  'mt::UPDATE_AVAILABLE': [info?: unknown]
-  'mt::UPDATE_DOWNLOADED': [info?: unknown]
-  'mt::UPDATE_ERROR': [error: unknown]
-  'mt::UPDATE_NOT_AVAILABLE': [info?: unknown]
+  'mt::update-state': [state: UpdateState, showDialog?: boolean]
   'mt::about-dialog': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
@@ -263,7 +380,7 @@ export interface IpcMainEventChannels extends StateIpcMainEvents {
   'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
   'mt::update-object-tree': [payload: ProjectTreeEvent]
   'mt::user-preference': [partial: unknown]
-  'mt::window-active-status': [active: boolean]
+  'mt::window-active-status': [state: { status: boolean }]
   'mt::window-enter-full-screen': []
   'mt::window-leave-full-screen': []
   'mt::window-maximize': []

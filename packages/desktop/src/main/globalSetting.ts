@@ -1,6 +1,10 @@
 import path from 'path'
 import { app } from 'electron'
 import { setLocalesDirectory } from 'common/i18n'
+import { APP_NAME, APP_PROFILE_NAME } from '@shared/brand'
+
+app.setName(APP_NAME)
+app.setPath('userData', path.join(app.getPath('appData'), APP_PROFILE_NAME))
 
 // A packaged app keeps `static/` beside the executable's resources; every other
 // run — the dev server, `electron-vite preview`, the e2e suite — reads it from

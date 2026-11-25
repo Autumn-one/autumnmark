@@ -3,6 +3,7 @@ import type Table from '../block/gfm/table';
 import type TableBodyCell from '../block/gfm/table/cell';
 import type { Muya } from '../muya';
 import type { IImageInfo } from '../utils/image';
+import type { IImageCaret } from './imageCaret';
 import type {
     IImageSelection,
     IResolvedTextSelection,
@@ -18,6 +19,7 @@ import { getImageInfo } from '../utils/image';
 import { buildAffiliation, buildSelectionAffiliation, endpointBlockInfo } from './affiliation';
 import { getCursorCoords, getCursorYOffset, getSelectionStart } from './cursorCoords';
 import { getOffsetOfParagraph } from './dom';
+import { clearImageCaret, imageCaret, paintImageCaret } from './imageCaret';
 import ImageSelection from './ImageSelection';
 import {
     comparePaths,
@@ -45,7 +47,9 @@ class Selection {
     private _setting = false;
     private _frame: number | null = null;
     private _docChanged = false;
+    private _preventScroll = false;
     private _lastPublished = '';
+    private _imageCaret: (IImageCaret & { element: HTMLElement }) | null = null;
 
     constructor(private _muya: Muya) {
         this._text = new TextSelection(_muya, this);
@@ -174,12 +178,13 @@ class Selection {
         return selection?.kind === SelectionType.IMAGE ? selection : null;
     }
 
-    setSelection(state: TSelectionState | null): boolean {
+    setSelection(state: TSelectionState | null, { preventScroll = false } = {}): boolean {
         if (state !== null && !isSelectionState(state))
             return false;
         const selection = state ? this._resolve(state) : null;
         if (state && !selection)
             return false;
+        this._preventScroll = preventScroll;
         this._setting = true;
         try {
             this._state = copySelectionState(state);
@@ -297,6 +302,20 @@ class Selection {
         }
     }
 
+    private _updateImageCaret(selection: TSelection | null) {
+        const content = selection?.kind === SelectionType.TEXT && selection.context.isCollapsed && !this._muya.isReadOnly
+            ? selection.context.anchorBlock.domNode
+            : null;
+        const caret = content ? imageCaret(content) : null;
+        if (this._imageCaret) {
+            const { atom, edge, element } = this._imageCaret;
+            if (atom === caret?.atom && edge === caret.edge && element.isConnected)
+                return;
+            clearImageCaret(element);
+        }
+        this._imageCaret = caret ? { ...caret, element: paintImageCaret(caret) } : null;
+    }
+
     flush() {
         if (!this._canNotify)
             return;
@@ -304,6 +323,7 @@ class Selection {
             cancelAnimationFrame(this._frame);
         this._frame = null;
         const selection = this.getSelection();
+        this._updateImageCaret(selection);
         if (!selection && this._state) {
             this._setting = true;
             try {
@@ -322,21 +342,29 @@ class Selection {
             : [];
         const signature = JSON.stringify([copySelectionState(selection), formats]);
         const docChanged = this._docChanged;
+        const preventScroll = this._preventScroll;
         this._docChanged = false;
+        this._preventScroll = false;
         if (!docChanged && signature === this._lastPublished)
             return;
         this._lastPublished = signature;
         this._muya.eventCenter.emit('selection-change', {
             selection,
             docChanged,
+            ...(preventScroll && { preventScroll }),
         });
     }
 
     cancel() {
+        if (this._imageCaret) {
+            clearImageCaret(this._imageCaret.element);
+            this._imageCaret = null;
+        }
         if (this._frame !== null)
             cancelAnimationFrame(this._frame);
         this._frame = null;
         this._docChanged = false;
+        this._preventScroll = false;
         this._lastPublished = '';
     }
 

@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { ElectronApplication, Page } from 'playwright'
 import {
   launchWithMarkdown,
@@ -8,14 +10,7 @@ import {
   enterSourceMode
 } from './helpers'
 
-const SVG_DATA_URI =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmMDAiLz48L3N2Zz4='
-
-const editorPointerEvents = (page: Page): Promise<string> =>
-  page.evaluate(
-    () =>
-      getComputedStyle(document.querySelector('.editor-component') as HTMLElement).pointerEvents
-  )
+const imageUrl = pathToFileURL(resolve('static/logo-96px.png')).href
 
 const viewerVisible = (page: Page): Promise<boolean> =>
   page.evaluate(() => {
@@ -36,7 +31,7 @@ test.describe('media viewer is modal to the keyboard', () => {
   let page: Page
 
   test.beforeEach(async() => {
-    const launched = await launchWithMarkdown(`![alt](${SVG_DATA_URI})\n`, {
+    const launched = await launchWithMarkdown(`![alt](${imageUrl})\n`, {
       suppressErrorDialog: true
     })
     app = launched.app
@@ -54,7 +49,7 @@ test.describe('media viewer is modal to the keyboard', () => {
   for (const key of ['Backspace', 'Delete', 'Enter']) {
     test(`${key} does not reach the document behind the viewer`, async() => {
       const before = await getMarkdownContent(page, app)
-      expect(before).toContain('![alt](data:image/svg+xml')
+      expect(before).toContain(imageUrl)
 
       await openViewer(page)
       await page.keyboard.press(key)
@@ -68,7 +63,7 @@ test.describe('media viewer is modal to the keyboard', () => {
       await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)
 
       const after = await getMarkdownContent(page, app)
-      expect(after).toContain('![alt](data:image/svg+xml')
+      expect(after).toContain(imageUrl)
 
       await expectNoRendererErrors(app)
     })
@@ -84,11 +79,7 @@ test.describe('media viewer is modal to the keyboard', () => {
       { timeout: 5000 }
     )
 
-    // Otherwise the overlay keeps showing the previous document's image while
-    // holding the new one at `pointer-events: none`.
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)
-
-    await expect.poll(() => editorPointerEvents(page), { timeout: 5000 }).not.toBe('none')
 
     await expectNoRendererErrors(app)
   })

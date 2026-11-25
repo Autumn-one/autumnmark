@@ -81,7 +81,7 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       label: t('menu.view.toggleTableOfContents'),
       id: 'tocMenuItem',
       type: 'checkbox',
-      checked: true,
+      checked: false,
       accelerator: keybindings.getAccelerator('view.toggle-toc') ?? undefined,
       click(_, focusedWindow) {
         actions.showTableOfContents(focusedWindow as BrowserWindow | undefined)
@@ -93,26 +93,23 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       click(_item, focusedWindow) {
         actions.reloadImageCache(focusedWindow as BrowserWindow | undefined)
       }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      id: 'developerToolsMenuItem',
+      label: t('menu.view.showDeveloperTools'),
+      accelerator: keybindings.getAccelerator('view.toggle-dev-tools') ?? undefined,
+      click(_item, focusedWindow) {
+        actions.toggleDevTools(focusedWindow as BrowserWindow | undefined)
+      }
     }
   ]
 
-  const viewMenu: MenuItemConstructorOptions = {
-    label: t('menu.view.view'),
-    submenu
-  }
-
   if (global.MARKTEXT_DEBUG) {
     submenu.push({
-      type: 'separator'
-    })
-    submenu.push({
-      label: t('menu.view.showDeveloperTools'),
-      accelerator: keybindings.getAccelerator('view.toggle-dev-tools') ?? undefined,
-      click(_item, win) {
-        actions.debugToggleDevTools(win as BrowserWindow | undefined)
-      }
-    })
-    submenu.push({
+      id: 'reloadWindowMenuItem',
       label: t('menu.view.reloadWindow'),
       accelerator: keybindings.getAccelerator('view.dev-reload') ?? undefined,
       click(_item, focusedWindow) {
@@ -121,5 +118,5 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
     })
   }
 
-  return viewMenu
+  return { label: t('menu.view.view'), submenu }
 }

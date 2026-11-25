@@ -1,21 +1,26 @@
-import { resolve, dirname } from 'path'
-import type { PluginOption } from 'vite'
+import { resolve, dirname, relative } from 'path'
+import { createRequire } from 'node:module'
+import { normalizePath, type PluginOption } from 'vite'
 import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import svgLoader from 'vite-svg-loader'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 import postcssPresetEnv from 'postcss-preset-env'
 import packageJson from './package.json' with { type: 'json' }
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const excalidrawFonts = normalizePath(resolve(dirname(createRequire(import.meta.url).resolve('@excalidraw/excalidraw')), 'fonts'))
+const excalidrawFontBase = normalizePath(relative(resolve(__dirname, 'src/renderer'), dirname(excalidrawFonts)))
+  .split('/').filter(segment => segment && segment !== '..').length
 
 export default defineConfig({
   main: {
     build: {
       externalizeDeps: {
         // Bundle ESM-only dependencies so main can load them from CommonJS at startup.
-        exclude: ['electron-store'],
+        exclude: ['electron-store', '@csstools/css-tokenizer'],
         include: ['native-keymap']
       }
     },
@@ -49,6 +54,17 @@ export default defineConfig({
     }
   },
   renderer: {
+    build: {
+      minify: true,
+      rolldownOptions: {
+        input: {
+          editor: resolve(__dirname, 'src/renderer/index.html'),
+          settings: resolve(__dirname, 'src/renderer/settings.html'),
+          themePreview: resolve(__dirname, 'src/renderer/theme-preview.html'),
+          themeStudio: resolve(__dirname, 'src/renderer/theme-studio.html')
+        }
+      }
+    },
     // The sandboxed renderer accesses Node only through preload and IPC.
     assetsInclude: ['**/*.md'],
     // Some browser dependencies reference Node’s global; map it to globalThis before imports run.
@@ -68,10 +84,15 @@ export default defineConfig({
       extensions: ['.mjs', '.ts', '.js', '.json', '.vue']
     },
     optimizeDeps: {
-      // Vite's dev client exposes define.global at runtime for optimized deps.
-      include: ['pako', 'pathe']
+      // Opening the separate studio or its preview must not invalidate the running editor's optimized modules.
+      include: [
+        'pako', 'pathe', 'codemirror', 'codemirror/mode/css/css', 'codemirror/mode/markdown/markdown',
+        'codemirror/addon/display/placeholder', 'postcss', 'postcss-selector-parser'
+      ]
     },
-    plugins: [vue(), svgLoader()] as PluginOption[],
+    plugins: [vue(), svgLoader(), viteStaticCopy({
+      targets: [{ src: excalidrawFonts, dest: 'excalidraw', rename: { stripBase: excalidrawFontBase } }]
+    })] as PluginOption[],
     css: {
       postcss: {
         plugins: [

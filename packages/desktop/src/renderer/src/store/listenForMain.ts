@@ -2,10 +2,16 @@ import { defineStore } from 'pinia'
 import bus from '../bus'
 import { useEditorStore } from './editor'
 import { useLayoutStore } from './layout'
+import { usePreferencesStore } from './preferences'
 
 export const useListenForMainStore = defineStore('listenForMain', () => {
   let stopEditListener: (() => void) | undefined
   function EDITOR_EDIT_ACTION(type: string): void {
+    const imageDialog = document.querySelector('.embedded-image-workspace')
+    if (imageDialog && (type === 'undo' || type === 'redo')) {
+      imageDialog.dispatchEvent(new CustomEvent('image-history', { detail: type }))
+      return
+    }
     if (
       useEditorStore().currentFile?.readOnly &&
       !['copy', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)
@@ -47,6 +53,27 @@ export const useListenForMainStore = defineStore('listenForMain', () => {
     })
   }
 
+  function LISTEN_FOR_VIEW(): () => void {
+    const preferences = usePreferencesStore()
+    const toggle = (name: unknown): void => {
+      if (name !== 'sourceCode' && name !== 'typewriter' && name !== 'focus') return
+      const file = useEditorStore().currentFile
+      if (!file?.readOnly && !file?.modeChanging) {
+        preferences[name] = !preferences[name]
+      }
+      preferences.DISPATCH_EDITOR_VIEW_STATE({ [name]: preferences[name] })
+    }
+    const ipc = window.electron.ipcRenderer
+    const stopPalette = ipc.on('mt::show-command-palette', () => bus.emit('show-command-palette'))
+    const stopToggle = ipc.on('mt::toggle-view-mode-entry', (_event, name) => toggle(name))
+    bus.on('view:toggle-view-entry', toggle)
+    return () => {
+      stopPalette()
+      stopToggle()
+      bus.off('view:toggle-view-entry', toggle)
+    }
+  }
+
   /** Main asked for the document to convert; reply from the editor store. */
   function LISTEN_FOR_PANDOC_EXPORT(): void {
     window.electron.ipcRenderer.on('mt::export-with-pandoc', (_e, target) => {
@@ -66,6 +93,7 @@ export const useListenForMainStore = defineStore('listenForMain', () => {
   return {
     EDITOR_EDIT_ACTION,
     LISTEN_FOR_EDIT,
+    LISTEN_FOR_VIEW,
     LISTEN_FOR_SHOW_DIALOG,
     LISTEN_FOR_PANDOC_EXPORT,
     LISTEN_FOR_PARAGRAPH_INLINE_STYLE

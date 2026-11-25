@@ -1,4 +1,4 @@
-name: Release MarkText
+name: Release AutumnMark
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
     # (e.g. `vbad.tag`) instead of them silently not triggering anything.
     tags:
       - 'v*'
+      # Preview releases reuse verified build artifacts instead of rebuilding every platform.
+      - '!v*-preview.*'
 
 concurrency:
   group: release-${{ github.ref }}
@@ -19,6 +21,8 @@ jobs:
     name: Validate tag
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7.0.1
+
       - name: Validate semver tag
         run: |
           tag="${GITHUB_REF_NAME}"
@@ -28,6 +32,33 @@ jobs:
             exit 1
           fi
           echo "Tag '$tag' is valid."
+
+      - name: Match tag to application version
+        run: |
+          node <<'NODE'
+          const expected = process.env.GITHUB_REF_NAME.slice(1)
+          for (const filename of ['./package.json', './packages/desktop/package.json']) {
+            const { version } = require(filename)
+            if (version !== expected) throw new Error(`${filename}: ${version} does not match ${expected}`)
+          }
+          NODE
+
+  verify:
+    name: Verify release code
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Verify desktop code and unit tests
+        run: pnpm check && pnpm test:unit
+
+      - name: Test Muya content tabs and document switching
+        run: pnpm -C packages/muya test src/__tests__/contentTabs.spec.ts src/__tests__/setContent.spec.ts src/state/__tests__/contentTabs.spec.ts src/utils/__tests__/contentTabs.spec.ts
 
   build:
     name: Build (${{ matrix.name }})
@@ -42,21 +73,9 @@ jobs:
             os: ubuntu-22.04
             platform: linux
             arch: x64
-          - name: linux-arm64
-            os: ubuntu-22.04-arm
-            platform: linux
-            arch: arm64
           - name: windows-x64
             os: windows-latest
             platform: windows
-            arch: x64
-          - name: windows-arm64
-            os: windows-11-arm
-            platform: windows
-            arch: arm64
-          - name: macos-x64
-            os: macos-15-intel
-            platform: macos
             arch: x64
           - name: macos-arm64
             os: macos-15
@@ -74,7 +93,20 @@ jobs:
 
       - name: Install Linux Build Dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /usr/share/keyrings/llvm.asc > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/llvm.asc] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm18.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y clang-18 libstdc++-12-dev icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+
+      - name: Use Clang for Electron 45 headers
+        if: matrix.platform == 'linux'
+        run: |
+          echo "CC=clang-18" >> "$GITHUB_ENV"
+          echo "CXX=clang++-18" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=-std=c++20" >> "$GITHUB_ENV"
+          clang++-18 --version
+          printf '#include <source_location>\nint main() { return std::source_location::current().line() == 0; }\n' | clang++-18 -std=c++20 -x c++ - -fsyntax-only
 
       - name: Install Python 3.12
         uses: actions/setup-python@v7.0.0
@@ -85,6 +117,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           node-version: '24.14.1'
+          desktop-only: 'true'
 
       # Cache Electron binary; key on package.json so it busts when Electron version changes.
       - name: Cache Electron binary
@@ -119,11 +152,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Mac builds are unsigned (no Developer ID); see release notes for the
-      # user-side xattr/codesign workaround. Per-arch script: electron-builder's
-      # --arm64/--x64 flags are additive over the config's arch list, so
-      # electron-builder.yml must not pin mac.target arches for the flag to
-      # actually restrict the build to a single arch.
       - name: build-mac
         if: matrix.platform == 'macos'
         run: pnpm run build:mac:${{ matrix.arch }}
@@ -139,7 +167,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: marktext-${{ matrix.name }}
+          name: autumnmark-${{ matrix.name }}
+          compression-level: 0
           retention-days: 7
           if-no-files-found: error
           path: |
@@ -156,7 +185,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [verify, build]
     runs-on: ubuntu-latest
     # Per-job permissions REPLACE workflow-level ones, so re-declare
     # both: contents:write to publish the release, actions:read for
@@ -178,7 +207,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Merge architecture-specific update metadata
+      - name: Verify and collect release assets
         run: |
           python -m pip install PyYAML==6.0.3
           python scripts/merge-release-artifacts.py artifacts dist "${GITHUB_REF_NAME#v}"
@@ -204,9 +233,9 @@ jobs:
               echo ""
             fi
             echo "## ⚠️ Note for macOS users"
-            echo "Builds are unsigned (no Apple Developer ID). After dragging MarkText into Applications, clear the quarantine flag once:"
+            echo "Builds are unsigned (no Apple Developer ID). After dragging AutumnMark into Applications, clear the quarantine flag once:"
             echo '```'
-            echo 'xattr -d com.apple.quarantine /Applications/MarkText.app'
+            echo 'xattr -d com.apple.quarantine /Applications/AutumnMark.app'
             echo '```'
             echo ""
             echo "## Verifying downloads"
@@ -222,7 +251,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > releases.json
-          previous_tag=$(python scripts/select-release-base.py "${GITHUB_REF_NAME}" < releases.json)
+          previous_tag=$(python scripts/select-release-base.py "${GITHUB_REF_NAME}" --allow-first-release < releases.json)
           echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
           echo "Release notes range: ${previous_tag}...${GITHUB_REF_NAME}"
 

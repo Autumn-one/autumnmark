@@ -1,4 +1,193 @@
 {
+  "ai": {
+    "restartTools": "Modelin ekran görüntüsü isteyebilmesi için AutumnMark’ı yeniden başlatın.",
+    "inputTypes": "Desteklenen girdi türleri",
+    "image": "Görsel",
+    "systemPrompt": "Tema asistanı sistem istemi",
+    "systemPromptHelp": "Tüm tema sohbetlerinde yeni mesajlara ve yeniden denemelere uygulanır.",
+    "promptStorageError": "Sistem istemi okunamadı veya kaydedilemedi.",
+    "previewPrivacy": "Model bu konuşmayı alır ve örnek Markdown, CSS veya ekran görüntüsü isteyebilir. Ekran görüntüleri, seçili öğeleri veya önizlemenin görünür alanı dışındaki içeriği içerebilir.",
+    "checkingPreview": "Önizleme kontrol ediliyor…",
+    "previewFailed": "Önizleme görüntüsü alınamadı. Tekrar deneyin.",
+    "reviewLimit": "İnceleme sınırına ulaşıldı. Son değişiklikler önizlemede görünüyor.",
+    "displayName": "Görünen ad (isteğe bağlı)",
+    "model": "Model",
+    "baseUrl": "API temel adresi",
+    "requestType": "İstek türü",
+    "classic": "Chat Completions (klasik)",
+    "loadFailed": "Kaydedilen model ayarları okunamadı.",
+    "restartRequired": "Güncellenen model ayarlarını yüklemek için AutumnMark uygulamasını yeniden başlatın.",
+    "contextTooSmall": "Tema ve son mesaj tahmini bağlam bütçesini aşıyor. Bağlamı büyütün veya çıktı sınırını azaltın.",
+    "add": "Model ekle",
+    "edit": "Modeli düzenle",
+    "remove": "{model} silinsin mi?",
+    "actions": "İşlemler",
+    "empty": "Yapılandırılmış model yok.",
+    "fetch": "Modelleri getir",
+    "fetched": "Bulunan model sayısı: {count}",
+    "reasoning": "Akıl yürütme düzeyi",
+    "context": "Bağlam boyutu (belirteç)",
+    "output": "Çıktı sınırı (belirteç)",
+    "default": "Sağlayıcı varsayılanı",
+    "test": "Test et",
+    "connected": "Bağlandı · yanıt: 1",
+    "unexpectedTestReply": "Hizmet yanıt verdi ancak model 1 döndürmedi.",
+    "invalidModelList": "Hizmet geçersiz bir model listesi döndürdü.",
+    "invalidSize": "Pozitif tam sayılar girin. Çıktı sınırı bağlam boyutunu aşamaz.",
+    "modelChanged": "Model değişti. Düzenlemek için yeniden açın."
+  },
+  "themeAi": {
+    "title": "Tema yapay zekâsı",
+    "current": "Geçerli tema",
+    "openDocument": "Tema değişikliklerini denemek için bir not açın.",
+    "empty": "Satır aralığını artırmak veya başlık rengini değiştirmek gibi bir değişiklik belirtin.",
+    "placeholder": "Temada neyi değiştirmek istersiniz?",
+    "viewChange": "Bu değişikliği görüntüle",
+    "previewStatus": "Tema önizlemesi etkin",
+    "previewing": "Bu notta önizleniyor",
+    "previewReady": "Tema taslağı önizlemeye hazır",
+    "previewHere": "Bu notta önizle",
+    "endPreview": "Önizlemeyi bitir",
+    "previewEnded": "Önizleme sona erdi. Değişiklik sürüm geçmişinde.",
+    "apply": "Temaya uygula",
+    "applied": "Tema uygulandı.",
+    "copyOnApply": "Uygulandığında temanın düzenlenebilir bir kopyası oluşturulur.",
+    "changed": "Geçerli tema değişti. Yeniden deneyin."
+  },
+  "themeHistory": {
+    "empty": "Bu tema için henüz kaydedilmiş bir sürüm yok.",
+    "restoreAndApply": "Geri yükle ve uygula",
+    "confirmApplyDetail": "Bu sürüm uygulanacaktır. Mevcut sürüm geçmişte kalacaktır.",
+    "appliedCollaboration": "Harici yapay zekâ istemcisinin değişiklikleri uygulandı.",
+    "appliedRecovered": "Daha önce uygulanan sürüm",
+    "title": "Sürüm geçmişi",
+    "current": "Geçerli taslak",
+    "loading": "Sürümler yükleniyor…",
+    "storageError": "Tema sürümleri bu cihazda okunamadı veya kaydedilemedi.",
+    "aiSummary": "Yapay zekâ özeti",
+    "changes": "Değişiklikler",
+    "previous": "Önceki sürümle karşılaştırma",
+    "noChanges": "Tema içeriği önceki sürümle aynı.",
+    "restore": "Taslak olarak geri yükle",
+    "confirmRestore": "Geri yüklemeyi onayla",
+    "confirm": "{date} {time} tarihli sürüm geri yüklensin mi?",
+    "confirmDetail": "Geri yükleme bir sürüm ekler. Geçerli taslak geçmişte kalır.",
+    "restored": "{date} {time} tarihli sürüm geri yüklendi.",
+    "applyHint": "Kullanılan temayı güncellemek için «Kaydet ve uygula» seçeneğini kullanın.",
+    "kind": {
+      "initial": "İlk sürüm",
+      "manual": "Elle düzenleme",
+      "ai": "Yapay zekâ düzenlemesi",
+      "save": "Kaydet",
+      "apply": "Kaydet ve uygula",
+      "restore": "Geri yükle",
+      "undo": "Geri al",
+      "collaboration": "Ortak düzenleme",
+      "recovered": "Kurtarılan taslak"
+    },
+    "description": {
+      "initial": "Bu temanın başlangıç noktası.",
+      "manual": "Tema taslağı elle düzenlendi.",
+      "ai": "Yapay zekâ asistanı taslağı düzenledi.",
+      "save": "Tema kaydedildi.",
+      "apply": "Tema kaydedildi ve uygulandı.",
+      "restore": "Önceki bir sürüm geri yüklendi.",
+      "undo": "Taslakta yapılan bir değişiklik geri alındı.",
+      "collaboration": "Taslak ortak çalışma klasöründeki dosyalardan güncellendi.",
+      "recovered": "Bu cihazda kayıtlı bir taslak kurtarıldı."
+    },
+    "field": {
+      "name": "Tema adı",
+      "base": "Temel tema",
+      "css": "Stil",
+      "sample": "Önizleme Markdown metni"
+    }
+  },
+  "studio": {
+    "themeFiles": "Tema dosyaları",
+    "composePlaceholder": "Temada neyi değiştirmek istediğinizi yazın…",
+    "interrupted": "Bu istek kesintiye uğradı. Alınmış içerik kaydedildi.",
+    "selector": "Seçici",
+    "addSelector": "Seçici ekle",
+    "locateSelector": "Kurala git",
+    "inspect": "Öğeyi incele",
+    "inspectHint": "Önizlemeden veya Elements ağacından bir öğe seçin. Aşağıdan seçicisini ekleyebilir veya ilgili kurala gidebilirsiniz.",
+    "inspectorFailed": "Önizleme öğesi incelenemedi.",
+    "title": "Tema düzenleyici",
+    "create": "Geçerli temadan oluştur",
+    "edit": "Geçerli temayı düzenle",
+    "name": "Tema adı",
+    "base": "Temel tema",
+    "saveOnly": "Yalnızca tema olarak kaydet",
+    "saveAndApply": "Kaydet ve uygula",
+    "saveOptions": "Kaydetme seçenekleri",
+    "document": "Belge",
+    "source": "Markdown kaynağı",
+    "preview": "Tema önizlemesi",
+    "assistant": "Yapay zekâ asistanı",
+    "configure": "Modeli yapılandır",
+    "connection": "Bağlantı ayarları",
+    "privacy": "Model bu konuşmayı alır ve tema CSS’sini veya örnek Markdown’ı isteyebilir.",
+    "prompt": "Tema asistanına mesaj",
+    "composeHint": "Enter ile gönder · Shift+Enter ile alt satıra boş satır ekle",
+    "emptyReply": "Model boş yanıt döndürdü.",
+    "unchanged": "Tema değişmedi.",
+    "user": "Siz",
+    "conversation": "Sohbet geçmişi",
+    "newChat": "Yeni sohbet",
+    "deleteChat": "Sohbeti sil",
+    "untitledChat": "Sohbet · {time}",
+    "confirmDeleteChat": "“{name}” ve ekran görüntüleri kalıcı olarak silinsin mi?",
+    "screenshot": "Önizleme ekran görüntüsü {n}",
+    "retract": "Geri çek",
+    "confirmBranch": "Bu sohbetteki sonraki tüm iletiler ve ekran görüntüleri de silinecek. Devam edilsin mi?",
+    "historyError": "Sohbet geçmişi bu cihazda okunamadı veya kaydedilemedi.",
+    "chatChanged": "Sohbet değişti veya başka bir pencerede düzenleniyor. Yeniden deneyin.",
+    "diagnostics": "Hata günlüğü",
+    "exportDiagnostics": "Günlüğü dışa aktar",
+    "replyError": {
+      "tooLarge": "Model yanıtı boyut sınırını aştı. Daha küçük bir değişiklik isteyin.",
+      "missingMatch": "Değiştirilecek metin geçerli CSS içinde bulunamadı.",
+      "ambiguousMatch": "Değiştirilecek metin geçerli CSS içinde birden çok kez geçiyor.",
+      "css": "Önerilen CSS doğrulamadan geçemedi",
+      "format": "Yanıt geçersiz bir düzenleme komutu içeriyor.",
+      "incomplete": "Yanıt, düzenleme komutu tamamlanmadan sona erdi.",
+      "truncated": "Modelin çıktı sınırına ulaşıldı. Sınırı artırın veya daha küçük bir değişiklik isteyin."
+    },
+    "send": "Gönder",
+    "stop": "Durdur",
+    "undo": "Son değişikliği geri al",
+    "export": "Temayı dışa aktar",
+    "import": "Kopya olarak içe aktar",
+    "draft": "Taslak bu cihaza kaydedildi",
+    "copy": "Temam",
+    "sample": "Örnek belge",
+    "endpoint": "Chat Completions API temel adresi",
+    "model": "Model kimliği",
+    "apiKey": "API anahtarı",
+    "keySaved": "Kaydedildi · korumak için boş bırakın",
+    "keyOptional": "Yerel modeller için isteğe bağlı",
+    "clearKey": "Kayıtlı anahtarı kaldır",
+    "saveConnection": "Bağlantıyı kaydet",
+    "httpError": "Modelin HTTP yanıtı",
+    "invalidEndpoint": "HTTPS veya localhost üzerinde HTTP kullanın. Temel adresi ya da chat/completions adresini girin.",
+    "invalidRequest": "Model adını ve ayarları denetleyin.",
+    "newKeyRequired": "Yeni adresin anahtarını girin veya kayıtlı anahtarı silin.",
+    "keyStore": "Sistem anahtarlığının kilidini açıp yeniden deneyin.",
+    "invalidReply": "Model yanıtı desteklenmiyor. Geçerli değişiklikler önizlemede gösterilir.",
+    "configureFirst": "Önce bir model yapılandırın.",
+    "requestFailed": "Bağlantı başarısız oldu veya zaman aşımına uğradı. Adresi denetleyin.",
+    "storageError": "Kaydedilemedi. Taslak açık kalacak.",
+    "stopped": "Üretim durduruldu.",
+    "updated": "Değişiklikler taslağa uygulandı.",
+    "generating": "Model bekleniyor…",
+    "nameRequired": "Bir tema adı girin.",
+    "invalidFile": "1 MB’tan küçük, desteklenen bir dosya seçin.",
+    "css": "CSS kaynağı",
+    "baseSource": "Temel CSS’yi görüntüle (salt okunur)",
+    "cssIssue": "CSS’yi denetleyin",
+    "openFailed": "Tema düzenleyici açılamadı."
+  },
   "menu": {
     "counter": {
       "words": "Sözcükler",
@@ -108,15 +297,15 @@
       "checkUpdates": "Güncellemeleri Denetle"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "MarkText Hakkında",
+      "title": "AutumnMark",
+      "about": "AutumnMark Hakkında",
       "checkUpdates": "Güncellemeleri Denetle...",
       "preferences": "Tercihler",
       "services": "Hizmetler",
-      "hide": "MarkText'i Gizle",
+      "hide": "AutumnMark'i Gizle",
       "hideOthers": "Diğerlerini Gizle",
       "showAll": "Tümünü Göster",
-      "quit": "MarkText'ten Çık"
+      "quit": "AutumnMark'ten Çık"
     },
     "view": {
       "view": "Görünüm",
@@ -148,6 +337,7 @@
     },
     "theme": {
       "theme": "&Tema",
+      "openSettings": "Tema ayarları…",
       "dark": "Koyu",
       "followThemDisabled": "Sistem temasını takip ederken tema seçimi devre dışı",
       "lightThemes": "Açık Temalar",
@@ -156,7 +346,7 @@
       "ayuLight": "Ayu Light",
       "ayuMirage": "Ayu Mirage",
       "cadmiumDark": "Cadmium Dark",
-      "cadmiumLight": "Cadmium Light",
+      "gitbookTeal": "GitBook Teal",
       "catppuccinLatte": "Catppuccin Latte",
       "catppuccinMocha": "Catppuccin Mocha",
       "cyberdream": "cyberdream",
@@ -188,6 +378,8 @@
     }
   },
   "contextMenu": {
+    "copyFilePath": "Dosya yolunu kopyala",
+    "copyFolderPath": "Üst klasörün yolunu kopyala",
     "cut": "Kes",
     "copy": "Kopyala",
     "paste": "Yapıştır",
@@ -220,7 +412,8 @@
       "rename": "Yeniden Adlandır",
       "copyPath": "Yolu kopyala",
       "showInFolder": "Klasörde göster",
-      "showInSideBar": "Kenar çubuğunda göster"
+      "showInSideBar": "Kenar çubuğunda göster",
+      "openContainingFolder": "Dosyanın bulunduğu klasörü kenar çubuğunda aç"
     }
   },
   "search": {
@@ -237,6 +430,7 @@
     "searchLimited": "Arama ilk {count} sonuçla sınırlandırıldı"
   },
   "sideBar": {
+    "resize": "Kenar çubuğunu yeniden boyutlandır",
     "search": {
       "backToFiles": "Dosyalara dön",
       "searchInFolder": "Klasörde ara...",
@@ -251,6 +445,7 @@
     },
     "tree": {
       "openedFiles": "Açık dosyalar",
+      "folders": "Klasörler",
       "saveAll": "Tümünü Kaydet",
       "closeAll": "Tümünü Kapat",
       "emptyProject": "Boş proje",
@@ -271,6 +466,7 @@
       "expand": "İçindekileri genişlet",
       "collapse": "İçindekileri daralt",
       "empty": "Başlık yok",
+      "emptyHint": "Eklenen başlıklar burada görünecek",
       "resize": "İçindekiler genişliğini ayarla",
       "title": "İçindekiler",
       "expandAll": "Tümünü genişlet",
@@ -293,7 +489,7 @@
       "conflict": "The destination already contains an item with this name. Rename it before trying again.",
       "missing": "The source or destination no longer exists. Refresh the folder and try again.",
       "permission": "The item could not be moved. Check folder permissions and whether another application is using it.",
-      "openElsewhere": "Close this file and any documents inside this folder in other MarkText windows before moving it.",
+      "openElsewhere": "Close this file and any documents inside this folder in other AutumnMark windows before moving it.",
       "destinationOpen": "A document is already open at the destination path. Close it before trying again."
     }
   },
@@ -313,6 +509,7 @@
     }
   },
   "commandPalette": {
+    "loadingHeadings": "Başlıklar yükleniyor…",
     "placeholder": "Çalıştırmak için bir komut yazın",
     "placeholders": {
       "selectOption": "Bir seçenek seçin",
@@ -410,7 +607,7 @@
   },
   "import": {
     "title": "İçe Aktar veya Aç",
-    "description": "İçeriklerinizi MarkText'e almak için buraya bırakın"
+    "description": "İçeriklerinizi AutumnMark'e almak için buraya bırakın"
   },
   "preferences": {
     "title": "Tercihler",
@@ -419,6 +616,8 @@
       "placeholder": "Tercihlerde ara..."
     },
     "categories": {
+      "ai": "Yapay zekâ modelleri",
+      "video": "Video",
       "general": "Genel",
       "appearance": "Görünüm",
       "editor": "Düzenleme",
@@ -578,6 +777,11 @@
         "hideLinkPopup": "Bağlantı açılır penceresini gizle",
         "autoCheck": "Üst ve alt görevlerin işaretlerini bağla",
         "autoNormalizeLineEndings": "Açılışta satır sonlarını LF'ye otomatik normalleştir",
+        "compactMode": "Kompakt mod",
+        "compactLimitHint": "Bir tür için sınırı 0 yaparsanız o türde kompakt mod kapanır.",
+        "compactImageMaxHeight": "En fazla görsel yüksekliği (px)",
+        "compactVideoMaxHeight": "En fazla video yüksekliği (px)",
+        "compactCodeMaxLines": "Görünür kod satırı sınırı",
         "wrapCodeBlocks": "Kod bloklarını kaydır",
         "sourceCodeLineNumbers": "Kaynak kod modunda satır numaralarını göster"
       }
@@ -587,7 +791,8 @@
       "actions": {
         "upload": "Buluta yükle",
         "folder": "Klasöre kopyala",
-        "path": "Mutlak yolu kullan"
+        "path": "Mutlak yolu kullan",
+        "embed": "Markdown içine göm (Base64)"
       },
       "folderSetting": {
         "title": "Klasör Ayarı",
@@ -633,7 +838,7 @@
         "scriptPath": "Betik yolu",
         "invalidScript": "Var olan ve çalıştırılabilir bir betiğin yolunu girin."
       },
-      "defaultBehavior": "Görseli MarkText'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
+      "defaultBehavior": "Görseli AutumnMark'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
     },
     "markdown": {
       "title": "Markdown",
@@ -657,6 +862,11 @@
         }
       },
       "diagrams": {
+        "newDrawingView": {
+          "title": "Yeni çizimleri açma biçimi",
+          "dialog": "Kayan pencere",
+          "tab": "Yeni sekme"
+        },
         "title": "Diyagramlar",
         "sequenceTheme": {
           "title": "Dizi Teması",
@@ -664,10 +874,10 @@
           "simple": "Basit"
         },
         "mermaidLightTheme": {
-          "title": "MarkText açık temaları için Mermaid teması"
+          "title": "AutumnMark açık temaları için Mermaid teması"
         },
         "mermaidDarkTheme": {
-          "title": "MarkText koyu temaları için Mermaid teması"
+          "title": "AutumnMark koyu temaları için Mermaid teması"
         },
         "plantumlServer": {
           "title": "PlantUML Sunucu URL'si"
@@ -707,6 +917,67 @@
     "theme": {
       "title": "Tema",
       "followSystemTheme": "Sistem görünümünü izle",
+      "mode": "Tema modu",
+      "fixed": "Sabit tema",
+      "currentTheme": "Geçerli tema",
+      "source": "Tema kaynağı",
+      "local": "Yerel temalar",
+      "online": "Çevrimiçi temalar",
+      "builtIn": "Yerleşik",
+      "custom": "Özel",
+      "installed": "Yüklü",
+      "active": "Kullanımda",
+      "apply": "Uygula",
+      "refresh": "Çevrimiçi temaları yenile",
+      "installOnly": "Yalnızca yükle",
+      "installAndApply": "Yükle ve uygula",
+      "update": "Güncelle",
+      "setFor": {
+        "light": "Açık tema olarak ayarla",
+        "dark": "Koyu tema olarak ayarla"
+      },
+      "installFor": {
+        "light": "Yükle ve açık tema olarak ayarla",
+        "dark": "Yükle ve koyu tema olarak ayarla"
+      },
+      "assigned": {
+        "light": "Açık mod için ayarlandı",
+        "dark": "Koyu mod için ayarlandı"
+      },
+      "deferred": {
+        "light": "Sistem açık moda geçtiğinde {name} uygulanacak.",
+        "dark": "Sistem koyu moda geçtiğinde {name} uygulanacak."
+      },
+      "applied": "{name} uygulandı.",
+      "installedNotice": "{name} yüklendi. Yerel temalar bölümünde bulabilirsiniz.",
+      "updated": "{name} güncellendi.",
+      "incompatible": "AutumnMark {version} gerekir",
+      "changeFailed": "Tema ayarı kaydedilemedi.",
+      "installFailed": "Bu tema indirilemedi veya kaydedilemedi.",
+      "deleteTheme": "Temayı sil",
+      "uninstallTheme": "Temayı kaldır",
+      "confirmRemoval": "“{name}” yerel temalardan kaldırılacak.",
+      "removalFallback": "Bu temayı kullanan ayarlar {base} temasına geçecek.",
+      "removalFailed": "Bu tema kaldırılamadı.",
+      "preview": "Önizleme",
+      "compare": "Geçerli temayla karşılaştır",
+      "previewing": "Önizleniyor",
+      "previewLoading": "Tema önizlemesi yükleniyor…",
+      "previewFailed": "Tema önizlemesi yüklenemedi.",
+      "loading": "Çevrimiçi temalar yükleniyor…",
+      "unavailable": "Çevrimiçi temalar yüklenemedi. Yenilemeyi deneyin.",
+      "cached": "Son indirilen katalog gösteriliyor.",
+      "cachedNoResults": "Son indirilen katalogda aramanızla eşleşen tema yok.",
+      "emptyCatalog": "Henüz çevrimiçi tema yok.",
+      "sample": {
+        "title": "Sabah notları",
+        "quote": "Küçük bir fikirle başlayın.",
+        "section": "Bölüm",
+        "status": "Durum",
+        "intro": "Giriş",
+        "draft": "Taslak",
+        "code": "Yazmaya başla"
+      },
       "followSystemNote": "Aşağıda koyu ve açık modlar için ayrı temalar seçebilirsiniz.",
       "modeThemes": "Tema Seçimi",
       "lightModeTheme": "Açık mod teması",
@@ -780,9 +1051,27 @@
     "copyright": "Telif Hakkı © Luo Ran 2017-{year}",
     "copyrightContributors": "Github Katkıda Bulunanlar tarafından <3 ile yapıldı"
   },
+  "remoteContent": {
+    "announcement": "Duyurular",
+    "unreadAnnouncement": "Okunmamış duyuru",
+    "about": "Güncel bilgiler",
+    "loading": "En yeni içerik getiriliyor…",
+    "loadFailed": "İçerik yüklenemedi.",
+    "refreshFailed": "Yenileme başarısız. Son alınan içerik gösteriliyor.",
+    "unverified": "GitHub’a ulaşılamıyor. Duyurunun güncel olup olmadığı doğrulanamadı.",
+    "refresh": "Yenile",
+    "retry": "Tekrar dene",
+    "donation": {
+      "title": "AutumnMark’ı destekleyin",
+      "description": "AutumnMark’ın geliştirilmesini desteklemek için QR kodunu ilgili uygulamayla tarayın.",
+      "alipay": "Alipay",
+      "wechatPay": "WeChat Pay",
+      "qrCode": "Bağış için {method} QR kodu"
+    }
+  },
   "commands": {
     "mt": {
-      "hide": "MarkText'i Gizle",
+      "hide": "AutumnMark'i Gizle",
       "hideOthers": "Diğerlerini Gizle"
     },
     "file": {
@@ -925,9 +1214,141 @@
       "switchLanguage": "Dili Değiştir"
     }
   },
+  "documentChat": {
+    "undoChanges": "Değişiklikleri geri al",
+    "changesReverted": "Değişiklikler geri alındı",
+    "turnActions": "Bu konuşma adımının işlemleri",
+    "deleteTurn": "Bu konuşma adımını sil",
+    "revertTurn": "Bu konuşma adımını geri al ve sil",
+    "revertFailed": "Belge veya tema değiştiği için bazı değişiklikler geri alınamadı. Sohbet korundu.",
+    "configure": "Yapay zekâ modellerini yapılandır",
+    "onboarding": {
+      "title": "Yapay zekâyla düzenle",
+      "loadingModels": "Yapay zekâ modelleri yükleniyor…",
+      "retry": "Yeniden dene",
+      "builtIn": "AutumnMark içinde yapay zekâ kullan",
+      "builtInHint": "Kenar çubuğunda sohbet etmek ve belgeyi ya da temayı düzenlemek için bir model ekleyin.",
+      "externalClient": "Zaten bir yapay zekâ istemcisi kullanıyor musunuz?",
+      "externalHint": "AutumnMark’ta model kurmadan tercih ettiğiniz istemciyi kullanın.",
+      "useExternal": "Harici yapay zekâ istemcisi kullan",
+      "target": "Düzenlenecek öğe",
+      "editDocument": "Belgeyi düzenle",
+      "editTheme": "Temayı düzenle",
+      "copyFailed": "Panoya kopyalanamadı. Yeniden deneyin.",
+      "skillIntro": "Belgeyi veya temayı düzenlemek için uyumlu bir istemcide {0} Skill’ini çağırın.",
+      "documentScope": "Tüm pencerelerde yalnızca bir belge açıksa Skill doğrudan düzenler. Birden fazla belge açıksa istemci hangisini istediğinizi sorar.",
+      "themeScope": "Tema düzenleyicisi açıksa Skill geçerli taslağı düzenler. Kapalıysa uygulanan temayı düzenler.",
+      "invokeSkill": "İstemcide Skill’i çağır",
+      "invokeHint": "Örneği istemcinize yapıştırıp istediğiniz değişikliğe göre uyarlayın.",
+      "documentInstruction": "{0} Skill’ini kullanarak geçerli belgedeki onay bekleyen maddeleri bir kontrol listesine dönüştür.",
+      "themeInstruction": "{0} Skill’ini kullanarak geçerli temadaki birinci düzey başlıkların boyutunu biraz küçült.",
+      "skillHelp": "İstemcinizde Skill’i bulamıyor musunuz?",
+      "skillHelpHint": "AutumnMark başlangıçta Skill’i yükler ve günceller. İstemcide Skill listesini yenileyin veya aşağıdaki ortak klasörden içe aktarın.",
+      "copyInstruction": "Çağrı talimatını kopyala",
+      "instructionCopied": "Çağrı talimatı kopyalandı. Yapay zekâ istemcinize yapıştırın."
+    }
+  },
+  "drawing": {
+    "insert": "Excalidraw çizimi ekle",
+    "openInTab": "Sekmede aç",
+    "new": "Yeni Excalidraw çizimi",
+    "open": "Excalidraw çizimini aç",
+    "untitled": "Adsız çizim",
+    "addDocument": "Markdown belgesi ekle",
+    "addDocumentButton": "Belge ekle",
+    "searchDocuments": "Markdown belgelerini ara",
+    "insertIntoNote": "Belgeye ekle",
+    "wholeDocument": "Belgenin tamamı",
+    "addCard": "Kart ekle",
+    "discardChanges": "Bu çizimdeki kaydedilmemiş değişiklikler atılsın mı?",
+    "discard": "Değişiklikleri at",
+    "changedOnDisk": "Diskteki çizim değişti. Son sürümü görmek için yeniden açın.",
+    "invalidFile": "Bir .excalidraw dosyası seçin.",
+    "openFailed": "Dosya açılamadı. {reason}",
+    "saveFailed": "Çizim kaydedilemedi veya eklenemedi. {reason}",
+    "cardFailed": "Belge kartı eklenemedi. {reason}"
+  },
   "common": {
     "cancel": "İptal",
     "ok": "Tamam"
+  },
+  "video": {
+    "streamedSource": "Kaydedildiğinde videonun tamamı ({size} MiB) Markdown dosyasına eklenir. Base64 kaynağı burada düzenlenemeyecek kadar büyük.",
+    "embed": "Videoları Base64 olarak göm",
+    "note": "Yeni videoları Markdown belgesine kaydeder. Kapalıyken dosya başvurusu eklenir.",
+    "title": "Video",
+    "insert": "Video ekle…",
+    "preview": "Video önizlemesi",
+    "replace": "Videoyu değiştir",
+    "choose": "Video seç…",
+    "fromClipboard": "Panodaki videoyu kullan",
+    "delete": "Videoyu sil",
+    "drop": "Değiştirmek için bırak",
+    "hint": "Değiştirmek için video bırakın veya {shortcut} tuşlarına basın",
+    "drag": "Özgün videoyu sürükle",
+    "invalid": "Video okunamadı veya kodlayıcı desteklenmiyor.",
+    "location": "Video kaynağı",
+    "saveAs": "Videoyu farklı kaydet…",
+    "convert": "Yerel videoya dönüştür",
+    "toEmbedded": "Videoyu Markdown içine göm",
+    "copy": "Video dosyasını kopyala"
+  },
+  "batchMedia": {
+    "title": "Resimleri ve videoları topluca göm",
+    "images": "Resimler ({count})",
+    "videos": "Videolar ({count})",
+    "scanning": "Belgeler taranıyor ({current}/{total})…",
+    "pending": "Gömülecek medya içeren belge sayısı: {count}",
+    "convert": "Seçilenleri göm ({count})",
+    "converting": "Belgeler dönüştürülüyor ({current}/{total})…",
+    "done": "Gömülen medya başvurusu: {count}",
+    "issues": "Sorunlar ({count})",
+    "locked": "Bu belge salt okunur.",
+    "changed": "Belge değişti veya kullanımda. Yeniden tarayın.",
+    "saveFailed": "Dönüştürülen belge kaydedilemedi."
+  },
+  "documentImages": {
+    "words": "{count} sözcük",
+    "paragraphs": "{count} paragraf",
+    "title": "Belge görselleri",
+    "noImages": "Görsel yok",
+    "allEmbedded": "Tüm görseller gömülü",
+    "pending": "Gömülecek görsel sayısı: {count}",
+    "convertAll": "Tüm belge görsellerini göm ({count})",
+    "summary": "Gömülü: {embedded} · Gömülmemiş: {pending}"
+  },
+  "embeddedImage": {
+    "setSize": "Görsel boyutunu ayarla…",
+    "width": "Genişlik",
+    "height": "Yükseklik",
+    "lockAspect": "En boy oranını kilitle",
+    "autoSize": "Otomatik boyuta dön",
+    "auto": "Otomatik",
+    "toEmbedded": "Bu görseli göm",
+    "pasteProgress": "Görseller gömülüyor {completed}/{total}",
+    "pasteFailed": "{total} görselden {failed} tanesi için özgün bağlantılar korundu",
+    "preview": "Görüntü önizlemesi",
+    "source": "Gömülü kaynak",
+    "replace": "Görüntüyü değiştir",
+    "copyAs": "Farklı kopyala",
+    "jpeg": "JPEG görüntüsü",
+    "fromClipboard": "Panodaki görüntüyü kullan",
+    "saveAs": "Görüntüyü farklı kaydet…",
+    "convert": "Yerel görüntüye dönüştür",
+    "viewSource": "Gömülü kaynağı göster",
+    "hint": "Tekerlekle yakınlaştır · Değiştirmek için görüntü bırakın veya {shortcut} tuşlarına basın",
+    "drag": "Özgün görüntüyü sürükle",
+    "drop": "Değiştirmek için bırakın",
+    "dirty": "Uygulanmamış değişiklikler",
+    "discard": "Değişiklikleri at",
+    "apply": "Değişiklikleri uygula",
+    "copyFailed": "Görüntü kopyalanamadı.",
+    "unsupported": "Desteklenmeyen görüntü biçimi.",
+    "title": "Gömülü görsel",
+    "delete": "Görseli sil",
+    "paste": "Veri URL’sini yapıştır",
+    "choose": "Görsel seç…",
+    "invalid": "Görsel okunamadı."
   },
   "dialog": {
     "moveToTrash": "\"{name}\" öğesini çöp kutusuna taşımak istediğinizden emin misiniz?",
@@ -939,7 +1360,7 @@
     "fileExists": "Dosya zaten var: {filename}",
     "files": "Dosyalar",
     "importWarning": "İçe aktarma uyarısı",
-    "installPandoc": "Pandoc bulunamadı. Yükleyin veya MARKTEXT_PANDOC ortam değişkenini pandoc çalıştırılabilir dosyasının yolu olarak ayarlayıp MarkText'i yeniden başlatın.",
+    "installPandoc": "Pandoc bulunamadı. Yükleyin veya MARKTEXT_PANDOC ortam değişkenini pandoc çalıştırılabilir dosyasının yolu olarak ayarlayıp AutumnMark'i yeniden başlatın.",
     "exportWarning": "Dışa aktarma uyarısı",
     "exportWarningMore": "…ve {count} tane daha",
     "keepOpen": "Açık tut",
@@ -956,13 +1377,30 @@
     "configSchemaViolation": "Yapılandırma şeması ihlali",
     "copyError": "Kopyalama hatası",
     "initializationFailed": "Başlatma başarısız {hint}",
-    "otherInstanceDetected": "Başka bir MarkText penceresi zaten açık",
+    "otherInstanceDetected": "Başka bir AutumnMark penceresi zaten açık",
     "report": "Bildir",
     "startupError": "Başlangıç hatası",
     "terminatedDueToError": "Hata nedeniyle sonlandırıldı",
     "unexpectedErrorWithMessage": "Beklenmeyen hata: {message}",
     "unexpectedMainProcess": "Beklenmeyen ana işlem hatası",
     "unexpectedRendererProcess": "Beklenmeyen işleyici işlem hatası"
+  },
+  "updates": {
+    "title": "Yazılım güncellemesi",
+    "install": "Yeniden başlat ve yükle",
+    "later": "Daha sonra",
+    "upToDate": "En güncel sürümü kullanıyorsunuz.",
+    "downloaded": "Güncelleme indirildi. Yükleme için uygulama kapanacak.",
+    "checkFailed": "Güncellemeler denetlenemedi. Daha sonra yeniden deneyin.",
+    "installFailed": "Güncelleme yüklenemedi. Daha sonra yeniden deneyin.",
+    "checking": "Güncellemeler denetleniyor…",
+    "preparing": "{version} sürümü yükleme için hazırlanıyor…",
+    "downloading": "{version} sürümü indiriliyor…",
+    "ready": "{version} sürümü yüklemeye hazır.",
+    "background": "Arka planda devam et",
+    "retry": "Yeniden dene",
+    "downloadFailed": "İndirme başarısız oldu. Bağlantınızı kontrol edip yeniden deneyin.",
+    "waiting": "Yanıt bekleniyor…"
   },
   "notifications": {
     "defaultMessage": "Varsayılan mesaj",

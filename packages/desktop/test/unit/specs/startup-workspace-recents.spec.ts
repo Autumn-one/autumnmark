@@ -114,10 +114,10 @@ describe('workspace reopening templates', () => {
     state = rememberWindowContext(active(state, 'b'), window('b', 'second'))
     const background = window('a', 'first')
     background.updatedAtMs = 100
-    background.layout.outline.position = 'right'
+    background.layout.sidebar.activeView = 'outline'
     const result = rememberWindowContext(state, background)
     expect(result.recentWorkspaces.map((entry) => entry.workspace.id)).toEqual(['second', 'first'])
-    expect(result.recentWorkspaces[1].layout.outline.position).toBe('right')
+    expect(result.recentWorkspaces[1].layout.sidebar.activeView).toBe('outline')
     expect(result.lastActiveWorkspaceId).toBe('second')
   })
 
@@ -153,9 +153,9 @@ describe('workspace reopening templates', () => {
   it('remembers empty-window layout separately without clearing the last active workspace', () => {
     const previous = rememberWindowContext(active(initial(), 'a'), window('a'))
     const empty = { ...window('empty'), workspace: null, documents: [], activeDocumentId: null }
-    empty.layout.outline.position = 'right'
+    empty.layout.sidebar.activeView = 'outline'
     const result = rememberWindowContext(active(previous, 'empty'), empty)
-    expect(result.recentEmptyWindowLayout?.layout.outline.position).toBe('right')
+    expect(result.recentEmptyWindowLayout?.layout.sidebar.activeView).toBe('outline')
     expect(result.lastActiveWorkspaceId).toBe('notes')
     expect(result.recentWorkspaces).toEqual(previous.recentWorkspaces)
     expect(rememberWindowContext(previous, empty).recentEmptyWindowLayout).toBeNull()

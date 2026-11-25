@@ -1,0 +1,158 @@
+import { EventEmitter } from 'node:events'
+import { app, ipcMain, type BrowserWindow } from 'electron'
+import type * as DesktopUpdates from '../../../src/main/updates'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { updater, isUpdatable } = vi.hoisted(() => ({
+  isUpdatable: vi.fn(),
+  updater: {
+    allowPrerelease: true,
+    autoDownload: true,
+    autoInstallOnAppQuit: true,
+    on: vi.fn(),
+    checkForUpdates: vi.fn(),
+    downloadUpdate: vi.fn(),
+    quitAndInstall: vi.fn()
+  }
+}))
+vi.mock('electron-updater', () => ({ autoUpdater: updater }))
+vi.mock('electron', async() => {
+  const { EventEmitter } = await import('node:events')
+  return { app: new EventEmitter(), ipcMain: new EventEmitter(), BrowserWindow: {} }
+})
+vi.mock('electron-log', () => ({ default: { warn: vi.fn() } }))
+vi.mock('../../../src/main/utils/isUpdatable', () => ({ isUpdatable }))
+
+const interval = 20 * 60 * 1000
+const send = vi.fn()
+const sender = Object.assign(new EventEmitter(), { send })
+const win = { isDestroyed: () => false, webContents: sender } as unknown as BrowserWindow
+const available = (version: string) => ({ isUpdateAvailable: true, updateInfo: { version } })
+const listen = (): void => { ipcMain.emit('mt::update-listen', { sender }) }
+let updates: typeof DesktopUpdates
+const updaterEvents = new EventEmitter()
+
+describe('desktop updates', () => {
+  beforeEach(async() => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    vi.resetAllMocks()
+    ipcMain.removeAllListeners()
+    sender.removeAllListeners()
+    updaterEvents.removeAllListeners()
+    updater.on.mockImplementation((event, callback) => updaterEvents.on(event, callback))
+    isUpdatable.mockReturnValue(true)
+    updater.checkForUpdates.mockResolvedValue({ isUpdateAvailable: false })
+    updater.downloadUpdate.mockResolvedValue([])
+    updates = await import('../../../src/main/updates')
+    listen()
+    send.mockClear()
+  })
+
+  afterEach(() => {
+    app.emit('will-quit', {} as Electron.Event)
+    vi.useRealTimers()
+  })
+
+  it('prefetches stable releases without installing on normal exit', () => {
+    expect(updater.allowPrerelease).toBe(false)
+    expect(updater.autoInstallOnAppQuit).toBe(false)
+    expect(updater.autoDownload).toBe(false)
+  })
+
+  it('retries silent checks on the timer, stopping on quit', async() => {
+    updater.checkForUpdates.mockRejectedValueOnce(new Error('offline'))
+    updates.startAutomaticUpdateChecks(() => win)
+    updates.startAutomaticUpdateChecks(() => win)
+    await vi.advanceTimersByTimeAsync(interval)
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2)
+    expect(send.mock.calls.some(call => call[2] === true)).toBe(false)
+    app.emit('will-quit', {} as Electron.Event)
+    await vi.advanceTimersByTimeAsync(interval)
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips scheduled checks on unsupported installations', async() => {
+    isUpdatable.mockReturnValue(false)
+    updates.startAutomaticUpdateChecks(() => win)
+    await vi.advanceTimersByTimeAsync(interval)
+    expect(updater.checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('shows an ongoing check immediately and allows retry after a network error', async() => {
+    updater.checkForUpdates.mockRejectedValueOnce(new Error('offline'))
+    updates.startAutomaticUpdateChecks(() => win)
+    updates.checkUpdates(win)
+    expect(send).toHaveBeenCalledWith('mt::update-state', { phase: 'checking' }, true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'error', stage: 'check' })
+    updates.checkUpdates(win)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2)
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'current' })
+  })
+
+  it('shares live progress with manual checks and newly opened windows', async() => {
+    updater.checkForUpdates.mockResolvedValue(available('1.1'))
+    updater.downloadUpdate.mockImplementation(() => new Promise(resolve => setTimeout(resolve, interval + 1)))
+    updates.startAutomaticUpdateChecks(() => win)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(updater.downloadUpdate).toHaveBeenCalledOnce()
+    expect(send.mock.calls.some(call => call[2] === true)).toBe(false)
+
+    const progress = { transferred: 20, total: 100, bytesPerSecond: 7 }
+    updaterEvents.emit('download-progress', progress)
+    const downloading = { phase: 'downloading', version: '1.1', progress }
+    updates.checkUpdates(win)
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', downloading, true)
+    const second = Object.assign(new EventEmitter(), { send: vi.fn() })
+    ipcMain.emit('mt::update-listen', { sender: second })
+    expect(second.send).toHaveBeenCalledWith('mt::update-state', downloading, false)
+    ipcMain.emit('mt::update-background', { sender })
+    await vi.advanceTimersByTimeAsync(interval + 1)
+    expect(updater.checkForUpdates).toHaveBeenCalledOnce()
+    expect(updater.downloadUpdate).toHaveBeenCalledOnce()
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'ready', version: '1.1' })
+    expect(updater.quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('offers a prefetched version once, even when the renderer starts after the download', async() => {
+    sender.emit('destroyed')
+    updater.checkForUpdates.mockResolvedValue(available('1.2'))
+    updates.startAutomaticUpdateChecks(() => null)
+    await vi.advanceTimersByTimeAsync(0)
+    listen()
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'ready', version: '1.2' }, true)
+    send.mockClear()
+    await vi.advanceTimersByTimeAsync(interval)
+    expect(send).not.toHaveBeenCalled()
+    expect(updater.downloadUpdate).toHaveBeenCalledOnce()
+
+    updater.checkForUpdates.mockResolvedValue(available('1.3'))
+    await vi.advanceTimersByTimeAsync(interval)
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'ready', version: '1.3' }, true)
+    expect(updater.quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('allows retry after a failed download and installs only the confirmed, ready version', async() => {
+    updater.checkForUpdates.mockResolvedValue(available('1.4'))
+    updater.downloadUpdate.mockRejectedValueOnce(new Error('connection reset'))
+    updates.checkUpdates(win)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'error', stage: 'download', version: '1.4' })
+    ipcMain.emit('mt::update-install', { sender }, '1.4')
+    expect(updater.quitAndInstall).not.toHaveBeenCalled()
+    updates.checkUpdates(win)
+    await vi.advanceTimersByTimeAsync(0)
+    ipcMain.emit('mt::update-install', { sender }, '1.3')
+    expect(updater.quitAndInstall).not.toHaveBeenCalled()
+    ipcMain.emit('mt::update-install', { sender }, '1.4')
+    ipcMain.emit('mt::update-install', { sender }, '1.4')
+    expect(updater.quitAndInstall).toHaveBeenCalledOnce()
+    updaterEvents.emit('error', new Error('installer failed'))
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'error', stage: 'install', version: '1.4' })
+    ipcMain.emit('mt::update-install', { sender }, '1.4')
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(2)
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(2)
+  })
+})

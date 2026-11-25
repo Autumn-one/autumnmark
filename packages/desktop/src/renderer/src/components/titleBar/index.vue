@@ -1,145 +1,126 @@
 <template>
-  <div>
-    <div
-      class="title-bar-editor-bg"
-      :class="{ 'tabs-visible': showTabBar }"
-    />
+  <header
+    class="title-bar-editor-bg"
+    :class="{
+      'tabs-visible': showTabBar,
+      'mica-title-bar': micaTitleBar && showCustomTitleBar && active
+    }"
+  >
     <div
       class="title-bar"
       :class="[
         { active: active },
         { 'tabs-visible': showTabBar },
         { frameless: titleBarStyle === 'custom' },
+        { 'has-menubar': showCustomTitleBar },
         { isOsx: isOsx }
       ]"
     >
+      <application-menu v-if="showCustomTitleBar" />
       <div
         v-if="titleBarStyle !== 'native' || isOsx"
         class="title"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
-        <span v-if="!filename">MarkText</span>
-        <span v-else>
-          <span
-            class="save-dot"
-            :class="{ show: !isSaved }"
-          />
-          <span class="path">
-            <bdi dir="ltr">
-              <span
-                v-for="(path, index) of paths"
-                :key="index"
-              >
-                {{ path }}
-                <el-icon
-                  class="path-arrow"
-                  :size="12"
-                >
-                  <ArrowRight />
-                </el-icon>
-              </span>
-              <span
-                class="filename"
-                :class="{ isOsx: platform === 'darwin' }"
-                @click="rename"
-              >
-                {{ filename }}
-              </span>
-            </bdi>
-          </span>
+        <span class="title-brand" :class="{ 'with-filename': filename }">
+          <img v-if="filename" :src="AppLogo" alt="" width="16" height="16" draggable="false" />
+          <span class="brand-name">{{ APP_NAME }}</span>
         </span>
+        <template v-if="filename">
+          <span class="save-dot" :class="{ show: !isSaved }" />
+          <bdi class="filename" :class="{ isOsx }" :title="filename" @click="rename">{{ filename }}</bdi>
+        </template>
       </div>
-      <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
-        <button
-          v-if="showCustomTitleBar"
-          type="button"
-          class="plain-button frameless-titlebar-menu title-no-drag"
-          aria-haspopup="menu"
-          :aria-label="t('titleBar.applicationMenu')"
-          @click.stop="handleMenuClick"
+      <div class="title-actions">
+        <div :class="showCustomTitleBar ? 'statistics-toolbar title-no-drag' : 'right-toolbar'">
+          <button
+            v-if="updates.showProgressButton"
+            type="button"
+            class="plain-button update-trigger title-no-drag"
+            :aria-label="t('updates.title')"
+            :title="updates.status"
+            aria-haspopup="dialog"
+            @click="updates.visible = true"
+          >
+            <el-icon :size="16">
+              <Warning v-if="updates.state.phase === 'error'" />
+              <CircleCheck v-else-if="updates.state.phase === 'ready'" />
+              <Download v-else />
+            </el-icon>
+            <span>{{ updates.percent === null ? t('updates.title') : `${updates.percent}%` }}</span>
+          </button>
+          <announcement-bell />
+        </div>
+        <div
+          v-if="titleBarStyle === 'custom' && !isFullScreen && !isOsx"
+          class="right-toolbar window-controls"
+          :class="[{ 'title-no-drag': titleBarStyle === 'custom' }]"
         >
-          <span class="text-center-vertical">&#9776;</span>
-        </button>
-        <document-statistics
-          v-if="wordCount"
-          :pathname="pathname"
-          :word-count="wordCount"
-          :selection-word-count="selectionWordCount"
-          :is-saved="isSaved"
-          :read-only="!!currentFile?.readOnly"
-          :mode-changing="!!currentFile?.modeChanging"
-          @toggle-reading="setReadingMode"
-        />
-      </div>
-      <div
-        v-if="titleBarStyle === 'custom' && !isFullScreen && !isOsx"
-        class="right-toolbar window-controls"
-        :class="[{ 'title-no-drag': titleBarStyle === 'custom' }]"
-      >
-        <icon-tooltip :content="t('titleBar.minimize')">
-          <button
-            type="button"
-            class="plain-button frameless-titlebar-button frameless-titlebar-minimize"
-            :aria-label="t('titleBar.minimize')"
-            @click.stop="handleMinimizeClick"
+          <icon-tooltip :content="t('titleBar.minimize')">
+            <button
+              type="button"
+              class="plain-button frameless-titlebar-button frameless-titlebar-minimize"
+              :aria-label="t('titleBar.minimize')"
+              @click.stop="handleMinimizeClick"
+            >
+              <span>
+                <svg
+                  width="10"
+                  height="10"
+                >
+                  <path :d="windowIconMinimize" />
+                </svg>
+              </span>
+            </button>
+          </icon-tooltip>
+          <icon-tooltip :content="maximizeLabel">
+            <button
+              type="button"
+              class="plain-button frameless-titlebar-button frameless-titlebar-toggle"
+              :aria-label="maximizeLabel"
+              @click.stop="handleMaximizeClick"
+            >
+              <span>
+                <svg
+                  width="10"
+                  height="10"
+                >
+                  <path
+                    v-show="!isMaximized"
+                    :d="windowIconMaximize"
+                  />
+                  <path
+                    v-show="isMaximized"
+                    :d="windowIconRestore"
+                  />
+                </svg>
+              </span>
+            </button>
+          </icon-tooltip>
+          <icon-tooltip
+            :content="t('titleBar.close')"
+            placement="bottom-end"
           >
-            <span>
-              <svg
-                width="10"
-                height="10"
-              >
-                <path :d="windowIconMinimize" />
-              </svg>
-            </span>
-          </button>
-        </icon-tooltip>
-        <icon-tooltip :content="maximizeLabel">
-          <button
-            type="button"
-            class="plain-button frameless-titlebar-button frameless-titlebar-toggle"
-            :aria-label="maximizeLabel"
-            @click.stop="handleMaximizeClick"
-          >
-            <span>
-              <svg
-                width="10"
-                height="10"
-              >
-                <path
-                  v-show="!isMaximized"
-                  :d="windowIconMaximize"
-                />
-                <path
-                  v-show="isMaximized"
-                  :d="windowIconRestore"
-                />
-              </svg>
-            </span>
-          </button>
-        </icon-tooltip>
-        <icon-tooltip
-          :content="t('titleBar.close')"
-          placement="bottom-end"
-        >
-          <button
-            type="button"
-            class="plain-button frameless-titlebar-button frameless-titlebar-close"
-            :aria-label="t('titleBar.close')"
-            @click.stop="handleCloseClick"
-          >
-            <span>
-              <svg
-                width="10"
-                height="10"
-              >
-                <path :d="windowIconClose" />
-              </svg>
-            </span>
-          </button>
-        </icon-tooltip>
+            <button
+              type="button"
+              class="plain-button frameless-titlebar-button frameless-titlebar-close"
+              :aria-label="t('titleBar.close')"
+              @click.stop="handleCloseClick"
+            >
+              <span>
+                <svg
+                  width="10"
+                  height="10"
+                >
+                  <path :d="windowIconClose" />
+                </svg>
+              </span>
+            </button>
+          </icon-tooltip>
+        </div>
       </div>
     </div>
-  </div>
+  </header>
 </template>
 
 <script setup lang="ts">
@@ -148,28 +129,21 @@ import { useLayoutStore } from '@/store/layout.js'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
-import { PATH_SEPARATOR } from '../../config'
 import { isMac as isOsxPlatform } from '@/util'
-import { pathBreadcrumb } from './pathBreadcrumb'
 import { buildWindowTitle } from './windowTitle'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { useAutoUpdatesStore } from '@/store/autoUpdates'
+import { CircleCheck, Download, Warning } from '@element-plus/icons-vue'
 import IconTooltip from '@/components/iconTooltip/index.vue'
-import DocumentStatistics from './documentStatistics.vue'
-import type { FileWordCount } from '@shared/types/files'
-
-interface ProjectInfo {
-  name?: string
-}
+import ApplicationMenu from './applicationMenu.vue'
+import AnnouncementBell from './announcementBell.vue'
+import AppLogo from '@/assets/images/logo.png'
+import { APP_NAME } from '@shared/brand'
 
 const props = defineProps<{
-  project?: ProjectInfo | null
   filename?: string
-  pathname?: string
   active?: boolean
-  wordCount?: FileWordCount | null
-  selectionWordCount?: FileWordCount | null
   platform?: string
   isSaved?: boolean
 }>()
@@ -177,13 +151,11 @@ const props = defineProps<{
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
 const editorStore = useEditorStore()
-const { currentFile } = storeToRefs(editorStore)
-const setReadingMode = (readOnly: boolean): void => {
-  if (currentFile.value) void editorStore.SET_READ_ONLY(currentFile.value.id, readOnly)
-}
+const updates = useAutoUpdatesStore()
 const { t } = useI18n()
 
 const isOsx = isOsxPlatform
+const micaTitleBar = window.marktext?.env?.micaTitleBar
 const windowIconMinimize = minimizePath
 const windowIconRestore = restorePath
 const windowIconMaximize = maximizePath
@@ -208,8 +180,6 @@ onMounted(async () => {
 const { titleBarStyle } = storeToRefs(preferencesStore)
 const { showTabBar } = storeToRefs(layoutStore)
 
-const paths = computed(() => pathBreadcrumb(props.pathname ?? '', PATH_SEPARATOR))
-
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx
 })
@@ -219,10 +189,8 @@ const maximizeLabel = computed(() =>
 )
 
 watch(
-  () => [props.filename, props.project?.name] as const,
-  ([filename, projectName]) => {
-    document.title = buildWindowTitle(filename, projectName ?? '', isOsx)
-  },
+  () => props.filename,
+  filename => { document.title = buildWindowTitle(filename) },
   { immediate: true }
 )
 
@@ -247,10 +215,6 @@ const toggleMaxmizeOnMacOS = () => {
 
 const handleMinimizeClick = () => {
   window.electron.windowControl.minimize()
-}
-
-const handleMenuClick = () => {
-  window.electron.windowControl.popupApplicationMenu({ x: 23, y: 20 })
 }
 
 const rename = () => {
@@ -293,12 +257,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .title-bar-editor-bg {
-  height: var(--titleBarHeight);
+  flex: none;
   background: var(--editorBgColor);
-  position: relative;
-  left: 0;
-  top: 0;
-  right: 0;
 }
 .title-bar {
   -webkit-app-region: drag;
@@ -307,10 +267,7 @@ onBeforeUnmount(() => {
   height: var(--titleBarHeight);
   box-sizing: border-box;
   color: var(--editorColor50);
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
+  position: relative;
   z-index: 2;
   transition: color 0.4s ease-in-out;
   cursor: default;
@@ -318,62 +275,41 @@ onBeforeUnmount(() => {
 .active {
   color: var(--editorColor);
 }
-img {
-  height: 90%;
-  margin-top: 1px;
-  vertical-align: top;
-}
 .title {
-  padding: 0 190px;
-  height: 100%;
-  line-height: var(--titleBarHeight);
-  font-size: 14px;
-  text-align: center;
-  transition: all 0.25s ease-in-out;
-  & .filename {
-    transition: all 0.25s ease-in-out;
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    height: 1px;
-    width: 100%;
-    z-index: 1;
-    -webkit-app-region: no-drag;
-  }
-}
-div.title > span {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-}
-
-/* Workaround for GH#339: the RTL context clips an over-long path from the left
-   so the filename stays visible. The save dot is a sibling rather than a child
-   so that clipping can never swallow it. */
-div.title > span > .path {
-  direction: rtl;
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
   min-width: 0;
+  padding-inline: 8px;
+  height: 100%;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
 }
-
-/* The RTL context above only exists to clip long paths from the left. Isolating
-   each segment keeps an RTL folder name from dragging its separator — or the
-   segments around it — out of order. */
-div.title > span > .path > bdi > span {
-  unicode-bidi: isolate;
-}
-
-.title-bar .title .filename.isOsx:hover {
-  color: var(--themeColor);
-}
-
-.active .save-dot {
+.title-brand {
+  display: inline-flex;
   flex: none;
-  margin-right: 0.25rem;
+  align-items: center;
+  gap: 6px;
+  line-height: 16px;
+}
+.title-brand.with-filename {
+  padding-inline-end: 8px;
+  border-inline-end: 1px solid var(--editorColor30);
+}
+.title-bar.isOsx .title {
+  margin-inline: 90px;
+}
+.filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.filename.isOsx { -webkit-app-region: no-drag; }
+.filename.isOsx:hover { color: var(--themeColor); }
+.title-actions { display: flex; justify-content: flex-end; align-items: center; height: 100%; }
+.save-dot {
+  flex: none;
+  margin-inline: 4px;
   width: 8px;
   height: 8px;
   display: inline-block;
@@ -382,23 +318,62 @@ div.title > span > .path > bdi > span {
   opacity: 0.7;
   visibility: hidden;
 }
-.active .save-dot.show {
+.save-dot.show {
   visibility: visible;
 }
-.title:hover {
-  color: var(sideBarTitleColor);
+.has-menubar {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
+  align-items: center;
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--sideBarBgColor), var(--editorBgColor)),
+    var(--editorColor) 7%
+  );
+}
+.title-bar-editor-bg.mica-title-bar,
+.mica-title-bar .has-menubar {
+  background: transparent;
+}
+.has-menubar :deep(.application-menubar) {
+  width: max-content;
+  max-width: min(55vw, calc(100vw - 200px));
+}
+.update-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline: 2px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  color: var(--themeColor);
+  background: var(--themeColor10);
+  white-space: nowrap;
+  font-size: 12px;
 }
 
-.left-toolbar {
-  padding: 0 10px;
+.right-toolbar .update-trigger > span {
+  display: none;
+}
+
+.statistics-toolbar {
+  flex: none;
+  padding-left: 8px;
   height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 190px;
   display: flex;
-  flex-direction: row;
-  gap: 8px;
+  align-items: center;
+}
+.has-menubar .window-controls {
+  position: static;
+  flex: none;
+}
+@media (max-width: 900px) {
+  .update-trigger > span { display: none; }
+}
+@media (max-width: 760px) {
+  .title-brand.with-filename { padding-inline-end: 0; border: 0; }
+  .title-brand.with-filename .brand-name { display: none; }
+  .has-menubar :deep(.application-menubar) { max-width: 48vw; }
 }
 .right-toolbar {
   height: 100%;
@@ -408,7 +383,7 @@ div.title > span > .path > bdi > span {
   width: 190px;
   display: flex;
   align-items: center;
-  flex-direction: row-reverse;
+  justify-content: flex-end;
   & .item {
     margin-right: 10px;
   }
@@ -422,12 +397,10 @@ div.title > span > .path > bdi > span {
   display: block;
   width: 46px;
   height: var(--titleBarHeight);
+  color: var(--editorColor);
 }
-/* `.right-toolbar` lays its items out in reverse. The window controls are
-   listed minimize → close and laid out forwards, so Tab moves left to right. */
 .window-controls {
   width: 138px;
-  flex-direction: row;
 }
 .frameless-titlebar-button > span {
   position: absolute;
@@ -436,26 +409,17 @@ div.title > span > .path > bdi > span {
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
 }
-.frameless-titlebar-menu {
-  color: var(--sideBarColor);
-}
 .frameless-titlebar-close:hover {
   background-color: rgb(228, 79, 79);
 }
 .frameless-titlebar-minimize:hover,
 .frameless-titlebar-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--editorColor10);
 }
 .frameless-titlebar-button svg {
-  fill: #000000;
+  fill: currentColor;
 }
 .frameless-titlebar-close:hover svg {
   fill: #ffffff;
-}
-
-.text-center-vertical {
-  display: inline-block;
-  vertical-align: middle;
-  line-height: normal;
 }
 </style>

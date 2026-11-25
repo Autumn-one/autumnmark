@@ -14,7 +14,10 @@ export interface PreferenceDefinition {
 
 // IDs are persisted keys where available; auxiliary controls use stable UI IDs.
 export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
+  aiModels: { category: 'ai', label: 'preferences.categories.ai', aliases: ['OpenAI', 'Base URL', 'API Key'] },
+  themeSystemPrompt: { category: 'ai', label: 'ai.systemPrompt' },
   "imageInsertAction": { "category": "images", "label": "preferences.image.defaultBehavior" },
+  "embedVideos": { "category": "video", "label": "video.embed", "notes": "video.note" },
   "defaultOpenMode": {
     "category": "general",
     "label": "readingMode.defaultMode",
@@ -51,10 +54,6 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
   "zoom": {
     "category": "appearance",
     "label": "preferences.general.window.zoom"
-  },
-  "tocPosition": {
-    "category": "general",
-    "label": "preferences.general.sidebar.tocPosition"
   },
   "wordWrapInToc": {
     "category": "general",
@@ -121,6 +120,22 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
   "trimUnnecessaryCodeBlockEmptyLines": {
     "category": "editor",
     "label": "preferences.editor.codeBlock.removeEmptyLines"
+  },
+  "compactMode": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactMode"
+  },
+  "compactImageMaxHeight": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactImageMaxHeight"
+  },
+  "compactVideoMaxHeight": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactVideoMaxHeight"
+  },
+  "compactCodeMaxLines": {
+    "category": "editor",
+    "label": "preferences.editor.misc.compactCodeMaxLines"
   },
   "wrapCodeBlocks": {
     "category": "editor",
@@ -266,6 +281,15 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
     "category": "markdown",
     "label": "preferences.markdown.compatibility.softNewlineAsSpace"
   },
+  "embedDrawings": {
+    "category": "markdown",
+    "label": "preferences.markdown.diagrams.embedDrawings.title",
+    "notes": "preferences.markdown.diagrams.embedDrawings.description"
+  },
+  "newDrawingView": {
+    "category": "markdown",
+    "label": "preferences.markdown.diagrams.newDrawingView.title"
+  },
   "mermaidLightTheme": {
     "category": "markdown",
     "label": "preferences.markdown.diagrams.mermaidLightTheme.title"
@@ -291,16 +315,16 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
     "label": "preferences.spellchecker.hideMarksForErrors"
   },
   "followSystemTheme": {
-    "category": "appearance",
+    "category": "theme",
     "label": "preferences.theme.followSystemTheme"
   },
   "lightModeTheme": {
-    "category": "appearance",
+    "category": "theme",
     "label": "preferences.theme.lightModeTheme",
     "fallback": "followSystemTheme"
   },
   "darkModeTheme": {
-    "category": "appearance",
+    "category": "theme",
     "label": "preferences.theme.darkModeTheme",
     "fallback": "followSystemTheme"
   },
@@ -369,11 +393,11 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
     "fallback": "spellcheckerEnabled"
   },
   "theme": {
-    "category": "appearance",
+    "category": "theme",
     "label": "preferences.theme.title"
   },
   "customCss": {
-    "category": "appearance",
+    "category": "theme",
     "label": "preferences.theme.customCss"
   },
   "imageUploader": {

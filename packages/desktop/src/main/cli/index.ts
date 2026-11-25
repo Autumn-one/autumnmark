@@ -4,6 +4,7 @@ import os from 'os'
 import { isDirectory } from 'common/filesystem'
 import parseArgs, { userArguments, type ParsedArgs } from './parser'
 import { getPath } from '../utils'
+import { APP_NAME, APP_PROFILE_NAME } from '@shared/brand'
 
 const write = (s: string): boolean => process.stdout.write(s)
 const writeLine = (s: string): boolean => write(s + '\n')
@@ -11,13 +12,12 @@ const writeLine = (s: string): boolean => write(s + '\n')
 const cli = (): ParsedArgs => {
   let argv = userArguments(process.argv, !!process.defaultApp, app.getAppPath())
   if (import.meta.env.DEV) {
-    // Don't pass electron development arguments to MarkText and change user data path.
-    argv = ['--user-data-dir', path.join(getPath('appData'), 'marktext-dev')]
+    argv = ['--user-data-dir', path.join(getPath('appData'), `${APP_PROFILE_NAME}-dev`)]
   }
 
   const args = parseArgs(argv, true)
   if (args['--help']) {
-    write(`Usage: marktext [commands] [path ...]
+    write(`Usage: autumnmark [commands] [path ...]
 
   Available commands:
 
@@ -36,7 +36,7 @@ const cli = (): ParsedArgs => {
   }
 
   if (args['--version']) {
-    writeLine(`MarkText: ${MARKTEXT_VERSION_STRING}`)
+    writeLine(`${APP_NAME}: ${MARKTEXT_VERSION_STRING}`)
     writeLine(`Node.js: ${process.versions.node}`)
     writeLine(`Electron: ${process.versions.electron}`)
     writeLine(`Chromium: ${process.versions.chrome}`)
@@ -47,7 +47,7 @@ const cli = (): ParsedArgs => {
   // Check for portable mode and ensure the user data path is absolute. We assume
   // that the path is writable if not this lead to an application crash.
   if (!args['--user-data-dir']) {
-    const portablePath = path.join(app.getAppPath(), '..', '..', 'marktext-user-data')
+    const portablePath = path.join(app.getAppPath(), '..', '..', `${APP_PROFILE_NAME}-user-data`)
     if (isDirectory(portablePath)) {
       args['--user-data-dir'] = portablePath
     }

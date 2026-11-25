@@ -330,7 +330,11 @@ export const MUYA_DEFAULT_OPTIONS = {
     orderListDelimiter: '.',
     tabSize: 4,
     codeBlockLineNumbers: false,
-    wrapCodeBlocks: false,
+    compactMode: true,
+    compactImageMaxHeight: 0,
+    compactVideoMaxHeight: 0,
+    compactCodeMaxLines: 12,
+    wrapCodeBlocks: true,
     // bullet/list marker width + listIndentation, tab or Daring Fireball Markdown (4 spaces) --> list indentation
     listIndentation: 1,
     frontmatterType: '-',
@@ -418,7 +422,7 @@ export const punctuation = [
     '~',
 ];
 // Electron detection (kept for reference; renderer-process check).
-export const IMAGE_EXT_REG = /\.(jpeg|jpg|png|gif|svg|webp)(?=\?|$)/i;
+export const IMAGE_EXT_REG = /\.(?:jpe?g|png|apng|gif|svg|webp|avif|bmp|ico|tiff?|heic|heif)(?=[?#]|$)/i;
 export const isFirefox
     = typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
 export const isOsx

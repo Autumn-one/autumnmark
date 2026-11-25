@@ -1,44 +1,26 @@
-export interface ThemeDescriptor {
+import { themeBases, type LocalTheme } from '@shared/localTheme'
+import { isDarkThemeId, pineInkTheme } from 'common/theme'
+import type { ThemeCatalogSnapshot } from '@shared/themeCatalog'
+
+export interface ThemeChoiceItem {
+  key: string
+  id?: string
+  base: string
   name: string
+  meta: string
+  image?: string
+  local?: LocalTheme
+  remote?: ThemeCatalogSnapshot['themes'][number]
 }
 
-export const themes: ReadonlyArray<ThemeDescriptor> = [
-  // Light Themes (alphabetical)
-  { name: 'ayu-light' },
-  { name: 'light' },
-  { name: 'catppuccin-latte' },
-  { name: 'everforest-light' },
-  { name: 'graphite' },
-  { name: 'gruvbox-light' },
-  { name: 'rose-pine-dawn' },
-  { name: 'solarized-light' },
-  { name: 'tokyo-night-light' },
-  { name: 'ulysses' },
-  // Dark Themes (alphabetical)
-  { name: 'ayu-dark' },
-  { name: 'ayu-mirage' },
-  { name: 'dark' },
-  { name: 'catppuccin-mocha' },
-  { name: 'cyberdream' },
-  { name: 'dracula' },
-  { name: 'everforest-dark' },
-  { name: 'gruvbox-dark' },
-  { name: 'horizon-dark' },
-  { name: 'kanagawa' },
-  { name: 'material-dark' },
-  { name: 'monokai-pro' },
-  { name: 'nightfox' },
-  { name: 'nord' },
-  { name: 'one-dark' },
-  { name: 'oxocarbon-dark' },
-  { name: 'palenight' },
-  { name: 'rose-pine' },
-  { name: 'rose-pine-moon' },
-  { name: 'solarized-dark' },
-  { name: 'synthwave-84' },
-  { name: 'tokyo-night' },
-  { name: 'tokyo-night-storm' }
-]
+export const themes = [pineInkTheme.id, ...themeBases.filter(id => id !== pineInkTheme.id)]
+  .sort((a, b) => Number(isDarkThemeId(a)) - Number(isDarkThemeId(b)))
+  .map(name => ({ name }))
 
-export const themeLabel = (name: string): string => name.split('-')
-  .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+export const themeLabel = (name: string, library: LocalTheme[] = []): string => {
+  const local = library.find(item => item.id === name)
+  if (local) return local.name
+  if (name === pineInkTheme.id) return pineInkTheme.name
+  if (name === 'light') return 'GitBook Teal'
+  return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}

@@ -230,6 +230,41 @@ export function getClipboardImageFile(
     return null;
 }
 
+const videoFileUrl = /\.(?:mp4|webm|ogv|mov|m4v|mkv|avi|mpeg|mpg|3gp)(?:[?#].*)?$/i;
+const videoDataUrl = /^data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={0,2}$/i;
+
+export function videoFromTransfer(data: DataTransfer | null): File | string | undefined {
+    if (!data)
+        return;
+    const file = Array.from(data.files ?? []).find(file => file.type.startsWith('video/') || videoFileUrl.test(file.name));
+    if (file)
+        return file;
+    const text = (data.getData('text/uri-list') || data.getData('text/plain')).trim();
+    if (videoDataUrl.test(text) || (/^https?:\/\/\S+$/i.test(text) && videoFileUrl.test(text)))
+        return text;
+    const html = data.getData('text/html');
+    if (!/<video\b/i.test(html))
+        return;
+    const body = new DOMParser().parseFromString(html, 'text/html').body;
+    const element = body.querySelector('video');
+    const src = element?.getAttribute('src') || element?.querySelector('source')?.getAttribute('src');
+    if (src && !body.textContent.trim() && (videoDataUrl.test(src) || /^https?:\/\//i.test(src)))
+        return src;
+}
+
+export function standaloneImageSource(html: string, url = ''): string | null {
+    if (!/<img\b/i.test(html)) {
+        const candidate = url.trim();
+        return /^https?:\/\/\S+\.(?:jpe?g|png|gif|apng|webp|svg|avif|bmp|ico|tiff?)(?:[?#]\S*)?$/i.test(candidate) ? candidate : null;
+    }
+    const body = new DOMParser().parseFromString(html, 'text/html').body;
+    const images = body.querySelectorAll('img');
+    if (images.length !== 1 || body.textContent.trim())
+        return null;
+    const src = images[0].getAttribute('src') ?? '';
+    return /^(?:https?:\/\/|data:image\/)/i.test(src) ? src : null;
+}
+
 // Read a bitmap as a data URL; return an empty string when reading is unavailable or fails.
 export function readFileAsDataURL(file: File): Promise<string> {
     if (typeof FileReader !== 'undefined') {

@@ -53,11 +53,6 @@ test.describe('Code block wrap + line-numbers preferences', () => {
 
   // Item 99: wrap preference toggles white-space on .mu-code-block .mu-code.
   test('wrapCodeBlocks toggles computed white-space on .mu-code-block .mu-code', async() => {
-    // Default preference is wrapCodeBlocks: false, so the editor root has no
-    // .mu-code-wrap class and white-space is pre. Establish the baseline first.
-    await expect.poll(() => readWhiteSpace(page), { timeout: 10000 }).toBe('pre')
-
-    await setPreference(app, page, { wrapCodeBlocks: true })
     await expect.poll(() => readWhiteSpace(page), { timeout: 10000 }).toBe('pre-wrap')
 
     // Disable wrapping again -> back to `pre`. This proves the toggle is live

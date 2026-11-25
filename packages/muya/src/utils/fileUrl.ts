@@ -1,7 +1,7 @@
+import { IMAGE_EXT_REG } from '../config';
+
 // Absolute POSIX, UNC and drive paths must not be resolved against the document directory.
 export const ABSOLUTE_LOCAL_REG = /^(?:\/|\\\\|[a-z]:\\|[a-z]:\/).+/i;
-
-const IMAGE_EXT_REG = /\.(?:jpeg|jpg|png|gif|svg|webp)(?=\?|$)/i;
 
 // At least two characters, so a Windows drive letter (`C:`) is not a scheme.
 const URL_SCHEME_REG = /^[a-z][a-z\d+.-]+:/i;
@@ -51,6 +51,16 @@ export function localPathToFileUrl(src: string): string {
         return `file:///${normalized}`;
 
     return `file://${normalized}`;
+}
+
+export function resolveVideoSource(src: string): string {
+    if (/^(?:data:video\/|https?:\/\/|file:\/\/)/i.test(src))
+        return src.replace(/&amp;/g, '&');
+    if (ABSOLUTE_LOCAL_REG.test(src))
+        return localPathToFileUrl(src);
+    return typeof window !== 'undefined' && window.DIRNAME
+        ? localPathToFileUrl(resolveRelativePath(encodeDirnameForUrl(window.DIRNAME), src))
+        : src;
 }
 
 // Resolve local exported image paths to absolute file URLs so exports retain images

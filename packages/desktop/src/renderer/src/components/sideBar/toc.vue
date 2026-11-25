@@ -1,6 +1,11 @@
 <template>
   <div
     class="side-bar-toc"
+    @dragstart.capture="startDrag"
+    @dragover.capture="dragOver"
+    @dragleave.capture="leaveDrag"
+    @drop.capture="dropSection"
+    @dragend.capture="finishDrag"
     :class="[{ 'side-bar-toc-overflow': !wordWrapInToc, 'side-bar-toc-wordwrap': wordWrapInToc }]"
   >
     <el-tree
@@ -27,6 +32,8 @@
         <!-- eslint-disable vue/no-v-html -- sanitized by labelHtmlOf -->
         <span
           class="el-tree-node__label"
+          :draggable="!currentFile?.readOnly"
+          :class="dropMark && dropMark.key === data.key ? 'toc-drop-' + dropMark.side : undefined"
           :data-toc-key="data.key"
           :title="plainLabel(data)"
           v-html="labelHtmlOf(data)"
@@ -39,7 +46,8 @@
       class="outline-empty"
       role="status"
     >
-      {{ t('sideBar.toc.empty') }}
+      <span>{{ t('sideBar.toc.empty') }}</span>
+      <span class="outline-empty-hint">{{ t('sideBar.toc.emptyHint') }}</span>
     </p>
   </div>
 </template>
@@ -50,6 +58,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { deriveKeyedToc, type KeyedTocNode } from '@/util/tocKeys'
+import { sectionCuts, type DropSide, type OutlineMoveSession } from '@/util/outlineMove'
 import { sanitize, TOC_DOMPURIFY_CONFIG } from '@/util/dompurify'
 import bus from '../../bus'
 import { storeToRefs } from 'pinia'
@@ -111,6 +120,74 @@ const { wordWrapInToc } = storeToRefs(preferencesStore)
 // Stable per-node key so el-tree preserves the user's expand/collapse state
 // across content edits (#3028) and tab switches (#3791). See deriveKeyedToc.
 const keyedToc = computed<KeyedTocNode[]>(() => deriveKeyedToc(toc.value))
+
+let drag: { session: OutlineMoveSession; source: number; fileId: string; sourceMode: boolean; toc: typeof toc.value } | undefined
+const dropMark = ref<{ key: string; side: DropSide }>()
+
+function dragRow(event: DragEvent) {
+  const row = event.target instanceof Element ? event.target.closest('.el-tree-node__content') : null
+  const key = row?.querySelector<HTMLElement>('[data-toc-key]')?.dataset.tocKey
+  const node = key ? tocTreeRef.value?.getNode(key) : undefined
+  if (!row || !node || !key) return
+  const index = editorStore.listToc.findIndex(item => item.slug === node.data.slug)
+  if (index >= 0) return { row, key, index }
+}
+
+function finishDrag() {
+  drag = undefined
+  dropMark.value = undefined
+}
+
+function startDrag(event: DragEvent) {
+  finishDrag()
+  const target = dragRow(event)
+  const file = currentFile.value
+  if (!target || !file || file.readOnly || !event.dataTransfer) return
+  bus.emit('begin-outline-move', (session: OutlineMoveSession) => {
+    drag = { session, source: target.index, fileId: file.id, sourceMode: preferencesStore.sourceCode, toc: toc.value }
+  })
+  if (!drag) {
+    event.preventDefault()
+    return
+  }
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('application/x-autumnmark-section', target.key)
+}
+
+function dropTarget(event: DragEvent) {
+  if (!drag || drag.fileId !== currentFile.value?.id || currentFile.value.readOnly ||
+      drag.sourceMode !== preferencesStore.sourceCode || drag.toc !== toc.value) return
+  const target = dragRow(event)
+  if (!target) return
+  const rect = target.row.getBoundingClientRect()
+  const side = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+  const cuts = sectionCuts(drag.session, drag.source, target.index, side)
+  if (cuts) return { key: target.key, side, cuts } as const
+}
+
+function dragOver(event: DragEvent) {
+  if (!drag) return
+  event.preventDefault()
+  const target = dropTarget(event)
+  dropMark.value = target
+  if (event.dataTransfer) event.dataTransfer.dropEffect = target ? 'move' : 'none'
+}
+
+function leaveDrag(event: DragEvent) {
+  if (!(event.relatedTarget instanceof Node && (event.currentTarget as Element).contains(event.relatedTarget))) {
+    dropMark.value = undefined
+  }
+}
+
+function dropSection(event: DragEvent) {
+  if (!drag) return
+  event.preventDefault()
+  event.stopPropagation()
+  const target = dropTarget(event)
+  const { session } = drag
+  finishDrag()
+  if (target) session.apply(target.cuts)
+}
 
 const collapsedKeys = computed(() => new Set(currentFile.value?.tocCollapsedKeys ?? []))
 let restoringTree = false
@@ -260,11 +337,19 @@ const handleClick = (data: { slug?: unknown }): void => {
 }
 
 .outline-empty {
-  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 48px 0 0;
   padding: 24px 12px;
   font-size: 13px;
   text-align: center;
   color: var(--sideBarColor);
+}
+
+.outline-empty-hint {
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .side-bar-toc .el-tree-node {
@@ -345,6 +430,17 @@ const handleClick = (data: { slug?: unknown }): void => {
 
 .side-bar-toc .el-tree-node__label strong {
   font-weight: 700;
+}
+
+.side-bar-toc .el-tree-node__label[draggable="true"] {
+  flex: 1;
+  cursor: grab;
+}
+.side-bar-toc .el-tree-node__content:has(.toc-drop-before) {
+  box-shadow: inset 0 2px var(--themeColor);
+}
+.side-bar-toc .el-tree-node__content:has(.toc-drop-after) {
+  box-shadow: inset 0 -2px var(--themeColor);
 }
 
 .side-bar-toc .el-tree-node__label em {

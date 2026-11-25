@@ -9,7 +9,8 @@ import TreeNode from '../../block/base/treeNode';
 import { ScrollPage } from '../../block/scrollPage';
 import { BACK_HASH, BRACKET_HASH, CLASS_NAMES, EVENT_KEYS, isOsx } from '../../config';
 import Selection from '../../selection';
-import { offsetInBlockAtPoint } from '../../selection/dom';
+import { getNodeAndOffset, getOffsetOfParagraph, offsetInBlockAtPoint } from '../../selection/dom';
+import { imageBesideCaret } from '../../selection/imageCaret';
 import { createTextSelectionState } from '../../selection/state';
 import { ChangeSource } from '../../types';
 import {
@@ -20,8 +21,10 @@ import {
     isKeyboardEvent,
     isMouseEvent,
 } from '../../utils';
+import { findEmbeddedMedia } from '../../utils/embeddedImage';
 import { editTab } from '../../utils/tab';
 import { isFoldableHeading } from '../commonMark/atxHeading/foldSection';
+import { embeddedDrawingFor } from '../extra/diagram/embedded';
 import { revealBlock } from '../folding';
 
 // Word boundary regexes derived from VSCode's wordHelper. Used by `extractWord`
@@ -519,7 +522,10 @@ class Content extends TreeNode {
         if (direction === 'up') {
             const previousContentBlock = this.previousContentInContext(true);
             if (!previousContentBlock) {
-                if (event.key === EVENT_KEYS.ArrowUp && start.offset !== 0)
+                const drawing = embeddedDrawingFor(this.previousContentInContext());
+                if (drawing)
+                    drawing.moveCaretOutside(true, event);
+                else if (event.key === EVENT_KEYS.ArrowUp && start.offset !== 0)
                     this.setCursor(0, 0, true);
 
                 return;
@@ -530,6 +536,13 @@ class Content extends TreeNode {
         }
         else {
             cursorBlock = this.nextContentInContext(true);
+            if (!cursorBlock) {
+                const drawing = embeddedDrawingFor(this.nextContentInContext());
+                if (drawing) {
+                    drawing.moveCaretOutside(false, event);
+                    return;
+                }
+            }
             if (!cursorBlock && this.text.length > 0 && !(isFoldableHeading(this.parent) && this.parent.folded)) {
                 const newNodeState = { name: 'paragraph', text: '' };
                 const newNode = ScrollPage.loadBlock(newNodeState.name).create(
@@ -548,6 +561,22 @@ class Content extends TreeNode {
             this.update();
             cursorBlock.setCursor(offset, offset, true);
         }
+    }
+
+    private _drawingArrowOffset(event: KeyboardEvent, offset: number): number | null {
+        const content = this.domNode;
+        if (!content || event.altKey || event.ctrlKey || event.metaKey)
+            return null;
+        if (event.key !== EVENT_KEYS.ArrowLeft && event.key !== EVENT_KEYS.ArrowRight)
+            return null;
+        const rtl = content.closest('[dir]')?.getAttribute('dir') === 'rtl';
+        const forward = event.key === (rtl ? EVENT_KEYS.ArrowLeft : EVENT_KEYS.ArrowRight);
+        const caret = getNodeAndOffset(content, offset);
+        const drawing = imageBesideCaret(content, caret.node, caret.offset, forward);
+        if (!drawing?.matches('.mu-inline-drawing'))
+            return null;
+        const start = getOffsetOfParagraph(drawing, content);
+        return forward ? start + (drawing.dataset.raw?.length ?? 0) : start;
     }
 
     private _upArrowOffset(block: Content, event: KeyboardEvent): number {
@@ -861,9 +890,63 @@ class Content extends TreeNode {
         return true;
     }
 
+    private _embeddedImageToDelete(key: string) {
+        if (!this.muya.options.editEmbeddedImage || this.isComposed || (key !== 'Backspace' && key !== 'Delete'))
+            return;
+        const images = findEmbeddedMedia(this.text);
+        const cursor = images.length ? this.getCursor() : null;
+        if (cursor && cursor.start.offset === cursor.end.offset)
+            return images.find(image => (key === 'Backspace' ? image.end : image.start) === cursor.start.offset);
+    }
+
+    private _drawingToDelete(backwards: boolean) {
+        const cursor = this.getCursor();
+        const offset = backwards ? 0 : this.text.length;
+        if (!cursor?.isCollapsed || cursor.start.offset !== offset)
+            return;
+
+        const drawing = embeddedDrawingFor(backwards ? this.previousContentInContext() : this.nextContentInContext());
+        if (drawing)
+            return { drawing, offset };
+    }
+
+    private _deleteDrawing(drawing: Parent, offset: number, event: KeyboardEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.muya.editor.history.cutoff();
+
+        let block = drawing;
+        while (block.isOnlyChild() && block.parent && !block.parent.isScrollPage)
+            block = block.parent;
+        block.remove();
+        this.setCursor(offset, offset, true);
+    }
+
+    private _handleDeleteKey(event: KeyboardEvent) {
+        if (this.isComposed || event.isComposing)
+            return;
+
+        const backwards = event.key === EVENT_KEYS.Backspace;
+        const drawingToDelete = this._drawingToDelete(backwards);
+        if (drawingToDelete)
+            this._deleteDrawing(drawingToDelete.drawing, drawingToDelete.offset, event);
+        else if (backwards)
+            this.backspaceHandler(event);
+        else
+            this.deleteHandler(event);
+    }
+
     keydownHandler = (event: Event) => {
         if (!isKeyboardEvent(event))
             return;
+        const image = this._embeddedImageToDelete(event.key);
+        if (image) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.text = this.text.slice(0, image.start) + this.text.slice(image.end);
+            this.setCursor(image.start, image.start, true);
+            return;
+        }
 
         if (this.beforeKeydown(event))
             return;
@@ -879,15 +962,8 @@ class Content extends TreeNode {
 
         switch (event.key) {
             case EVENT_KEYS.Backspace:
-                if (!this.isComposed)
-                    this.backspaceHandler(event);
-
-                break;
-
             case EVENT_KEYS.Delete:
-                if (!this.isComposed)
-                    this.deleteHandler(event);
-
+                this._handleDeleteKey(event);
                 break;
 
             case EVENT_KEYS.Enter:
@@ -904,7 +980,7 @@ class Content extends TreeNode {
 
             case EVENT_KEYS.ArrowRight: // fallthrough
                 if (!this.isComposed)
-                    this.arrowHandler(event);
+                    this._navigateArrow(event);
 
                 break;
 
@@ -917,6 +993,40 @@ class Content extends TreeNode {
                 break;
         }
     };
+
+    private _navigateArrow(event: KeyboardEvent): void {
+        const cursor = this.getCursor();
+        const drawingEdge = cursor?.isCollapsed && !event.shiftKey ? this._drawingArrowOffset(event, cursor.start.offset) : null;
+        if (drawingEdge !== null) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.setCursor(drawingEdge, drawingEdge, true);
+            return;
+        }
+        const { contentTabs, foldBlocks } = this.muya.editor;
+        const tab = contentTabs.titleAtArrowBoundary(this, event);
+        const fold = foldBlocks.titleAtArrowBoundary(this, event, tab?.boundary);
+        if (!tab && !fold) {
+            this.arrowHandler(event);
+            return;
+        }
+        const offset = this.getCursor()!.start.offset;
+        const withinBlock = this._deferArrowToBrowser(event, offset, offset);
+        if (withinBlock)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (fold) {
+            foldBlocks.editTitle(fold, {
+                edge: event.key === EVENT_KEYS.ArrowUp ? 'bottom' : 'top',
+                x: Selection.getCursorCoords()?.x,
+            });
+        }
+        else if (tab) {
+            const returnCaret = event.key === EVENT_KEYS.ArrowUp ? { block: this, offset } : undefined;
+            contentTabs.selectTitle(tab.heading, returnCaret);
+        }
+    }
 
     private _wrapSelectionWithAutoPair(event: KeyboardEvent) {
         if (
