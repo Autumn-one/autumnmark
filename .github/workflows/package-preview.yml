@@ -163,7 +163,7 @@ jobs:
           node <<'NODE'
           const { readdirSync, readFileSync, writeFileSync } = require('node:fs')
           const { createHash } = require('node:crypto')
-          const names = readdirSync('dist').filter(name => /\.(exe|zip|dmg|AppImage|snap|deb|rpm|tar\.gz)$/.test(name)).sort()
+          const names = readdirSync('dist').filter(name => /\.(exe|zip|7z|dmg|AppImage|snap|deb|rpm|tar\.gz)$/.test(name)).sort()
           if (!names.length) throw new Error('No platform packages were produced')
           const lines = names.map(name => createHash('sha256').update(readFileSync('dist/' + name)).digest('hex') + '  ' + name)
           writeFileSync('dist/SHA256SUMS-' + process.env.PLATFORM + '.txt', lines.join('\n') + '\n')
@@ -179,6 +179,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
+            dist/*.7z
             dist/*.dmg
             dist/*.AppImage
             dist/*.snap

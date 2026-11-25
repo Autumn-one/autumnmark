@@ -236,6 +236,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
+            dist/*.7z
             dist/*.dmg
             dist/*.blockmap
             dist/*.yml

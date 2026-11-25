@@ -5,42 +5,40 @@
 const path = require('path')
 const checker = require('license-checker')
 
-// license-checker keys packages as "<name>@<version>", and excludePackages
-// matches that string exactly — name-only entries don't match. Build the
-// workspace exclusions at runtime from each package's own package.json so
-// version bumps stay in sync automatically. @marktext/file-icons stays
-// pinned because it's a published third-party dep that license-checker
-// fails to detect (MIT).
 const repoRoot = path.resolve(__dirname, '..')
-const workspaceExclusions = ['packages/desktop', 'packages/muya']
-  .map((rel) => {
-    const { name, version } = require(path.join(repoRoot, rel, 'package.json'))
-    return `${name}@${version}`
-  })
-  .concat('@marktext/file-icons')
-  .join(';')
+const desktop = require(path.join(repoRoot, 'packages/desktop/package.json'))
+const muya = require(path.join(repoRoot, 'packages/muya/package.json'))
+const shippedPackages = new Set([
+  ...Object.keys(desktop.dependencies),
+  ...Object.keys(desktop.optionalDependencies),
+  ...desktop.bundledAppDependencies.filter(name => name !== muya.name),
+  ...Object.keys(muya.dependencies)
+])
 
 const getLicenses = (rootDir, callback) => {
-  checker.init(
-    {
-      start: rootDir,
-      production: true,
-      development: false,
-      direct: true,
-      excludePackages: workspaceExclusions,
-      json: true,
-      // BlueOak-1.0.0 is a permissive, OSI-approved licence that minimatch 10
-      // (and its npm-adjacent siblings) moved to.
+  const options = { start: rootDir, direct: true, json: true }
+  // Vite bundles application dependencies from devDependencies. Resolve their
+  // installed versions before applying license-checker's exact name@version filter.
+  checker.init(options, (error, packages) => {
+    if (error) {
+      callback(error)
+      return
+    }
+    const audited = Object.keys(packages).filter(id => shippedPackages.has(id.slice(0, id.lastIndexOf('@'))))
+    if (audited.length === 0) {
+      callback(new Error('No installed application dependencies found'))
+      return
+    }
+    checker.init({
+      ...options,
+      packages: audited.join(';'),
+      // BlueOak-1.0.0 covers minimatch and its related dependencies.
       onlyAllow:
         'Unlicense;WTFPL;ISC;MIT;BSD;Apache-2.0;MIT*;Apache;Apache*;BSD*;BlueOak-1.0.0;CC0-1.0;CC-BY-4.0;CC-BY-3.0'
-    },
-    function(err, packages) {
-      callback(err, packages, checker)
-    }
-  )
+    }, (err, selected) => callback(err, selected, checker))
+  })
 }
 
-// Check that all production dependencies are allowed.
 const validateLicenses = (rootDir) => {
   getLicenses(rootDir, (err, packages, checker) => {
     if (err) {

@@ -1,3 +1,8 @@
+## AutumnMark 0.24.58
+
+- Reduced download and installation sizes by excluding build leftovers, bundling shared dependencies once, and compressing fonts without changing their glyphs.
+- Added a smaller Windows x64 portable 7z download alongside the ZIP and installer.
+
 ## AutumnMark 0.24.57
 
 - The visual editor and theme catalog preview use the full width available to them.
