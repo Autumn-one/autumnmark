@@ -184,6 +184,9 @@ test('sidebar chat applies and reverts document and theme edits and opens its sc
     await waitForMenuReady(app)
     const { panel, composer, sendButton, send, selectConversation } = await openChat(page)
     await expect(panel.getByRole('checkbox')).toHaveCount(0)
+    await expect(sendButton).toBeDisabled()
+    const composerHeight = (await composer.boundingBox())?.height ?? 0
+    expect(composerHeight).toBeGreaterThan(0)
     const modelBox = await panel.getByRole('combobox', { name: 'Model', exact: true }).boundingBox()
     const sendBox = await sendButton.boundingBox()
     expect(modelBox).not.toBeNull()
@@ -204,6 +207,7 @@ test('sidebar chat applies and reverts document and theme edits and opens its sc
     await composer.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(9, 9))
     await composer.press('Shift+Enter')
     await expect(composer).toHaveValue(followUp)
+    await expect.poll(async() => (await composer.boundingBox())?.height ?? 0).toBeGreaterThan(composerHeight)
     expect(await composer.evaluate((element: HTMLTextAreaElement) => element.selectionStart)).toBe(10)
     expect(requests).toHaveLength(1)
     await composer.press('Enter')

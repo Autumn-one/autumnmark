@@ -172,6 +172,7 @@
     />
     <form
       v-else
+      class="chat-composer"
       @submit.prevent="send"
     >
       <textarea
@@ -181,7 +182,7 @@
         :placeholder="t('documentChat.message')"
         :maxlength="maxDocumentChatPromptLength"
         :disabled="creating"
-        rows="3"
+        rows="2"
         @keydown.enter="composerEnter"
       />
       <div class="composer-actions">
@@ -201,18 +202,22 @@
         <button
           v-if="sending.has(selectedId)"
           type="button"
-          class="send"
+          class="composer-action"
+          :aria-label="t('studio.stop')"
+          :title="t('studio.stop')"
           @click="stop"
         >
-          {{ t('studio.stop') }}
+          <span class="stop-icon" aria-hidden="true" />
         </button>
         <button
           v-else
           type="submit"
-          class="send"
+          class="composer-action"
+          :aria-label="t('studio.send')"
+          :title="t('studio.send')"
           :disabled="!canSend"
         >
-          {{ t('studio.send') }}
+          <Top aria-hidden="true" />
         </button>
       </div>
     </form>
@@ -229,7 +234,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue'
-import { MoreFilled, Plus, RefreshLeft } from '@element-plus/icons-vue'
+import { MoreFilled, Plus, RefreshLeft, Top } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { AiModelProfile } from '@shared/aiModel'
 import {
@@ -638,8 +643,7 @@ onUnmounted(() => {
 
 <style scoped>
 .document-chat { display: flex; flex-direction: column; height: 100%; font-size: 13px; }
-.chat-toolbar, form { padding: 8px; }
-.chat-toolbar { display: flex; gap: 6px; align-items: center; }
+.chat-toolbar { display: flex; gap: 6px; align-items: center; padding: 8px; }
 .chat-toolbar svg { display: block; width: 14px; height: 14px; }
 .chat-timeline { flex: 1; min-height: 0; overflow: auto; padding: 0 8px; user-select: text; }
 .after-history { max-height: 65%; border-top: 1px solid var(--editorColor10); }
@@ -669,22 +673,78 @@ summary { cursor: pointer; overflow-wrap: anywhere; }
 .patch :is(ins, del) { display: block; padding: 5px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: monospace; text-decoration: none; }
 .patch ins { background: var(--themeColor10); border-inline-start: 2px solid var(--themeColor); }
 .patch del { background: color-mix(in srgb, var(--deleteColor) 10%, transparent); border-inline-start: 2px solid var(--deleteColor); text-decoration: line-through; }
-form { display: grid; gap: 6px; border-top: 1px solid var(--editorColor10); }
 .composer-actions, .turn-actions { display: flex; align-items: center; gap: 6px; }
-.composer-actions select { flex: 1; min-width: 0; width: 0; }
 .turn-actions { flex-wrap: wrap; }
 .turn-actions button { display: inline-flex; align-items: center; gap: 4px; }
 .turn-actions svg { width: 13px; height: 13px; flex: none; }
 .turn-menu { margin-inline-start: auto; }
 .turn-menu button { padding: 0 5px; min-height: 24px; border-color: transparent; background: transparent; }
 .reverted-status { color: var(--editorColor70); }
-textarea { width: 100%; min-height: 3em; max-height: 20vh; box-sizing: border-box; padding: 6px; resize: vertical; }
-select, button, :deep(.preview-actions button), textarea { color: inherit; font: inherit; background: var(--editorBgColor); border: 1px solid var(--editorColor20); border-radius: 5px; }
-select, button, :deep(.preview-actions button) { padding: 4px 6px; min-height: 28px; }
+button, :deep(.preview-actions button) { color: inherit; font: inherit; background: var(--editorBgColor); border: 1px solid var(--editorColor20); border-radius: 5px; padding: 4px 6px; min-height: 28px; }
 button:enabled, :deep(.preview-actions button:enabled) { cursor: pointer; }
 button:enabled:hover, :deep(.preview-actions button:enabled:hover) { border-color: var(--themeColor); }
 button:disabled, :deep(.preview-actions button:disabled) { opacity: .5; }
-.send { flex: none; margin-inline-start: auto; min-width: 52px; }
+.chat-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0 10px 8px;
+  padding: 10px;
+  border: 1px solid var(--editorColor20);
+  border-radius: 12px;
+  color: var(--editorColor);
+  background: var(--editorBgColor);
+}
+.chat-composer:focus-within { border-color: var(--themeColor); }
+.chat-composer textarea {
+  field-sizing: content;
+  display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: calc(2lh + 4px);
+  max-block-size: 20vh;
+  padding: 2px 0;
+  border: 0;
+  outline: none;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: 1.5;
+  resize: none;
+}
+.chat-composer textarea::placeholder { color: var(--editorColor60); }
+.composer-actions select {
+  field-sizing: content;
+  min-inline-size: 0;
+  block-size: 28px;
+  padding-inline: 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: inherit;
+  background: color-mix(in srgb, var(--editorBgColor), var(--sideBarBgColor) 82%);
+  font: inherit;
+  cursor: pointer;
+}
+.composer-actions select:hover { background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 8%); }
+.composer-actions :is(select, button):focus-visible { outline: 2px solid var(--themeColor); outline-offset: 2px; }
+.composer-action {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--buttonPrimaryFontColor);
+  background: var(--buttonPrimaryBgColor);
+}
+.composer-action:enabled:hover { border-color: transparent; color: var(--buttonPrimaryFontColorHover); background: var(--buttonPrimaryBgColorHover); }
+.composer-action:disabled { color: var(--editorColor60); background: var(--editorColor10); opacity: 1; }
+.composer-action svg { inline-size: 16px; block-size: 16px; }
+.stop-icon { inline-size: 10px; block-size: 10px; border-radius: 2px; background: currentColor; }
 .chat-error { color: var(--deleteColor); }
 .panel-error { padding: 0 8px 8px; }
 </style>
