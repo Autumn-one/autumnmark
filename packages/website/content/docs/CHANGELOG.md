@@ -1,3 +1,7 @@
+## AutumnMark 0.24.56
+
+- Distinguished built-in Violet Diary from saved themes with the same name in the Theme menu and settings. Existing theme styles, selections, and history are preserved.
+
 ## AutumnMark 0.24.55
 
 - Added 暮紫日记 (Violet Diary) as the built-in dark theme and refreshed 松风明月 (Pine Ink), the built-in light theme, with distinct styles for each heading level.
