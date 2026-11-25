@@ -157,7 +157,7 @@ test('the CSS inspector docks beside the studio and selects live preview HTML', 
 })
 
 test('Elements tree selections add or focus a rule in the writable theme CSS', async() => {
-  const { app, page } = await launchWithMarkdown('Document', { preferences: { language: 'en', theme: 'light' } })
+  const { app, page } = await launchWithMarkdown('Document', { preferences: { language: 'en', theme: 'pine-ink', followSystemTheme: false } })
   try {
     const studio = await openStudio(app, await openSettings(app, page))
     const native = await app.browserWindow(studio)
@@ -165,11 +165,13 @@ test('Elements tree selections add or focus a rule in the writable theme CSS', a
     const input = studio.getByRole('textbox', { name: 'CSS source' })
     await input.focus()
     await studio.keyboard.insertText(layout)
+    const width = await studio.evaluate(() => innerWidth)
     await studio.getByRole('button', { name: 'Inspect element' }).click()
+    await expect.poll(() => studio.evaluate(() => innerWidth)).toBeLessThan(width)
     const preview = studio.frameLocator('iframe')
     const selector = studio.getByRole('combobox', { name: 'Selector', exact: true })
     await expect(studio.locator('main.inspecting')).toBeVisible()
-    await preview.locator('h2.mu-atx-heading').click({ position: { x: 2, y: 2 } })
+    await preview.locator('h2.mu-atx-heading').click({ position: { x: 10, y: 6 } })
     await expect(selector).toHaveValue('.mu-atx-heading')
     const locate = studio.getByRole('button', { name: 'Go to rule' })
     await locate.click()
