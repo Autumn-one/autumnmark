@@ -1,3 +1,7 @@
+## AutumnMark 0.24.54
+
+- The AI sidebar now groups the message field, compact model picker, and send button in one card. The message field grows as you type longer prompts.
+
 ## AutumnMark 0.24.53
 
 - Embedded image and drawing labels in source mode now use the source editor’s text color so they stay readable on the active theme’s background.
