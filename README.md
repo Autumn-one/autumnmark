@@ -1,90 +1,122 @@
-<p align="center"><img src="docs/assets/logo-small.png" alt="" width="80" height="80"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="AutumnMark 秋笺" width="80" height="80"></p>
 
 <h1 align="center">AutumnMark · 秋笺</h1>
 
-秋笺是一款开源桌面 Markdown 编辑器。写教程时，可以让读者切换不同平台的步骤，把补充说明折起来，在代码里点出关键几行。插图也能直接存进同一份 `.md`，离线打开或发给别人都不需要图床。
+<p align="center"><strong>单文件图文与手绘笔记，换个 Markdown 编辑器依然可读。</strong></p>
+
+秋笺是一款开源桌面 Markdown 编辑器。粘贴截图或绘制 Excalidraw 手绘图，内容默认直接存进同一份 `.md` 文件，无需搭建图床；写教程或技术笔记时，可以用多选项卡切换步骤、用折叠块收起补充说明、给代码块加上居中文件名、行高亮与可拖拽预览高度——并且全部基于**可渐进回退的标准 Markdown 语法**，发给使用其他编辑器的读者也不会乱码或丢内容。
 
 [访问官网](https://autumn-one.github.io/autumnmark/) · [下载正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布记录](https://github.com/Autumn-one/autumnmark/releases)
 
-![秋笺编辑《雾岭山脊观测手记》：左侧是文档大纲，正文中有内嵌海拔图、三个地点的选项卡、折叠的观测说明和带高亮行的 Python 代码。](docs/assets/autumnmark-ridge-notes.webp)
+![秋笺「松风明月」主题编辑《雾岭山脊 · 踏秋观测手记》：左侧是文件、大纲与 AI 侧边栏，正文顶部展示多选项卡、单文件内嵌海拔剖面图与折叠块。](docs/assets/autumnmark-ridge-notes.webp)
 
-[查看截图中的示例 Markdown](docs/examples/ridge-notes.md) · [在官网切换浅色、源码和深色视图](https://autumn-one.github.io/autumnmark/#preview)
+![同一份手记下方的内嵌 Excalidraw 手绘图与增强代码块：手绘图直接内嵌在 Markdown 中并支持点击二次编辑，代码块展示居中文件名 ridge_metrics.py、第 2-4 行高亮与可展开预览。](docs/assets/autumnmark-drawing-code.webp)
 
-## 同一份 Markdown，在其他编辑器里怎样显示？
+[查看截图中的示例 Markdown](docs/examples/ridge-notes.md) · [在官网切换浅色、手绘与代码、源码和深色视图](https://autumn-one.github.io/autumnmark/#preview)
 
-四项扩展都支持**渐进回退**。秋笺把交互加在 Markdown 的标题、段落、图片和代码围栏上。用其他编辑器打开同一份文件，阅读效果取决于该编辑器支持的语法。
+## 核心特色与渐进回退
 
-| 功能           | 在秋笺里                                                        | 在其他 Markdown 编辑器里                                                                                                        |
-| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 多选项卡       | 点击「杉林口」「听风垭」「望云台」，切换到对应的观测记录。      | 三个地点以带 `\|` 的小标题依次出现，每一段记录都能读到。                                                                        |
-| 单文件内嵌图片 | 粘贴海拔图后，图片数据随 `.md` 一起保存。分享时只需这一个文件。 | 允许 `data:` 图片的阅读器可直接离线显示。遇到过滤内嵌图片的平台，可在秋笺中右键「转换为本地图片」，把生成的图片与文档一起发布。 |
-| 折叠块         | 点开「为什么在垭口多停五分钟？」查看说明，再点一次收起。        | 折叠标记是 HTML 注释，标题和整段说明按原顺序显示。                                                                              |
-| 代码块标注     | 在代码上方显示文件名，高亮指定行，还能限制长代码的预览高度。    | 阅读器按普通围栏代码块显示完整源码。标题、行高亮和预览高度取决于阅读器支持。                                                    |
+秋笺的扩展能力均建立在标准 Markdown 的标题、HTML 注释、图片链接与代码围栏之上，不引入私有二进制格式。同一份 `.md` 在秋笺与其他编辑器中的表现如下：
 
-## 自己写一段试试
+| 特色功能                     | 在秋笺里的体验                                                                                                                                  | 在其他 Markdown 编辑器 / 平台里                                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **无需图床的内嵌图片**       | 默认将粘贴截图、本地图片和网页图片以标准 `data:` 链接写入 `.md`，离线即看、单文件即发；支持拖拽调宽（可吸附 `100%`）、批量内嵌与源码折叠芯片。  | 支持 `data:` 图片的编辑器可直接离线显示。若目标平台过滤内嵌图片，可在秋笺中右键「转换为本地图片」或拖出原图，与文档一同发布。     |
+| **可回退的扩展语法**         | 所有交互增强都以注释或扩展元信息附着在标准语法上，所见即所得，同时完整保留纯文本可读性。                                                        | 即使完全不认识秋笺扩展，也能按原顺序读到全部标题、段落、图片与源码，无语法污染、无厂商锁定。                                      |
+| **多选项卡**                 | 输入 `/tabs` 即可创建选项卡组，点击标签切换不同平台步骤或节点记录，支持 `+` 新建、键盘切换与 `</>` 源码编辑。                                   | 每个标签对应普通标题（如 `#### \| 杉林口`），所有面板内容按源码顺序完整呈现，不丢信息。                                           |
+| **折叠语法**                 | 输入 `/fold` 收起长日志、答案或背景说明，点击标题随时展开收起；导出 HTML 时转为原生可交互折叠块。                                               | `<!-- fold -->` 与 `<!-- /fold -->` 作为标准 HTML 注释自动隐藏，标题与正文完整显示。                                              |
+| **代码块增强**               | 顶栏居中显示文件名、高亮关键行、限制长代码预览行数并支持拖拽底部边缘调高或一键展开；复制按钮始终复制完整源码。                                  | 仍是标准围栏代码块，所有编辑器都能正常语法高亮、阅读与复制完整代码。                                                              |
+| **内嵌手绘图（Excalidraw）** | 输入 `/excalidraw` 直接在文档内绘制手绘流程图与架构草图，默认内嵌进 `.md`；点击画布随时弹出或移到标签页修改，支持拖拽调宽与 HTML/PDF 渲染导出。 | 以标准图片语法保存（也支持独立 `.excalidraw` 文件引用），源码模式折叠为简洁芯片；导出 HTML/PDF 时自动转为高清图片供任意平台阅读。 |
+
+## 快速上手扩展语法
 
 ### 多选项卡
 
-输入 `/tabs` 插入一组内容选项卡，用 `+` 添加标签。也可以直接写 Markdown。组内以 `| ` 开头的标题就是标签名，后面的段落、列表或代码属于这个标签。
+输入 `/tabs` 插入选项卡组，点击 `+` 添加标签；也可以直接编写标准 Markdown，组内以 `| ` 开头的标题即为标签名，其后的段落、列表、图片或代码块都归属该标签：
 
 ```markdown
 <!-- tabs -->
 
-#### | 杉林口
+#### | 杉林口 · 720m
 
-06:40，杉林里仍有薄雾。
+**06:40 · 晨雾初散**　林间能见度约五十米，松针上的露珠尚未落下。
 
-#### | 听风垭
+#### | 听风垭 · 1160m
 
-07:25，西侧山脊已经见光。
+**07:25 · 雾线交汇**　东坡的雾沿着垭口倾泻下沉，西侧山脊已经见光。
 
 <!-- /tabs -->
 ```
 
-### 单文件内嵌图片
+### 无需图床的单文件内嵌图片
 
-在「偏好设置 → 图片与导出」选择「嵌入 Markdown（Base64）」，然后粘贴截图或插入图片。图片仍使用 `![图片说明](图片地址)` 的写法，地址里存着图片本身。上图的海拔剖面就保存在示例文件里，断开网络也能查看。
+秋笺默认开启「嵌入 Markdown（Base64）」（可在「偏好设置 → 图片与导出」切换）。粘贴截图、拖入本地图片，或直接粘贴含图片链接的 Markdown 片段时，图片会自动写入 `![图片说明](data:image/...)`：
 
-### 折叠块
+- **离线便携**：发给同事或跨设备同步只需这一个 `.md` 文件，不再受图床失效或外链防盗链困扰。
+- **灵活互转**：支持右键「转换为本地图片」、文档/文件夹批量内嵌、拖拽左右边缘调整显示宽度，以及在源码模式下自动折叠为紧凑芯片。
 
-输入 `/折叠`，或用两行独立注释包住标题和正文。默认收起。想让读者先看到正文，可把开头改为 `<!-- fold open -->`。
+### 内嵌手绘图（Excalidraw）
+
+输入 `/excalidraw`（或通过菜单插入手绘图）即可唤出内置 Excalidraw 手绘白板：
+
+- **默认单文件内嵌**：图形以 `![雾岭山脊路线与雾线走向手绘图](data:application/x-excalidraw;base64,...)` 保存在文档内；也可在偏好设置中切换为独立的 `.excalidraw` 文件引用。
+- **实时编辑与调宽**：点击预览图即可在弹窗或独立标签页继续绘制并原地刷新；悬停拖拽左右边缘可调整宽度（自动以 `<!-- drawing-layout: width="100%" -->` 记住布局），导出 HTML / PDF 时自动渲染为高清图。
+
+### 折叠语法
+
+输入 `/fold`（或 `/折叠`），用两行独立 HTML 注释包住标题与正文。默认收起，如需默认展开可写 `<!-- fold open -->`：
 
 ```markdown
 <!-- fold -->
 
-### 为什么在垭口多停五分钟？
+### 为什么要在听风垭多停十分钟？
 
-间隔一分钟拍一张照片，就能看出雾线移动的方向。
+东西两侧坡面的气流在此交汇。每分钟拍一张照片，就能看出雾线抬升与回落的方向。
 
 <!-- /fold -->
 ```
 
-### 代码块标题、行高亮与预览高度
+### 代码块增强
 
-在围栏首行写 `title="ridge.py"` 指定文件名，用 `{2-3}` 高亮第 2、3 行，`max-lines=4` 让代码块先显示四行。滚动或展开即可读完，复制代码会得到整个片段。
+在代码围栏首行附加 `title="文件名"`、行高亮 `{2-4}` 与预览行数上限 `max-lines=5`；在编辑器里还可以直接拖拽代码块底部边缘调整预览高度，或点击底部箭头展开/收起：
 
 ````markdown
-```python title="ridge.py" {2-3} max-lines=4
-heights = [720, 1160, 1380]
-start, summit = heights[0], heights[-1]
-rise = summit - start
-direction = "上升" if rise > 0 else "下降"
+```python title="ridge_metrics.py" {2-4} max-lines=5
+elevations = [720, 1160, 1380]
+start, summit = elevations[0], elevations[-1]
+gain = summit - start
+temp_drop = round(gain / 100 * 0.6, 1)
 
-print(f"{direction} {abs(rise)} 米")
+print(f"累计爬升 +{gain} m，山顶约降温 {temp_drop} °C")
 ```
 ````
 
-[完整扩展语法](https://github.com/Autumn-one/autumnmark/blob/v0.24.28/packages/website/content/docs/end-user/MARKDOWN_SYNTAX.md#content-tabs) · [图片嵌入与转换](https://github.com/Autumn-one/autumnmark/blob/v0.24.28/packages/website/content/docs/end-user/IMAGES.md#embed-in-markdown-base64)
+[完整扩展语法文档](https://github.com/Autumn-one/autumnmark/blob/develop/packages/website/content/docs/end-user/MARKDOWN_SYNTAX.md#content-tabs) · [图片与媒体内嵌指南](https://github.com/Autumn-one/autumnmark/blob/develop/packages/website/content/docs/end-user/IMAGES.md#embed-in-markdown-base64)
 
-## 下载与开发
+## 更多桌面端体验
 
-正式版提供 Windows x64、macOS ARM64（Apple 芯片）和 Linux x64 安装包。编辑器支持可视化和源码编辑、数学公式、Mermaid 图表，以及 HTML 和 PDF 导出。[下载安装包](https://github.com/Autumn-one/autumnmark/releases/latest)
+- **内置精品主题与主题工坊**：默认搭载「松风明月」浅色与「暮紫日记」深色主题，内置多套配色、在线主题库与自定义 CSS 实时预览。
+- **完整写作工具链**：支持 CommonMark 与 GFM、KaTeX 数学公式、Mermaid / PlantUML 图表、表格拖拽调宽与行列排序、专注/打字机/阅读模式、文档 AI 侧边栏，以及导出 HTML 与 PDF。
 
-从仓库根目录运行 `pnpm install` 安装依赖，再用 `pnpm run dev` 启动桌面端。Windows x64 安装包可用 `pnpm run build:win:x64` 构建。[贡献指南](.github/CONTRIBUTING.md)
+## 下载与本地开发
+
+正式版提供 **Windows x64**（安装程序、便携 ZIP / 7z）、**macOS ARM64（Apple 芯片）** 与 **Linux x64** 安装包。[前往 Releases 下载](https://github.com/Autumn-one/autumnmark/releases/latest)
+
+```bash
+# 在仓库根目录安装依赖
+pnpm install
+
+# 启动桌面端开发模式
+pnpm run dev
+
+# 构建 Windows x64 安装包
+pnpm run build:win:x64
+```
+
+详细开发规范与贡献方式请参阅 [贡献指南](.github/CONTRIBUTING.md)。
 
 ## 上游与许可
 
-秋笺基于 MarkText 构建，感谢上游作者和贡献者。项目采用 MIT 许可证。[MarkText](https://github.com/marktext/marktext) · [上游贡献者](https://github.com/marktext/marktext/graphs/contributors) · [上游 README 译本](docs/i18n/) · [MIT 许可证](LICENSE)
+秋笺基于 MarkText 构建，感谢上游作者与社区贡献者。项目采用 MIT 许可证。[MarkText](https://github.com/marktext/marktext) · [上游贡献者](https://github.com/marktext/marktext/graphs/contributors) · [上游 README 译本](docs/i18n/) · [MIT 许可证](LICENSE)
 
 <details>
 <summary>MarkText 上游赞助信息</summary>
