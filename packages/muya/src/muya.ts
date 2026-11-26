@@ -1,6 +1,7 @@
 import type Content from './block/base/content';
 import type Parent from './block/base/parent';
 import type { IHeadingFoldState } from './block/folding';
+import type { IUpdateEmbeddedDrawingParams } from './editor/embeddedDrawingUpdate';
 import type { Listener, TEventListener } from './event/types';
 import type { ILocale } from './i18n/types';
 import type { IReplaceOption, ISearchOption } from './search/types';
@@ -20,6 +21,7 @@ import {
     MUYA_DEFAULT_OPTIONS,
     URL_REG,
 } from './config/index';
+import { applyEmbeddedDrawingUpdate, resolveEmbeddedDrawingTarget } from './editor/embeddedDrawingUpdate';
 import { Editor } from './editor/index';
 import { attachReadingEvents, prepareReadingLinks } from './editor/readOnly';
 import EventCenter from './event/index';
@@ -723,6 +725,27 @@ export class Muya {
     /** Reload images whose files changed on disk despite cached bitmaps. */
     invalidateImageCache() {
         this.editor.inlineEngine.invalidateImageCache();
+    }
+
+    /** Revalidate one preview key in place without clearing unrelated cached images. */
+    refreshImagePreview(key: string, loadFn?: () => Promise<string>): Promise<boolean> {
+        return this.editor.inlineEngine.refreshImagePreview(key, loadFn);
+    }
+
+    /**
+     * Update a single embedded drawing block in place without rebuilding the document.
+     * Returns false without modifying document state when target verification fails.
+     */
+    updateEmbeddedDrawing(params: IUpdateEmbeddedDrawingParams): boolean {
+        if (this.isReadOnly || !this.canMutate || !this.editor.scrollPage)
+            return false;
+        this.editor.transactions.assertStandalone();
+        this.flush();
+        const target = resolveEmbeddedDrawingTarget(this, params);
+        if (!target)
+            return false;
+        applyEmbeddedDrawingUpdate(this, target, params);
+        return true;
     }
 
     copyAsMarkdown() {

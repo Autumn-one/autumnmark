@@ -1,3 +1,9 @@
+## AutumnMark 0.24.66
+
+- Editing elements in the drawing popup now updates inline embedded drawings, fenced `excalidraw` blocks, and linked `.excalidraw` previews in place with offscreen image decoding, eliminating loading-box collapses and background document jitter behind the modal overlay.
+- Embedded drawing auto-saves update only the edited block via incremental transactions instead of rebuilding the full document, keeping unrelated Mermaid diagrams, sibling blocks, and undo/redo steps intact without stealing focus.
+- Linked `.excalidraw` refreshes and window focus checks now revalidate only changed drawing files using file and document-card fingerprints instead of invalidating the entire document's image cache.
+
 ## AutumnMark 0.24.65
 
 - Editing text in an embedded drawing popup now keeps the text input focused across auto-save pauses, `Ctrl/Cmd+S` saves, external disk reloads, and table selections, while cleanly committing or discarding active text on close or Open in Tab.

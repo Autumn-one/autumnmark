@@ -2,6 +2,7 @@ import type { IHighlight } from '../../inline/model/types';
 import type { Muya } from '../../muya';
 import type { IContentCursor, INodeOffset, IRenderCursor } from '../../selection/types';
 import type { Nullable } from '../../types';
+import type { TDiff } from '../../utils';
 import type { TBlockPath } from '../types';
 import type Parent from './parent';
 import diff from 'fast-diff';
@@ -15,6 +16,7 @@ import { createTextSelectionState } from '../../selection/state';
 import { ChangeSource } from '../../types';
 import {
     adjustOffset,
+    codePointLength,
     diffToTextOp,
     isCompositionEndEvent,
     isInputEvent,
@@ -411,6 +413,31 @@ class Content extends TreeNode {
 
             this.transactions.editOperation(path, diffToTextOp(diffs));
         }
+    }
+
+    /** Replace a known UTF-16 range directly to avoid diffing large embedded payloads. */
+    replaceTextRange(start: number, end: number, replacement: string): void {
+        if (!this.muya.canMutate || start < 0 || end < start || end > this._text.length)
+            return;
+        const deleted = this._text.slice(start, end);
+        if (deleted === replacement)
+            return;
+        this.transactions.captureSelection();
+        const prefixLength = codePointLength(this._text.slice(0, start));
+        this._text = this._text.slice(0, start) + replacement + this._text.slice(end);
+        const { path } = this;
+        if (this.blockName === 'language-input') {
+            path.pop();
+            path.push('meta', 'lang');
+        }
+        const op: TDiff[] = [];
+        if (prefixLength > 0)
+            op.push(prefixLength);
+        if (deleted.length > 0)
+            op.push({ d: deleted });
+        if (replacement.length > 0)
+            op.push(replacement);
+        this.transactions.editOperation(path, op);
     }
 
     protected get isCollapsed() {

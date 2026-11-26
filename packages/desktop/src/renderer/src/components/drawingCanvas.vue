@@ -672,7 +672,7 @@ async function saveSession(mode: SaveMode): Promise<SaveOutcome> {
   error.value = ''
   const save = async(): Promise<SaveOutcome> => {
     try {
-      const saved = await session.commit(content, filename.value)
+      const saved = await session.commit(content, filename.value, snapshot)
       if (!saved) return 'failed'
       session.source = content
       session.unsavedSource = undefined
@@ -748,7 +748,7 @@ async function commitDrawing(action: 'save' | 'insert') {
     syncDrawing()
     const saved = await getSessionActions()?.save(file.id)
     if (saved?.status !== 'saved') return
-    bus.emit('drawing::preview-changed')
+    bus.emit('drawing::preview-changed', { path: saved.pathname })
     if (action === 'insert') await props.insert?.(saved.pathname)
   } catch (reason) {
     error.value = t('drawing.saveFailed', { reason: String(reason) })

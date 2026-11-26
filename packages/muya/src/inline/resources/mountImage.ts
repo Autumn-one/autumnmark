@@ -11,7 +11,7 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
         imageText.querySelector('img')?.remove();
         return;
     }
-    const img = createImage(url, width, height, attrs, imageClass);
+    const img = createImageElement(url, width, height, attrs, imageClass);
 
     if (imageText.classList.contains(`${CLASS_NAMES.MU_INLINE_IMAGE}`)) {
         const imageContainer = imageText.querySelector(
@@ -19,9 +19,9 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
         );
         const oldImage = imageContainer!.querySelector('img');
         if (oldImage)
-            oldImage.remove();
-
-        imageContainer!.appendChild(img);
+            oldImage.replaceWith(img);
+        else
+            imageContainer!.appendChild(img);
         imageText.classList.remove(CLASS_NAMES.MU_IMAGE_LOADING);
         imageText.classList.add(CLASS_NAMES.MU_IMAGE_SUCCESS);
         // Host themes use this hook on the first load as well as cached renders.
@@ -35,7 +35,7 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
     }
 }
 
-function createImage(url: string, width: number | undefined, height: number | undefined, attrs: Record<string, string>, imageClass?: string) {
+export function createImageElement(url: string, width: number | undefined, height: number | undefined, attrs: Record<string, string>, imageClass?: string) {
     const img = document.createElement('img');
     img.src = url;
 

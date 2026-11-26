@@ -88,7 +88,7 @@ import DocumentImageStatus from './documentImageStatus.vue'
 import { imageDestinationEdits, isInlineImage } from '@/util/documentImages'
 import { isDrawingPath, isDrawingReference } from '@/util/drawingPaths'
 import type { EditMarkdown } from '@shared/markdownEdits'
-import { findDocumentImages, type IEmbeddedImageEdit } from '@muyajs/core'
+import { findDocumentImages, type IEmbeddedImageEdit, type IUpdateEmbeddedDrawingParams } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
 import { documentVideos } from '@/util/videoAttachments'
 import EmbeddedImageDialog from './embeddedImageDialog.vue'
@@ -147,7 +147,9 @@ const editMarkdown: EditMarkdown = (id, prepare, options) => {
   if (!view) throw new Error(t('batchMedia.changed'))
   view.editMarkdown(id, prepare, options)
 }
-defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
+const updateEmbeddedDrawing = (id: string, params: IUpdateEmbeddedDrawingParams): boolean =>
+  props.sourceCode ? false : renderedEditor.value?.updateEmbeddedDrawing(id, params) ?? false
+defineExpose({ drawingInsertion, editMarkdown, readMarkdown, updateEmbeddedDrawing })
 const imageCounts = shallowRef({ embedded: 0, pending: 0 })
 watch([() => store.currentFile?.id, () => props.markdown], ([id, markdown], previous, onCleanup) => {
   const refresh = () => {

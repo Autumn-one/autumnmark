@@ -110,6 +110,17 @@ export function usesDefaultObjectSize(width?: number, height?: number): boolean 
     return width === DEFAULT_OBJECT_WIDTH || height === DEFAULT_OBJECT_HEIGHT;
 }
 
+export async function decodeImageElement(img: HTMLImageElement): Promise<void> {
+    if (typeof img.decode !== 'function')
+        return;
+    try {
+        await img.decode();
+    }
+    catch {
+        // Callers already verified load success; ignore unsupported or cancelled decodes.
+    }
+}
+
 export async function loadImage(url: string, detectContentType = false): Promise<{
     url: string;
     width: number;

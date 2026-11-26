@@ -7,6 +7,7 @@ import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
 import { finalizeRenderedDiagram, renderDiagram } from '../../../utils/diagram/render';
 import { abbreviateEmbeddedImages, abbreviatePreviewText } from '../../../utils/embeddedImage';
+import { decodeImageElement } from '../../../utils/image';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 import { embeddedDrawingFor } from './embedded';
@@ -149,7 +150,7 @@ class DiagramPreview extends Parent {
         muya.options.embeddedDrawing?.open(code.text, previews.indexOf(this.domNode!));
     }
 
-    private async _showDrawing(code: string) {
+    private async _showDrawing(code: string, previewLoader?: () => Promise<string>) {
         const drawing = this.muya.options.embeddedDrawing;
         const target = this.domNode!;
         if (!drawing) {
@@ -159,35 +160,54 @@ class DiagramPreview extends Parent {
         const render = ++this._drawingRender;
         const label = drawing.label();
         target.classList.add('mu-embedded-drawing');
-        const button = target.ownerDocument.createElement('button');
-        button.type = 'button';
-        button.className = 'mu-embedded-drawing-button';
-        button.setAttribute('aria-label', label);
-        button.textContent = this.muya.i18n.t('Loading...');
-        target.replaceChildren(button);
+
+        let button = target.querySelector<HTMLButtonElement>(':scope > .mu-embedded-drawing-button');
+        const existingImg = button?.querySelector<HTMLImageElement>(':scope > img') ?? null;
+        if (!button) {
+            button = target.ownerDocument.createElement('button');
+            button.type = 'button';
+            button.className = 'mu-embedded-drawing-button';
+            button.setAttribute('aria-label', label);
+            button.textContent = this.muya.i18n.t('Loading...');
+            target.replaceChildren(button);
+        }
+        else {
+            button.setAttribute('aria-label', label);
+            // Keep an already rendered drawing visible while the next preview exports.
+            if (!existingImg)
+                button.textContent = this.muya.i18n.t('Loading...');
+        }
+
         try {
-            const source = await drawing.preview(code);
+            const source = await (previewLoader ? previewLoader() : drawing.preview(code));
             if (render !== this._drawingRender)
                 return;
             const image = target.ownerDocument.createElement('img');
             image.alt = label;
             image.src = source;
-            button.replaceChildren(image);
+            await decodeImageElement(image);
+            if (render !== this._drawingRender || !button.isConnected)
+                return;
+            const liveImg = button.querySelector<HTMLImageElement>(':scope > img');
+            if (liveImg)
+                liveImg.replaceWith(image);
+            else
+                button.replaceChildren(image);
         }
         catch {
-            if (render === this._drawingRender)
+            if (render === this._drawingRender && button.isConnected && !button.querySelector(':scope > img'))
                 button.textContent = this.muya.i18n.t('Invalid Diagram Code');
         }
     }
 
-    async update(code = this._code) {
+    async update(code = this._code, previewLoader?: () => Promise<string>) {
         const { i18n } = this.muya;
         this._rendered = false;
         if (this._code !== code)
             this._code = code;
 
         if (this._type === 'excalidraw') {
-            await this._showDrawing(code);
+            await this._showDrawing(code, previewLoader);
             return;
         }
 

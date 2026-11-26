@@ -143,7 +143,7 @@ import { reportImageError } from '@/util/embeddedImageActions'
 import { embedDocumentImages, embedLinkedImage } from '@/services/pastedImages'
 import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
-import type { IEmbeddedImageEdit } from '@muyajs/core'
+import type { IEmbeddedImageEdit, IUpdateEmbeddedDrawingParams } from '@muyajs/core'
 import { getCssForOptions, type PdfCssOptions } from '@/util/pdf'
 import {
   getTocHeadingScrollTop,
@@ -163,7 +163,15 @@ import {
 import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
 import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
 import { getDocumentLocationMenuItems } from '../../contextMenu/fileLocation'
-import { invalidateDrawingPreviews, renderEmbeddedDrawingPreview, resolveDrawingPreview } from '@/services/drawingPreviews'
+import {
+  hasLinkedDrawingChanged,
+  invalidateDrawingPreview,
+  linkedDrawingPaths,
+  renderEmbeddedDrawingPreview,
+  renderLinkedDrawingPreview,
+  resolveDrawingPreview
+} from '@/services/drawingPreviews'
+import type { DrawingPreviewChangedPayload } from '@/services/drawingEditors'
 import { resolveDrawingPath } from '@/util/drawingPaths'
 import { drawingInsertionAt } from '@/util/drawingInsertion'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
@@ -349,7 +357,13 @@ function drawingInsertion(id: string) {
   return drawingInsertionAt(markdown, offset)
 }
 
-defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
+function updateEmbeddedDrawing(id: string, params: IUpdateEmbeddedDrawingParams): boolean {
+  const muya = editor.value
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return false
+  return muya.updateEmbeddedDrawing(params)
+}
+
+defineExpose({ drawingInsertion, editMarkdown, readMarkdown, updateEmbeddedDrawing })
 
 function openInlineDrawing(wrapper: HTMLElement, event: Event) {
   const muya = editor.value
@@ -1154,10 +1168,33 @@ const handleInvalidateImageCache = () => {
   }
 }
 
-const refreshDrawingPreviews = () => {
-  invalidateDrawingPreviews()
-  if (/\.excalidraw/i.test(currentFile.value?.markdown ?? '')) handleInvalidateImageCache()
+const refreshDrawingPreviews = (payload?: unknown) => {
+  const muya = editor.value
+  const file = currentFile.value
+  if (!muya || !file || renderedDocumentId !== file.id || sourceCode.value) return
+  const detail = payload && typeof payload === 'object' ? payload as DrawingPreviewChangedPayload : undefined
+  const paths = linkedDrawingPaths(file.markdown, file.pathname)
+  if (!paths.length) return
+  if (detail?.path) {
+    const targetPath = detail.path
+    const matched = paths.filter(path => window.fileUtils.isSamePathSync(path, targetPath))
+    for (const key of matched) {
+      invalidateDrawingPreview(key)
+      void muya.refreshImagePreview(key, detail.previewLoader ?? (() => renderLinkedDrawingPreview(key)))
+    }
+    return
+  }
+  for (const key of paths) {
+    void (async() => {
+      const changed = await hasLinkedDrawingChanged(key)
+      if (!changed || editor.value !== muya || currentFile.value?.id !== file.id) return
+      invalidateDrawingPreview(key)
+      await muya.refreshImagePreview(key, () => renderLinkedDrawingPreview(key))
+    })()
+  }
 }
+
+const handleWindowDrawingFocus = () => refreshDrawingPreviews()
 
 const openSpellcheckerLanguageCommand = () => {
   if (!isMac) {
@@ -2170,7 +2207,7 @@ onMounted(() => {
   bus.on('file-loaded', setMarkdownToEditor)
   bus.on('invalidate-image-cache', handleInvalidateImageCache)
   bus.on('drawing::preview-changed', refreshDrawingPreviews)
-  window.addEventListener('focus', refreshDrawingPreviews)
+  window.addEventListener('focus', handleWindowDrawingFocus)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
   bus.on('selectAll', handleSelectAll)
@@ -2357,7 +2394,7 @@ onBeforeUnmount(() => {
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('drawing::preview-changed', refreshDrawingPreviews)
-  window.removeEventListener('focus', refreshDrawingPreviews)
+  window.removeEventListener('focus', handleWindowDrawingFocus)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
   bus.off('selectAll', handleSelectAll)

@@ -282,7 +282,7 @@ export function getParagraphReference(ele: HTMLElement, id: string) {
 
 // ot-text-unicode measures positions in code points, not grapheme clusters.
 // Unchanged diff spans must use the same units or subsequent operations corrupt state (#4926).
-function codePointLength(str: string) {
+export function codePointLength(str: string) {
     let length = 0;
     for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);

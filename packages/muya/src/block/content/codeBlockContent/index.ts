@@ -125,6 +125,11 @@ class CodeBlockContent extends Content {
     // Seeded at creation to avoid racing the preview’s initial async render.
     private _lastPreviewText: string;
 
+    /** Mark preview text as already handled so subsequent highlights skip duplicate renders. */
+    syncPreviewText(text: string): void {
+        this._lastPreviewText = text;
+    }
+
     constructor(muya: Muya, state: CodeContentState) {
         super(muya, state.text);
         this._lastPreviewText = state.text;

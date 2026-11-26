@@ -1265,3 +1265,189 @@ test('keeps scroll and a folded heading when a mixed document drawing autosaves'
     await app.close()
   }
 })
+
+test('updates an inline drawing in place during dialog autosave without loading collapse or rebuilding sibling blocks', async() => {
+  const markdown = [
+    '# Heading',
+    '',
+    'Unchanged paragraph above.',
+    '',
+    '```mermaid',
+    'graph LR',
+    '  A --> B',
+    '```',
+    '',
+    blankInlineDrawing,
+    '',
+    'Unchanged paragraph below.',
+    ''
+  ].join('\n')
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: true }
+  })
+  try {
+    const drawing = page.locator('.mu-editor .mu-inline-drawing')
+    const preview = drawing.getByRole('img', { name: 'Embedded drawing' })
+    await expect(preview).toBeVisible()
+    await expect(page.locator('.mu-diagram-preview svg')).toBeVisible()
+
+    const beforeSrc = await preview.getAttribute('src')
+    await page.evaluate(() => {
+      const editor = document.querySelector('.mu-editor')
+      if (!editor) throw new Error('Missing editor root')
+      const heading = editor.querySelector('h1')
+      const mermaidSvg = editor.querySelector('.mu-diagram-preview svg')
+      const state = {
+        heading,
+        mermaidSvg,
+        sawLoading: false,
+        sawMermaidLoading: false
+      }
+      ;(window as unknown as Record<string, unknown>).__drawingProbe = state
+      const observer = new MutationObserver(() => {
+        if (editor.querySelector('.mu-image-loading')) state.sawLoading = true
+        const diagram = editor.querySelector('.mu-diagram-preview')
+        if (diagram && diagram.textContent?.includes('Loading...')) state.sawMermaidLoading = true
+      })
+      observer.observe(editor, { attributes: true, childList: true, subtree: true, characterData: true })
+      ;(window as unknown as Record<string, unknown>).__drawingObserver = observer
+    })
+
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup.locator('canvas.interactive')).toBeVisible()
+
+    await drawShape(page, popup, 'toolbar-rectangle', -40, -20)
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length ?? 0).toBe(1)
+    await expect.poll(() => preview.getAttribute('src')).not.toBe(beforeSrc)
+    await expect(preview).toHaveAttribute('src', /^data:image\/png;base64,/)
+
+    const probe = await page.evaluate(() => {
+      const w = window as unknown as Record<string, unknown>
+      ;(w.__drawingObserver as MutationObserver | undefined)?.disconnect()
+      const state = w.__drawingProbe as {
+        heading: Element | null
+        mermaidSvg: Element | null
+        sawLoading: boolean
+        sawMermaidLoading: boolean
+      }
+      const editor = document.querySelector('.mu-editor')
+      if (!editor) throw new Error('Missing editor root')
+      return {
+        sawLoading: state.sawLoading,
+        sawMermaidLoading: state.sawMermaidLoading,
+        sameHeading: editor.querySelector('h1') === state.heading,
+        sameMermaidSvg: editor.querySelector('.mu-diagram-preview svg') === state.mermaidSvg
+      }
+    })
+    expect(probe).toEqual({
+      sawLoading: false,
+      sawMermaidLoading: false,
+      sameHeading: true,
+      sameMermaidSvg: true
+    })
+  } finally {
+    await app.close()
+  }
+})
+
+test('updates a fenced excalidraw block in place without flashing Loading text', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`Before\n\n${blankDrawingFence}\n\nAfter\n`, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: true }
+  })
+  try {
+    const button = page.locator('.mu-editor .mu-embedded-drawing-button')
+    const preview = button.locator('img')
+    await expect(preview).toBeVisible()
+    const beforeSrc = await preview.getAttribute('src')
+
+    await page.evaluate(() => {
+      const btn = document.querySelector('.mu-editor .mu-embedded-drawing-button')
+      if (!btn) throw new Error('Missing drawing button')
+      const state = { sawLoadingText: false, sawMissingImg: false }
+      ;(window as unknown as Record<string, unknown>).__fenceProbe = state
+      const observer = new MutationObserver(() => {
+        if (btn.textContent?.includes('Loading...')) state.sawLoadingText = true
+        if (!btn.querySelector('img')) state.sawMissingImg = true
+      })
+      observer.observe(btn, { childList: true, subtree: true, characterData: true })
+      ;(window as unknown as Record<string, unknown>).__fenceObserver = observer
+    })
+
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup.locator('canvas.interactive')).toBeVisible()
+    await drawShape(page, popup, 'toolbar-rectangle')
+
+    await expect.poll(async() => {
+      const text = await readFile(filePath, 'utf8')
+      const match = /```excalidraw\r?\n([\s\S]*?)\r?\n```/.exec(text)
+      return match ? JSON.parse(match[1]).elements.length : 0
+    }).toBe(1)
+    await expect.poll(() => preview.getAttribute('src')).not.toBe(beforeSrc)
+
+    const probe = await page.evaluate(() => {
+      const w = window as unknown as Record<string, unknown>
+      ;(w.__fenceObserver as MutationObserver | undefined)?.disconnect()
+      return w.__fenceProbe
+    })
+    expect(probe).toEqual({ sawLoadingText: false, sawMissingImg: false })
+  } finally {
+    await app.close()
+  }
+})
+
+test('updates a linked excalidraw preview without invalidating unrelated images', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`![Linked](./linked.excalidraw)\n\n${blankInlineDrawing}\n`, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: false }
+  })
+  try {
+    const linkedPath = join(dirname(filePath), 'linked.excalidraw')
+    await writeFile(linkedPath, blankDrawing, 'utf8')
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+
+    const linkedImg = page.locator('.mu-editor .mu-linked-drawing img')
+    const inlineImg = page.locator('.mu-editor .mu-inline-drawing img')
+    await expect(linkedImg).toBeVisible()
+    await expect(inlineImg).toBeVisible()
+    const beforeLinkedSrc = await linkedImg.getAttribute('src')
+
+    await page.evaluate(() => {
+      const editor = document.querySelector('.mu-editor')
+      if (!editor) throw new Error('Missing editor root')
+      const state = {
+        inlineImg: editor.querySelector('.mu-inline-drawing img'),
+        sawLoading: false
+      }
+      ;(window as unknown as Record<string, unknown>).__linkedProbe = state
+      const observer = new MutationObserver(() => {
+        if (editor.querySelector('.mu-image-loading')) state.sawLoading = true
+      })
+      observer.observe(editor, { attributes: true, childList: true, subtree: true })
+      ;(window as unknown as Record<string, unknown>).__linkedObserver = observer
+    })
+
+    await linkedImg.click()
+    const popup = page.getByRole('dialog', { name: 'linked.excalidraw' })
+    await expect(popup.locator('canvas.interactive')).toBeVisible()
+    await drawShape(page, popup, 'toolbar-rectangle')
+
+    await expect.poll(async() => JSON.parse(await readFile(linkedPath, 'utf8')).elements.length).toBe(1)
+    await expect.poll(() => linkedImg.getAttribute('src')).not.toBe(beforeLinkedSrc)
+
+    const probe = await page.evaluate(() => {
+      const w = window as unknown as Record<string, unknown>
+      ;(w.__linkedObserver as MutationObserver | undefined)?.disconnect()
+      const state = w.__linkedProbe as { inlineImg: Element | null; sawLoading: boolean }
+      const editor = document.querySelector('.mu-editor')
+      if (!editor) throw new Error('Missing editor root')
+      return {
+        sawLoading: state.sawLoading,
+        sameInlineImg: editor.querySelector('.mu-inline-drawing img') === state.inlineImg
+      }
+    })
+    expect(probe).toEqual({ sawLoading: false, sameInlineImg: true })
+  } finally {
+    await app.close()
+  }
+})
