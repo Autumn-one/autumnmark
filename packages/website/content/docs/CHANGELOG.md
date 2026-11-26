@@ -1,3 +1,8 @@
+## AutumnMark 0.24.62
+
+- Inserting or editing an embedded drawing keeps the Markdown document at its current scroll position.
+- Added local diagnostics for slash-menu drawing insertion, from the search match through saving and canvas startup.
+
 ## AutumnMark 0.24.61
 
 - Resizing an embedded or hovered image keeps the document at its current scroll position, even when the text cursor is offscreen.

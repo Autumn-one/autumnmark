@@ -13,6 +13,8 @@ export interface IDrawingInsertion {
     replace: (markup: string) => string;
 }
 
+export type TDrawingInsertTrace = (stage: string, details?: Record<string, boolean | string>) => void;
+
 export interface IMuyaOptions {
     readOnly: boolean;
     fontSize: number;
@@ -127,7 +129,8 @@ export interface IMuyaOptions {
         label: () => string;
         quickInsert?: {
             title: () => string;
-            open: (target: IDrawingInsertion) => void;
+            startTrace?: () => TDrawingInsertTrace;
+            open: (target: IDrawingInsertion, trace?: TDrawingInsertTrace) => void;
         };
     };
     editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit, event?: MouseEvent) => void;

@@ -140,10 +140,10 @@ const renderedEditor = ref<InstanceType<typeof Editor> | null>(null)
 const activeEditor = computed(() => props.sourceCode ? sourceEditor.value : renderedEditor.value)
 const readMarkdown = (id: string): string | undefined => activeEditor.value?.readMarkdown(id)
 const drawingInsertion = (id: string) => activeEditor.value?.drawingInsertion(id)
-const editMarkdown: EditMarkdown = (id, prepare) => {
+const editMarkdown: EditMarkdown = (id, prepare, options) => {
   const view = activeEditor.value
   if (!view) throw new Error(t('batchMedia.changed'))
-  view.editMarkdown(id, prepare)
+  view.editMarkdown(id, prepare, options)
 }
 defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
 const imageCounts = shallowRef({ embedded: 0, pending: 0 })

@@ -4,7 +4,11 @@ export interface MarkdownEdit {
   text: string
 }
 
-export type EditMarkdown = (id: string, prepare: (markdown: string) => MarkdownEdit[]) => void
+export type EditMarkdown = (
+  id: string,
+  prepare: (markdown: string) => MarkdownEdit[],
+  options?: { preventScroll?: boolean }
+) => void
 
 export function applyMarkdownEdits(markdown: string, edits: readonly MarkdownEdit[]): string {
   const parts: string[] = []

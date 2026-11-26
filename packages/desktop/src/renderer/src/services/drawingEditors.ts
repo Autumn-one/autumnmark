@@ -1,3 +1,4 @@
+import type { TDrawingInsertTrace } from '@muyajs/core'
 import { shallowReactive, shallowRef } from 'vue'
 
 export interface DrawingEditor {
@@ -12,6 +13,7 @@ export interface DrawingEditor {
   nameOnInsert?: boolean
   filename?: string
   dirtyDraft?: boolean
+  insertionTrace?: TDrawingInsertTrace
   commit: (content: string, filename?: string) => Promise<boolean>
   save?: () => Promise<boolean>
   beforeClose?: (transactionId?: string) => Promise<boolean>

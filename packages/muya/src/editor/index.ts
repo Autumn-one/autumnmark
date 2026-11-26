@@ -612,7 +612,7 @@ export class Editor {
     }
 
     private _commitTransaction(transaction: ICompletedTransaction) {
-        const { operation, blockOperation, view, selection, source, history, recordSelection, replay } = transaction;
+        const { operation, blockOperation, view, selection, source, history, recordSelection, replay, preventScroll } = transaction;
         const before = this.jsonState.rawState;
         if (history === 'separate' && operation !== null)
             this.history.recordRebuild(operation, before, recordSelection !== undefined ? recordSelection : selection);
@@ -653,6 +653,8 @@ export class Editor {
         finally {
             this.isUpdating = false;
         }
+        if (preventScroll)
+            this.selection.preventScrollOnNextNotification();
         this.selection.notify(operation !== null);
     }
 

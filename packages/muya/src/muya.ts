@@ -390,10 +390,15 @@ export class Muya {
      * `recordSelection` is the selection restored by undo. Omit it to use the
      * live selection, or pass the saved WYSIWYG selection when focus has moved
      * to source mode.
+     * Set `preventScroll` for updates that should keep the viewport independent of the caret.
      *
      * @returns Whether an undo boundary was recorded.
      */
-    replaceContent(content: TState[] | string, recordSelection?: Nullable<TSelectionState>): boolean {
+    replaceContent(
+        content: TState[] | string,
+        recordSelection?: Nullable<TSelectionState>,
+        { preventScroll = false } = {},
+    ): boolean {
         this.editor.transactions.assertStandalone();
         this.flush();
         const { jsonState } = this.editor;
@@ -408,6 +413,7 @@ export class Muya {
             this.editor.rebuildContents(op, this.isReadOnly ? null : selection, ChangeSource.Api, {
                 history: 'separate',
                 recordSelection: boundarySelection,
+                preventScroll,
             });
         });
         this._refreshReadingPresentation();

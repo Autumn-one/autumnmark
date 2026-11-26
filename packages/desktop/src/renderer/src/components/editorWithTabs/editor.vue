@@ -322,7 +322,7 @@ function readMarkdown(id: string): string | undefined {
   return muya.getMarkdown()
 }
 
-const editMarkdown: EditMarkdown = (id, prepare) => {
+const editMarkdown: EditMarkdown = (id, prepare, options) => {
   const muya = editor.value
   const markdown = readMarkdown(id)
   if (!muya || markdown === undefined) throw new Error(t('batchMedia.changed'))
@@ -330,7 +330,7 @@ const editMarkdown: EditMarkdown = (id, prepare) => {
   if (!edits.length) return
   const folds = muya.getHeadingFoldState()
   const expanded = muya.editor.compactBlocks.expandedPaths()
-  muya.replaceContent(applyMarkdownEdits(markdown, edits))
+  muya.replaceContent(applyMarkdownEdits(markdown, edits), undefined, options)
   muya.setHeadingFoldState(folds)
   muya.editor.compactBlocks.restoreExpandedPaths(expanded)
 }
@@ -2085,10 +2085,18 @@ onMounted(() => {
       label: () => t('drawing.embedded'),
       quickInsert: {
         title: () => t('drawing.insert'),
-        open: target => {
+        startTrace: () => {
+          const traceId = crypto.randomUUID()
+          return (stage, details = {}) => log.info('[drawing-quick-insert]', traceId, stage, details)
+        },
+        open: (target, trace) => {
           const tab = currentFile.value
-          if (tab?.id === renderedDocumentId)
-            bus.emit('drawing::insert-at', { id: tab.id, target })
+          if (tab?.id === renderedDocumentId) {
+            trace?.('editor-dispatched')
+            bus.emit('drawing::insert-at', { id: tab.id, target, trace })
+          } else {
+            trace?.('editor-dispatch-rejected', { hasActiveTab: !!tab })
+          }
         }
       }
     },

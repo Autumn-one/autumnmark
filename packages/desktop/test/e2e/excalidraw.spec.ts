@@ -319,6 +319,62 @@ test('deletes an adjacent drawing without losing the caret or jumping to the top
   }
 })
 
+test('keeps the document scroll position when inserting a drawing and closing immediately', async() => {
+  const paragraphs = Array.from({ length: 50 }, (_, index) => `Paragraph ${index + 1}`).join('\n\n')
+  const { app, page, filePath } = await launchWithMarkdown(`Insert here\n\n${paragraphs}\n`, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: true }
+  })
+  try {
+    const editor = page.locator('.mu-editor')
+    await editor.getByText('Insert here', { exact: true }).click()
+    await page.keyboard.press('End')
+    const scrollTop = await editor.evaluate(element => {
+      element.scrollTop = 800
+      return element.scrollTop
+    })
+    expect(scrollTop).toBeGreaterThan(500)
+
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'drawing.insert')
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await popup.locator('.el-dialog__headerbtn').click()
+    await expect(popup).toBeHidden()
+    expect(await editor.evaluate(element => element.scrollTop)).toBeCloseTo(scrollTop, 0)
+    expect(await readFile(filePath, 'utf8')).toContain('Insert here![Embedded drawing](')
+  } finally {
+    await app.close()
+  }
+})
+
+test('keeps the document scroll position after editing an existing drawing', async() => {
+  const paragraphs = Array.from({ length: 40 }, (_, index) => `Paragraph ${index + 1}`).join('\n\n')
+  const { app, page, filePath } = await launchWithMarkdown(`${paragraphs}\n\n${blankInlineDrawing}\n\nAfter\n`, {
+    preferences: { language: 'en', autoSave: false }
+  })
+  try {
+    const editor = page.locator('.mu-editor')
+    await editor.getByText('Paragraph 1', { exact: true }).click()
+    const preview = editor.getByRole('img', { name: 'Embedded drawing' })
+    await preview.scrollIntoViewIfNeeded()
+    const scrollTop = await editor.evaluate(element => element.scrollTop)
+    expect(scrollTop).toBeGreaterThan(500)
+
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await popup.getByRole('tab', { name: 'Source' }).click()
+    const source = popup.getByRole('textbox', { name: 'Excalidraw JSON' })
+    const scene = JSON.parse(await source.inputValue())
+    scene.appState.viewBackgroundColor = '#ffeedd'
+    await source.fill(JSON.stringify(scene))
+    await popup.getByRole('button', { name: 'Apply' }).click()
+    await popup.locator('.el-dialog__headerbtn').click()
+    await expect(popup).toBeHidden()
+    expect(await editor.evaluate(element => element.scrollTop)).toBeCloseTo(scrollTop, 0)
+    expect(inlineScenes(await readFile(filePath, 'utf8'))[0].appState.viewBackgroundColor).toBe('#ffeedd')
+  } finally {
+    await app.close()
+  }
+})
+
 test('embeds drawings by default and edits them after reopening the Markdown', async() => {
   const { app, page, filePath } = await launchWithMarkdown('# Release plan\n\n- Check the build\n', { preferences: { language: 'en', autoSave: false } })
   const directory = dirname(filePath)
@@ -617,27 +673,51 @@ test('inserts an embedded drawing in an untitled note without opening Save As', 
   }
 })
 
-test('the slash menu inserts an embedded drawing at the paragraph in a quote', async() => {
+test('the /excel slash query inserts an embedded drawing at the paragraph in a quote', async() => {
   const { app, page, filePath } = await launchWithMarkdown('Before\n\n> Quote\n\nAfter\n', {
-    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+    preferences: { language: 'zh-CN', embedDrawings: true, autoSave: false }
   })
   try {
+    const logDirectory = await app.evaluate(({ app }) => {
+      const now = new Date()
+      return `${app.getPath('userData')}/logs/${now.getFullYear()}${now.getMonth() + 1}`
+    })
+    const logFile = join(logDirectory, 'main.log')
+    const drawingLogs = async() => (await readFile(logFile, 'utf8').catch(() => ''))
+      .split('\n').filter(line => line.includes('[drawing-quick-insert]'))
+
     await page.locator('.mu-editor blockquote .mu-paragraph').click()
     await page.keyboard.press('End')
     await page.keyboard.press('Enter')
-    await page.keyboard.type('/excalidraw')
+    await page.keyboard.insertText('/excel')
     const command = page.locator('.mu-quick-insert [data-label="insert-drawing"]')
     await expect(command).toHaveClass(/active/)
+    await page.keyboard.press('Escape')
+    await expect.poll(async() => (await drawingLogs()).some(line => line.includes('menu-hidden'))).toBe(true)
+    const dismissed = (await drawingLogs()).join('\n')
+    expect(dismissed).toMatch(/menu-searched[\s\S]*menu-hidden/)
+    expect(dismissed).not.toContain('command-selected')
+
+    await page.keyboard.press('Backspace')
+    await page.keyboard.insertText('l')
+    await expect(command).toHaveClass(/active/)
     await page.keyboard.press('Enter')
-    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    const popup = page.getByRole('dialog', { name: '内嵌绘图' })
     await expect(popup).toBeVisible()
-    await expect(popup.getByRole('button', { name: 'Insert into Document' })).toHaveCount(0)
+    await expect(popup.getByRole('button', { name: '插入到文档' })).toHaveCount(0)
+    await expect.poll(async() => (await drawingLogs()).some(line => line.includes('canvas-ready'))).toBe(true)
+    const logLines = await drawingLogs()
+    const traceId = /\[drawing-quick-insert\]\s+(\S+)\s+canvas-ready\b/.exec(logLines.join('\n'))?.[1]
+    expect(traceId).toBeTruthy()
+    const trace = logLines.filter(line => line.includes(`[drawing-quick-insert] ${traceId} `)).join('\n')
+    expect(trace).toMatch(/menu-searched[\s\S]*command-selected[\s\S]*markdown-updated[\s\S]*note-save-result[\s\S]*canvas-ready/)
+    expect(trace).not.toMatch(/Quote|base64|\.md\b/)
     await popup.locator('.el-dialog__headerbtn').click()
     await expect(popup).toBeHidden()
     const drawing = page.locator('.mu-editor blockquote .mu-inline-drawing')
-    await expect(drawing.getByRole('img', { name: 'Embedded drawing' })).toBeVisible()
+    await expect(drawing.getByRole('img', { name: '内嵌绘图' })).toBeVisible()
     await expect.poll(async() => (await readFile(filePath, 'utf8')).replace(/\r\n/g, '\n'))
-      .toMatch(/^Before\n\n> Quote\n>[^\n]*\n> !\[Embedded drawing\]\(data:application\/x-excalidraw;base64,[\w+/=]+\)\n\nAfter\n?$/)
+      .toMatch(/^Before\n\n> Quote\n>[^\n]*\n> !\[内嵌绘图\]\(data:application\/x-excalidraw;base64,[\w+/=]+\)\n\nAfter\n?$/)
   } finally {
     await app.close()
   }

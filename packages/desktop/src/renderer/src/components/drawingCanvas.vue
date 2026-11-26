@@ -488,6 +488,7 @@ const initialData = (async() => {
     const scene = await parseDrawing(incoming)
     return props.file?.pathname ? await refreshDocumentCards(scene, props.file.pathname) : scene
   } catch (reason) {
+    session?.insertionTrace?.('canvas-load-failed')
     error.value = t('drawing.openFailed', { reason: String(reason) })
     return null
   }
@@ -514,6 +515,7 @@ watch([canvas, theme, language, name, readOnly], ([container, activeTheme, langC
         if (!initial || disposed || !scene || ready.value) return
         baseline = serializeDrawing(scene)
         ready.value = true
+        session?.insertionTrace?.('canvas-ready')
       })
       if (props.file) {
         clearTimeout(dirtyTimer)
