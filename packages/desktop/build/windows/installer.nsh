@@ -4,8 +4,13 @@
 ; MUI2's default 50 DLU Next button clips the UAC shield icon and trailing ">"
 ; when localized labels (e.g. Simplified Chinese "下一步(N) >") carry BCM_SETSHIELD.
 !define AUTUMNMARK_NEXT_BTN_EXTRA_DLU 18
+; Leave room above the bottom edge of PAGE_INSTALL_MODE when a wrapped path and
+; blank paragraph line appear in $RadioButtonLabel1.
+!define AUTUMNMARK_INSTALL_MODE_LABEL_LIFT_DLU 12
 !define MUI_CUSTOMFUNCTION_GUIINIT autumnmarkOnGuiInit
-!ifdef BUILD_UNINSTALLER
+!ifndef BUILD_UNINSTALLER
+  !define MUI_PAGE_CUSTOMFUNCTION_SHOW autumnmarkOnInstallModeShow
+!else
   !define MUI_CUSTOMFUNCTION_UNGUIINIT un.autumnmarkOnGuiInit
 !endif
 
@@ -63,11 +68,76 @@
 !macroend
 
 !macro customHeader
+  ; NSIS's bundled Chinese .nlf files use SimSun/PMingLiU 9pt, whose tmInternalLeading
+  ; is 0 so Win32 STATIC controls pack adjacent lines tightly.
+  !ifdef LANG_SIMPCHINESE
+    SetFont /LANG=${LANG_SIMPCHINESE} "Microsoft YaHei UI" 9
+  !endif
+  !ifdef LANG_TRADCHINESE
+    SetFont /LANG=${LANG_TRADCHINESE} "Microsoft JhengHei UI" 9
+  !endif
+
+  ; Separate status and action lines with a blank line in Chinese locales.
+  ; Upstream Chinese .nsh omit the second CRLF on the Finish page (unlike English
+  ; and the uninstaller), and multiUserUi joins its two lines with a single CRLF.
+  !pragma warning disable 6030
+  !ifndef BUILD_UNINSTALLER
+    !ifdef LANG_SIMPCHINESE
+      LangString reinstallUpgrade ${LANG_SIMPCHINESE} "$\r$\n即将重新安装/升级."
+      LangString MUI_TEXT_FINISH_INFO_TEXT ${LANG_SIMPCHINESE} "$(^NameDA) 已安装在你的系统。$\r$\n$\r$\n单击 [完成(F)] 关闭此向导。"
+    !endif
+    !ifdef LANG_TRADCHINESE
+      LangString reinstallUpgrade ${LANG_TRADCHINESE} "$\r$\n即將重新安裝/升級"
+      LangString MUI_TEXT_FINISH_INFO_TEXT ${LANG_TRADCHINESE} "已在電腦安裝 $(^NameDA) 。$\r$\n$\r$\n按 [完成(F)] 關閉安裝程式。"
+    !endif
+  !else
+    !ifdef LANG_SIMPCHINESE
+      LangString uninstall ${LANG_SIMPCHINESE} "$\r$\n即将卸载."
+    !endif
+    !ifdef LANG_TRADCHINESE
+      LangString uninstall ${LANG_TRADCHINESE} "$\r$\n即將解除安裝"
+    !endif
+  !endif
+  !pragma warning default 6030
+
   Function autumnmarkOnGuiInit
     !insertmacro autumnmarkWidenNextButton
   FunctionEnd
 
-  !ifdef BUILD_UNINSTALLER
+  !ifndef BUILD_UNINSTALLER
+    Function autumnmarkOnInstallModeShow
+      Push $0
+      Push $1
+      Push $2
+      Push $3
+      Push $4
+
+      ${If} $RadioButtonLabel1 != 0
+        System::Call "*(i 0, i 0, i 0, i ${AUTUMNMARK_INSTALL_MODE_LABEL_LIFT_DLU}) p .r1"
+        ${If} $1 != 0
+          System::Call "user32::MapDialogRect(p $MultiUser.InstallModePage, p r1) i .r0"
+          ${If} $0 != 0
+            System::Call "*$1(i, i, i, i .r2)"
+            ${If} $2 > 0
+              System::Call "user32::GetWindowRect(p $RadioButtonLabel1, p r1)"
+              System::Call "user32::MapWindowPoints(p 0, p $MultiUser.InstallModePage, p r1, i 2)"
+              System::Call "*$1(i .r3, i .r4, i, i)"
+              IntOp $4 $4 - $2
+              ; SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE (0x0015)
+              System::Call "user32::SetWindowPos(p $RadioButtonLabel1, p 0, i r3, i r4, i 0, i 0, i 0x0015)"
+            ${EndIf}
+          ${EndIf}
+          System::Free $1
+        ${EndIf}
+      ${EndIf}
+
+      Pop $4
+      Pop $3
+      Pop $2
+      Pop $1
+      Pop $0
+    FunctionEnd
+  !else
     Function un.autumnmarkOnGuiInit
       !insertmacro autumnmarkWidenNextButton
     FunctionEnd
