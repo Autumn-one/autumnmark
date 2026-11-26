@@ -11,7 +11,7 @@
         :placeholder="placeholder(key)"
         @input="update(key, $event)"
       >
-      px
+      <template v-if="!(key === 'width' && fullWidth)">px</template>
     </label>
     <label><input v-model="locked" type="checkbox" @change="lockRatio">{{ t('embeddedImage.lockAspect') }}</label>
     <button type="button" @click="reset">{{ t('embeddedImage.autoSize') }}</button>
@@ -29,12 +29,21 @@ const emit = defineEmits<{ apply: [dimensions: IImageDimensions] }>()
 const { t } = useI18n()
 const axes = ['width', 'height'] as const
 type Axis = typeof axes[number]
-const draft = reactive({ width: String(props.dimensions.width ?? ''), height: String(props.dimensions.height ?? '') })
+const initialFullWidth = computed(() => props.dimensions.width === '100%')
+const fullWidth = ref(props.dimensions.width === '100%')
+const initialDraft = (key: Axis) => {
+  const value = props.dimensions[key]
+  return typeof value === 'number' ? String(value) : ''
+}
+const draft = reactive({ width: initialDraft('width'), height: initialDraft('height') })
 const widthField = ref<HTMLInputElement>()
 const locked = ref(true)
 const ratio = computed(() => props.natural.width / props.natural.height)
 const valid = computed(() => axes.every(key => !draft[key] || (Number.isSafeInteger(Number(draft[key])) && Number(draft[key]) > 0)))
-const changed = computed(() => axes.some(key => draft[key] !== String(props.dimensions[key] ?? '')))
+const changed = computed(() =>
+  fullWidth.value !== initialFullWidth.value ||
+  axes.some(key => draft[key] !== initialDraft(key))
+)
 
 function otherDimension(key: Axis, value: number) {
   return Math.max(1, Math.round(key === 'width' ? value / ratio.value : value * ratio.value))
@@ -43,11 +52,13 @@ function bindWidth(el: Element | ComponentPublicInstance | null, key: Axis) {
   if (key === 'width' && el instanceof HTMLInputElement) widthField.value = el
 }
 function placeholder(key: Axis) {
+  if (key === 'width' && fullWidth.value) return '100%'
   const other = key === 'width' ? 'height' : 'width'
   const pixels = draft[other] && ratio.value ? otherDimension(other, Number(draft[other])) : props.natural[key]
   return pixels > 0 ? String(pixels) : t('embeddedImage.auto')
 }
 function update(key: Axis, event: Event) {
+  fullWidth.value = false
   const input = event.target as HTMLInputElement
   draft[key] = input.value
   if (locked.value && ratio.value > 0 && Number.isFinite(ratio.value) && input.validity.valid) {
@@ -59,6 +70,7 @@ function lockRatio() {
     draft.height = String(otherDimension('width', Number(draft.width)))
 }
 function reset() {
+  fullWidth.value = false
   draft.width = draft.height = ''
 }
 function apply() {

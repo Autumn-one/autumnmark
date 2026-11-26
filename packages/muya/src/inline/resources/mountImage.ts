@@ -1,7 +1,7 @@
 import type { ILoadedImage } from './images';
 import { CLASS_NAMES } from '../../config';
 import { insertAfter, operateClassName } from '../../utils/dom';
-import { usesDefaultObjectSize } from '../../utils/image';
+import { isFullImageWidth, usesDefaultObjectSize } from '../../utils/image';
 
 export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: Record<string, string>, className?: string, imageClass?: string): void {
     const { url, width, height } = result;
@@ -24,6 +24,8 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
             imageContainer!.appendChild(img);
         imageText.classList.remove(CLASS_NAMES.MU_IMAGE_LOADING);
         imageText.classList.add(CLASS_NAMES.MU_IMAGE_SUCCESS);
+        if (isFullImageWidth(attrs.width))
+            imageText.classList.add('mu-image-full-width');
         // Host themes use this hook on the first load as well as cached renders.
         if ((width ?? 0) < 100 || (height ?? 0) < 100)
             imageText.classList.add(CLASS_NAMES.MU_SMALL_IMAGE);
@@ -47,10 +49,13 @@ export function createImageElement(url: string, width: number | undefined, heigh
     if (attrs.title)
         img.setAttribute('title', attrs.title);
 
-    if (attrs.width && NUM_REG.test(attrs.width))
+    const fullWidth = isFullImageWidth(attrs.width);
+    if (fullWidth)
+        img.setAttribute('width', '100%');
+    else if (attrs.width && NUM_REG.test(attrs.width))
         img.setAttribute('width', attrs.width);
 
-    if (attrs.height && NUM_REG.test(attrs.height))
+    if (!fullWidth && attrs.height && NUM_REG.test(attrs.height))
         img.setAttribute('height', attrs.height);
 
     // ViewBox-only SVGs otherwise collapse in the shrink-to-fit container (#4991).

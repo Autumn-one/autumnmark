@@ -1,3 +1,7 @@
+## AutumnMark 0.24.68
+
+- Dragging an embedded or linked image to full container width now snaps to `width="100%"` (showing `100% (W × H px)` while dragging), clears explicit `height`, and preserves full-width rendering across editor reloads, the picture size dialog, and HTML/PDF export without jumping the document scrollbar on release.
+
 ## AutumnMark 0.24.67
 
 - Hovering over inline embedded drawings, fenced `excalidraw` blocks, or linked `.excalidraw` drawings now shows left/right drag resize bars matching embedded images, updating width in place without jumping the document scrollbar on release.

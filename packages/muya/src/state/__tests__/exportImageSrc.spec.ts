@@ -121,4 +121,9 @@ describe('resolveExportImageSrc', () => {
         window.DIRNAME = '/home/me/C#';
         expect(resolveExportImageSrc('my%20cat.png?v=2')).toBe('file:///home/me/C%23/my%20cat.png?v=2');
     });
+
+    it.each(renderers)('preserves width="100%" on exported img tags in %s', async (_name, render) => {
+        const html = await render('<img title="" src="https://example.com/pic.png" alt="pic" width="100%" />');
+        expect(html).toContain('width="100%"');
+    });
 });

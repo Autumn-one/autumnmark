@@ -3,7 +3,7 @@ import type { IEmbeddedImage } from '../utils/embeddedImage';
 import { getOffsetOfParagraph } from '../selection/dom';
 import { bindEmbeddedImageEvents, embeddedImageSource, embeddedImageWidths, findEmbeddedMedia, replaceEmbeddedImage } from '../utils/embeddedImage';
 import { resolveVideoSource } from '../utils/fileUrl';
-import { imageToHtml, isImageToken, replaceImageMarkup } from '../utils/image';
+import { imageToHtml, isFullImageWidth, isImageToken, replaceImageMarkup } from '../utils/image';
 import { embeddedPictureSize } from './imageDimensions';
 import { parseInline } from './parser/lexer';
 
@@ -72,14 +72,24 @@ function imagePreview(block: Content, node: HTMLElement, image: IEmbeddedImage, 
         const align = token.attrs['data-align'];
         if (align && ['left', 'center', 'right', 'inline'].includes(align))
             node.classList.add(align);
+        const fullWidth = isFullImageWidth(token.attrs.width);
+        if (fullWidth)
+            node.classList.add('mu-image-full-width');
         embeddedImageWidths.set(img, (width, height) => {
             if (!node.isConnected)
                 return;
             const start = getOffsetOfParagraph(node, block.domNode!);
-            const resized = imageToHtml({ ...token.attrs, src: image.src, width: String(width), ...(height === undefined ? {} : { height: String(height) }) });
+            const nextAttrs: Record<string, string | null | undefined> = { ...token.attrs, src: image.src, width: String(width) };
+            if (isFullImageWidth(width))
+                delete nextAttrs.height;
+            else if (height !== undefined)
+                nextAttrs.height = String(height);
+            const resized = imageToHtml(nextAttrs);
             replaceImageMarkup(block, start, raw, resized);
         });
         for (const attr of ['alt', 'title', 'width', 'height'] as const) {
+            if (fullWidth && attr === 'height')
+                continue;
             const value = token.attrs[attr];
             if (value)
                 img.setAttribute(attr, value);

@@ -7,7 +7,7 @@ import ImageIcon from '../../assets/icons/image/2.png';
 import ImageFailIcon from '../../assets/icons/image_fail/2.png';
 import { CLASS_NAMES } from '../../config';
 import { isInlineDrawingImage, isLinkedDrawingImage } from '../../utils/diagram/drawingData';
-import { usesDefaultObjectSize } from '../../utils/image';
+import { isFullImageWidth, usesDefaultObjectSize } from '../../utils/image';
 
 function renderIcon(h: H, className: string, icon: string) {
     // A `<span>`, not an `<a>`: these hover controls carry no href, and an `<a>`
@@ -61,6 +61,39 @@ function isImageSelected(
     );
 }
 
+function buildImgVNode(
+    h: H,
+    props: { alt: string; src: string; title: string },
+    width: string | null | undefined,
+    height: string | null | undefined,
+    fullWidth: boolean,
+    naturalWidth: number | undefined,
+    naturalHeight: number | undefined,
+) {
+    const attrs: Record<string, string> = {};
+    if (typeof width === 'string' && width)
+        attrs.width = width;
+    if (!fullWidth && typeof height === 'string' && height)
+        attrs.height = height;
+
+    const data: {
+        props: { alt: string; src: string; title: string };
+        attrs?: Record<string, string>;
+        style?: Record<string, string>;
+    } = { props };
+
+    if (Object.keys(attrs).length)
+        data.attrs = attrs;
+
+    // Re-renders rewrite the block from these vnodes, so the width
+    // `loadImageAsync` pinned on the first load has to be restated
+    // here or a size-less image collapses again (#4991).
+    if (!width && !height && usesDefaultObjectSize(naturalWidth, naturalHeight))
+        data.style = { width: `${naturalWidth}px` };
+
+    return h('img', data);
+}
+
 export default function image(
     this: Renderer,
     { h, block, token }: ISyntaxRenderOptions & { token: TSelectableImageToken },
@@ -89,6 +122,7 @@ export default function image(
     const title = token.attrs.title ?? '';
     const width = token.attrs.width;
     const height = token.attrs.height;
+    const fullWidth = isFullImageWidth(width);
 
     if (src) {
         const attrs = Object.fromEntries(
@@ -144,6 +178,9 @@ export default function image(
     if (typeof token.attrs['data-align'] === 'string')
         wrapperSelector += `.${token.attrs['data-align']}`;
 
+    if (fullWidth)
+        wrapperSelector += '.mu-image-full-width';
+
     const preview = this.images.getPreview(src);
     if (preview !== undefined) {
         imgSrc = preview;
@@ -190,29 +227,15 @@ export default function image(
         if (isImageSelected(selectedImage, block, token))
             wrapperSelector += `.${CLASS_NAMES.MU_INLINE_IMAGE_SELECTED}`;
 
-        const renderImage = () => {
-            const data = {
-                props: {
-                    alt,
-                    src: imgSrc,
-                    title,
-                },
-            };
-
-            if (typeof width === 'string' && width)
-                Object.assign(data.props, { width });
-
-            if (typeof height === 'string' && height)
-                Object.assign(data.props, { height });
-
-            // Re-renders rewrite the block from these vnodes, so the width
-            // `loadImageAsync` pinned on the first load has to be restated
-            // here or a size-less image collapses again (#4991).
-            if (!width && !height && usesDefaultObjectSize(naturalWidth, naturalHeight))
-                Object.assign(data, { style: { width: `${naturalWidth}px` } });
-
-            return h('img', data);
-        };
+        const renderImage = () => buildImgVNode(
+            h,
+            { alt, src: imgSrc, title },
+            width,
+            height,
+            fullWidth,
+            naturalWidth,
+            naturalHeight,
+        );
 
         return isSuccess
             ? [

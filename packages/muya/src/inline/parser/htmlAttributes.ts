@@ -30,17 +30,20 @@ export const WHITELIST_ATTRIBUTES = [
     'data-align',
 ];
 
-function validWidthAndHeight(value: string) {
+function validDimension(value: string, allowFullPercent: boolean) {
+    if (allowFullPercent && value.trim() === '100%')
+        return '100%';
     if (!/^\d+$/.test(value))
         return '';
-    const num = Number.parseInt(value);
+    const num = Number.parseInt(value, 10);
 
     return num >= 0 ? num.toString() : '';
 }
 
 export function getAttributes(html: string): Record<string, string> {
     const name = /^<([A-Z][A-Z\d-]*)/i.exec(html)!;
-    const attrs: Record<string, string> = name[1].toLowerCase() === 'img' ? { title: '', src: '', alt: '' } : {};
+    const tagName = name[1].toLowerCase();
+    const attrs: Record<string, string> = tagName === 'img' ? { title: '', src: '', alt: '' } : {};
     // Parse the already validated opener without a DOM tree builder dropping table/head tags.
     const attributes = /[ \t\r\n]+([A-Z_:][\w.:-]*)(?:[ \t\r\n]*=[ \t\r\n]*(?:"([^"]*)"|'([^']*)'|([^ \t\r\n"'=<>`]+)))?/gi;
     const seen = new Set<string>();
@@ -51,7 +54,9 @@ export function getAttributes(html: string): Record<string, string> {
             continue;
         seen.add(attribute);
         const value = decodeHTMLAttribute(match[2] ?? match[3] ?? match[4] ?? '');
-        attrs[attribute] = attribute === 'width' || attribute === 'height' ? validWidthAndHeight(value) : value;
+        attrs[attribute] = attribute === 'width' || attribute === 'height'
+            ? validDimension(value, tagName === 'img' && attribute === 'width')
+            : value;
     }
     return attrs;
 }

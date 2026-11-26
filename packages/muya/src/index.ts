@@ -63,7 +63,7 @@ export type { IExportRenderOptions } from './utils/diagram/render';
 export { drawingPreviewExpansionEdits } from './utils/drawingLayout';
 export { bindEmbeddedImageEvents, findEmbeddedImages, findEmbeddedMedia, replaceEmbeddedImage } from './utils/embeddedImage';
 export type { IEmbeddedImage, IEmbeddedImageEdit, IImageDimensions } from './utils/embeddedImage';
-export type { IImageInfo } from './utils/image';
+export type { IImageInfo, TImageWidth } from './utils/image';
 export { getImageInfo, imageToMarkdown, standaloneRemoteMarkdownImage } from './utils/image';
 export { escapeHTML, sanitize, unescapeHTML, wordCount } from './utils/index';
 export { default as logger } from './utils/logger';

@@ -8,6 +8,11 @@ import { escapeHTML } from './index';
 import { encodeLinkTitle, escapeLinkAttribute } from './markdownEscape';
 
 export type TSelectableImageToken = ImageToken | (HTMLTagToken & { tag: 'img'; kind?: 'tag' });
+export type TImageWidth = number | '100%';
+
+export function isFullImageWidth(width: string | number | null | undefined): boolean {
+    return width === '100%';
+}
 
 export interface IImageInfo {
     token: TSelectableImageToken;
@@ -218,11 +223,13 @@ export function replaceImageMarkup(block: Content, start: number, expected: stri
     muya.editor.history.cutoff();
 }
 
-export function imageToHtml(attrs: Record<string, string | null>) {
-    const attributes = Object.entries(attrs).map(([name, attr]) => {
-        const value = name === 'src' && attr ? correctImageSrc(attr) : String(attr);
-        return `${name}="${escapeHTML(value)}"`;
-    });
+export function imageToHtml(attrs: Record<string, string | null | undefined>) {
+    const attributes = Object.entries(attrs)
+        .filter((entry): entry is [string, string] => entry[1] !== undefined && entry[1] !== null)
+        .map(([name, attr]) => {
+            const value = name === 'src' && attr ? correctImageSrc(attr) : String(attr);
+            return `${name}="${escapeHTML(value)}"`;
+        });
     return `<img ${attributes.join(' ')} />`;
 }
 

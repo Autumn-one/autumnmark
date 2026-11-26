@@ -483,10 +483,19 @@ class Format extends Content {
         this.updateImageAttributes(image, { [attrName]: attrValue });
     }
 
-    updateImageAttributes({ token }: IImageInfo, changes: Record<string, string>) {
+    updateImageAttributes({ token }: IImageInfo, changes: Record<string, string | undefined>) {
         const { start, end } = token.range;
         const oldText = this.text;
-        const imageText = imageToHtml({ ...token.attrs, ...changes });
+        const nextAttrs: Record<string, string | null | undefined> = { ...token.attrs };
+        for (const [key, value] of Object.entries(changes)) {
+            if (value === undefined)
+                delete nextAttrs[key];
+            else
+                nextAttrs[key] = value;
+        }
+        const imageText = imageToHtml(nextAttrs);
+        if (imageText === oldText.substring(start, end))
+            return;
         this.text
             = oldText.substring(0, start) + imageText + oldText.substring(end);
 
@@ -500,7 +509,7 @@ class Format extends Content {
                 end: start + imageText.length,
             },
             raw: imageText,
-        });
+        }, { preventScroll: true });
     }
 
     // Unlink keeps the visible anchor text rather than substituting the URL.
