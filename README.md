@@ -8,7 +8,7 @@
 
 [访问官网](https://autumn-one.github.io/autumnmark/) · [下载正式版](https://github.com/Autumn-one/autumnmark/releases/latest) · [查看发布记录](https://github.com/Autumn-one/autumnmark/releases)
 
-![秋笺「松风明月」主题编辑《雾岭山脊 · 踏秋观测手记》：左侧是文件、大纲与 AI 侧边栏，正文顶部展示多选项卡、单文件内嵌海拔剖面图与折叠块。](docs/assets/autumnmark-ridge-notes.webp)
+![秋笺「松风明月」主题编辑《雾岭山脊 · 踏秋观测手记》：左侧是文件、大纲与 AI 侧边栏，正文顶部展示多选项卡、单文件内嵌海拔剖面图与折叠块。](docs/assets/autumnmark-pine-ink-tabs.webp)
 
 ![同一份手记下方的内嵌 Excalidraw 手绘图与增强代码块：手绘图直接内嵌在 Markdown 中并支持点击二次编辑，代码块展示居中文件名 ridge_metrics.py、第 2-4 行高亮与可展开预览。](docs/assets/autumnmark-drawing-code.webp)
 
