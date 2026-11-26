@@ -1,3 +1,7 @@
+## AutumnMark 0.24.74
+
+- Removed the extra blank-line overrides in the Windows NSIS installer's Chinese install-mode and finish pages so `Microsoft YaHei UI` / `Microsoft JhengHei UI` renders with balanced line spacing.
+
 ## AutumnMark 0.24.73
 
 - Switched the Windows NSIS installer's Chinese UI font to `Microsoft YaHei UI` / `Microsoft JhengHei UI` and added paragraph spacing on the install-mode and finish pages so adjacent lines no longer crowd together.
