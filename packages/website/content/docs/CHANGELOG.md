@@ -1,3 +1,7 @@
+## AutumnMark 0.24.73
+
+- Switched the Windows NSIS installer's Chinese UI font to `Microsoft YaHei UI` / `Microsoft JhengHei UI` and added paragraph spacing on the install-mode and finish pages so adjacent lines no longer crowd together.
+
 ## AutumnMark 0.24.72
 
 - Widened the Windows NSIS installer's **Next** button (and shifted **Back** accordingly) so localized labels with the UAC shield icon no longer clip the icon or trailing `>`.
