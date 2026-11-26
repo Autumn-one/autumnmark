@@ -237,6 +237,7 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
+  copyParagraphNewlines,
   editorLineWidth,
   compactMode,
   compactImageMaxHeight,
@@ -311,8 +312,12 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
   const tab = currentFile.value
   if (!muya || !tab) return
   const hasSelection = document.getSelection()?.isCollapsed === false
+  const alternateCopyLabel = copyParagraphNewlines.value === 'single'
+    ? t('menu.edit.copyAsStandardMarkdown')
+    : t('menu.edit.copyAsSingleNewline')
   const items = [
     { label: t('menu.edit.copy'), enabled: hasSelection, click: () => document.execCommand('copy') },
+    { label: alternateCopyLabel, enabled: hasSelection, click: () => muya.copyWithAlternateNewlines() },
     { label: t('menu.edit.copyAsRich'), enabled: hasSelection, click: () => muya.copyAsRich() },
     { label: t('menu.edit.copyAsHtml'), enabled: hasSelection, click: () => muya.copyAsHtml() },
     { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
@@ -446,7 +451,11 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
       }
     }], {
       x: event.clientX, y: event.clientY,
-      editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+      editor: {
+        selectionText: document.getSelection()?.toString() ?? '',
+        spellcheckerEnabled: spellcheckerEnabled.value,
+        copyParagraphNewlines: copyParagraphNewlines.value
+      }
     })
     return
   }
@@ -460,7 +469,11 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
     { id: 'newDrawing', label: t('drawing.insert'), click: () => bus.emit('drawing::insert', { id: tab.id, atCaret: false }) }], {
     x: event.clientX,
     y: event.clientY,
-    editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+    editor: {
+      selectionText: document.getSelection()?.toString() ?? '',
+      spellcheckerEnabled: spellcheckerEnabled.value,
+      copyParagraphNewlines: copyParagraphNewlines.value
+    }
   })
 }
 const rowInput = ref<InputNumberInstance | null>(null)
@@ -778,6 +791,12 @@ watch(multilineBlockquote, (value, oldValue) => {
 watch(softNewlineAsSpace, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ softNewlineAsSpace: value }, true)
+  }
+})
+
+watch(copyParagraphNewlines, (value, oldValue) => {
+  if (value !== oldValue && editor.value) {
+    editor.value.setOptions({ copyParagraphNewlines: value }, false)
   }
 })
 
@@ -1243,12 +1262,17 @@ const handleSelectAll = () => {
 }
 
 // Rich copy sets text/html and text/plain; HTML copy puts source only in text/plain.
-const COPY_PASTE_METHOD_MAP: Record<string, 'copyAsRich' | 'copyAsHtml' | 'pasteAsPlainText'> = {
+const COPY_PASTE_METHOD_MAP: Record<
+  string,
+  'copyWithAlternateNewlines' | 'copyAsRich' | 'copyAsHtml' | 'pasteAsPlainText'
+> = {
+  copyAlternateNewlines: 'copyWithAlternateNewlines',
   copyAsRich: 'copyAsRich',
   copyAsHtml: 'copyAsHtml',
   pasteAsPlainText: 'pasteAsPlainText'
 }
 const handleCopyPaste = (type: unknown) => {
+  if (type === 'copyAlternateNewlines' && sourceCode.value) return
   if (editor.value) {
     const method = COPY_PASTE_METHOD_MAP[type as string]
     if (method) editor.value[method]()
@@ -2100,6 +2124,7 @@ onMounted(() => {
     githubAlerts: githubAlerts.value,
     disableHtml: !isHtmlEnabled.value,
     softNewlineAsSpace: softNewlineAsSpace.value,
+    copyParagraphNewlines: copyParagraphNewlines.value,
     hideQuickInsertHint: hideQuickInsertHint.value,
     hideLinkPopup: hideLinkPopup.value,
     autoCheck: autoCheck.value,
@@ -2226,6 +2251,7 @@ onMounted(() => {
   bus.on('flush-active-editor', flushActiveEditor)
   bus.on('editor-blur', blurEditor)
   bus.on('editor-focus', focusEditor)
+  bus.on('copyAlternateNewlines', handleCopyPaste)
   bus.on('copyAsRich', handleCopyPaste)
   bus.on('copyAsHtml', handleCopyPaste)
   bus.on('pasteAsPlainText', handleCopyPaste)
@@ -2414,6 +2440,7 @@ onBeforeUnmount(() => {
   bus.off('flush-active-editor', flushActiveEditor)
   bus.off('editor-blur', blurEditor)
   bus.off('editor-focus', focusEditor)
+  bus.off('copyAlternateNewlines', handleCopyPaste)
   bus.off('copyAsRich', handleCopyPaste)
   bus.off('copyAsHtml', handleCopyPaste)
   bus.off('pasteAsPlainText', handleCopyPaste)

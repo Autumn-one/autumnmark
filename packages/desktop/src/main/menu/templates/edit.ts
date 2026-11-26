@@ -4,8 +4,12 @@ import { isOsx } from '../../config'
 import { COMMANDS } from '../../commands'
 import { t } from '../../i18n'
 import type Keybindings from '../../keyboard/shortcutHandler'
+import type Preference from '../../preferences'
 
-export default function(keybindings: Keybindings): MenuItemConstructorOptions {
+export default function(keybindings: Keybindings, preferences?: Preference): MenuItemConstructorOptions {
+  const alternateCopyLabel = preferences?.getItem('copyParagraphNewlines') === 'single'
+    ? t('menu.edit.copyAsStandardMarkdown')
+    : t('menu.edit.copyAsSingleNewline')
   // Native separators ignore command visibility on Windows/Linux (#5884).
   const screenshotItems: MenuItemConstructorOptions[] = isOsx
     ? [
@@ -69,6 +73,14 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       },
       {
         type: 'separator'
+      },
+      {
+        id: 'copyAlternateNewlinesMenuItem',
+        label: alternateCopyLabel,
+        accelerator: keybindings.getAccelerator(COMMANDS.EDIT_COPY_ALTERNATE_NEWLINES) ?? undefined,
+        click(_menuItem, browserWindow) {
+          actions.editorCopyAlternateNewlines(browserWindow as BrowserWindow | undefined)
+        }
       },
       {
         label: t('menu.edit.copyAsRich'),

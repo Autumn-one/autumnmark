@@ -62,6 +62,7 @@ export interface IMuyaOptions {
     githubAlerts: boolean;
     fancyLists: boolean;
     softNewlineAsSpace: boolean;
+    copyParagraphNewlines: 'double' | 'single';
     autoMoveCheckedToEnd: boolean;
     disableHtml: boolean;
     locale: {

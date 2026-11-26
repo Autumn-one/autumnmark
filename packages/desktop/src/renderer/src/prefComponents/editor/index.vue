@@ -172,6 +172,14 @@
           :bool="autoCheck"
           :on-change="(value) => onSelectChange('autoCheck', value)"
         />
+        <cur-select
+          id="setting-copyParagraphNewlines"
+          :description="preferenceLabel('copyParagraphNewlines')"
+          :notes="preferenceNotes('copyParagraphNewlines')"
+          :value="copyParagraphNewlines"
+          :options="getCopyParagraphNewlinesOptions()"
+          :on-change="(value) => onSelectChange('copyParagraphNewlines', value)"
+        />
       </template>
     </compound>
 
@@ -268,6 +276,7 @@ import {
   getTabSizeOptions,
   getEndOfLineOptions,
   getTextDirectionOptions,
+  getCopyParagraphNewlinesOptions,
   getTrimTrailingNewlineOptions,
   getDefaultEncodingOptions
 } from './config'
@@ -300,6 +309,7 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
+  copyParagraphNewlines,
   sourceCodeLineNumbers,
   autoNormalizeLineEndings,
   compactMode,

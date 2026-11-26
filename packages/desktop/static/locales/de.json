@@ -243,7 +243,9 @@
       "screenshot": "Screenshot",
       "lineEnding": "Zeilenendezeichen",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Linux/Mac)"
+      "lineEndingLf": "LF (Linux/Mac)",
+      "copyAsSingleNewline": "Kopieren (einzelner Zeilenumbruch)",
+      "copyAsStandardMarkdown": "Kopieren (Standard-Markdown)"
     },
     "paragraph": {
       "title": "Absatz",
@@ -410,7 +412,9 @@
       "showInFolder": "Im Ordner anzeigen",
       "showInSideBar": "In Seitenleiste anzeigen",
       "openContainingFolder": "Übergeordneten Ordner in der Seitenleiste öffnen"
-    }
+    },
+    "copyAsSingleNewline": "Kopieren (einzelner Zeilenumbruch)",
+    "copyAsStandardMarkdown": "Kopieren (Standard-Markdown)"
   },
   "search": {
     "searchPlaceholder": "Suchen",
@@ -740,7 +744,13 @@
         "title": "Schreibeinstellungen",
         "autoCloseBrackets": "Klammern automatisch schließen",
         "autoCompleteMarkdown": "Markdown-Zeichen paarweise ergänzen",
-        "autoCloseQuotes": "Anführungszeichen automatisch schließen"
+        "autoCloseQuotes": "Anführungszeichen automatisch schließen",
+        "copyParagraphNewlines": {
+          "title": "Absatzumbrüche beim Kopieren",
+          "note": "Steuert den Absatzabstand beim normalen Kopieren, ohne gespeicherte Markdown-Dateien zu ändern. Der alternative Kopier-Kurzbefehl (Standard Strg+Umschalt+C / ⌘⇧C) nutzt stets den anderen Modus.",
+          "double": "Standard-Markdown (doppelter Zeilenumbruch)",
+          "single": "Klartext-Ansicht (einzelner Zeilenumbruch)"
+        }
       },
       "fileRepresentation": {
         "title": "Dateidarstellung",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Rückwärts suchen",
       "replace": "Ersetzen",
       "findInFolder": "Im Ordner suchen",
-      "screenshot": "Screenshot"
+      "screenshot": "Screenshot",
+      "copyAlternateNewlines": "Mit alternativem Absatzumbruch kopieren"
     },
     "paragraph": {
       "heading1": "Überschrift 1",

@@ -380,6 +380,8 @@ export const MUYA_DEFAULT_OPTIONS = {
     fancyLists: false,
     // Render soft line breaks as spaces instead of visual newlines.
     softNewlineAsSpace: false,
+    // Paragraph separation used by normal clipboard copy ('double' = standard Markdown, 'single' = compact plain text).
+    copyParagraphNewlines: 'double' as 'double' | 'single',
     // Move checked task list item to the end of task list.
     autoMoveCheckedToEnd: false,
     // Whether HTML rendering is disabled or not.

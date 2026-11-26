@@ -1,3 +1,8 @@
+## AutumnMark 0.24.69
+
+- Added a **Paragraph newlines when copying** setting under **Preferences → Editor → Writing preferences** (`Standard Markdown (double newline)` by default, or `Plain-text visual (single newline)` for pasting into AI prompts and plain-text apps) without changing saved `.md` files or empty lines inside code blocks.
+- Bound `Ctrl+Shift+C` (`Cmd+Shift+C` on macOS) to copy with the alternate paragraph newline mode, updating the Edit menu, context menu, and Keybindings labels dynamically while unbinding the default shortcut for Copy as Rich Text.
+
 ## AutumnMark 0.24.68
 
 - Dragging an embedded or linked image to full container width now snaps to `width="100%"` (showing `100% (W × H px)` while dragging), clears explicit `height`, and preserves full-width rendering across editor reloads, the picture size dialog, and HTML/PDF export without jumping the document scrollbar on release.

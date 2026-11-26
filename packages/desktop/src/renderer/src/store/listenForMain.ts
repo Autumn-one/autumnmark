@@ -25,7 +25,7 @@ export const useListenForMainStore = defineStore('listenForMain', () => {
     }
     if (
       file?.readOnly &&
-      !['copy', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)
+      !['copy', 'copyAlternateNewlines', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)
     )
       return
     const layoutStore = useLayoutStore()

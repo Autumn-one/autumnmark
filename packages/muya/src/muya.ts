@@ -752,6 +752,11 @@ export class Muya {
         this.editor.clipboard.copyAsMarkdown();
     }
 
+    /** Copy using the opposite paragraph newline mode from `copyParagraphNewlines`. */
+    copyWithAlternateNewlines() {
+        this.editor.clipboard.copyWithAlternateNewlines();
+    }
+
     /** Copy rendered HTML as literal markup in the plain-text clipboard slot. */
     copyAsHtml() {
         this.editor.clipboard.copyAsHtml();

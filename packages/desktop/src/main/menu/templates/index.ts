@@ -30,7 +30,7 @@ export default function(
   return [
     ...(process.platform === 'darwin' ? [marktext(keybindings)] : []),
     file(keybindings, preferences, recentlyUsedFiles),
-    edit(keybindings),
+    edit(keybindings, preferences),
     paragraph(keybindings, preferences),
     format(keybindings),
     window(keybindings),

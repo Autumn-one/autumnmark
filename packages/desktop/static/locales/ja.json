@@ -243,7 +243,9 @@
       "screenshot": "スクリーンショット",
       "lineEnding": "改行コード",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Linux/Mac)"
+      "lineEndingLf": "LF (Linux/Mac)",
+      "copyAsSingleNewline": "コピー（単一改行）",
+      "copyAsStandardMarkdown": "コピー（標準 Markdown）"
     },
     "paragraph": {
       "title": "段落",
@@ -410,7 +412,9 @@
       "showInFolder": "フォルダーの表示",
       "showInSideBar": "サイドバーに表示",
       "openContainingFolder": "ファイルのあるフォルダーをサイドバーで開く"
-    }
+    },
+    "copyAsSingleNewline": "コピー（単一改行）",
+    "copyAsStandardMarkdown": "コピー（標準 Markdown）"
   },
   "search": {
     "searchPlaceholder": "検索",
@@ -740,7 +744,13 @@
         "title": "執筆設定",
         "autoCloseBrackets": "括弧を自動で閉じる",
         "autoCompleteMarkdown": "Markdown 記号のペアを自動補完",
-        "autoCloseQuotes": "引用符を自動で閉じる"
+        "autoCloseQuotes": "引用符を自動で閉じる",
+        "copyParagraphNewlines": {
+          "title": "コピー時の段落改行",
+          "note": "通常のコピー時の段落間隔を設定します。保存される Markdown ファイルには影響しません。別モードのコピーショートカット（既定 Ctrl+Shift+C / ⌘⇧C）は常にもう一方のモードを使用します。",
+          "double": "標準 Markdown（二重改行）",
+          "single": "プレーンテキスト表示（単一改行）"
+        }
       },
       "fileRepresentation": {
         "title": "ファイルの表示形式",
@@ -1120,7 +1130,8 @@
       "findPrevious": "前を検索",
       "replace": "置換",
       "findInFolder": "フォルダー内の検索",
-      "screenshot": "スクリーンショット"
+      "screenshot": "スクリーンショット",
+      "copyAlternateNewlines": "別モードの段落改行でコピー"
     },
     "paragraph": {
       "heading1": "見出し 1",

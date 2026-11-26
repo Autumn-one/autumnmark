@@ -519,6 +519,9 @@ class AppMenu {
       if (prefs.showPandocConvert !== undefined) {
         this.updateAppMenu()
       }
+      if (prefs.copyParagraphNewlines !== undefined) {
+        this.updateAppMenu()
+      }
       if (prefs.language) {
         setLanguage(prefs.language)
         this.updateAppMenu()

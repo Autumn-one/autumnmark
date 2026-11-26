@@ -243,7 +243,9 @@
       "screenshot": "Captura de Tela",
       "lineEnding": "Terminação de Linha",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "Copiar (quebra de linha simples)",
+      "copyAsStandardMarkdown": "Copiar (Markdown padrão)"
     },
     "paragraph": {
       "title": "Parágrafo",
@@ -410,7 +412,9 @@
       "showInFolder": "Mostrar na pasta",
       "showInSideBar": "Mostrar na barra lateral",
       "openContainingFolder": "Abrir pasta do arquivo na barra lateral"
-    }
+    },
+    "copyAsSingleNewline": "Copiar (quebra de linha simples)",
+    "copyAsStandardMarkdown": "Copiar (Markdown padrão)"
   },
   "search": {
     "searchPlaceholder": "Pesquisar",
@@ -740,7 +744,13 @@
         "title": "Preferências de escrita",
         "autoCloseBrackets": "Fechar colchetes automaticamente",
         "autoCompleteMarkdown": "Completar pares de marcadores Markdown",
-        "autoCloseQuotes": "Fechar aspas automaticamente"
+        "autoCloseQuotes": "Fechar aspas automaticamente",
+        "copyParagraphNewlines": {
+          "title": "Quebras de parágrafo ao copiar",
+          "note": "Controla o espaçamento entre parágrafos na cópia normal sem alterar os arquivos Markdown salvos. O atalho alternativo (padrão Ctrl+Shift+C / ⌘⇧C) sempre usa o outro modo.",
+          "double": "Markdown padrão (quebra de linha dupla)",
+          "single": "Texto simples visual (quebra de linha simples)"
+        }
       },
       "fileRepresentation": {
         "title": "Representação de Arquivo",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Localizar Anterior",
       "replace": "Substituir",
       "findInFolder": "Localizar na Pasta",
-      "screenshot": "Captura de Tela"
+      "screenshot": "Captura de Tela",
+      "copyAlternateNewlines": "Copiar com quebra de parágrafo alternativa"
     },
     "paragraph": {
       "heading1": "Cabeçalho 1",

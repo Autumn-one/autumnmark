@@ -63,6 +63,7 @@ function escapeText(str: string) {
 export interface IExportMarkdownOptions {
     listIndentation?: number | string;
     fancyLists?: boolean;
+    compactBlockNewlines?: boolean;
 }
 
 export default class ExportMarkdown {
@@ -75,11 +76,13 @@ export default class ExportMarkdown {
     private _listIndentation: string;
     private _listIndentationCount: number;
     private _fancyLists: boolean;
+    private _compactBlockNewlines: boolean;
 
     constructor(
         {
             listIndentation,
             fancyLists = false,
+            compactBlockNewlines = false,
         }: IExportMarkdownOptions = {
             listIndentation: 1,
         },
@@ -88,6 +91,7 @@ export default class ExportMarkdown {
         // helper to translate the first tight item in a nested list
         this._isLooseParentList = true;
         this._fancyLists = fancyLists;
+        this._compactBlockNewlines = compactBlockNewlines;
 
         this._listIndentation = 'number';
         if (listIndentation === 'tab') {
@@ -224,7 +228,8 @@ export default class ExportMarkdown {
             case 'github-alert': {
                 const prefix = `${indent}> `;
                 const body = this._convertStatesToMarkdown(state.children, prefix);
-                result.push(`${prefix}${githubAlertMarker(state.meta)}\n${state.meta.blankLineAfterMarker && body.trim() ? `${prefix}\n` : ''}${body}`);
+                const blankAfterMarker = !this._compactBlockNewlines && state.meta.blankLineAfterMarker && body.trim();
+                result.push(`${prefix}${githubAlertMarker(state.meta)}\n${blankAfterMarker ? `${prefix}\n` : ''}${body}`);
                 break;
             }
 
@@ -276,7 +281,7 @@ export default class ExportMarkdown {
         if (wouldMergeLists && followsTightList)
             insertNewLine = false;
 
-        const needsListSeparator = this._fancyLists && wouldMergeLists
+        const needsListSeparator = !this._compactBlockNewlines && this._fancyLists && wouldMergeLists
             && previousList?.name === state.name && 'delimiter' in meta;
         // Blank lines cannot preserve independent lists whose markers would merge
         // on reparse. See https://pandoc.org/MANUAL.html#ending-a-list.
@@ -349,7 +354,7 @@ export default class ExportMarkdown {
     }
 
     private _insertLineBreak(result: unknown[], indent: string) {
-        if (!result.length)
+        if (this._compactBlockNewlines || !result.length)
             return;
         // Blank lines inside a list item should be empty, not carry the
         // item's indent as trailing whitespace. For blockquote-style indents

@@ -258,6 +258,11 @@
     "type": "boolean",
     "default": false
   },
+  "copyParagraphNewlines": {
+    "description": "Editor--Paragraph newline separation when copying text.",
+    "enum": ["double", "single"],
+    "default": "double"
+  },
   "autoNormalizeLineEndings": {
     "description": "Editor--Automatically normalize line endings when opening files. When disabled, files are opened as-is.",
     "type": "boolean",

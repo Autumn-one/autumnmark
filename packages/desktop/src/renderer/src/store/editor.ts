@@ -1463,6 +1463,9 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_CONTEXT_MENU(): void {
+      window.electron.ipcRenderer.on('mt::cm-copy-alternate-newlines', () => {
+        bus.emit('copyAlternateNewlines', 'copyAlternateNewlines')
+      })
       window.electron.ipcRenderer.on('mt::cm-copy-as-rich', () => {
         bus.emit('copyAsRich', 'copyAsRich')
       })

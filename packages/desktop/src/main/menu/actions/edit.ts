@@ -73,6 +73,10 @@ export const editorRedo = (win: Win): void => {
   edit(win, 'redo')
 }
 
+export const editorCopyAlternateNewlines = (win: Win): void => {
+  edit(win, 'copyAlternateNewlines')
+}
+
 export const editorCopyAsRich = (win: Win): void => {
   edit(win, 'copyAsRich')
 }
@@ -162,6 +166,7 @@ export const lineEnding = (win: Win, lineEnding: string): void => {
 
 export const loadEditCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.EDIT_COPY, nativeCopy)
+  commandManager.add(COMMANDS.EDIT_COPY_ALTERNATE_NEWLINES, editorCopyAlternateNewlines)
   commandManager.add(COMMANDS.EDIT_COPY_AS_HTML, editorCopyAsHtml)
   commandManager.add(COMMANDS.EDIT_COPY_AS_RICH, editorCopyAsRich)
   commandManager.add(COMMANDS.EDIT_CREATE_PARAGRAPH, editorCreateParagraph)

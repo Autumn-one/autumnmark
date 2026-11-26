@@ -279,7 +279,9 @@
       "screenshot": "螢幕截圖",
       "lineEnding": "行結束符",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "複製（單換行）",
+      "copyAsStandardMarkdown": "複製（標準 Markdown）"
     },
     "paragraph": {
       "title": "段落",
@@ -446,7 +448,9 @@
       "showInFolder": "在資料夾中顯示",
       "showInSideBar": "在側邊欄中顯示",
       "openContainingFolder": "在側邊欄中開啟所在資料夾"
-    }
+    },
+    "copyAsSingleNewline": "複製（單換行）",
+    "copyAsStandardMarkdown": "複製（標準 Markdown）"
   },
   "search": {
     "searchPlaceholder": "搜尋",
@@ -776,7 +780,13 @@
         "title": "寫作偏好",
         "autoCloseBrackets": "自動關閉括號",
         "autoCompleteMarkdown": "自動補全 Markdown 成對標記",
-        "autoCloseQuotes": "自動關閉引號"
+        "autoCloseQuotes": "自動關閉引號",
+        "copyParagraphNewlines": {
+          "title": "複製時的段落換行",
+          "note": "控制一般複製時的段落間距，不影響儲存的 .md 檔案。切換換行複製快捷鍵（預設 Ctrl+Shift+C / ⌘⇧C）將自動使用另一種模式。",
+          "double": "標準 Markdown（雙換行）",
+          "single": "純文字視覺（單換行）"
+        }
       },
       "fileRepresentation": {
         "title": "檔案表示",
@@ -1156,7 +1166,8 @@
       "findPrevious": "尋找上一個",
       "replace": "取代",
       "findInFolder": "在資料夾中尋找",
-      "screenshot": "螢幕截圖"
+      "screenshot": "螢幕截圖",
+      "copyAlternateNewlines": "切換段落換行方式複製"
     },
     "paragraph": {
       "heading1": "標題 1",

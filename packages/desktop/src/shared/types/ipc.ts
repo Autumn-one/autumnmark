@@ -334,6 +334,7 @@ export interface IpcMainEventChannels extends StateIpcMainEvents {
   'language-changed': [language: string]
   'mt::update-state': [state: UpdateState, showDialog?: boolean]
   'mt::about-dialog': []
+  'mt::cm-copy-alternate-newlines': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']
