@@ -14,6 +14,7 @@ import type { IFileState } from '@shared/types/files'
 import type { SaveDocumentResult } from '@shared/types/ipc'
 import { setSessionActions, useEditorStore } from '@/store/editor'
 import { drawingDialog, drawingEditorTabs } from './drawingEditors'
+import { isDrawingPath } from '@/util/drawingPaths'
 import { useLayoutStore } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useProjectStore } from '@/store/project'
@@ -211,6 +212,12 @@ class WindowSession {
     await this._flush()
   }
 
+  private _syncAutoTabBar(): void {
+    const active = this._editor.currentFile
+    const isDrawing = !!active && isDrawingPath(active.pathname || active.filename)
+    this._layout.SET_AUTO_TAB_BAR_VISIBLE(this._editor.tabs.length > 1 || isDrawing)
+  }
+
   private _file(payload: ManagedDocumentPayload): IFileState {
     const { document, markdown } = payload
     const file = createDocumentState(
@@ -298,6 +305,7 @@ class WindowSession {
     this._editor.updateTabIdToIndex()
     const active = files.find((file) => file.id === activeId) ?? files[0]
     if (active) this._editor.UPDATE_CURRENT_FILE(active)
+    this._syncAutoTabBar()
     this._main.SET_INITIALIZED()
     window.electron.ipcRenderer.send('mt::window-initialized')
     window.electron.ipcRenderer.send('mt::project-renderer-ready')
@@ -352,6 +360,7 @@ class WindowSession {
       this._editor.tabs.push(file)
       this._editor.updateTabIdToIndex()
     }
+    this._syncAutoTabBar()
     const focus = this._editor.TAKE_OPEN_INTENT(file.pathname)
     if (focus === true && !renaming) bus.emit('editor-focus')
     else if (focus === false && !renaming)

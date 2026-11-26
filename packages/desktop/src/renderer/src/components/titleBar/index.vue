@@ -2,7 +2,7 @@
   <header
     class="title-bar-editor-bg"
     :class="{
-      'tabs-visible': showTabBar,
+      'tabs-visible': showTabBar && !!filename,
       'mica-title-bar': micaTitleBar && showCustomTitleBar && active
     }"
   >
@@ -10,7 +10,7 @@
       class="title-bar"
       :class="[
         { active: active },
-        { 'tabs-visible': showTabBar },
+        { 'tabs-visible': showTabBar && !!filename },
         { frameless: titleBarStyle === 'custom' },
         { 'has-menubar': showCustomTitleBar },
         { isOsx: isOsx }

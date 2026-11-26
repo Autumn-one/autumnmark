@@ -161,9 +161,11 @@ function noteForDrawing(id: string) {
   return editorStore.tabs.find(tab => tab.id === noteId && !tab.readOnly && !tab.modeChanging && !tab.diskConflict)
 }
 watch(() => currentFile.value?.id, id => {
-  if (id && currentDrawing.value) layoutStore.SET_LAYOUT({ showTabBar: true })
-  else if (id) lastNote.value = id
+  if (id && !currentDrawing.value) lastNote.value = id
 }, { immediate: true, flush: 'sync' })
+watch(() => editorStore.tabs.length > 1 || currentDrawing.value, autoVisible => {
+  layoutStore.SET_AUTO_TAB_BAR_VISIBLE(autoVisible)
+}, { immediate: true })
 let choosingDrawing = false
 let creatingDrawing = false
 

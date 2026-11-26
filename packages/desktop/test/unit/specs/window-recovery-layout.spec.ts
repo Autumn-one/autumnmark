@@ -35,7 +35,7 @@ describe('window-owned layout', () => {
       preferredWidthPx: 410,
       openedFiles: { expanded: false, preferredHeightPx: 260 }
     }
-    preferred.tabBar.visible = true
+    preferred.tabBar = { visible: true, mode: 'visible' }
     preferred.modes = { sourceCode: true, focus: true, typewriter: true }
     const changed = vi.fn()
     first.INITIALIZE_WINDOW_LAYOUT(preferred, changed)
@@ -114,6 +114,96 @@ describe('window-owned layout', () => {
     expect(changed).not.toHaveBeenCalled()
     Object.defineProperty(window, 'innerWidth', { value: width, configurable: true })
     window.dispatchEvent(new Event('resize'))
+  })
+  it('drives auto visibility without persisting transient state and follows symmetric toggle exits', async() => {
+    const layout = useLayoutStore()
+    const changed = vi.fn()
+    layout.INITIALIZE_WINDOW_LAYOUT(createDefaultLayout(), changed)
+    expect(changed).not.toHaveBeenCalled()
+    expect(layout.tabBarMode).toBe('auto')
+    expect(layout.showTabBar).toBe(false)
+
+    // Auto reveal and auto hide follow document count without writing a manual lock.
+    layout.SET_AUTO_TAB_BAR_VISIBLE(true)
+    await nextTick()
+    expect(layout.showTabBar).toBe(true)
+    expect(layout.tabBarMode).toBe('auto')
+    expect(layout.CAPTURE_WINDOW_LAYOUT().tabBar).toEqual({ visible: false })
+    expect(changed).not.toHaveBeenCalled()
+    expect(window.electron.ipcRenderer.send).toHaveBeenLastCalledWith(
+      'mt::view-layout-changed', expect.any(Number), { showSideBar: false, showToc: false, showTabBar: true }
+    )
+
+    layout.SET_AUTO_TAB_BAR_VISIBLE(false)
+    await nextTick()
+    expect(layout.showTabBar).toBe(false)
+    expect(changed).not.toHaveBeenCalled()
+
+    // Single-file manual show locks visible; single-file manual hide returns to auto.
+    layout.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(layout.tabBarMode).toBe('visible')
+    expect(layout.showTabBar).toBe(true)
+    expect(layout.CAPTURE_WINDOW_LAYOUT().tabBar).toEqual({ visible: true, mode: 'visible' })
+    expect(changed).toHaveBeenCalledTimes(1)
+
+    layout.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(layout.tabBarMode).toBe('auto')
+    expect(layout.showTabBar).toBe(false)
+    expect(layout.CAPTURE_WINDOW_LAYOUT().tabBar).toEqual({ visible: false })
+
+    // Multi-file manual hide locks hidden; multi-file manual show returns to auto.
+    layout.SET_AUTO_TAB_BAR_VISIBLE(true)
+    layout.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(layout.tabBarMode).toBe('hidden')
+    expect(layout.showTabBar).toBe(false)
+    expect(layout.CAPTURE_WINDOW_LAYOUT().tabBar).toEqual({ visible: false, mode: 'hidden' })
+
+    const restored = useLayoutStore(createPinia())
+    const restoredChanged = vi.fn()
+    restored.INITIALIZE_WINDOW_LAYOUT(layout.CAPTURE_WINDOW_LAYOUT(), restoredChanged)
+    restored.SET_AUTO_TAB_BAR_VISIBLE(true)
+    expect(restored.showTabBar).toBe(false)
+    expect(restoredChanged).not.toHaveBeenCalled()
+
+    restored.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(restored.tabBarMode).toBe('auto')
+    expect(restored.showTabBar).toBe(true)
+    expect(restored.CAPTURE_WINDOW_LAYOUT().tabBar).toEqual({ visible: false })
+
+    // Cross-scene second toggle enters the opposite manual override to flip visibility immediately.
+    restored.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(restored.tabBarMode).toBe('hidden')
+    restored.SET_AUTO_TAB_BAR_VISIBLE(false)
+    restored.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(restored.tabBarMode).toBe('visible')
+    expect(restored.showTabBar).toBe(true)
+    restored.SET_AUTO_TAB_BAR_VISIBLE(true)
+    restored.TOGGLE_LAYOUT_ENTRY('showTabBar')
+    expect(restored.tabBarMode).toBe('hidden')
+    expect(restored.showTabBar).toBe(false)
+
+    // SET_LAYOUT stays deterministic for booleans while letting tabBarMode take precedence.
+    restored.SET_LAYOUT({ showTabBar: true })
+    expect(restored.tabBarMode).toBe('visible')
+    restored.SET_LAYOUT({ showTabBar: false, tabBarMode: 'auto' })
+    expect(restored.tabBarMode).toBe('auto')
+    expect(restored.showTabBar).toBe(true)
+    restored.SET_LAYOUT({ showTabBar: false })
+    expect(restored.tabBarMode).toBe('hidden')
+    expect(restored.showTabBar).toBe(false)
+
+    // Legacy payloads resolve cleanly even when bypassing the disk codec.
+    const legacyVisible = useLayoutStore(createPinia())
+    legacyVisible.INITIALIZE_WINDOW_LAYOUT({ ...createDefaultLayout(), tabBar: { visible: true } })
+    expect(legacyVisible.tabBarMode).toBe('auto')
+    const legacyHidden = useLayoutStore(createPinia())
+    legacyHidden.INITIALIZE_WINDOW_LAYOUT({
+      ...createDefaultLayout(),
+      tabBar: { visible: false, hiddenByUser: true } as typeof createDefaultLayout extends () => infer L
+        ? L extends { tabBar: infer T } ? T : never
+        : never
+    })
+    expect(legacyHidden.tabBarMode).toBe('hidden')
   })
 })
 describe('window geometry in external device-independent bounds', () => {

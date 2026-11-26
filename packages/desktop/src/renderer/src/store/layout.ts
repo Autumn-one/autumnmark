@@ -2,14 +2,19 @@ import { computed, ref, watch, onScopeDispose } from 'vue'
 import { defineStore } from 'pinia'
 import bus from '../bus'
 import { usePreferencesStore } from './preferences'
-import type { WindowLayoutState } from '@shared/types/applicationState'
-import { createDefaultLayout } from '@shared/applicationState/defaults'
+import type { TabBarMode, WindowLayoutState } from '@shared/types/applicationState'
+import {
+  createDefaultLayout,
+  resolveTabBarMode,
+  serializeTabBarState
+} from '@shared/applicationState/defaults'
 import { MIN_EDITOR_WIDTH } from '@/util/editorLayout'
 
 interface LayoutPartial {
   rightColumn?: string
   showSideBar?: boolean
   showTabBar?: boolean
+  tabBarMode?: TabBarMode
   sideBarWidth?: number | string
 }
 
@@ -32,7 +37,11 @@ export const useLayoutStore = defineStore('layout', () => {
   let changed: (() => void) | undefined
   const rightColumn = ref(defaultLayout.sidebar.activeView)
   const showSideBar = ref(defaultLayout.sidebar.visible)
-  const showTabBar = ref(defaultLayout.tabBar.visible)
+  const tabBarMode = ref<TabBarMode>(resolveTabBarMode(defaultLayout.tabBar))
+  const autoTabBarVisible = ref(false)
+  const showTabBar = computed(() =>
+    tabBarMode.value === 'auto' ? autoTabBarVisible.value : tabBarMode.value === 'visible'
+  )
   const showToc = computed(() => showSideBar.value && rightColumn.value === 'outline')
   const sideBarWidth = ref(defaultLayout.sidebar.preferredWidthPx)
   const viewportWidth = ref(window.innerWidth)
@@ -57,7 +66,15 @@ export const useLayoutStore = defineStore('layout', () => {
       rightColumn.value = view === 'search' || view === 'outline' || view === 'documentChat' ? view : 'files'
     }
     if (layout.showSideBar !== undefined) showSideBar.value = !!layout.showSideBar
-    if (layout.showTabBar !== undefined) showTabBar.value = !!layout.showTabBar
+    if (
+      layout.tabBarMode === 'auto' ||
+      layout.tabBarMode === 'visible' ||
+      layout.tabBarMode === 'hidden'
+    ) {
+      tabBarMode.value = layout.tabBarMode
+    } else if (layout.showTabBar !== undefined) {
+      tabBarMode.value = layout.showTabBar ? 'visible' : 'hidden'
+    }
     if (layout.sideBarWidth !== undefined)
       sideBarWidth.value = normalizeSideBarWidth(layout.sideBarWidth)
   }
@@ -66,7 +83,19 @@ export const useLayoutStore = defineStore('layout', () => {
     if (entryName === 'showToc') {
       SET_LAYOUT({ rightColumn: showToc.value ? 'files' : 'outline', showSideBar: true })
     } else if (entryName === 'showSideBar') showSideBar.value = !showSideBar.value
-    else showTabBar.value = !showTabBar.value
+    else {
+      const nextVisible = !showTabBar.value
+      tabBarMode.value =
+        nextVisible === autoTabBarVisible.value
+          ? 'auto'
+          : nextVisible
+            ? 'visible'
+            : 'hidden'
+    }
+  }
+
+  function SET_AUTO_TAB_BAR_VISIBLE(visible: boolean): void {
+    autoTabBarVisible.value = visible
   }
 
   function SET_SIDE_BAR_WIDTH(
@@ -113,7 +142,7 @@ export const useLayoutStore = defineStore('layout', () => {
     showSideBar.value = state.sidebar.visible
     rightColumn.value = state.sidebar.activeView
     sideBarWidth.value = normalizeSideBarWidth(state.sidebar.preferredWidthPx)
-    showTabBar.value = state.tabBar.visible
+    tabBarMode.value = resolveTabBarMode(state.tabBar)
     openedFilesExpanded.value = state.sidebar.openedFiles.expanded
     openedFilesHeight.value = state.sidebar.openedFiles.preferredHeightPx
     preferencesStore.SET_MODE({ type: 'sourceCode', checked: state.modes.sourceCode })
@@ -134,7 +163,7 @@ export const useLayoutStore = defineStore('layout', () => {
           preferredHeightPx: openedFilesHeight.value
         }
       },
-      tabBar: { visible: showTabBar.value },
+      tabBar: serializeTabBarState(tabBarMode.value),
       modes: {
         sourceCode: preferencesStore.sourceCode,
         focus: preferencesStore.focus,
@@ -153,7 +182,7 @@ export const useLayoutStore = defineStore('layout', () => {
     () => [
       rightColumn.value,
       showSideBar.value,
-      showTabBar.value,
+      tabBarMode.value,
       sideBarWidth.value,
       openedFilesExpanded.value,
       openedFilesHeight.value,
@@ -179,11 +208,13 @@ export const useLayoutStore = defineStore('layout', () => {
     showToc,
     rightColumn,
     showSideBar,
+    tabBarMode,
     showTabBar,
     sideBarWidth,
     effectiveSideBarWidth,
     SET_LAYOUT,
     TOGGLE_LAYOUT_ENTRY,
+    SET_AUTO_TAB_BAR_VISIBLE,
     SET_SIDE_BAR_WIDTH,
     LISTEN_FOR_LAYOUT,
     DISPATCH_LAYOUT_MENU_ITEMS

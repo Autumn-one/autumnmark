@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.63]
+    branches: [hotfix/v0.24.64]
   workflow_dispatch:
     inputs:
       platform:
@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test test/e2e/excalidraw.spec.ts test/e2e/issue-3652-auto-reload.spec.ts test/e2e/embedded-images.spec.ts test/e2e/theme-studio.spec.ts test/e2e/themes.spec.ts test/e2e/preferences-window.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/issue-5581-tabbar-visibility.spec.ts test/e2e/issue-2395-preview-tabs.spec.ts test/e2e/issue-5686-opened-files-actions.spec.ts test/e2e/layout-toggles.spec.ts test/e2e/session-recovery-multi.spec.ts test/e2e/excalidraw.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

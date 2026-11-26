@@ -49,6 +49,8 @@ export interface WindowGeometryState {
   displayId: string | null
 }
 
+export type TabBarMode = 'auto' | 'visible' | 'hidden'
+
 /** Preferred window layout, before viewport clamps or temporary mode overrides. */
 export interface WindowLayoutState {
   sidebar: {
@@ -58,7 +60,12 @@ export interface WindowLayoutState {
     preferredWidthPx: number
     openedFiles: { expanded: boolean; preferredHeightPx: number }
   }
-  tabBar: { visible: boolean }
+  tabBar: {
+    // True only when explicitly locked visible; automatic visibility is derived at runtime.
+    visible: boolean
+    // Omit or 'auto' for automatic single/multi-tab visibility; 'visible'/'hidden' lock manual overrides.
+    mode?: TabBarMode
+  }
   // Store intent before focus/read-only modes temporarily suppress UI elements.
   modes: { sourceCode: boolean; focus: boolean; typewriter: boolean }
 }

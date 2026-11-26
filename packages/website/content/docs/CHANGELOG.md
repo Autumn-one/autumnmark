@@ -1,3 +1,9 @@
+## AutumnMark 0.24.64
+
+- The tab bar now automatically appears when multiple files or a drawing tab are open, and automatically hides again when closing back to a single document.
+- Manually hiding the tab bar in a multi-file window persists across opening more files, new tabs, folder changes, and restarts; toggling it back on with multiple files open (or hiding a single-file tab bar) smoothly returns to automatic mode.
+- Closing the last document no longer leaves the `tabs-visible` title bar background style on the recent files page.
+
 ## AutumnMark 0.24.63
 
 - Embedded drawings save against the latest Markdown when another editor changes the surrounding text. Conflicting drawing edits stay open and can be moved into a tab.

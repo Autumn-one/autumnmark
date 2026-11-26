@@ -142,5 +142,45 @@ describe('window defaults and contract fixtures', () => {
     const legacySidebar = { ...first.layout.sidebar, activeView: 'themeAi' }
     const restored = parseWindowSnapshot({ ...first, layout: { ...first.layout, sidebar: legacySidebar } })
     expect(restored?.layout.sidebar.activeView).toBe('documentChat')
+    const legacyVisible = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: true } }
+    })
+    expect(legacyVisible?.layout.tabBar).toEqual({ visible: false })
+    const legacyHidden = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: false, hiddenByUser: true } }
+    })
+    expect(legacyHidden?.layout.tabBar).toEqual({ visible: false, mode: 'hidden' })
+    const conflictingLegacy = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: true, hiddenByUser: true } }
+    })
+    expect(conflictingLegacy?.layout.tabBar).toEqual({ visible: false })
+    const explicitVisible = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: false, mode: 'visible' } }
+    })
+    expect(explicitVisible?.layout.tabBar).toEqual({ visible: true, mode: 'visible' })
+    const explicitHidden = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: true, mode: 'hidden' } }
+    })
+    expect(explicitHidden?.layout.tabBar).toEqual({ visible: false, mode: 'hidden' })
+    const explicitAuto = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: true, mode: 'auto' } }
+    })
+    expect(explicitAuto?.layout.tabBar).toEqual({ visible: false })
+    const invalidMode = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: true, mode: 'INVALID' } }
+    })
+    expect(invalidMode?.layout.tabBar).toEqual({ visible: false })
+    const invalidModeLegacyHidden = parseWindowSnapshot({
+      ...first,
+      layout: { ...first.layout, tabBar: { visible: false, mode: 'INVALID', hiddenByUser: true } }
+    })
+    expect(invalidModeLegacyHidden?.layout.tabBar).toEqual({ visible: false, mode: 'hidden' })
   })
 })
