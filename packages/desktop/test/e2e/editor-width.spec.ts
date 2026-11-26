@@ -8,8 +8,8 @@ test('default editor width fills available width and explicit editorLineWidth ca
     windowLayout: { showSideBar: false }
   })
   try {
-    const window = await app.browserWindow(page)
-    await window.evaluate(win => win.setContentSize(1200, 780))
+    const browserWindow = await app.browserWindow(page)
+    await browserWindow.evaluate(win => win.setContentSize(1200, 780))
     const container = page.locator('.editor-component .mu-container')
     await expect.poll(() => container.evaluate(el => el.clientWidth)).toBeGreaterThan(800)
 
