@@ -464,10 +464,16 @@ const blockViewsByTab = new Map<string, { markdown: string; folds: IHeadingFoldS
 
 const captureBlockViews = (): void => {
   if (!editor.value || !renderedDocumentId || !tabs.value.some(tab => tab.id === renderedDocumentId)) return
+  const folds = editor.value.getHeadingFoldState()
+  const expanded = editor.value.editor.compactBlocks.expandedPaths()
+  if (!folds.length && !expanded.length) {
+    blockViewsByTab.delete(renderedDocumentId)
+    return
+  }
   blockViewsByTab.set(renderedDocumentId, {
     markdown: editor.value.getMarkdown(),
-    folds: editor.value.getHeadingFoldState(),
-    expanded: editor.value.editor.compactBlocks.expandedPaths()
+    folds,
+    expanded
   })
 }
 
@@ -1856,15 +1862,16 @@ const handleFileChange = (payload: unknown) => {
       if (savedEngineHistory) {
         editor.value.setHistory(savedEngineHistory)
       }
-      // Seed new trackers before edits; retain existing content IDs when switching back to a tab.
-      if (id) {
-        getSyntheticHistory(id, editor.value.getMarkdown())
-      }
       const savedViews = id ? blockViewsByTab.get(id) : undefined
-      // Paths are valid only for the captured document, including after source edits or disk reloads.
-      if (savedViews?.markdown === editor.value.getMarkdown()) {
-        editor.value.setHeadingFoldState(savedViews.folds)
-        editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
+      // Seed new trackers before edits; retain existing content IDs when switching back to a tab.
+      if (id && (savedViews || !syntheticHistoryByTab.has(id))) {
+        const markdown = editor.value.getMarkdown()
+        getSyntheticHistory(id, markdown)
+        // Paths are valid only for the captured document, including after source edits or disk reloads.
+        if (savedViews?.markdown === markdown) {
+          editor.value.setHeadingFoldState(savedViews.folds)
+          editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
+        }
       }
     }
   } else if (newCursor) {

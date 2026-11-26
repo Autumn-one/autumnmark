@@ -731,15 +731,15 @@ export class SessionHost {
           typeof options.requestId === 'number' &&
           this._previewRequests.get(id) !== options.requestId
       if (obsolete()) return
-      await this._requestCheckpoint(id)
-      if (obsolete()) return
       const location = createFileLocation(pathname)
-      const existing = this._owner()
-        .getWindow(id)
-        ?.documents.find(
-          (document) =>
-            document.resource.kind === 'file' && document.resource.location.key === location.key
-        )
+      const current = this._owner().getWindow(id)
+      if (!current) return
+      const loaded = findFileTab(current, location) ? null : await this._readDocument(pathname, options)
+      if (obsolete()) return
+      // Checkpoint after the read so edits made during disk IO can keep the outgoing preview open.
+      const snapshot = loaded ? await this._requestCheckpoint(id) : current
+      if (obsolete()) return
+      const existing = findFileTab(snapshot, location)
       if (existing) {
         this._native(id).webContents.send(
           'mt::switch-tab-by-file_path',
@@ -748,11 +748,7 @@ export class SessionHost {
         )
         return existing.id
       }
-      const loaded = await this._readDocument(pathname, options)
-      if (obsolete()) return
-      await this._requestCheckpoint(id)
-      if (obsolete()) return
-      const snapshot = this._owner().getWindow(id)!
+      if (!loaded) return
       const preview = options.preview && this._accessor.preferences.getAll().openFilesInPreviewMode
       const retire = snapshot.documents.filter(
         (document) =>

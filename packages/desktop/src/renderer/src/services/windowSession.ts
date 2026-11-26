@@ -332,11 +332,6 @@ class WindowSession {
     const nameInput = document.activeElement instanceof HTMLInputElement &&
       document.activeElement.matches('input.rename') ? document.activeElement : null
     const selection = nameInput ? [nameInput.selectionStart, nameInput.selectionEnd] as const : null
-    for (const id of payload.replacedDocumentIds ?? []) {
-      const replaced = this._editor.tabs.find((file) => file.id === id)
-      if (replaced) this._editor.FORCE_CLOSE_TAB(replaced)
-      this._observed.delete(id)
-    }
     const file = this._file(payload)
     const options = payload.options ?? {}
     const intent = this._editor.PEEK_OPEN_INTENT(file.pathname)
@@ -344,9 +339,15 @@ class WindowSession {
       (intent?.preview ?? options.preview ?? false) && this._preferences.openFilesInPreviewMode
     if (typeof options.requestId === 'number')
       this._editor.SETTLE_SIDEBAR_OPEN(options.requestId, file.pathname)
-    if (payload.selected && !renaming)
-      this._editor.UPDATE_CURRENT_FILE(file)
-    else {
+    const select = payload.selected && !renaming
+    // Closing the active preview first would render a neighboring tab before switching to this one.
+    if (select) this._editor.UPDATE_CURRENT_FILE(file)
+    for (const id of payload.replacedDocumentIds ?? []) {
+      const replaced = this._editor.tabs.find((file) => file.id === id)
+      if (replaced) this._editor.FORCE_CLOSE_TAB(replaced)
+      this._observed.delete(id)
+    }
+    if (!select) {
       if (payload.selected) this._deferredSelection = file.id
       this._editor.tabs.push(file)
       this._editor.updateTabIdToIndex()

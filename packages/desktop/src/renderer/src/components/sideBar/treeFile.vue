@@ -7,9 +7,7 @@
     data-tree-directory="false"
     :draggable="!renameCache && !projectStore.createCache.dirname"
     :style="{ opacity: file.isMarkdown || isDrawingPath(file.pathname) ? 1 : 0.75 }"
-    :class="[
-      { current: currentFile?.pathname === file.pathname, active: file.id === activeItem.id }
-    ]"
+    :class="{ current: isCurrentFile, active: isActive }"
     @click="handleFileClick"
     @dblclick="handleFileDblClick"
   >
@@ -31,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
@@ -62,6 +60,8 @@ const { nameInputValue } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
 const { currentFile, tabs } = storeToRefs(editorStore)
+const isCurrentFile = computed(() => currentFile.value?.pathname === props.file.pathname)
+const isActive = computed(() => activeItem.value.id === props.file.id)
 
 const handleFileClick = (event: MouseEvent): void => {
   // Select before the open-file branch runs, so non-markdown rows select too.

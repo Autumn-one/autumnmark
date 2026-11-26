@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.59]
+    branches: [hotfix/v0.24.60]
   workflow_dispatch:
     inputs:
       platform:
@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test test/e2e/code-block-height.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/issue-2395-preview-tabs.spec.ts test/e2e/sidebar-focus-model.spec.ts test/e2e/heading-fold-tab-state-6054.spec.ts test/e2e/tab-switch-cursor.spec.ts test/e2e/large-file-tabs.spec.ts test/e2e/source-mode-flush.spec.ts test/e2e/sidebar-auto-reveal-528.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

@@ -1,3 +1,7 @@
+## AutumnMark 0.24.60
+
+- Markdown files open faster when browsing the sidebar. Replacing a preview tab now renders the requested file directly, and opening a new file performs one recovery checkpoint after the file is read.
+
 ## AutumnMark 0.24.59
 
 - Resizing a code block keeps the document at its current scroll position, even when the text cursor is offscreen.

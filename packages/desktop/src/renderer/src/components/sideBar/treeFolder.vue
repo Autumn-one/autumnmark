@@ -6,7 +6,7 @@
       :data-tree-path="folder.pathname"
       data-tree-directory="true"
       :draggable="!renameCache && !createCache.dirname"
-      :class="[{ active: folder.id === activeItem.id }]"
+      :class="{ active: isActive }"
       :title="folder.pathname"
       @click="folderNameClick"
     >
@@ -101,6 +101,7 @@ const { createCache } = storeToRefs(projectStore)
 const { nameInputValue } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
+const isActive = computed(() => activeItem.value.id === props.folder.id)
 
 const handleInputFocus = (): void => {
   // Expand the create target before waiting for its input to mount.
