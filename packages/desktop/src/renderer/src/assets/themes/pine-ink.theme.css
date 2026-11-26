@@ -343,6 +343,7 @@
   --float-hover-color: #29493e;
   --mu-code-line-highlight: #d4b27426;
   --selection-color: #e8c27e55;
+  caret-color: var(--code-block-color);
   border-color: #315347;
   border-radius: 9px;
 }

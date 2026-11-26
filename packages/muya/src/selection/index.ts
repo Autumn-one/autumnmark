@@ -287,6 +287,10 @@ class Selection {
         return !this._setting && !transactions.isActive && !isUpdating && !isComposing;
     }
 
+    preventScrollOnNextNotification(): void {
+        this._preventScroll = true;
+    }
+
     notify(docChanged = false, deferred = false) {
         this._docChanged ||= docChanged;
         if (!this._canNotify)

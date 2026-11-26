@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [release/v0.24.58]
+    branches: [hotfix/v0.24.59]
   workflow_dispatch:
     inputs:
       platform:
@@ -83,8 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            pattern='inserts a drawing from the context menu|full settings window indexes|actual settings clicks|Mermaid connectors|sequence diagram arrowheads'
-            if pnpm test:e2e --grep="$pattern"; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/code-block-height.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

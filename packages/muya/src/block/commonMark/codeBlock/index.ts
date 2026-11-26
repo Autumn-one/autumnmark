@@ -130,12 +130,15 @@ class CodeBlock extends Parent {
                 this.replaceWith(CodeBlock.create(this.muya, state));
                 if (selection)
                     this.muya.setSelection(selection);
-                return;
             }
-            const input = this.firstContentInDescendant()!;
-            input.text = info;
-            this.meta.lang = info;
-            input.update();
+            else {
+                const input = this.firstContentInDescendant()!;
+                input.text = info;
+                this.meta.lang = info;
+                input.update();
+            }
+            // The resize commits a document edit while the caret can be offscreen.
+            this.muya.editor.selection.preventScrollOnNextNotification();
         });
     }
 

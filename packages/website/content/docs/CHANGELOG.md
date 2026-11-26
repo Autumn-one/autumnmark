@@ -1,3 +1,8 @@
+## AutumnMark 0.24.59
+
+- Resizing a code block keeps the document at its current scroll position, even when the text cursor is offscreen.
+- The code block header in 松风明月 (Pine Ink) now uses a light text cursor that is visible against the dark green background.
+
 ## AutumnMark 0.24.58
 
 - Reduced download and installation sizes by excluding build leftovers, bundling shared dependencies once, and compressing fonts without changing their glyphs.

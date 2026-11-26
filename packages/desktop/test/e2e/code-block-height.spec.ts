@@ -125,7 +125,9 @@ test('centers the code title and edits the full fence from either header label',
   const info = 'ts title="main.cs" {2}'
   const renamed = 'js title="tasks.js" {2}'
   const markdown = ['Before.', '', '~~~' + info, 'first()', 'second()', '~~~', ''].join('\n')
-  const { app, page, filePath } = await launchWithMarkdown(markdown)
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { theme: 'pine-ink', followSystemTheme: false }
+  })
   try {
     const block = page.locator('.mu-code-block')
     const title = block.locator('.mu-code-block-title')
@@ -145,6 +147,7 @@ test('centers the code title and edits the full fence from either header label',
     await page.mouse.click(centerX, centerY)
     await expect(title).toBeHidden()
     await expect(input).toHaveCSS('opacity', '1')
+    await expect(input).toHaveCSS('caret-color', 'rgb(243, 239, 221)')
     await expect(input).toHaveText(info)
     await page.keyboard.press('Enter')
     await expect(block.locator('.mu-code')).toHaveClass(/mu-active/)
@@ -223,6 +226,52 @@ test('reading code previews wrap, expand and copy the complete source', async() 
     await app.close()
   }
 })
+
+for (const type of ['fenced', 'indented'] as const) {
+  test(`resizing ${type} code preserves document scroll with the caret offscreen`, async() => {
+    const rows = Array.from({ length: 24 }, (_, i) => `row ${i + 1}`)
+    const code = type === 'fenced' ? `~~~js\n${rows.join('\n')}\n~~~` : rows.map(row => `    ${row}`).join('\n')
+    const markdown = `${'Introduction.\n\n'.repeat(25)}${code}\n\n${'Paragraph.\n\n'.repeat(45)}Last paragraph.\n`
+    const { app, page, filePath } = await launchWithMarkdown(markdown, {
+      preferences: { language: 'en', compactMode: true, compactCodeMaxLines: 6 }
+    })
+    try {
+      const editor = page.locator('.editor-component')
+      const last = editor.getByText('Last paragraph.', { exact: true })
+      await last.click()
+      const caretText = () => page.evaluate(() => window.getSelection()?.focusNode?.textContent)
+      await expect.poll(caretText).toBe('Last paragraph.')
+
+      const block = editor.locator('.mu-code-block')
+      const handle = block.locator('.mu-code-resize')
+      await handle.scrollIntoViewIfNeeded()
+      await expect(last).not.toBeInViewport()
+      const { x, y } = await handle.evaluate(el => {
+        const box = el.getBoundingClientRect()
+        return { x: box.x + box.width / 2, y: box.bottom - 2 }
+      })
+      const lineHeight = await block.locator('.mu-code').evaluate(el => parseFloat(getComputedStyle(el).lineHeight))
+      const scrollTop = () => editor.evaluate(el => el.scrollTop)
+      const before = await scrollTop()
+      expect(before).toBeGreaterThan(0)
+
+      const delta = type === 'fenced' ? -2 : 2
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x, y + delta * lineHeight)
+      await expect(handle).toHaveAttribute('data-lines', `Rows: ${6 + delta}`)
+      expect(await scrollTop()).toBe(before)
+      await page.mouse.up()
+
+      expect(await scrollTop()).toBe(before)
+      await expect.poll(caretText).toBe('Last paragraph.')
+      await clickMenuById(app, 'fileSaveMenuItem')
+      await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(`max-lines=${6 + delta}`)
+    } finally {
+      await app.close()
+    }
+  })
+}
 
 test('saves a resized block and reopens it with compact mode disabled', async() => {
   const body = Array.from({ length: 24 }, (_, i) => `row ${i + 1}`).join('\n')
