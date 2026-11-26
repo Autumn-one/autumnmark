@@ -4,9 +4,9 @@ GitHub Pages 发布本分支根目录的静态 HTML、CSS 和 JavaScript。在�
 
 ## 首页示例与截图
 
-[《雾岭山脊观测手记》](assets/ridge-notes.md) 是首页提供下载的单文件示例。海拔图已嵌入 Markdown，网页卡片使用同一张[海拔剖面图](assets/ridge-profile.webp)。
+[《雾岭山脊 · 踏秋观测手记》](assets/ridge-notes.md) 是首页提供下载的单文件示例，包含顶置多选项卡、内嵌海拔剖面图、折叠块、内嵌 Excalidraw 手绘图与增强代码块。特性卡片复用其中的[海拔剖面图](assets/ridge-profile.webp)和[手绘草图](assets/ridge-drawing.webp)。
 
-图库的浅色、源码和深色三张截图均来自 Windows 版 AutumnMark v0.24.28，尺寸为 1875 × 1335。更新时在桌面端打开示例，分别拍摄这三个视图，同步检查首页的替代文字、尺寸和分享图，以及项目 README 中的预览图。
+图库的可视化编辑（松风明月）、手绘与代码、源码模式和深色主题（暮紫日记）四张截图均实拍自最新版 Windows 桌面端 AutumnMark，尺寸为 1650 × 1028。更新时同步检查首页替代文字、尺寸、分享图，以及主仓库 `README.md` 与 `docs/examples/ridge-notes.md`。
 
 ## 安装包
 
