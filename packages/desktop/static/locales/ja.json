@@ -1287,6 +1287,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "ディスク上のファイルが変更されたか、元の描画が見つかりませんでした。描画の変更はエディターに残っています。",
     "browseDocuments": "Browse Files…",
     "canvas": "Canvas",
     "source": "Source",

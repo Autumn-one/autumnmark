@@ -1287,6 +1287,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "Il documento è stato modificato su disco o non è stato possibile trovare il disegno originale. Le modifiche al disegno restano aperte.",
     "browseDocuments": "Browse Files…",
     "canvas": "Canvas",
     "source": "Source",

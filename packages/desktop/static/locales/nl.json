@@ -1287,6 +1287,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "Het document is gewijzigd op schijf of de oorspronkelijke tekening is niet gevonden. Je wijzigingen aan de tekening blijven geopend.",
     "browseDocuments": "Browse Files…",
     "canvas": "Canvas",
     "source": "Source",
