@@ -1,3 +1,4 @@
+import type { ISizedDiagramCodeToken, ISizedDrawingParagraphToken } from '../utils/marked/extensions/drawingLayout';
 import type { ISizedTableCell } from '../utils/marked/extensions/tableLayout';
 import type { ListItemToken, TBlockToken } from '../utils/marked/types';
 import type {
@@ -379,9 +380,11 @@ export class MarkdownToState {
             }
 
             case 'paragraph': {
+                const { drawingWidths } = token as ISizedDrawingParagraphToken;
                 value = token.text;
                 state = {
                     name: 'paragraph' as const,
+                    ...(drawingWidths ? { meta: { drawingWidths } } : {}),
                     text: value,
                 };
                 parentList[0].push(state);
@@ -484,7 +487,7 @@ export class MarkdownToState {
 
         const diagramType = diagramTypeOfLang(lang);
         if (diagramType)
-            return createDiagramState(diagramType, value);
+            return createDiagramState(diagramType, value, (token as ISizedDiagramCodeToken).drawingWidth);
 
         // walkTokens adds 'fenced', which marked's declared codeBlockStyle type omits.
         const isFenced = (codeBlockStyle as 'indented' | 'fenced' | undefined) === 'fenced';

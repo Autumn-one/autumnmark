@@ -412,6 +412,14 @@ class Content extends TreeNode {
             const diffs = diff(oldText, text);
 
             this.transactions.editOperation(path, diffToTextOp(diffs));
+            if (
+                this.blockName === 'paragraph.content'
+                && this.parent?.blockName === 'paragraph'
+                && 'remapDrawingMetaOnTextChange' in this.parent
+            ) {
+                (this.parent as { remapDrawingMetaOnTextChange: (oldText: string, newText: string) => void })
+                    .remapDrawingMetaOnTextChange(oldText, text);
+            }
         }
     }
 

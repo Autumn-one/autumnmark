@@ -1,11 +1,12 @@
 import type { Muya } from '../../../muya';
-import type { IDiagramState, TState } from '../../../state/types';
+import type { IDiagramState, TDrawingWidth, TState } from '../../../state/types';
 import type { IPreviewDiagramPayload } from '../../../ui/previewToolBar';
 import type DiagramBlock from './index';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
 import { finalizeRenderedDiagram, renderDiagram } from '../../../utils/diagram/render';
+import { applyDrawingWidth } from '../../../utils/drawingLayout';
 import { abbreviateEmbeddedImages, abbreviatePreviewText } from '../../../utils/embeddedImage';
 import { decodeImageElement } from '../../../utils/image';
 import logger from '../../../utils/logger';
@@ -17,6 +18,7 @@ const debug = logger('diagramPreview:');
 class DiagramPreview extends Parent {
     private _code: string;
     private _type: string;
+    private _width?: TDrawingWidth;
     private _rendered = false;
     private _cancelFinalize: (() => void) | null = null;
     private _drawingRender = 0;
@@ -38,14 +40,23 @@ class DiagramPreview extends Parent {
         this.tagName = 'div';
         this._code = text;
         this._type = meta.type;
+        this._width = meta.width;
         this.classList = ['mu-diagram-preview'];
         this.attributes = {
             spellcheck: 'false',
             contenteditable: 'false',
         };
         this.createDomNode();
+        if (this._type === 'excalidraw')
+            applyDrawingWidth(this.domNode!, this._width);
         this._attachDOMEvents();
         this.update();
+    }
+
+    setDrawingWidth(width?: TDrawingWidth): void {
+        this._width = width;
+        if (this.domNode && this._type === 'excalidraw')
+            applyDrawingWidth(this.domNode, width);
     }
 
     override getState(): TState {
@@ -185,6 +196,7 @@ class DiagramPreview extends Parent {
             const image = target.ownerDocument.createElement('img');
             image.alt = label;
             image.src = source;
+            image.draggable = false;
             await decodeImageElement(image);
             if (render !== this._drawingRender || !button.isConnected)
                 return;

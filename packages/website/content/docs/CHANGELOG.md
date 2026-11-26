@@ -1,3 +1,9 @@
+## AutumnMark 0.24.67
+
+- Hovering over inline embedded drawings, fenced `excalidraw` blocks, or linked `.excalidraw` drawings now shows left/right drag resize bars matching embedded images, updating width in place without jumping the document scrollbar on release.
+- Drawing widths persist in Markdown via a preceding HTML comment (`<!-- drawing-layout: width="480" -->`, `width="100%"`, or multi-drawing `widths="1:320,2:100%"`), snapping to `100%` at full container width and recording integer pixels otherwise.
+- Remembered drawing widths stay intact across undo/redo, paragraph splits and merges, deletions (including duplicate-source drawings), cut/paste, text drag-and-drop, and HTML/PDF export without affecting ordinary images in the same paragraph.
+
 ## AutumnMark 0.24.66
 
 - Editing elements in the drawing popup now updates inline embedded drawings, fenced `excalidraw` blocks, and linked `.excalidraw` previews in place with offscreen image decoding, eliminating loading-box collapses and background document jitter behind the modal overlay.

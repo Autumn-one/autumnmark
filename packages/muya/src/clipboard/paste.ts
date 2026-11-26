@@ -1,8 +1,9 @@
 import type Content from '../block/base/content';
 import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
+import type Paragraph from '../block/commonMark/paragraph';
 import type { Muya } from '../muya';
-import type { TState } from '../state/types';
+import type { IParagraphMeta, IParagraphState, TDrawingWidth, TState } from '../state/types';
 import type { Nullable } from '../types';
 import type { IClipboardImage } from './image';
 import type Clipboard from './index';
@@ -14,6 +15,7 @@ import { atxHeadingBody, splitAtxHeading } from '../state/headings';
 import HtmlToMarkdown from '../state/htmlToMarkdown';
 import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState, markdownListMarker } from '../state/types';
+import { countParagraphDrawings, mergeDrawingWidths, normalizeDrawingWidths, splitDrawingWidths } from '../utils/drawingLayout';
 import { standaloneRemoteMarkdownImage } from '../utils/image';
 import { getClipboardImageFile, getCopyTextType, isHttpUrl, isStandaloneTableHtml, normalizePastedHTML, standaloneImageSource } from '../utils/paste';
 import { embedAfterPaste } from './embedPastedImages';
@@ -172,6 +174,24 @@ function finishPaste(muya: Muya, ctx: IPasteContext, remaining: TState[], tail: 
     seatCursorAtSeam(last, sewOffset);
 }
 
+function attachTailDrawingMeta(states: TState[], tailWidths: Record<string, TDrawingWidth>): void {
+    let last: TState | undefined = states.at(-1);
+    while (last && 'children' in last && last.children.length > 0)
+        last = last.children.at(-1);
+    if (!last || !isParagraphState(last))
+        return;
+    const baseCount = countParagraphDrawings(last.text);
+    const merged: Record<string, TDrawingWidth> = { ...last.meta?.drawingWidths };
+    for (const [key, value] of Object.entries(tailWidths)) {
+        const index = Number(key);
+        if (Number.isSafeInteger(index) && index >= 1)
+            merged[String(baseCount + index)] = value;
+    }
+    const normalized = normalizeDrawingWidths(merged);
+    if (normalized)
+        (last as IParagraphState).meta = { drawingWidths: normalized };
+}
+
 function pasteInlineMerge(
     muya: Muya,
     ctx: IPasteContext,
@@ -182,9 +202,29 @@ function pasteInlineMerge(
 ): void {
     const { anchorBlock } = ctx;
     const rest = states.slice(1);
+    const anchorParagraph = anchorBlock.blockName === 'paragraph.content'
+        && anchorBlock.parent?.blockName === 'paragraph'
+        ? anchorBlock.parent as Paragraph
+        : null;
+    const incomingMeta = states[0] && isParagraphState(states[0]) ? states[0].meta : undefined;
 
     if (rest.length === 0) {
-        anchorBlock.text = head + mergeText + tail;
+        if (anchorParagraph && (anchorParagraph.meta?.drawingWidths || incomingMeta?.drawingWidths)) {
+            const oldText = anchorBlock.text;
+            anchorParagraph.withExplicitDrawingMeta(() => {
+                anchorParagraph.mergeDrawingMeta({
+                    oldText,
+                    head,
+                    inserted: mergeText,
+                    tail,
+                    incomingMeta,
+                });
+                anchorBlock.text = head + mergeText + tail;
+            });
+        }
+        else {
+            anchorBlock.text = head + mergeText + tail;
+        }
         anchorBlock.update();
         const offset = head.length + mergeText.length;
         anchorBlock.setCursor(offset, offset, true);
@@ -192,8 +232,27 @@ function pasteInlineMerge(
         return;
     }
 
-    anchorBlock.text = head + mergeText;
+    let detachedTailMeta: IParagraphMeta | undefined;
+    if (anchorParagraph && (anchorParagraph.meta?.drawingWidths || incomingMeta?.drawingWidths)) {
+        const oldText = anchorBlock.text;
+        anchorParagraph.withExplicitDrawingMeta(() => {
+            detachedTailMeta = anchorParagraph.mergeDrawingMeta({
+                oldText,
+                head,
+                inserted: mergeText,
+                tail: '',
+                incomingMeta,
+                detachedTail: tail,
+            });
+            anchorBlock.text = head + mergeText;
+        });
+    }
+    else {
+        anchorBlock.text = head + mergeText;
+    }
     anchorBlock.update();
+    if (detachedTailMeta?.drawingWidths)
+        attachTailDrawingMeta(rest, detachedTailMeta.drawingWidths);
     finishPaste(muya, ctx, rest, tail);
 }
 
@@ -289,24 +348,72 @@ function mergeListPaste(
     target: NonNullable<ReturnType<typeof getListPasteTarget>>,
 ): void {
     const { firstState, listBlock, listState, itemIndex, paraIndex, currentItem, anchorPara } = target;
-
-    const sewOffset = sewTail(states, tail);
     const pastedItems = firstState.children;
     const pastedFirst = pastedItems[0].children[0];
 
     // Task lists append every pasted item; bullet and ordered lists merge the first paragraph inline.
     const canFold = firstState.name !== 'task-list' && isParagraphState(pastedFirst);
+    const foldedOnly = canFold
+        && pastedItems.length === 1
+        && pastedItems[0].children.length === 1
+        && states.length === 1;
+
+    // Compute drawing metadata before `sewTail` mutates the target paragraph text in place.
+    const anchorOldText = anchorPara.text;
+    const anchorOldWidths = anchorPara.meta?.drawingWidths;
+    if (canFold) {
+        const pastedFirstWidths = pastedFirst.meta?.drawingWidths;
+        if (anchorOldWidths || pastedFirstWidths) {
+            if (foldedOnly) {
+                const { merged } = mergeDrawingWidths({
+                    existingWidths: anchorOldWidths,
+                    oldText: anchorOldText,
+                    head,
+                    inserted: pastedFirst.text,
+                    tail,
+                    incomingWidths: pastedFirstWidths,
+                });
+                if (merged)
+                    anchorPara.meta = { drawingWidths: merged };
+                else
+                    delete anchorPara.meta;
+            }
+            else {
+                const { merged, detachedTail } = mergeDrawingWidths({
+                    existingWidths: anchorOldWidths,
+                    oldText: anchorOldText,
+                    head,
+                    inserted: pastedFirst.text,
+                    tail: '',
+                    incomingWidths: pastedFirstWidths,
+                    detachedTail: tail,
+                });
+                if (merged)
+                    anchorPara.meta = { drawingWidths: merged };
+                else
+                    delete anchorPara.meta;
+                if (detachedTail)
+                    attachTailDrawingMeta(states, detachedTail);
+            }
+        }
+    }
+    else if (anchorOldWidths) {
+        const { head: headWidths, tail: tailWidths } = splitDrawingWidths(anchorOldWidths, anchorOldText, head, tail);
+        if (headWidths)
+            anchorPara.meta = { drawingWidths: headWidths };
+        else
+            delete anchorPara.meta;
+        if (tailWidths)
+            attachTailDrawingMeta(states, tailWidths);
+    }
+
+    const sewOffset = sewTail(states, tail);
 
     const mergedChildren = [...listState.children];
-    let foldedOnly = false;
     if (canFold) {
         anchorPara.text = head + pastedFirst.text;
         currentItem.children = [...currentItem.children, ...pastedItems[0].children.slice(1)];
         mergedChildren.splice(itemIndex + 1, 0, ...pastedItems.slice(1));
-        foldedOnly
-            = pastedItems.length === 1
-                && pastedItems[0].children.length === 1
-                && states.length === 1;
     }
     else {
         anchorPara.text = head;

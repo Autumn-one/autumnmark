@@ -522,10 +522,17 @@ class ParagraphContent extends Format {
         }
         else {
             if (parent!.isOnlyChild()) {
-                this.text = text.substring(0, start.offset);
+                const headText = text.substring(0, start.offset);
+                const tailText = text.substring(end.offset);
+                const tailMeta = parent!.withExplicitDrawingMeta(() => {
+                    const splitTail = parent!.splitDrawingMeta(text, headText, tailText);
+                    this.text = headText;
+                    return splitTail;
+                });
                 const paragraphChild: IParagraphState = {
                     name: 'paragraph',
-                    text: text.substring(end.offset),
+                    ...(tailMeta ? { meta: tailMeta } : {}),
+                    text: tailText,
                 };
                 const newNodeState: IListItemState | ITaskListItemState
                     = listItem.blockName === 'task-list-item'
@@ -659,7 +666,26 @@ class ParagraphContent extends Format {
 
         const { text: oldText } = previousContentBlock;
         const offset = oldText.length;
-        previousContentBlock.text += this.text;
+        const previousParagraph = previousContentBlock.blockName === 'paragraph.content'
+            && previousContentBlock.parent?.blockName === 'paragraph'
+            ? previousContentBlock.parent as Paragraph
+            : null;
+        const currentParagraph = this.parent;
+        if (previousParagraph && currentParagraph && (previousParagraph.meta?.drawingWidths || currentParagraph.meta?.drawingWidths)) {
+            previousParagraph.withExplicitDrawingMeta(() => {
+                previousParagraph.mergeDrawingMeta({
+                    oldText,
+                    head: oldText,
+                    inserted: this.text,
+                    tail: '',
+                    incomingMeta: currentParagraph.meta,
+                });
+                previousContentBlock.text += this.text;
+            });
+        }
+        else {
+            previousContentBlock.text += this.text;
+        }
         this.parent!.remove();
         previousContentBlock.setCursor(offset, offset, true);
     }

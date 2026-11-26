@@ -13,6 +13,7 @@ import type { IListMarker } from '../../utils/listMarker';
 import type AtxHeading from '../commonMark/atxHeading';
 import type BulletList from '../commonMark/bulletList';
 import type OrderList from '../commonMark/orderList';
+import type Paragraph from '../commonMark/paragraph';
 import type SetextHeading from '../commonMark/setextHeading';
 import type Parent from './parent';
 import type TreeNode from './treeNode';
@@ -36,6 +37,7 @@ import { SelectionType } from '../../selection/types';
 import { isListItemState } from '../../state/types';
 import { conflict, firstGraphemeLength, isHTMLElement, isKeyboardEvent, isMouseEvent, lastGraphemeLength } from '../../utils';
 import { COLOR_SPAN_CLOSE_TAG, colorPropertyOf, colorSpanOpenTag, isColorStyleEmpty, parseColorStyle } from '../../utils/colorSpan';
+import { extractRangeDrawingWidths } from '../../utils/drawingLayout';
 import { getImageInfo, imageToHtml, imageToMarkdown, isImageToken } from '../../utils/image';
 import { minSpacesAfterMarker, parseListMarker, toListDelimiter } from '../../utils/listMarker';
 import logger from '../../utils/logger';
@@ -481,10 +483,19 @@ class Format extends Content {
         this.updateImageAttributes(image, { [attrName]: attrValue });
     }
 
-    updateImageAttributes({ token }: IImageInfo, changes: Record<string, string>) {
+    updateImageAttributes({ token }: IImageInfo, changes: Record<string, string | undefined>) {
         const { start, end } = token.range;
         const oldText = this.text;
-        const imageText = imageToHtml({ ...token.attrs, ...changes });
+        const nextAttrs: Record<string, string | null | undefined> = { ...token.attrs };
+        for (const [key, value] of Object.entries(changes)) {
+            if (value === undefined)
+                delete nextAttrs[key];
+            else
+                nextAttrs[key] = value;
+        }
+        const imageText = imageToHtml(nextAttrs);
+        if (imageText === oldText.substring(start, end))
+            return;
         this.text
             = oldText.substring(0, start) + imageText + oldText.substring(end);
 
@@ -498,7 +509,7 @@ class Format extends Content {
                 end: start + imageText.length,
             },
             raw: imageText,
-        });
+        }, { preventScroll: true });
     }
 
     // Unlink keeps the visible anchor text rather than substituting the URL.
@@ -515,7 +526,20 @@ class Format extends Content {
     deleteImage({ token }: IImageInfo) {
         const oldText = this.text;
         const { start, end } = token.range;
-        this.text = oldText.substring(0, start) + oldText.substring(end);
+        const nextText = oldText.substring(0, start) + oldText.substring(end);
+        const paragraph = this.blockName === 'paragraph.content' && this.parent?.blockName === 'paragraph'
+            ? this.parent as Paragraph
+            : null;
+        if (paragraph?.meta?.drawingWidths) {
+            const { remaining } = extractRangeDrawingWidths(paragraph.meta.drawingWidths, oldText, start, end);
+            paragraph.withExplicitDrawingMeta(() => {
+                paragraph.setExplicitDrawingWidths(remaining);
+                this.text = nextText;
+            });
+        }
+        else {
+            this.text = nextText;
+        }
         this.setCursor(start, start, true);
     }
 
@@ -1552,6 +1576,30 @@ class Format extends Content {
         this.update();
     }
 
+    private _mergeParagraphDrawingMeta(nextParent: Parent, currentText: string, nextText: string): void {
+        const currentParagraph = this.blockName === 'paragraph.content'
+            && this.parent?.blockName === 'paragraph'
+            ? this.parent as Paragraph
+            : null;
+        const nextParagraph = nextParent.blockName === 'paragraph'
+            ? nextParent as Paragraph
+            : null;
+        if (currentParagraph && nextParagraph && (currentParagraph.meta?.drawingWidths || nextParagraph.meta?.drawingWidths)) {
+            currentParagraph.withExplicitDrawingMeta(() => {
+                currentParagraph.mergeDrawingMeta({
+                    oldText: currentText,
+                    head: currentText,
+                    inserted: nextText,
+                    tail: '',
+                    incomingMeta: nextParagraph.meta,
+                });
+                this.text = currentText + nextText;
+            });
+            return;
+        }
+        this.text = currentText + nextText;
+    }
+
     override deleteHandler(event: KeyboardEvent): void {
         const { start, end } = this.getCursor()!;
         const { text } = this;
@@ -1571,8 +1619,7 @@ class Format extends Content {
         event.preventDefault();
 
         const paragraphBlock = nextBlock.parent!;
-
-        this.text = text + nextBlock.text;
+        this._mergeParagraphDrawingMeta(paragraphBlock, text, nextBlock.text);
         this.setCursor(start.offset, end.offset, true);
 
         // Blocks after the merged paragraph in a list item (e.g. a nested
@@ -1650,9 +1697,22 @@ class Format extends Content {
         event.preventDefault();
         this.muya.editor.history.markInputBoundary('insertParagraph', '\n');
         const { muya, parent } = this;
-        this.text = head;
+        const originalText = this.text;
+        let tailMeta: unknown;
+        if (parent?.blockName === 'paragraph') {
+            const paragraph = parent as Paragraph;
+            tailMeta = paragraph.withExplicitDrawingMeta(() => {
+                const splitTail = paragraph.splitDrawingMeta(originalText, head, tail);
+                this.text = head;
+                return splitTail;
+            });
+        }
+        else {
+            this.text = head;
+        }
         const newParagraphState = {
             name: 'paragraph',
+            ...(tailMeta ? { meta: tailMeta } : {}),
             text: tail,
         };
 

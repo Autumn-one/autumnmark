@@ -6,7 +6,7 @@ import DeleteIcon from '../../assets/icons/delete/2.png';
 import ImageIcon from '../../assets/icons/image/2.png';
 import ImageFailIcon from '../../assets/icons/image_fail/2.png';
 import { CLASS_NAMES } from '../../config';
-import { isInlineDrawingImage } from '../../utils/diagram/drawingData';
+import { isInlineDrawingImage, isLinkedDrawingImage } from '../../utils/diagram/drawingData';
 import { usesDefaultObjectSize } from '../../utils/image';
 
 function renderIcon(h: H, className: string, icon: string) {
@@ -114,6 +114,9 @@ export default function image(
     if ('load' in imageSrc && isInlineDrawingImage(token)) {
         wrapperSelector += '.mu-inline-drawing';
         Object.assign(data.attrs, { 'role': 'button', 'tabindex': '0', 'aria-label': alt });
+    }
+    else if (isLinkedDrawingImage(token)) {
+        wrapperSelector += '.mu-linked-drawing';
     }
 
     const imageIcons = [

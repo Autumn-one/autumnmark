@@ -1,6 +1,7 @@
 import type { Muya } from '../../../muya';
-import type { IDiagramMeta, IDiagramState } from '../../../state/types';
+import type { IDiagramMeta, IDiagramState, IParagraphState, TDrawingWidth } from '../../../state/types';
 import type { TBlockPath } from '../../types';
+import type DiagramPreview from './diagramPreview';
 import { adjustOffset } from '../../../utils';
 import { inlineDrawingToMarkdown } from '../../../utils/diagram/drawingSource';
 import logger from '../../../utils/logger';
@@ -60,11 +61,59 @@ class DiagramBlock extends Parent {
     constructor(muya: Muya, { meta }: IDiagramState) {
         super(muya);
         this.tagName = 'figure';
-        this.meta = meta;
+        this.meta = { ...meta };
         this.classList = ['mu-diagram-block'];
         if (meta.type === 'excalidraw' && muya.options.embeddedDrawing)
             this.classList.push('mu-embedded-drawing-block');
         this.createDomNode();
+    }
+
+    get preview(): DiagramPreview | null {
+        const attachment = this.attachments.head;
+        return attachment?.blockName === 'diagram-preview' ? attachment as DiagramPreview : null;
+    }
+
+    setDrawingWidth(width: TDrawingWidth | undefined): void {
+        if (this.meta.type !== 'excalidraw' || !this.muya.canMutate || !this.muya.isBlockInDocument(this))
+            return;
+        const next: TDrawingWidth | undefined = width === '100%' || (typeof width === 'number' && Number.isSafeInteger(width) && width > 0)
+            ? width
+            : undefined;
+        const previous = this.meta.width;
+        if (previous === next) {
+            this.preview?.setDrawingWidth(previous);
+            return;
+        }
+
+        const widthPath = [...this.path, 'meta', 'width'];
+        this.muya.editor.history.cutoff();
+        this.muya.transact(() => {
+            if (next !== undefined)
+                this.meta.width = next;
+            else
+                delete this.meta.width;
+            if (previous === undefined && next !== undefined)
+                this.transactions.insertValueOperation(widthPath, next);
+            else if (previous !== undefined && next !== undefined)
+                this.transactions.replaceOperation(widthPath, previous, next);
+            else if (previous !== undefined && next === undefined)
+                this.transactions.removeOperation(widthPath);
+            this.preview?.setDrawingWidth(next);
+            // Pointer-driven resizes commit while the text caret can sit far offscreen.
+            this.muya.editor.selection.preventScrollOnNextNotification();
+        });
+        this.muya.editor.history.cutoff();
+    }
+
+    syncDrawingLayout(state: unknown): void {
+        const width = state && typeof state === 'object' && 'meta' in state
+            ? (state as IDiagramState).meta?.width
+            : undefined;
+        if (width === '100%' || (typeof width === 'number' && Number.isSafeInteger(width) && width > 0))
+            this.meta.width = width;
+        else
+            delete this.meta.width;
+        this.preview?.setDrawingWidth(this.meta.width);
     }
 
     queryBlock(path: TBlockPath) {
@@ -130,8 +179,13 @@ class DiagramBlock extends Parent {
             return;
         // Entering the same row needs image markup so text can share it with the drawing.
         const text = inlineDrawingToMarkdown(source.text, drawing.label());
+        const paragraphState: IParagraphState = {
+            name: 'paragraph',
+            ...(this.meta.width !== undefined ? { meta: { drawingWidths: { 1: this.meta.width } } } : {}),
+            text,
+        };
         this.muya.transact(() => {
-            const paragraph = ScrollPage.loadBlock('paragraph').create(this.muya, { name: 'paragraph', text });
+            const paragraph = ScrollPage.loadBlock('paragraph').create(this.muya, paragraphState);
             this.replaceWith(paragraph);
             const offset = before ? 0 : text.length;
             paragraph.firstContentInDescendant()?.setCursor(offset, offset, true);
@@ -148,7 +202,7 @@ class DiagramBlock extends Parent {
         return {
             name: 'diagram',
             text,
-            meta,
+            meta: { ...meta },
         };
     }
 }

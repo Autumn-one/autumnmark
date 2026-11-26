@@ -1,4 +1,5 @@
 import type Format from '../block/base/format';
+import type Paragraph from '../block/commonMark/paragraph';
 import type { Muya } from '../muya';
 import type { IRenderCursor } from '../selection/types';
 import type { IParagraphState } from '../state/types';
@@ -32,6 +33,11 @@ function isStandaloneImage(tokens: Token[], isImageMarker?: (raw: string) => boo
     if (isInlineDrawingImage(token))
         return false;
     return isImageToken(token) || token.type === 'reference_image' || isImageMarker?.(token.raw.trim()) === true;
+}
+
+function syncParagraphDrawingWidths(block: Format) {
+    if (block.parent?.blockName === 'paragraph')
+        (block.parent as Paragraph).applyDrawingWidths();
 }
 
 function addDrawingGaps(content: HTMLElement) {
@@ -331,8 +337,10 @@ class InlineEngine {
         projection?.mount(domNode!, true);
         if (!this.muya.isReadOnly)
             addDrawingGaps(domNode!);
-        if (block.blockName === 'paragraph.content')
+        if (block.blockName === 'paragraph.content') {
+            syncParagraphDrawingWidths(block);
             this.muya.editor.compactBlocks.track(domNode!, standalone ? domNode!.firstElementChild as HTMLElement : null);
+        }
 
         if (this.muya.isReadOnly)
             prepareReadingLinks(domNode!);

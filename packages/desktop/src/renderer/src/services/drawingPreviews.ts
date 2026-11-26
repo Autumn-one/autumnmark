@@ -1,6 +1,5 @@
-import { decodeInlineDrawing, findDocumentImages, isInlineDrawingSource } from '@muyajs/core'
+import { decodeInlineDrawing, drawingPreviewExpansionEdits, findDocumentImages, isInlineDrawingSource } from '@muyajs/core'
 import { applyMarkdownEdits } from '@shared/markdownEdits'
-import { imageDestinationEdits } from '@/util/documentImages'
 import { resolveDrawingPath } from '@/util/drawingPaths'
 import type { DrawingScene } from './drawingScene'
 
@@ -127,5 +126,5 @@ export async function expandDrawingPreviews(markdown: string, documentPath?: str
       // Keeping the original reference preserves its alt text if the drawing becomes unavailable.
     }
   }))
-  return applyMarkdownEdits(markdown, imageDestinationEdits(markdown, converted))
+  return applyMarkdownEdits(markdown, drawingPreviewExpansionEdits(markdown, converted))
 }

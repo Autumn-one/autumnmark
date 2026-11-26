@@ -54,6 +54,7 @@ type BlockNode = {
     setLoose?: (loose: boolean) => void;
     setChecked?: (checked: boolean) => void;
     setSyntax?: (syntax: unknown) => void;
+    syncDrawingLayout?: (state: unknown) => void;
     path?: (string | number)[];
     blockName?: string;
     align?: string;
@@ -149,6 +150,18 @@ function drop(root: BlockNode, descent: JSONOpList, muya: Muya, snapshot: () => 
             throw new Error('Cannot project heading syntax onto this Block');
         block.setSyntax(state.syntax);
         return root;
+    }
+    const metaIndex = descent.indexOf('meta');
+    if (metaIndex >= 0) {
+        const { subDoc: block } = descend(root, descent.slice(0, metaIndex), []);
+        const isParagraphMeta = block?.blockName === 'paragraph';
+        const isDiagramWidthMeta = block?.blockName === 'diagram'
+            && (metaIndex === descent.length - 2 || descent[metaIndex + 1] === 'width');
+        if (block?.syncDrawingLayout && (isParagraphMeta || isDiagramWidthMeta)) {
+            const state = block.path ? stateAtPath(snapshot(), block.path) : undefined;
+            block.syncDrawingLayout(state);
+            return root;
+        }
     }
     let subDoc = root;
     let i = 0; // For reading

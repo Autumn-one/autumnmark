@@ -60,6 +60,7 @@ export { decodeInlineDrawing, encodeInlineDrawing, isInlineDrawingSource } from 
 export { findEmbeddedDrawings, inlineDrawingToMarkdown } from './utils/diagram/drawingSource';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions } from './utils/diagram/render';
+export { drawingPreviewExpansionEdits } from './utils/drawingLayout';
 export { bindEmbeddedImageEvents, findEmbeddedImages, findEmbeddedMedia, replaceEmbeddedImage } from './utils/embeddedImage';
 export type { IEmbeddedImage, IEmbeddedImageEdit, IImageDimensions } from './utils/embeddedImage';
 export type { IImageInfo } from './utils/image';

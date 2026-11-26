@@ -21,6 +21,7 @@ import type {
 } from './types';
 /* eslint-disable no-fallthrough */
 import { deepClone } from '../utils';
+import { drawingLayoutComment } from '../utils/drawingLayout';
 import { githubAlertMarker } from '../utils/githubAlerts';
 import { indentationWidth, indentToTabStop, indentWithTabs, removeIndent } from '../utils/indentation';
 import { continuesList, formatListMarker, minSpacesAfterMarker, parseListMarker } from '../utils/listMarker';
@@ -402,8 +403,13 @@ export default class ExportMarkdown {
     ) {
         const { text } = state;
         const lines = text.split('\n');
-
-        return `${lines.map(line => `${indent}${line}`).join('\n')}\n`;
+        const body = `${lines.map(line => `${indent}${line}`).join('\n')}\n`;
+        if (state.name !== 'paragraph')
+            return body;
+        const comment = drawingLayoutComment(state);
+        if (!comment)
+            return body;
+        return `${indent}${comment}\n${indent.replace(/ +$/, '')}\n${body}`;
     }
 
     private _serializeAtxHeading(state: IAtxHeadingState, indent: string) {
@@ -500,6 +506,9 @@ export default class ExportMarkdown {
             text,
             meta: { type },
         } = state;
+        const comment = drawingLayoutComment(state);
+        if (comment)
+            result.push(`${indent}${comment}\n${indent.replace(/ +$/, '')}\n`);
         const lines = text.split('\n');
         result.push(`${indent}\`\`\`${type}\n`);
 

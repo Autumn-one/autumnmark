@@ -2,6 +2,7 @@ import type { Token } from 'marked';
 import type { IFrontmatterToken, ILexOption, TLexedToken } from './types';
 import { Marked } from 'marked';
 import compatibleTaskList from './compatibleTaskList';
+import drawingLayoutExtension from './extensions/drawingLayout';
 import fancyListsExtension, { endListItemsAtFancyMarkers } from './extensions/fancyLists';
 import footnoteExtension from './extensions/footnote';
 import githubAlertsExtension, { normalizeGithubAlertTokens } from './extensions/githubAlerts';
@@ -24,7 +25,7 @@ export function lexSourceBlocks(
     const tokens: (Token | IFrontmatterToken)[] = [];
 
     // Per-call Marked instances prevent enabled extensions leaking into later calls.
-    const m = new Marked(referenceDefinitionTabs(), tableLayoutExtension());
+    const m = new Marked(referenceDefinitionTabs(), tableLayoutExtension(), drawingLayoutExtension());
 
     if (texMathDollars) {
         m.use(
