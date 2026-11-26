@@ -737,31 +737,41 @@ export class SessionHost {
       const loaded = findFileTab(current, location) ? null : await this._readDocument(pathname, options)
       if (obsolete()) return
       // Checkpoint after the read so edits made during disk IO can keep the outgoing preview open.
-      const snapshot = loaded ? await this._requestCheckpoint(id) : current
-      if (obsolete()) return
-      const existing = findFileTab(snapshot, location)
-      if (existing) {
-        this._native(id).webContents.send(
-          'mt::switch-tab-by-file_path',
-          existing.resource.kind === 'file' ? existing.resource.location.path : pathname,
-          options
-        )
-        return existing.id
-      }
-      if (!loaded) return
+      let snapshot = loaded ? await this._requestCheckpoint(id) : current
       const preview = options.preview && this._accessor.preferences.getAll().openFilesInPreviewMode
-      const retire = snapshot.documents.filter(
-        (document) =>
-          (preview &&
-              this._previews.get(id) === document.id &&
-              document.content.kind === 'disk') ||
-            (selected &&
-              document.id === snapshot.activeDocumentId &&
-              isBlankMarkdownTab(document))
-      )
-      if (retire.length > 0) {
+      let replacedDocumentIds: string[] = []
+      for (let attempt = 0; ; attempt++) {
+        if (obsolete()) return
+        const existing = findFileTab(snapshot, location)
+        if (existing) {
+          this._native(id).webContents.send(
+            'mt::switch-tab-by-file_path',
+            existing.resource.kind === 'file' ? existing.resource.location.path : pathname,
+            options
+          )
+          return existing.id
+        }
+        if (!loaded) return
+        const retire = snapshot.documents.filter(
+          (document) =>
+            (preview &&
+                this._previews.get(id) === document.id &&
+                document.content.kind === 'disk') ||
+              (selected &&
+                document.id === snapshot.activeDocumentId &&
+                isBlankMarkdownTab(document))
+        )
+        if (!retire.length) break
         const ended = await this._endDocuments(id, retire, false, false)
-        if (ended.status !== 'persisted') throw new Error('Preview replacement was not committed')
+        if (ended.status === 'persisted') {
+          replacedDocumentIds = retire.map((document) => document.id)
+          break
+        }
+        if (ended.reason !== 'stale-sequence' || attempt > 0)
+          throw new Error('Preview replacement was not committed')
+        if (obsolete()) return
+        // A background checkpoint can invalidate the close while metadata is being written.
+        snapshot = await this._requestCheckpoint(id)
       }
       const result = await this._owner().addDocument(id, loaded.document, loaded.content.markdown)
       if (result.status !== 'persisted')
@@ -776,7 +786,7 @@ export class SessionHost {
         contentRevision: 0,
         selected,
         options,
-        replacedDocumentIds: retire.map((document) => document.id)
+        replacedDocumentIds
       }
       this._native(id).webContents.send('mt::state::document-opened', payload)
       return loaded.document.id
