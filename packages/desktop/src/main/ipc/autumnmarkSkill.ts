@@ -16,6 +16,8 @@ import type { SkillActiveTheme } from './themeStudio'
 import { prepareAutumnMarkSkill } from './skillInstall'
 
 const revisionPattern = /^[a-f0-9]{64}$/
+const sessionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i
+const maxDocumentSessions = 200
 
 function themeInfo({ id, name, base, scope }: SkillTheme): SkillTheme {
   return { id, name, base, scope }
@@ -44,10 +46,21 @@ export function registerAutumnMarkSkill(accessor: Accessor, appliedTheme: SkillA
   const instance = randomUUID()
   const token = randomBytes(32).toString('hex')
   const pending = new Map<string, { sender: WebContents; resolve: (result: SkillWindowResponse) => void }>()
+  const documentSessions = new Map<string, { windowId: number; id: string }>()
   let endpoint: { server: Server; path: string } | undefined
   let focusedAt = Date.now()
   let editorFocusedAt = 0
   let stopped = false
+
+  function rememberDocumentSession(windowId: number, id: string): string {
+    const session = randomUUID()
+    documentSessions.set(session, { windowId, id })
+    if (documentSessions.size > maxDocumentSessions) {
+      const oldest = documentSessions.keys().next().value
+      if (oldest) documentSessions.delete(oldest)
+    }
+    return session
+  }
 
   const windows = (type: WindowTypeValue) => accessor.windowManager.getWindowsByType(type)
     .filter(({ win }) => win.browserWindow && !win.browserWindow.isDestroyed())
@@ -103,12 +116,27 @@ export function registerAutumnMarkSkill(accessor: Accessor, appliedTheme: SkillA
       return { documents, theme, activeTheme, activeEditorId: activeEditor()?.id ?? null, editorFocusedAt, focusedAt }
     }
     if (action === 'read-document' || action === 'edit-document') {
+      const { session } = request
+      if (session !== undefined && (typeof session !== 'string' || !sessionPattern.test(session))) {
+        throw new Error('invalid-request')
+      }
+      const locked = session ? documentSessions.get(session) : undefined
+      if (session && !locked) throw new Error('document-target-changed')
+      if (locked && ((windowId !== undefined && windowId !== locked.windowId) || (id !== undefined && id !== locked.id))) {
+        throw new Error('document-target-changed')
+      }
+      const targetWindowId = locked ? locked.windowId : windowId
+      const targetId = locked ? locked.id : id
       const documents = await listDocuments()
       if (documents.length !== 1 && request.confirmed !== true) throw new Error('document-confirmation-required')
-      const target = documents.find(document => document.windowId === windowId && document.id === id)
-      const entry = windows(WindowType.EDITOR).find(window => window.id === windowId)
+      const target = documents.find(document => document.windowId === targetWindowId && document.id === targetId)
+      const entry = windows(WindowType.EDITOR).find(window => window.id === targetWindowId)
       if (!entry || !target?.editable) throw new Error('document-unavailable')
-      if (action === 'read-document') return fromWindow(entry, { action, id: target.id })
+      if (action === 'read-document') {
+        const content = await fromWindow<Record<string, unknown>>(entry, { action, id: target.id })
+        const activeSession = session ?? rememberDocumentSession(entry.id, target.id)
+        return { ...content, document: target, session: activeSession }
+      }
       if (typeof markdown !== 'string' || markdown.length > maxSkillMarkdownLength ||
         typeof revision !== 'string' || !revisionPattern.test(revision)) throw new Error('invalid-request')
       return fromWindow(entry, { action, id: target.id, revision, markdown })

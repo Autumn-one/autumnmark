@@ -5,7 +5,7 @@ import { lock } from 'proper-lockfile'
 import writeAtomic from 'write-file-atomic'
 
 // Older builds use this revision to avoid replacing a newer installed bundle.
-const revision = 5
+const revision = 6
 const bundledFiles = ['SKILL.md', 'bridge.cjs', 'theme-workspace.md'] as const
 const runtimeFile = 'runtime.txt'
 const files = [...bundledFiles, runtimeFile] as const

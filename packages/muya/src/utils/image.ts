@@ -195,10 +195,14 @@ export function replaceImageMarkup(block: Content, start: number, expected: stri
     const { muya } = block;
     if (muya.isReadOnly || !muya.isBlockInDocument(block) || !block.text.startsWith(expected, start))
         return;
+    if (replacement === expected)
+        return;
     muya.editor.history.cutoff();
     muya.transact(() => {
         block.text = block.text.slice(0, start) + replacement + block.text.slice(start + expected.length);
         block.update();
+        // Image edits triggered by pointer handles or dialogs commit while the text caret can be offscreen.
+        muya.editor.selection.preventScrollOnNextNotification();
     });
     muya.editor.history.cutoff();
 }

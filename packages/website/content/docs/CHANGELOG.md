@@ -1,3 +1,9 @@
+## AutumnMark 0.24.61
+
+- Resizing an embedded or hovered image keeps the document at its current scroll position, even when the text cursor is offscreen.
+- AI document chat and the AutumnMark skill now lock follow-up reads and edits to the target document session so switching tabs does not redirect changes to another file.
+- Long notification messages wrap cleanly without compressing action buttons.
+
 ## AutumnMark 0.24.60
 
 - Markdown files open faster when browsing the sidebar. Replacing a preview tab now renders the requested file directly, and opening a new file performs one recovery checkpoint after the file is read.

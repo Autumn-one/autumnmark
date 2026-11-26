@@ -264,6 +264,38 @@ test('resizes an embedded picture from either edge without opening its preview',
   }
 })
 
+test('resizing an embedded picture while scrolled down keeps the scroll position', async() => {
+  const markdown = `# Top\n\n${'Paragraph line.\n\n'.repeat(45)}![leaf](${src})\n\n${'Tail line.\n\n'.repeat(15)}`
+  const { app, page, filePath } = await launchWithMarkdown(markdown)
+  try {
+    const editor = page.locator('.editor-component')
+    const picture = page.locator('.mu-embedded-image img')
+    await picture.scrollIntoViewIfNeeded()
+    const scrollTop = () => editor.evaluate(el => el.scrollTop)
+    const before = await scrollTop()
+    expect(before).toBeGreaterThan(200)
+
+    await picture.hover()
+    const handle = page.locator('.mu-transformer .right')
+    await expect(handle).toBeVisible()
+    const box = (await handle.boundingBox())!
+    const width = (await picture.boundingBox())!.width
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 80, y, { steps: 5 })
+    await page.mouse.up()
+
+    await expect(picture).toHaveAttribute('width', String(Math.floor(width + 80)))
+    expect(Math.abs(await scrollTop() - before)).toBeLessThan(100)
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(`width="${Math.floor(width + 80)}"`)
+  } finally {
+    await app.close()
+  }
+})
+
 test('aligns mixed pictures at the top and resizes a linked picture on hover alone', async() => {
   const filePath = test.info().outputPath('pictures.md')
   writeFileSync(test.info().outputPath('leaf.png'), Buffer.from(png, 'base64'))

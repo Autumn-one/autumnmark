@@ -238,7 +238,7 @@ import { MoreFilled, Plus, RefreshLeft, Top } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { AiModelProfile } from '@shared/aiModel'
 import {
-  maxDocumentChatPromptLength, type DocumentChat,
+  chatDocumentTarget, maxDocumentChatPromptLength, type DocumentChat,
   type DocumentChatDocument, type DocumentChatEffects, type DocumentChatMarkdownEffect, type DocumentChatProposal,
   type DocumentChatSummary, type DocumentChatTarget, type DocumentChatThemeEffect, type DocumentChatTurn
 } from '@shared/documentChat'
@@ -246,6 +246,7 @@ import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
 import { reverseTextChange, textChanges } from '@shared/reversibleText'
 import { isDrawingPath } from '@shared/drawing'
 import type { LocalTheme } from '@shared/localTheme'
+import type { IFileState } from '@shared/types/files'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import MediaViewer from '@/components/mediaViewer/index.vue'
@@ -290,10 +291,20 @@ const turnError: Record<NonNullable<DocumentChatTurn['error']>, string> = {
   cancelled: 'studio.stopped'
 }
 
-const editableTab = computed(() => {
-  const tab = editor.currentFile
-  return tab && !tab.readOnly && !tab.modeChanging && !tab.diskConflict && !isDrawingPath(tab.pathname || tab.filename) ? tab : undefined
-})
+function isEditableTab(tab: IFileState | null | undefined): tab is IFileState {
+  return !!tab && !tab.readOnly && !tab.modeChanging && !tab.diskConflict && !isDrawingPath(tab.pathname || tab.filename)
+}
+
+function sameTarget(a: DocumentChatTarget, b: DocumentChatTarget): boolean {
+  return a.id === b.id || (!!a.pathname && !!b.pathname && window.fileUtils.isSamePathSync(a.pathname, b.pathname))
+}
+
+function findTab(target: DocumentChatTarget): IFileState | undefined {
+  return editor.tabs.find(file => sameTarget(file, target))
+}
+
+const editableTab = computed(() => isEditableTab(editor.currentFile) ? editor.currentFile : undefined)
+const boundTarget = computed(() => chatDocumentTarget(chat.value))
 const profileId = computed({
   get() {
     const id = modelChoices.get(selectedId.value) ?? chat.value?.profileId
@@ -396,19 +407,62 @@ function composerEnter(event: KeyboardEvent): void {
   if (!event.repeat) void send()
 }
 
+async function readTargetDocument(target: DocumentChatTarget): Promise<DocumentChatDocument | undefined> {
+  const tab = findTab(target)
+  if (!tab) {
+    if (!target.pathname) return
+    try {
+      const { markdown } = await ipc.invoke('mt::media::read-document', target.pathname, preferences.autoGuessEncoding)
+      return { id: target.id, filename: target.filename, pathname: target.pathname, markdown }
+    } catch {
+      return
+    }
+  }
+  if (!isEditableTab(tab)) return
+  const previous = editor.currentFile
+  if (previous?.id !== tab.id) {
+    editor.UPDATE_CURRENT_FILE(tab)
+    await nextTick()
+  }
+  try {
+    const markdown = props.readMarkdown(tab.id)
+    if (markdown === undefined) return
+    return { id: tab.id, filename: tab.filename, pathname: tab.pathname, markdown }
+  } finally {
+    if (previous && previous.id !== tab.id && editor.currentFile?.id === tab.id && editor.tabs.some(file => file.id === previous.id)) {
+      editor.UPDATE_CURRENT_FILE(previous)
+      await nextTick()
+    }
+  }
+}
+
 async function send(): Promise<void> {
   if (!canSend.value) return
   error.value = ''
   const prompt = draft.value.trim()
   const model = profileId.value
-  const tab = editableTab.value
-  const documentId = editor.currentFile?.id
+  const initialId = selectedId.value
+  const locked = initialId ? boundTarget.value : undefined
   let document: DocumentChatDocument | undefined
-  if (tab) {
-    const { id, filename, pathname } = tab
-    const markdown = props.readMarkdown(id)
-    if (markdown !== undefined) {
-      document = { id, filename, pathname, markdown }
+  let documentId: string | undefined
+  if (locked) {
+    sending.add(initialId)
+    try {
+      document = await readTargetDocument(locked)
+    } finally {
+      sending.delete(initialId)
+    }
+    if (selectedId.value !== initialId) return
+    documentId = editor.currentFile && sameTarget(locked, editor.currentFile) ? editor.currentFile.id : undefined
+  } else {
+    const tab = editableTab.value
+    documentId = editor.currentFile?.id
+    if (tab) {
+      const { id, filename, pathname } = tab
+      const markdown = props.readMarkdown(id)
+      if (markdown !== undefined) {
+        document = { id, filename, pathname, markdown }
+      }
     }
   }
 
@@ -416,7 +470,7 @@ async function send(): Promise<void> {
   const id = selectedId.value || await newChat()
   if (!id) return
   if (firstMessage) prompts.delete('')
-  if (documentId !== editor.currentFile?.id || (document && !matchesTarget(document))) {
+  if (!locked && (documentId !== editor.currentFile?.id || (document && !matchesTarget(document)))) {
     prompts.set(id, prompt)
     error.value = 'documentChat.changed'
     return
@@ -429,15 +483,19 @@ async function send(): Promise<void> {
       chatId: id, profileId: model, prompt, document, previewDocumentId: documentId, theme: preview?.getContext()
     })
     await applyReply(id, turn, preview, model, document?.markdown)
-    if (turn.capture && selectedId.value === id && documentId === editor.currentFile?.id) {
+    if (turn.capture && selectedId.value === id && documentId && documentId === editor.currentFile?.id) {
       await nextTick()
       await ipc.invoke('mt::document-chat::capture', id, turn.id).catch(() => {
         if (selectedId.value === id) error.value = 'ai.previewFailed'
       })
     }
-  } catch {
+  } catch (reason) {
     if (!prompts.has(id)) prompts.set(id, prompt)
-    if (selectedId.value === id) error.value = 'documentChat.sendFailed'
+    if (selectedId.value === id) {
+      error.value = reason instanceof Error && reason.message.includes('documentTargetMismatch')
+        ? 'documentChat.changed'
+        : 'documentChat.sendFailed'
+    }
   } finally {
     sending.delete(id)
   }
@@ -456,7 +514,7 @@ async function markdownHash(text: string): Promise<string> {
 }
 
 async function changeDocument(target: DocumentChatTarget, transform: (markdown: string) => Promise<string>): Promise<DocumentChatMarkdownEffect> {
-  const tab = editor.tabs.find(file => file.id === target.id || (!!target.pathname && window.fileUtils.isSamePathSync(file.pathname, target.pathname)))
+  const tab = findTab(target)
   if (!tab) {
     if (!target.pathname) throw new Error('Document unavailable')
     const encoding = preferences.autoGuessEncoding

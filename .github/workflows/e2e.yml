@@ -2,7 +2,7 @@ name: E2E Test
 
 on:
   push:
-    branches: [hotfix/v0.24.60]
+    branches: [hotfix/v0.24.61]
   workflow_dispatch:
     inputs:
       platform:
@@ -40,8 +40,8 @@ jobs:
       - name: Verify desktop code and unit tests
         run: pnpm check && pnpm test:unit
 
-      - name: Test Muya syntax highlighting and export fonts
-        run: pnpm -C packages/muya test src/utils/prism/__tests__ src/utils/__tests__/embedExportFonts.spec.ts src/block/extra/math/__tests__/mhchem.spec.ts
+      - name: Test Muya syntax highlighting, export fonts, and image resize scroll
+        run: pnpm -C packages/muya test src/utils/prism/__tests__ src/utils/__tests__/embedExportFonts.spec.ts src/block/extra/math/__tests__/mhchem.spec.ts src/ui/imageResizeBar/__tests__/embeddedImageResizeScroll.spec.ts
 
   e2e:
     runs-on: ${{ (github.event_name == 'push' || inputs.platform == 'windows') && 'windows-latest' || 'ubuntu-24.04' }}
@@ -83,7 +83,7 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test test/e2e/issue-2395-preview-tabs.spec.ts test/e2e/sidebar-focus-model.spec.ts test/e2e/heading-fold-tab-state-6054.spec.ts test/e2e/tab-switch-cursor.spec.ts test/e2e/large-file-tabs.spec.ts test/e2e/source-mode-flush.spec.ts test/e2e/sidebar-auto-reveal-528.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/embedded-images.spec.ts test/e2e/document-chat.spec.ts; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

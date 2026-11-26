@@ -3,7 +3,7 @@ import path from 'node:path'
 import { ipcMain } from 'electron'
 import { isSamePathSync } from 'common/filesystem/paths'
 import {
-  maxDocumentChatPromptLength,
+  chatDocumentTarget, maxDocumentChatPromptLength,
   type DocumentChat, type DocumentChatEffects, type DocumentChatHistoryEntry, type DocumentChatRequest,
   type DocumentChatTarget, type DocumentChatTurn
 } from '@shared/documentChat'
@@ -23,11 +23,22 @@ interface Archive {
   chats: DocumentChat[]
 }
 
+function isDocumentTarget(value: unknown): value is DocumentChatTarget {
+  if (!value || typeof value !== 'object') return false
+  const target = value as Partial<DocumentChatTarget>
+  return typeof target.id === 'string' && typeof target.pathname === 'string' && typeof target.filename === 'string'
+}
+
+function sameDocumentTarget(a: DocumentChatTarget, b: DocumentChatTarget): boolean {
+  return a.id === b.id || (!!a.pathname && !!b.pathname && isSamePathSync(a.pathname, b.pathname))
+}
+
 function parseArchive(value: unknown): Archive {
   const archive = value as Partial<Archive> | null
   if (archive?.version !== 1) throw new UnsupportedStateVersion('Unsupported chat history version')
   if (!Array.isArray(archive.chats) || archive.chats.some(chat => !chat ||
     typeof chat.id !== 'string' || typeof chat.title !== 'string' || !Number.isFinite(chat.updatedAt) ||
+    (chat.target !== undefined && !isDocumentTarget(chat.target)) ||
     !Array.isArray(chat.turns) || chat.turns.some(turn => !turn || typeof turn.id !== 'string' || typeof turn.prompt !== 'string'))) {
     throw new Error('Invalid chat history')
   }
@@ -137,6 +148,10 @@ export function registerDocumentChat(app: Accessor, savedSettings: (id: string) 
     try {
       const chat = await update(chatId, current => {
         if (!current) throw new Error('invalidRequest')
+        const bound = chatDocumentTarget(current)
+        if (bound && document && !sameDocumentTarget(bound, document)) {
+          throw new Error('documentTargetMismatch')
+        }
         return { ...current, profileId, title: current.title || prompt.split(/\r?\n/, 1)[0].slice(0, 80),
           updatedAt: Date.now(), turns: [...current.turns, turn] }
       })
@@ -152,12 +167,23 @@ export function registerDocumentChat(app: Accessor, savedSettings: (id: string) 
         if (controller.signal.aborted) reply = { error: 'cancelled' }
         else reply = { error: error instanceof Error && error.message === 'configureFirst' ? 'configureFirst' : 'requestFailed' }
       }
-      const { capturePreview, ...answer } = reply
+      const { capturePreview, sawDocument, ...answer } = reply
       const completed: DocumentChatTurn = {
         ...turn, ...answer, ...(capturePreview && previewDocumentId ? { capture: { documentId: previewDocumentId } } : {})
       }
-      await update(chatId, current => ({ ...(current ?? chat),
-        turns: (current ?? chat).turns.map(item => item.id === turn.id ? completed : item) }))
+      const documentTarget: DocumentChatTarget | undefined = document
+        ? { id: document.id, pathname: document.pathname, filename: document.filename }
+        : undefined
+      await update(chatId, current => {
+        const base = current ?? chat
+        const bound = chatDocumentTarget(base)
+        let target = base.target
+        if (documentTarget) {
+          if (bound && sameDocumentTarget(bound, documentTarget)) target = documentTarget
+          else if (!bound && (sawDocument || answer.proposal)) target = documentTarget
+        }
+        return { ...base, target, turns: base.turns.map(item => item.id === turn.id ? completed : item) }
+      })
       return completed
     } finally {
       inFlight.delete(chatId)
@@ -212,7 +238,12 @@ export function registerDocumentChat(app: Accessor, savedSettings: (id: string) 
       if (inFlight.has(id)) throw new Error('chatBusy')
       if (!turnId) return null
       const turns = chat.turns.filter(turn => turn.id !== turnId)
-      return { ...chat, title: turns[0]?.prompt.split(/\r?\n/, 1)[0].slice(0, 80) ?? '', turns }
+      return {
+        ...chat,
+        target: turns.length ? chat.target : undefined,
+        title: turns[0]?.prompt.split(/\r?\n/, 1)[0].slice(0, 80) ?? '',
+        turns
+      }
     })
     notify()
   })
