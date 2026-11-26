@@ -1307,6 +1307,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "The document changed on disk or the original drawing could not be found. Your drawing edits are still open.",
     "addDocument": "Add Markdown Document",
     "addDocumentButton": "Add Document",
     "searchDocuments": "Search Markdown documents",

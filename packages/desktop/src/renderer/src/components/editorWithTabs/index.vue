@@ -34,8 +34,10 @@
           <drawing-canvas
             v-if="openedDrawings.has(file.id)"
             v-show="currentDrawing && store.currentFile?.id === file.id"
+            :id="'drawing-workspace-' + file.id"
             :file="drawingEditorTabs.has(file.id) ? undefined : file"
             :session="drawingEditorTabs.get(file.id)"
+            :show-source="drawingEditorTabs.get(file.id)?.embedded"
             :can-insert="!drawingEditorTabs.has(file.id) && canInsertDrawing(file.id)"
             :insert="(path, content) => insertDrawing(file.id, path, content)"
           />

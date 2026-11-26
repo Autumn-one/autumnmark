@@ -1,0 +1,24 @@
+AutumnMark · 秋笺 logo v1
+
+Mode: built-in image_gen (generation followed by one refinement)
+Artifact: autumnmark-logo-v1.png
+Concept: autumn leaf + folded writing paper + pen-stroke negative space
+
+Generation prompt
+
+Use case: logo-brand
+Asset type: final standalone logo symbol for AutumnMark (秋笺), a calm, polished desktop Markdown writing editor.
+Primary request: design an original, memorable minimalist logo merging an autumn leaf and a folded sheet of writing paper into ONE coherent geometric silhouette. A broad diagonal negative-space slit should suggest a pen stroke / leaf vein, with a subtly pointed lower-left end that evokes writing. Aim for a sophisticated, welcoming independent desktop software identity.
+Style/medium: expertly constructed flat vector-style brand mark, precise smooth curves balanced with decisive folds, two broad interlocking planes, restrained and timeless, very clean edges.
+Color palette: autumn amber #E8A33D and warm burnt orange #C65D35; flat solid colors, carefully balanced contrast.
+Composition/framing: square 1024x1024 canvas; one large centered standalone symbol with approximately 12% clear margin; strong compact silhouette and substantial shapes that survive reduction to a 32px taskbar icon.
+Scene/backdrop: fully transparent background, with true alpha outside and inside the negative-space slit.
+Text: none. The product name is context only; do not draw lettering.
+Constraints: deliver the usable symbol itself, not a presentation board or mockup. No rounded-square backing tile, no border, no drop shadow, no gradients, no 3D, no texture, no hairlines, no detailed leaf veins, no maple leaf, no decorative extra objects, no watermark. Do not reproduce the blue MarkText logo. The paper and leaf must read as a single designed emblem rather than separate overlapping clip art.
+
+Refinement prompt
+
+Use case: precise-object-edit
+Edit target: the provided AutumnMark autumn leaf / folded paper logo.
+Keep the existing exact silhouette, fold geometry, two-color palette, orientation, proportions, and composition.
+Change ONLY rendering cleanliness: reconstruct it as impeccable flat vector-style artwork with uniform solid amber #E8A33D and solid burnt orange #C65D35 fills, smooth clean antialiased contours, no texture or shading. The entire diagonal gap and all space outside the emblem must be genuinely transparent and perfectly clean. Remove every yellow/red speck, fringe, isolated pixel and background residue, particularly in the diagonal cut and around the bottom/left perimeter. No gradients, noise, shadows, glow, lettering, border, or background tile. Maintain the same design, not a new concept. Deliver a standalone transparent PNG logo.

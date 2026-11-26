@@ -125,8 +125,8 @@ import { drawingDestination, isDrawingPath } from '@/util/drawingPaths'
 import notice from '@/services/notification'
 import { blankDrawing } from '@shared/drawing'
 import type { IFileState } from '@shared/types/files'
-import { createDocumentState } from '@/store/help'
-import { drawingDialog, drawingEditorTabs, type DrawingEditor } from '@/services/drawingEditors'
+import { createDocumentState, getOptionsFromState } from '@/store/help'
+import { drawingDialog, drawingEditorTabs, preserveDrawingFocus, type DrawingEditor } from '@/services/drawingEditors'
 
 const DrawingCanvas = defineAsyncComponent(() => import('@/components/drawingCanvas.vue'))
 
@@ -171,8 +171,10 @@ function editDrawingNote(note: IFileState, prepare: Parameters<EditMarkdown>[1])
   if (!editorStore.tabs.some(tab => tab.id === note.id) || note.readOnly || note.modeChanging || note.diskConflict)
     throw new Error(t('drawing.documentUnavailable'))
   if (currentFile.value?.id === note.id) {
-    editMarkdown(note.id, prepare, { preventScroll: true })
-    editorStore.flushActiveEditor()
+    preserveDrawingFocus(() => {
+      editMarkdown(note.id, prepare, { preventScroll: true })
+      editorStore.flushActiveEditor()
+    })
     return
   }
   const markdown = applyMarkdownEdits(note.markdown, prepare(note.markdown))
@@ -208,6 +210,46 @@ const embeddedMarkup = (content: string) => inlineDrawingToMarkdown(content, t('
 const comparableScene = (source: string) => source.split('\n').filter(line => line.trim()).join('\n').trim()
 const noteMarkdown = (note: IFileState) => readMarkdown(note.id) ?? note.markdown
 
+interface EmbeddedDrawingLocation {
+  markdown: string
+  source: string
+  index?: number
+}
+
+function drawingMarkupLines(markdown: string, { start, end }: { start: number; end: number }) {
+  const nextLine = markdown.indexOf('\n', end)
+  return markdown.slice(markdown.lastIndexOf('\n', start - 1) + 1, nextLine < 0 ? markdown.length : nextLine)
+}
+
+function findDrawingTarget(markdown: string, drawings: ReturnType<typeof findEmbeddedDrawings>, location: EmbeddedDrawingLocation) {
+  const expected = comparableScene(location.source)
+  const matchesSource = ({ source }: (typeof drawings)[number]) => source !== undefined && comparableScene(source) === expected
+  if (markdown.trimEnd() === location.markdown.trimEnd() && location.index !== undefined) {
+    const target = drawings[location.index]
+    if (target && matchesSource(target)) return target
+  }
+  const matches = drawings.filter(matchesSource)
+  if (!matches.length) return
+  const previous = findEmbeddedDrawings(location.markdown)
+  const original = location.index === undefined ? undefined : previous[location.index]
+  const previousMatches = previous.filter(matchesSource)
+  if (matches.length !== previousMatches.length) return
+  if (matches.length === 1) return matches[0]
+  if (!original || !matchesSource(original)) return
+
+  // An unchanged prefix or suffix can locate a repeated scene without relying on its ordinal.
+  const anchored = matches.filter(({ markup }) =>
+    markdown.slice(0, markup.end) === location.markdown.slice(0, original.markup.end) ||
+    markdown.slice(markup.start) === location.markdown.slice(original.markup.start))
+  if (anchored.length === 1) return anchored[0]
+  if (anchored.length > 1) return
+
+  const lines = drawingMarkupLines(location.markdown, original.markup)
+  if (previousMatches.some(drawing => drawing !== original && drawingMarkupLines(location.markdown, drawing.markup) === lines)) return
+  const inContext = matches.filter(drawing => drawingMarkupLines(markdown, drawing.markup) === lines)
+  if (inContext.length === 1) return inContext[0]
+}
+
 async function saveDrawingNote(note: IFileState, trace?: TDrawingInsertTrace) {
   if (!note.pathname) {
     const checkpoint = await getSessionActions()?.checkpoint()
@@ -224,31 +266,59 @@ async function saveDrawingNote(note: IFileState, trace?: TDrawingInsertTrace) {
 }
 
 function embeddedDrawingCommit(note: IFileState, source: string, drawing: DrawingEditor, trace?: TDrawingInsertTrace) {
-  let previousMarkdown = noteMarkdown(note)
+  let location: EmbeddedDrawingLocation = { markdown: noteMarkdown(note), source, index: drawing.embeddedIndex }
+  let staged: EmbeddedDrawingLocation | undefined
   return async(content: string) => {
-    if (source !== content || noteMarkdown(note) !== previousMarkdown) {
-      editDrawingNote(note, markdown => {
-        const drawings = findEmbeddedDrawings(markdown)
-        const expected = comparableScene(source)
-        const matches = drawings.filter(({ source }) => source !== undefined && comparableScene(source) === expected)
-        const atIndex = drawing.embeddedIndex === undefined ? undefined : drawings[drawing.embeddedIndex]
-        const target = markdown.trimEnd() === previousMarkdown.trimEnd() && atIndex && matches.includes(atIndex)
-          ? atIndex
-          : matches.length === 1 ? matches[0] : undefined
-        if (!target) throw new Error(t('drawing.documentUnavailable'))
-        drawing.embeddedIndex = drawings.indexOf(target)
-        return [{
-          start: target.start,
-          end: target.end,
-          text: target.kind === 'inline' ? encodeInlineDrawing(content)
-            : content.split('\n').map(line => target.prefix + line).join('\n') + '\n'
-        }]
-      })
-      source = content
-      previousMarkdown = noteMarkdown(note)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const before = noteMarkdown(note)
+      const pathname = note.pathname
+      const wasSaved = note.isSaved
+      const format = JSON.stringify(getOptionsFromState(note))
+      const expected = staged?.markdown === before ? staged : location
+      let index = expected.index
+      if (expected.source !== content || before !== expected.markdown) {
+        editDrawingNote(note, markdown => {
+          const drawings = findEmbeddedDrawings(markdown)
+          const target = findDrawingTarget(markdown, drawings, expected) ??
+            (staged && staged !== expected ? findDrawingTarget(markdown, drawings, staged) : undefined)
+          if (!target) throw new Error(t('drawing.embeddedChanged'))
+          index = drawings.indexOf(target)
+          return [{
+            start: target.start,
+            end: target.end,
+            text: target.kind === 'inline' ? encodeInlineDrawing(content)
+              : content.split('\n').map(line => target.prefix + line).join('\n') + '\n'
+          }]
+        })
+      }
+      const next = { markdown: noteMarkdown(note), source: content, index }
+      staged = next
+      if (!pathname || drawing.draft) {
+        await saveDrawingNote(note, drawing.draft ? trace : undefined)
+      } else {
+        const result = await getSessionActions()?.save(note.id, false, true)
+        if (result?.status === 'disk-changed') {
+          // Only the drawing's provisional edit may be replaced by a silent reload.
+          if (result.change && result.change.pathname === note.pathname && editorStore.tabs.includes(note)) {
+            if (wasSaved && !note.readOnly && !note.modeChanging && noteMarkdown(note) === next.markdown &&
+                JSON.stringify(getOptionsFromState(note)) === format) {
+              editorStore.loadChange(result.change)
+              staged = undefined
+              if (attempt === 0) continue
+            } else if (result.change.data.rawBaseline?.rawSha256 !== note.acceptedDiskSha256) {
+              editorStore.notifyDiskConflict(note, result.change)
+            }
+          }
+          throw new Error(t('drawing.embeddedChanged'))
+        }
+        if (result?.status !== 'saved') throw new Error(t('drawing.documentUnavailable'))
+      }
+      location = next
+      staged = undefined
+      drawing.embeddedIndex = index
+      return true
     }
-    await saveDrawingNote(note, drawing.draft ? trace : undefined)
-    return true
+    return false
   }
 }
 
@@ -344,7 +414,7 @@ async function openEmbeddedDrawing(request: unknown) {
       source: savedSource,
       noteId: note.id,
       embedded: true,
-      embeddedIndex: index,
+      embeddedIndex: closed?.embeddedIndex ?? index,
       draft: false,
       get readOnly() { return note.readOnly },
       commit: content => commit(content)

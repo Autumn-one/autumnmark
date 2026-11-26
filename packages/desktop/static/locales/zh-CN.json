@@ -1307,6 +1307,7 @@
     "invalidName": "请输入有效的绘图文件名。",
     "renameFailed": "无法重命名绘图。{reason}",
     "documentUnavailable": "无法访问原文档。",
+    "embeddedChanged": "文档已被外部修改，或无法定位原来的绘图。你的绘图改动仍保留在编辑器中。",
     "addDocument": "添加 Markdown 文档",
     "addDocumentButton": "添加文档",
     "searchDocuments": "搜索 Markdown 文档",

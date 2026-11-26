@@ -1,3 +1,10 @@
+## AutumnMark 0.24.63
+
+- Embedded drawings save against the latest Markdown when another editor changes the surrounding text. Conflicting drawing edits stay open and can be moved into a tab.
+- The drawing canvas keeps keyboard focus during saves and supports undo and redo through shortcuts and the Edit menu.
+- Refined the Violet Diary theme and expanded theme-preview examples and documentation.
+- Added branding design assets and documentation for the smaller desktop packages.
+
 ## AutumnMark 0.24.62
 
 - Inserting or editing an embedded drawing keeps the Markdown document at its current scroll position.

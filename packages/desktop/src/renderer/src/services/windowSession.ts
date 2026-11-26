@@ -143,7 +143,7 @@ class WindowSession {
       captureView: () => {
         void this._captureActiveView().catch((error) => this._failure(error))
       },
-      save: (id, saveAs = false) => this._save(id, saveAs),
+      save: (id, saveAs = false, preserveDiskChanges = false) => this._save(id, saveAs, preserveDiskChanges),
       create: async(markdown, selected, title = '') => {
         if (!this._context) return
         const result = await ipc.invoke('mt::state::register-untitled', {
@@ -547,6 +547,8 @@ class WindowSession {
     file.isPendingCreation = false
     file.diskConflict = false
     file.diskMissing = false
+    const disk = result.document.content
+    if (disk.kind === 'disk' && disk.baseline.exists) file.acceptedDiskSha256 = disk.baseline.rawSha256
     const baseline = { markdown: result.savedMarkdown, format: JSON.stringify(result.savedFormat) }
     file.isSaved =
       documentVideos(file.id).expand(file.markdown) === baseline.markdown && JSON.stringify(getOptionsFromState(file)) === baseline.format
@@ -554,7 +556,7 @@ class WindowSession {
     this._schedule()
   }
 
-  private async _save(id: string, saveAs = false): Promise<SaveDocumentResult> {
+  private async _save(id: string, saveAs = false, preserveDiskChanges = false): Promise<SaveDocumentResult> {
     const drawing = drawingEditorTabs.get(id)
     if (drawing) {
       const saved = await drawing.save?.()
@@ -572,7 +574,8 @@ class WindowSession {
       'mt::state::save-document',
       this._context.contextToken,
       id,
-      saveAs
+      saveAs,
+      preserveDiskChanges
     )
     if (result.status !== 'saved') return result
     this._saved(result)

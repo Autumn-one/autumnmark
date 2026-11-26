@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Locator } from '@playwright/test'
 import type CodeMirror from 'codemirror'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -243,6 +244,119 @@ test('saves only the clicked inline drawing among identical scenes', async() => 
     await sendIpcToRenderer(app, 'mt::show-export-dialog', 'styledHtml')
     await page.locator('.print-settings-dialog .button-primary').click()
     await expect.poll(() => readFile(htmlPath, 'utf8').catch(() => '')).toMatch(/<p>Before <img[^>]+src="data:image\/png;base64,[^>]+> After<\/p>/)
+  } finally {
+    await app.close()
+  }
+})
+
+test('rebases an open embedded drawing onto external document edits', async() => {
+  const markdown = `${blankInlineDrawing}\n\n> Before ${blankInlineDrawing} After\n`
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { language: 'en', autoSave: false }
+  })
+  try {
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async() => ({ response: 1, checkboxChecked: false })
+    })
+    await page.locator('.mu-editor .mu-inline-drawing').nth(1).getByRole('img').click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await popup.getByRole('tab', { name: 'Source' }).click()
+    const source = popup.getByRole('textbox', { name: 'Excalidraw JSON' })
+    const scene = JSON.parse(await source.inputValue())
+    scene.appState.viewBackgroundColor = '#ffeedd'
+    await source.fill(JSON.stringify(scene))
+    const apply = popup.getByRole('button', { name: 'Apply' })
+    await expect(apply).toBeEnabled()
+
+    await writeFile(filePath, `Changed by another editor\n\n${markdown}\nMore text from another editor\n`)
+    await apply.click()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[1]?.appState.viewBackgroundColor).toBe('#ffeedd')
+    const saved = await readFile(filePath, 'utf8')
+    expect(saved).toMatch(/^Changed by another editor\r?\n/)
+    expect(saved).toContain('More text from another editor')
+    expect(inlineScenes(saved)[0]).toEqual(JSON.parse(blankDrawing))
+    await popup.locator('.el-dialog__headerbtn').click()
+    await expect(popup).toBeHidden()
+    await expect(page.locator('.editor-notifications')).toBeHidden()
+  } finally {
+    await app.close()
+  }
+})
+
+test('keeps an open drawing edit when the original drawing changes on disk', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`${blankInlineDrawing}\n`, {
+    preferences: { language: 'en', autoSave: false }
+  })
+  try {
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async() => ({ response: 1, checkboxChecked: false })
+    })
+    await page.locator('.mu-editor .mu-inline-drawing').getByRole('img').click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await popup.getByRole('tab', { name: 'Source' }).click()
+    const source = popup.getByRole('textbox', { name: 'Excalidraw JSON' })
+    const scene = JSON.parse(await source.inputValue())
+    scene.appState.viewBackgroundColor = '#ffeedd'
+    await source.fill(JSON.stringify(scene))
+    const apply = popup.getByRole('button', { name: 'Apply' })
+    await expect(apply).toBeEnabled()
+
+    const external = 'Drawing removed in another editor\n'
+    await writeFile(filePath, external)
+    await apply.click()
+    await expect(popup.getByRole('alert')).toContainText('Your drawing edits are still open.')
+    await expect(source).toHaveValue(/#ffeedd/)
+    expect(await readFile(filePath, 'utf8')).toBe(external)
+    await popup.getByRole('tab', { name: 'Canvas' }).click()
+    await popup.getByRole('button', { name: 'Open in Tab' }).click()
+    await expect(popup).toBeHidden()
+    const drawing = page.locator('.drawing-workspace:visible')
+    await drawing.getByRole('tab', { name: 'Source' }).click()
+    await expect(drawing.getByRole('textbox', { name: 'Excalidraw JSON' })).toHaveValue(/#ffeedd/)
+  } finally {
+    await app.close()
+  }
+})
+
+test('undoes and redoes canvas edits with the keyboard and the edit menu', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`${blankInlineDrawing}\n`, {
+    preferences: { language: 'en', autoSave: false }
+  })
+  try {
+    await page.locator('.mu-editor .mu-inline-drawing').getByRole('img').click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    const drawRectangle = async(workspace: Locator) => {
+      await workspace.locator('label').filter({ has: page.getByTestId('toolbar-rectangle') }).click()
+      const canvas = await workspace.locator('canvas.interactive').boundingBox()
+      if (!canvas) throw new Error('Missing drawing canvas bounds')
+      const x = canvas.x + canvas.width / 2
+      const y = canvas.y + canvas.height / 2
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + 80, y + 50, { steps: 5 })
+      await page.mouse.up()
+    }
+    await drawRectangle(popup)
+    const undo = popup.getByTestId('button-undo')
+    const elementCount = async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length
+    await expect(undo).toBeEnabled()
+    await expect.poll(elementCount).toBe(1)
+
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect.poll(elementCount).toBe(0)
+    await page.keyboard.press('ControlOrMeta+Shift+z')
+    await expect.poll(elementCount).toBe(1)
+
+    await popup.getByRole('button', { name: 'Open in Tab' }).click()
+    await expect(popup).toBeHidden()
+    const drawing = page.locator('.drawing-workspace:visible')
+    await drawRectangle(drawing)
+    await expect(drawing.getByTestId('button-undo')).toBeEnabled()
+    await expect.poll(elementCount).toBe(2)
+    await clickMenuById(app, 'undoMenuItem')
+    await expect.poll(elementCount).toBe(1)
+    await clickMenuById(app, 'redoMenuItem')
+    await expect.poll(elementCount).toBe(2)
   } finally {
     await app.close()
   }

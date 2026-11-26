@@ -1310,6 +1310,7 @@
     "invalidName": "請輸入有效的繪圖檔名。",
     "renameFailed": "無法重新命名繪圖。{reason}",
     "documentUnavailable": "無法存取原始文件。",
+    "embeddedChanged": "文件已被外部修改，或無法定位原來的繪圖。你的繪圖變更仍保留在編輯器中。",
     "addDocument": "新增 Markdown 文件",
     "addDocumentButton": "新增文件",
     "searchDocuments": "搜尋 Markdown 文件",

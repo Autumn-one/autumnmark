@@ -1060,13 +1060,15 @@ export class SessionHost {
     windowId: string,
     documentId: string,
     saveAs = false,
-    allowReadOnly = false
+    allowReadOnly = false,
+    preserveDiskChanges = false
   ): Promise<ManagedSaveResult> {
     const document = this._owner()
       .getWindow(windowId)
       ?.documents.find((document) => document.id === documentId)
     if (!document || (document.readOnly && !allowReadOnly)) return { status: 'failed' }
     let previousPath = ''
+    let conflictPath = ''
     let savedMarkdown = ''
     let savedFormat = document.saveFormat
     const sender = this._native(windowId).webContents
@@ -1095,12 +1097,16 @@ export class SessionHost {
           const current = await this._diskBaseline(destination)
           const baseline = capture.baseline
           const changed = baseline?.exists
-            ? current.exists &&
-              (current.rawSha256 !== baseline.rawSha256 ||
-                (resource.kind === 'file' &&
-                  createFileLocation(destination).key !== resource.location.key))
+            ? current.exists
+              ? current.rawSha256 !== baseline.rawSha256 ||
+                (resource.kind === 'file' && createFileLocation(destination).key !== resource.location.key)
+              : preserveDiskChanges
             : current.exists
           if (changed) {
+            if (preserveDiskChanges) {
+              conflictPath = destination
+              return null
+            }
             const choice = await dialog.showMessageBox(native, {
               type: 'warning',
               buttons: [t('dialog.replace'), t('dialog.cancel')],
@@ -1131,7 +1137,19 @@ export class SessionHost {
         }
         return { snapshot, markdown: capture.markdown }
       })
-      if (result.status === 'cancelled') return { status: 'canceled' }
+      if (result.status === 'cancelled') {
+        if (!conflictPath) return { status: 'canceled' }
+        const preferences = this._accessor.preferences
+        const { autoGuessEncoding, trimTrailingNewline, autoNormalizeLineEndings } = preferences.getAll()
+        const data = await loadMarkdownFile(conflictPath, preferences.getPreferredEol(), autoGuessEncoding,
+          trimTrailingNewline, autoNormalizeLineEndings).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error
+        })
+        if (!data) return { status: 'disk-changed' }
+        await this.observeFile(windowId, { type: 'change', change: { pathname: conflictPath, data } })
+        const change = { pathname: conflictPath, data: { ...data, encoding: { ...data.encoding, isBom: !!data.encoding.isBom } } }
+        return { status: 'disk-changed', change }
+      }
       if (result.status !== 'persisted') {
         this.report(new Error('Recovery metadata unavailable after save'), windowId)
         if (result.reason !== 'storage-unavailable') return { status: 'failed' }
@@ -1575,10 +1593,10 @@ export class SessionHost {
     )
     ipcMain.handle(
       'mt::state::save-document',
-      async(event, token: string, id: string, saveAs: boolean) => {
-        const editor = editorFor(event.sender)
-        if (!this._contextMatches(editor.sessionStateId!, token)) return { status: 'failed' }
-        return this.saveDocument(editor.sessionStateId!, id, saveAs)
+      async(event, token: string, id: string, saveAs: boolean, preserveDiskChanges?: boolean) => {
+        const windowId = editorFor(event.sender).sessionStateId
+        if (!windowId || !this._contextMatches(windowId, token)) return { status: 'failed' }
+        return this.saveDocument(windowId, id, saveAs, false, preserveDiskChanges === true)
       }
     )
     ipcMain.handle('mt::state::close-documents', (event, token: string, ids: string[]) => {

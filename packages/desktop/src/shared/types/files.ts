@@ -97,6 +97,20 @@ export interface FileChangeDetail {
   [key: string]: unknown
 }
 
+export interface FileChangePayload {
+  pathname: string
+  data: {
+    isMixedLineEndings?: boolean
+    lineEnding?: LineEnding | string
+    adjustLineEndingOnSave?: boolean
+    trimTrailingNewline?: number
+    encoding?: IFileState['encoding']
+    markdown: string
+    filename: string
+    rawBaseline?: { exists: boolean; rawSha256?: string }
+  }
+}
+
 export interface TabOptions {
   readOnly?: boolean
   selected?: boolean

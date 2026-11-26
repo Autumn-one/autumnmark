@@ -38,19 +38,32 @@ test.describe('Issue #3652 — reloading a file changed on disk', () => {
   })
 
   test('a tab with unsaved edits asks before discarding them', async() => {
-    const { app, page, filePath } = await launchWithMarkdown('from marktext\n')
+    const { app, page, filePath } = await launchWithMarkdown('from marktext\n', {
+      preferences: { language: 'zh-CN' }
+    })
     await page.waitForTimeout(500)
 
     await typeIntoEditor(page, ' edited here')
     await expect.poll(() => isDirty(page), { timeout: 8000 }).toBe(true)
 
-    // The banner text is localized, so match on the filename it interpolates.
     fs.writeFileSync(filePath, 'from another editor\n', 'utf-8')
     await expect.poll(() => reloadBannerText(page), { timeout: 8000 }).toContain(
       path.basename(filePath)
     )
 
     expect(await editorText(page)).toContain('edited here')
+
+    const confirm = page.locator('.editor-notifications').getByRole('button', { name: '确定' })
+    await expect(confirm).toBeVisible()
+    const labelLines = await confirm.evaluate(button => {
+      const range = document.createRange()
+      range.selectNodeContents(button)
+      return range.getClientRects().length
+    })
+    expect(labelLines).toBe(1)
+
+    await confirm.click()
+    await expect.poll(() => editorText(page)).toContain('from another editor')
 
     await app.close()
   })

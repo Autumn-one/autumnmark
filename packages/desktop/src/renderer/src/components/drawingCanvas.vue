@@ -2,6 +2,7 @@
   <div
     class="drawing-workspace"
     @keydown.capture="handleShortcut"
+    @drawing-history="handleHistoryCommand"
   >
     <div
       class="drawing-toolbar"
@@ -260,6 +261,7 @@ import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, languages
 import type { FileId } from '@excalidraw/excalidraw/element/types'
 import type { BinaryFileData, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { createElement } from 'react'
+import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch } from 'vue'
 import { ArrowDown, TopRight } from '@element-plus/icons-vue'
@@ -311,7 +313,8 @@ const card = shallowRef<{ path: string; document: Awaited<ReturnType<typeof read
 const heading = ref('')
 const busy = ref(false)
 const canEdit = computed(() => ready.value && !busy.value && !readOnly.value)
-const canSave = computed(() => !readOnly.value && (!session?.noteId || session.draft))
+const saveFailed = ref(session?.unsavedSource !== undefined)
+const canSave = computed(() => !readOnly.value && (!session?.noteId || session.draft || saveFailed.value))
 const hasFilenameInput = computed(() => session?.draft && session.nameOnInsert)
 const error = ref('')
 const viewId = useId()
@@ -367,12 +370,12 @@ const language = computed(() => {
 const theme = computed(() => isDarkThemeId(preferences.theme) ? 'dark' : 'light')
 let root: Root | undefined
 let baseline: string | undefined
-let incoming = props.file?.markdown ?? props.session?.source ?? ''
+let incoming = props.file?.markdown ?? session?.unsavedSource ?? session?.source ?? ''
 let disposed = false
 let refreshVersion = 0
 let dirtyTimer: ReturnType<typeof setTimeout> | undefined
+let pendingSourceApply: Promise<void> | undefined
 let pendingSave: Promise<boolean> | undefined
-let saveFailed = false
 let discarded: { transactionId: string; content: string } | undefined
 let cardRequest = 0
 
@@ -384,7 +387,7 @@ function currentScene(): DrawingScene | undefined {
 function readSource() {
   const scene = ready.value && currentScene()
   const content = scene ? serializeDrawing(scene) : undefined
-  return content !== undefined && content !== baseline ? content : session?.source ?? ''
+  return content !== undefined && content !== baseline ? content : session?.unsavedSource ?? session?.source ?? ''
 }
 
 function resetSource() {
@@ -416,7 +419,11 @@ async function copySource() {
   }
 }
 
-async function applySource() {
+function applySource() {
+  pendingSourceApply ??= applySourceDraft().finally(() => { pendingSourceApply = undefined })
+}
+
+async function applySourceDraft() {
   const current = api.value
   if (!current || !session || readOnly.value || busy.value || !sourceDirty.value) return
   if (readSource() !== sourceBaseline.value) {
@@ -434,11 +441,14 @@ async function applySource() {
       sourceError.value = t('drawing.sourceChanged')
       return
     }
-    current.addFiles(Object.values(scene.files))
-    current.updateScene({
-      elements: scene.elements,
-      appState: { ...current.getAppState(), ...scene.appState, selectedElementIds: {} },
-      captureUpdate: CaptureUpdateAction.IMMEDIATELY
+    // The save below reads React's scene and app state in the same turn.
+    flushSync(() => {
+      current.addFiles(Object.values(scene.files))
+      current.updateScene({
+        elements: scene.elements,
+        appState: { ...current.getAppState(), ...scene.appState, selectedElementIds: {} },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY
+      })
     })
     ready.value = true
   } catch (reason) {
@@ -447,8 +457,8 @@ async function applySource() {
   } finally {
     busy.value = false
   }
-  if (!session.draft) await saveSession(false)
   sourceDraft.value = sourceBaseline.value = readSource()
+  if (!session.draft) await saveSession(false)
 }
 
 async function confirmSourceDiscard() {
@@ -602,15 +612,12 @@ async function refreshCards() {
 
 async function saveSession(explicit: boolean): Promise<boolean> {
   clearTimeout(dirtyTimer)
-  while (pendingSave) {
-    const saved = await pendingSave
-    if (!saved) return false
-  }
+  while (pendingSave) await pendingSave
   const scene = currentScene()
   if (!session || !scene || !ready.value || readOnly.value || disposed) return true
   if (!explicit && session.draft) return true
   const content = serializeDrawing(scene)
-  if (!session.draft && content === baseline && !saveFailed) return true
+  if (!session.draft && content === baseline && !saveFailed.value) return true
   const wasDraft = session.draft
   busy.value = true
   error.value = ''
@@ -619,8 +626,9 @@ async function saveSession(explicit: boolean): Promise<boolean> {
       const saved = await session.commit(content, filename.value)
       if (!saved) return false
       session.source = content
+      session.unsavedSource = undefined
       baseline = content
-      saveFailed = false
+      saveFailed.value = false
       if (wasDraft && session.noteId) {
         const latest = currentScene()
         if (latest && serializeDrawing(latest) !== content) scheduleSessionSave()
@@ -628,7 +636,7 @@ async function saveSession(explicit: boolean): Promise<boolean> {
       }
       return true
     } catch (reason) {
-      saveFailed = true
+      saveFailed.value = true
       error.value = t('drawing.saveFailed', { reason: String(reason) })
       return false
     } finally {
@@ -647,7 +655,7 @@ async function moveToTab() {
   if (!discardSource) return
   if (session.noteId && !session.draft && !readOnly.value) {
     const saved = await saveSession(false)
-    if (!saved) return
+    if (!saved && !session.embedded) return
   }
   const scene = currentScene()
   if (!scene) return
@@ -656,7 +664,8 @@ async function moveToTab() {
     session.dirtyDraft ||= content !== baseline
     session.filename = filename.value
   }
-  session.source = content
+  if (session.noteId && !session.draft && (saveFailed.value || content !== baseline)) session.unsavedSource = content
+  else session.source = content
   try {
     await props.openInTab()
   } catch (reason) {
@@ -700,6 +709,7 @@ async function commitDrawing(action: 'save' | 'insert') {
 
 async function beforeClose(transactionId?: string): Promise<boolean> {
   if (!session || readOnly.value) return true
+  await pendingSourceApply
   if (busy.value && !pendingSave) return false
   const discardSource = await confirmSourceDiscard()
   if (!discardSource) return false
@@ -710,7 +720,7 @@ async function beforeClose(transactionId?: string): Promise<boolean> {
   }
   const scene = currentScene()
   const content = scene && serializeDrawing(scene)
-  if (pending && !session.dirtyDraft && (content === undefined || baseline === undefined || content === baseline)) return true
+  if (pending && !saveFailed.value && !session.dirtyDraft && (content === undefined || baseline === undefined || content === baseline)) return true
   if (transactionId && discarded?.transactionId === transactionId && discarded.content === content) return true
   try {
     await ElMessageBox.confirm(t('drawing.discardChanges'), {
@@ -727,12 +737,43 @@ async function beforeClose(transactionId?: string): Promise<boolean> {
 
 defineExpose({ beforeClose })
 
+function isTextField(target: EventTarget | null) {
+  if (target instanceof HTMLInputElement)
+    return ['text', 'search', 'url', 'tel', 'email', 'password', 'number'].includes(target.type)
+  return target instanceof HTMLElement && (target.isContentEditable || target instanceof HTMLTextAreaElement)
+}
+
+function editCanvasHistory(action: 'undo' | 'redo') {
+  if (!ready.value || readOnly.value || activeView.value !== 'canvas') return
+  // The Excalidraw imperative API exposes history clearing only. Use its own toolbar action.
+  canvas.value?.querySelector<HTMLButtonElement>(`button[data-testid="button-${action}"]`)?.click()
+}
+
+function handleHistoryCommand(event: Event) {
+  const action = (event as CustomEvent<'undo' | 'redo'>).detail
+  const focused = document.activeElement
+  const workspace = event.currentTarget as HTMLElement
+  if (workspace.contains(focused) && isTextField(focused)) {
+    document.execCommand(action)
+    return
+  }
+  editCanvasHistory(action)
+}
+
 function handleShortcut(event: KeyboardEvent) {
-  if ((!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== 's') return
-  event.preventDefault()
-  event.stopPropagation()
-  if (activeView.value === 'source') void applySource()
-  else void commitDrawing('save')
+  if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.isComposing) return
+  const key = event.key.toLowerCase()
+  if (key === 's') {
+    event.preventDefault()
+    event.stopPropagation()
+    if (activeView.value === 'source') applySource()
+    else void commitDrawing('save')
+  } else if (activeView.value === 'canvas' && !isTextField(event.target) &&
+      (key === 'z' || (key === 'y' && !event.shiftKey))) {
+    event.preventDefault()
+    event.stopPropagation()
+    editCanvasHistory(key === 'z' && !event.shiftKey ? 'undo' : 'redo')
+  }
 }
 
 function openReferencedDocument(reference: NonNullable<ReturnType<typeof documentReference>>) {
