@@ -25,10 +25,16 @@ export const isIndexCursor = (cursor: unknown): cursor is IndexCursor => {
 type CursorEditor = Pick<Muya, 'setSelection' | 'setCursorByOffset'>
 
 // The source editor stores line/ch coordinates; Muya stores a selection state.
-export const applyCursor = (editor: CursorEditor, cursor: unknown): void => {
+export const applyCursor = (
+  editor: CursorEditor,
+  cursor: unknown,
+  options?: { preserveFocus?: boolean }
+): void => {
   if (isIndexCursor(cursor)) {
-    editor.setCursorByOffset(cursor)
+    if (options) editor.setCursorByOffset(cursor, options)
+    else editor.setCursorByOffset(cursor)
   } else if (cursor) {
-    editor.setSelection(cursor as TSelectionState)
+    if (options) editor.setSelection(cursor as TSelectionState, options)
+    else editor.setSelection(cursor as TSelectionState)
   }
 }

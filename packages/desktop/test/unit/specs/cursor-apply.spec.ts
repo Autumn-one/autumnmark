@@ -45,6 +45,22 @@ describe('applyCursor', () => {
     expect(editor.setSelection).not.toHaveBeenCalled()
     expect(editor.setCursorByOffset).not.toHaveBeenCalled()
   })
+
+  it('forwards preserveFocus to setCursorByOffset and setSelection when provided', () => {
+    const editor = makeEditor()
+    const indexCursor = { anchor: { line: 1, ch: 0 }, focus: { line: 1, ch: 2 } }
+    const snapshot = {
+      kind: 'text',
+      anchor: { offset: 0, path: [0, 'text'] },
+      focus: { offset: 2, path: [0, 'text'] }
+    }
+
+    applyCursor(editor, indexCursor, { preserveFocus: true })
+    applyCursor(editor, snapshot, { preserveFocus: true })
+
+    expect(editor.setCursorByOffset).toHaveBeenCalledWith(indexCursor, { preserveFocus: true })
+    expect(editor.setSelection).toHaveBeenCalledWith(snapshot, { preserveFocus: true })
+  })
 })
 
 describe('isIndexCursor', () => {

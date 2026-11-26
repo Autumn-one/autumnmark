@@ -612,7 +612,7 @@ export class Editor {
     }
 
     private _commitTransaction(transaction: ICompletedTransaction) {
-        const { operation, blockOperation, view, selection, source, history, recordSelection, replay, preventScroll } = transaction;
+        const { operation, blockOperation, view, selection, source, history, recordSelection, replay, preventScroll, preserveFocus } = transaction;
         const before = this.jsonState.rawState;
         if (history === 'separate' && operation !== null)
             this.history.recordRebuild(operation, before, recordSelection !== undefined ? recordSelection : selection);
@@ -621,7 +621,7 @@ export class Editor {
         try {
             const commit = () => {
                 this.jsonState.apply(operation);
-                this._updateBlocks(blockOperation, view, selection, () => this.jsonState.getState());
+                this._updateBlocks(blockOperation, view, selection, () => this.jsonState.getState(), preserveFocus);
                 if (replay && !selection)
                     this.selection.clear();
                 debug.log(JSON.stringify(operation));
@@ -664,10 +664,16 @@ export class Editor {
         this.contentTabs.refresh();
     }
 
-    private _updateBlocks(operation: JSONOp, view: ICompletedTransaction['view'], selection: Nullable<TSelectionState>, recover: () => TState[]) {
+    private _updateBlocks(
+        operation: JSONOp,
+        view: ICompletedTransaction['view'],
+        selection: Nullable<TSelectionState>,
+        recover: () => TState[],
+        preserveFocus = false,
+    ) {
         if (view === 'rebuild') {
             this.scrollPage!.updateState(recover());
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
             return;
         }
         if (operation === null) {
@@ -679,33 +685,45 @@ export class Editor {
             const snapshot = pick(this.scrollPage as BlockNode, operation);
             drop(snapshot, operation, this._muya, () => completed ??= recover());
             this.refreshBlockViews();
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
         }
         catch (error) {
             // A completed snapshot also recovers a provisional Block update;
             // neither path may publish a half-applied tree.
             debug.error(`updateContents incremental apply failed; rebuilding from state: ${String(error)}`);
             this.scrollPage!.updateState(recover());
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
         }
     }
 
-    private _restoreSelection(selection: Nullable<TSelectionState>) {
+    private _restoreSelection(selection: Nullable<TSelectionState>, preserveFocus = false) {
         if (!selection)
             return;
-        const endpoints = resolveTextSelectionEndpoints(this._muya, selection);
-        if (endpoints) {
-            const { anchor, focus } = endpoints;
-            const sameBlock = anchor.block === focus.block;
-            this.activeContentBlock = sameBlock ? anchor.block : null;
-            // Rebuilt blocks hide source syntax; expose the saved endpoints before mapping them to DOM nodes.
-            anchor.block.update({ block: anchor.block, anchor, focus: sameBlock ? focus : anchor });
-            if (!sameBlock)
-                focus.block.update({ block: focus.block, anchor: focus, focus });
+        if (!preserveFocus) {
+            const endpoints = resolveTextSelectionEndpoints(this._muya, selection);
+            if (endpoints) {
+                const { anchor, focus } = endpoints;
+                const sameBlock = anchor.block === focus.block;
+                this.activeContentBlock = sameBlock ? anchor.block : null;
+                // Rebuilt blocks hide source syntax; expose the saved endpoints before mapping them to DOM nodes.
+                anchor.block.update({ block: anchor.block, anchor, focus: sameBlock ? focus : anchor });
+                if (!sameBlock)
+                    focus.block.update({ block: focus.block, anchor: focus, focus });
+            }
         }
-        const restored = this.selection.setSelection(selection);
-        if (!restored)
-            this.scrollPage?.firstContentInDescendant()?.setCursor(0, 0, true);
+        const restored = this.selection.setSelection(selection, { preserveFocus });
+        if (!restored) {
+            const first = this.scrollPage?.firstContentInDescendant();
+            if (!first)
+                return;
+            if (preserveFocus) {
+                const start = { block: first, path: first.path, offset: 0 };
+                this.selection.setSelection(createTextSelectionState(start, start), { preserveFocus: true });
+            }
+            else {
+                first.setCursor(0, 0, true);
+            }
+        }
     }
 
     /**

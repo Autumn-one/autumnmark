@@ -1768,6 +1768,7 @@ interface FileChangePayload {
   muyaIndexCursor?: unknown
   blocks?: unknown
   isReload?: boolean
+  preserveFocus?: boolean
 }
 
 const handleFileChange = (payload: unknown) => {
@@ -1780,6 +1781,7 @@ const handleFileChange = (payload: unknown) => {
     history: payloadHistory,
     scrollTop,
     isReload,
+    preserveFocus,
     reason
   } = (payload ?? {}) as FileChangePayload
   if (!editor.value) return
@@ -1834,14 +1836,14 @@ const handleFileChange = (payload: unknown) => {
       }
       loadingContent = true
       try {
-        editor.value.replaceContent(newMarkdown)
+        editor.value.replaceContent(newMarkdown, undefined, preserveFocus ? { preserveFocus: true } : undefined)
         if (id) engineHistoryByTab.set(id, editor.value.getHistory())
       } finally {
         loadingContent = false
       }
       editorStore.UPDATE_TOC(editor.value.getTOC())
       if (newCursor) {
-        applyCursor(editor.value, newCursor)
+        applyCursor(editor.value, newCursor, preserveFocus ? { preserveFocus: true } : undefined)
       }
     } else {
       // setContent clears history; restore this tab’s engine history after replacing its document.

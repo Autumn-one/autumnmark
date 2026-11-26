@@ -7,7 +7,7 @@ export interface MarkdownEdit {
 export type EditMarkdown = (
   id: string,
   prepare: (markdown: string) => MarkdownEdit[],
-  options?: { preventScroll?: boolean }
+  options?: { preventScroll?: boolean; preserveFocus?: boolean }
 ) => void
 
 export function applyMarkdownEdits(markdown: string, edits: readonly MarkdownEdit[]): string {

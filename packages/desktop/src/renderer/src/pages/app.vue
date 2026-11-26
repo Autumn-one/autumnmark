@@ -174,7 +174,7 @@ function editDrawingNote(note: IFileState, prepare: Parameters<EditMarkdown>[1])
     throw new Error(t('drawing.documentUnavailable'))
   if (currentFile.value?.id === note.id) {
     preserveDrawingFocus(() => {
-      editMarkdown(note.id, prepare, { preventScroll: true })
+      editMarkdown(note.id, prepare, { preventScroll: true, preserveFocus: true })
       editorStore.flushActiveEditor()
     })
     return

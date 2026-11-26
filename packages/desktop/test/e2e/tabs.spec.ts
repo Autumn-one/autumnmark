@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { blankDrawing } from '../../src/shared/drawing'
 import {
   getMarkdownContent,
+  launchElectron,
   launchWithMarkdown,
+  openProjectFolder,
   placeCaretInEditor,
   sendIpcToRenderer,
   typeIntoEditor
@@ -466,6 +472,427 @@ test.describe('Tab management', () => {
       await expect(cPage.locator('.recent-files-projects')).toBeVisible()
     } finally {
       await cApp.close()
+    }
+  })
+})
+
+test.describe('Tab hover priority and double-click close', () => {
+  test('Hovering an unsaved tab or sidebar opened file prioritizes the close button and preserves dot on mouse-focus cancel', async() => {
+    const launch = await launchWithMarkdown('# Unsaved hover\n', {
+      windowLayout: { showSideBar: true, showTabBar: true },
+      preferences: { language: 'en', autoSave: false, openedFilesInSidebar: true }
+    })
+    const hApp = launch.app
+    const hPage = launch.page
+    try {
+      await placeCaretInEditor(hPage)
+      await typeIntoEditor(hPage, ' dirty')
+      const tab = hPage.locator('.tabs-container > li.unsaved').first()
+      const openedRow = hPage.locator('.side-bar .opened-files-list > .opened-file.unsaved').first()
+      await expect(tab).toBeVisible()
+      await expect(openedRow).toBeVisible()
+
+      const readTabVisuals = () =>
+        hPage.evaluate(() => {
+          const li = document.querySelector('.tabs-container > li.unsaved')
+          const dot = li?.querySelector('.unsaved-dot')
+          const btn = li?.querySelector('.close-icon')
+          if (!li || !dot || !btn) return null
+          return {
+            dotVisibility: getComputedStyle(dot).visibility,
+            closeOpacity: Number.parseFloat(getComputedStyle(btn).opacity),
+            hover: li.matches(':hover'),
+            focus: btn.matches(':focus'),
+            focusVisible: btn.matches(':focus-visible'),
+            isActiveElement: document.activeElement === btn
+          }
+        })
+
+      const readSidebarVisuals = () =>
+        hPage.evaluate(() => {
+          const row = document.querySelector('.side-bar .opened-files-list > .opened-file.unsaved')
+          const btn = row?.querySelector('.close-icon')
+          if (!row || !btn) return null
+          return {
+            dotVisibility: getComputedStyle(row, '::before').visibility,
+            closeOpacity: Number.parseFloat(getComputedStyle(btn).opacity),
+            hover: row.matches(':hover'),
+            focus: btn.matches(':focus'),
+            focusVisible: btn.matches(':focus-visible'),
+            isActiveElement: document.activeElement === btn
+          }
+        })
+
+      // Move pointer into the editor so neither the tab bar nor sidebar row is hovered.
+      const editorBox = await hPage.locator('.editor-component').boundingBox()
+      if (!editorBox) throw new Error('Missing editor bounds')
+      await hPage.mouse.move(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+
+      await expect.poll(readTabVisuals).toMatchObject({ dotVisibility: 'visible', closeOpacity: 0, hover: false })
+      await expect.poll(readSidebarVisuals).toMatchObject({ dotVisibility: 'visible', closeOpacity: 0, hover: false })
+
+      // Hover the tab label area (left side, away from the right-aligned close button).
+      const tabBox = await tab.boundingBox()
+      if (!tabBox) throw new Error('Missing tab bounds')
+      await hPage.mouse.move(tabBox.x + 14, tabBox.y + tabBox.height / 2)
+      await expect.poll(readTabVisuals).toMatchObject({ dotVisibility: 'hidden', closeOpacity: 1, hover: true })
+
+      // Hover the sidebar opened-file text area (right side, away from the left-aligned close button).
+      const rowBox = await openedRow.boundingBox()
+      if (!rowBox) throw new Error('Missing opened-file row bounds')
+      await hPage.mouse.move(rowBox.x + rowBox.width - 14, rowBox.y + rowBox.height / 2)
+      await expect.poll(readTabVisuals).toMatchObject({ dotVisibility: 'visible', closeOpacity: 0, hover: false })
+      await expect.poll(readSidebarVisuals).toMatchObject({ dotVisibility: 'hidden', closeOpacity: 1, hover: true })
+
+      // Move back to the editor so both return to idle state.
+      await hPage.mouse.move(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+      await expect.poll(readSidebarVisuals).toMatchObject({ dotVisibility: 'visible', closeOpacity: 0, hover: false })
+
+      // E4: Keyboard :focus-visible on close button shows close icon and hides the dot.
+      await hPage.locator('.editor-tabs > .new-file').focus()
+      await hPage.keyboard.press('Shift+Tab')
+      await expect.poll(readTabVisuals).toMatchObject({
+        isActiveElement: true,
+        focusVisible: true,
+        dotVisibility: 'hidden',
+        closeOpacity: 1
+      })
+
+      // E5: Mouse-click close -> Cancel dialog -> residual :focus without :focus-visible keeps the dot visible.
+      // Click the editor first so mouse interaction clears the keyboard focus-visible modality left by E4.
+      await hPage.mouse.click(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+      await hApp.evaluate(({ dialog }) => {
+        dialog.showMessageBox = async() => ({ response: 2, checkboxChecked: false })
+      })
+      await tab.locator('.close-icon').click()
+      await hPage.mouse.move(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+      // Native dialog may drop webContents focus; restore mouse-modality focus on the close button if needed.
+      await hPage.evaluate(() => {
+        const btn = document.querySelector<HTMLButtonElement>('.tabs-container > li.unsaved .close-icon')
+        if (btn && document.activeElement !== btn) btn.focus()
+      })
+      await expect.poll(readTabVisuals).toMatchObject({
+        isActiveElement: true,
+        focus: true,
+        focusVisible: false,
+        hover: false,
+        dotVisibility: 'visible',
+        closeOpacity: 0
+      })
+
+      // Same E5 mouse-focus residual check on sidebar opened-file row.
+      await hPage.mouse.click(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+      await openedRow.locator('.close-icon').click()
+      await hPage.mouse.move(editorBox.x + editorBox.width / 2, editorBox.y + editorBox.height / 2)
+      await hPage.evaluate(() => {
+        const btn = document.querySelector<HTMLButtonElement>('.side-bar .opened-files-list > .opened-file.unsaved .close-icon')
+        if (btn && document.activeElement !== btn) btn.focus()
+      })
+      await expect.poll(readSidebarVisuals).toMatchObject({
+        isActiveElement: true,
+        focus: true,
+        focusVisible: false,
+        hover: false,
+        dotVisibility: 'visible',
+        closeOpacity: 0
+      })
+    } finally {
+      await hApp.close()
+    }
+  })
+
+  test('Double-clicking a tab closes clean, unsaved, preview, and last tabs while guarding close button and drag gestures', async() => {
+    const projectDir = mkdtempSync(join(tmpdir(), 'marktext-dblclick-tabs-'))
+    const alphaPath = join(projectDir, 'alpha.md')
+    const betaPath = join(projectDir, 'beta.md')
+    writeFileSync(alphaPath, '# Alpha\n', 'utf-8')
+    writeFileSync(betaPath, '# Beta\n', 'utf-8')
+    const launched = await launchElectron([], {
+      windowLayout: { showSideBar: true, showTabBar: true },
+      preferences: { language: 'en', autoSave: false, openFilesInPreviewMode: true }
+    })
+    const dApp = launched.app
+    const dPage = launched.page
+    try {
+      await openProjectFolder(dApp, dPage, projectDir, alphaPath)
+
+      // Preview tab: double-clicking the tab closes it (Scheme A).
+      await dPage.locator('.side-bar-file[title$="alpha.md"]').click()
+      const alphaTab = dPage.locator('.tabs-container > li[title$="alpha.md"]')
+      await expect(alphaTab).toHaveClass(/preview/)
+      await alphaTab.dblclick()
+      await expect(dPage.locator(tabSelector)).toHaveCount(0)
+      await expect(dPage.locator('.recent-files-projects')).toBeVisible()
+
+      // Re-open two pinned tabs via sidebar double-click so we can test drag suppression, unsaved prompt, and close-icon double-click.
+      await dPage.locator('.side-bar-file[title$="alpha.md"]').dblclick()
+      await expect(alphaTab).toBeVisible()
+      await dPage.locator('.side-bar-file[title$="beta.md"]').dblclick()
+      const betaTab = dPage.locator('.tabs-container > li[title$="beta.md"]')
+      await expect(dPage.locator(tabSelector)).toHaveCount(2)
+
+      // Real pointer drag >5px and return to origin within double-click window must not close the tab.
+      const betaBox = await betaTab.boundingBox()
+      if (!betaBox) throw new Error('Missing beta tab bounds')
+      const cx = betaBox.x + 18
+      const cy = betaBox.y + betaBox.height / 2
+      await dPage.mouse.click(cx, cy)
+      await dPage.mouse.move(cx, cy)
+      await dPage.mouse.down()
+      await dPage.mouse.move(cx + 24, cy, { steps: 6 })
+      await dPage.mouse.move(cx, cy, { steps: 6 })
+      await dPage.mouse.up()
+      await dPage.waitForTimeout(100)
+      await expect(dPage.locator(tabSelector)).toHaveCount(2)
+
+      // A genuine double-click right after dragging still closes the tab.
+      await dPage.mouse.dblclick(cx, cy)
+      await expect(betaTab).toHaveCount(0)
+      await expect(dPage.locator(tabSelector)).toHaveCount(1)
+
+      // Double-clicking the empty tab strip area does not close the remaining tab.
+      const stripBox = await dPage.locator('.editor-tabs').boundingBox()
+      if (!stripBox) throw new Error('Missing tab strip bounds')
+      await dPage.mouse.dblclick(stripBox.x + stripBox.width - 8, stripBox.y + stripBox.height / 2)
+      await expect(dPage.locator(tabSelector)).toHaveCount(1)
+
+      // Dirty tab: double-clicking the close button prompts once (Cancel), then double-clicking tab body prompts once (Don't Save).
+      await placeCaretInEditor(dPage)
+      await typeIntoEditor(dPage, ' unsaved change')
+      await expect(alphaTab).toHaveClass(/unsaved/)
+      await dApp.evaluate(({ dialog }) => {
+        const audit = globalThis as unknown as { closePromptCount: number; closeResponse: number }
+        audit.closePromptCount = 0
+        audit.closeResponse = 2
+        dialog.showMessageBox = async() => {
+          audit.closePromptCount++
+          return { response: audit.closeResponse, checkboxChecked: false }
+        }
+      })
+      await alphaTab.locator('.close-icon').dblclick()
+      await expect.poll(() => dApp.evaluate(() =>
+        (globalThis as unknown as { closePromptCount: number }).closePromptCount
+      )).toBe(1)
+      await expect(dPage.locator(tabSelector)).toHaveCount(1)
+
+      await dApp.evaluate(() => {
+        (globalThis as unknown as { closeResponse: number }).closeResponse = 1
+      })
+      await alphaTab.dblclick({ position: { x: 16, y: 12 } })
+      await expect.poll(() => dApp.evaluate(() =>
+        (globalThis as unknown as { closePromptCount: number }).closePromptCount
+      )).toBe(2)
+      await expect(dPage.locator(tabSelector)).toHaveCount(0)
+      await expect(dPage.locator('.recent-files-projects')).toBeVisible()
+    } finally {
+      await dApp.close()
+      rmSync(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  test('Double-clicking a dirty drawing tab close button triggers only one discard confirmation', async() => {
+    const blankInlineDrawing = `![Embedded drawing](data:application/x-excalidraw;base64,${Buffer.from(blankDrawing).toString('base64')})`
+    const launch = await launchWithMarkdown(`Before\n\n${blankInlineDrawing}\n\nAfter\n`, {
+      windowLayout: { showTabBar: true },
+      preferences: { language: 'en', embedDrawings: true, autoSave: false },
+      suppressErrorDialog: true
+    })
+    const gApp = launch.app
+    const gPage = launch.page
+    try {
+      const preview = gPage.locator('.mu-editor .mu-inline-drawing img')
+      await expect(preview).toBeVisible()
+      await preview.click()
+      const popup = gPage.getByRole('dialog', { name: 'Embedded drawing' })
+      await expect(popup).toBeVisible()
+      await popup.getByRole('button', { name: 'Open in Tab' }).click()
+      await expect(popup).toBeHidden()
+
+      const drawingTab = gPage.locator('.tabs-container > li.active')
+      await expect(drawingTab).toHaveText('Embedded drawing.excalidraw')
+      const workspace = gPage.locator('.drawing-workspace:visible')
+      await expect(workspace.locator('.excalidraw canvas').first()).toBeVisible()
+      await workspace.getByRole('tab', { name: 'Source' }).click()
+      await workspace.getByRole('textbox', { name: 'Excalidraw JSON' }).fill('{')
+
+      // Two rapid close-button clicks before the modal backdrop mounts: WindowSession._close's
+      // _closing single-flight lock must drop the second close so only one confirmation opens.
+      await gPage.evaluate(() => {
+        const btn = document.querySelector<HTMLButtonElement>('.tabs-container > li.active .close-icon')
+        if (!btn) throw new Error('Missing drawing tab close button')
+        btn.click()
+        btn.click()
+        btn.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, button: 0, detail: 2 }))
+      })
+      const confirmBox = gPage.locator('.el-message-box:visible')
+      await expect(confirmBox).toHaveCount(1)
+      await confirmBox.getByRole('button', { name: 'Cancel' }).click()
+      await expect(confirmBox).toHaveCount(0)
+      // Hold briefly to verify no queued second confirmation reappears from the second click.
+      await gPage.waitForTimeout(150)
+      await expect(confirmBox).toHaveCount(0)
+      await expect(drawingTab).toHaveCount(1)
+
+      // Double-click tab title: prompts once and discarding closes the drawing tab.
+      await drawingTab.dblclick({ position: { x: 24, y: 12 } })
+      await expect(confirmBox).toHaveCount(1)
+      await confirmBox.getByRole('button', { name: 'Discard Changes' }).click()
+      await expect(confirmBox).toHaveCount(0)
+      await expect(gPage.locator(tabSelector)).toHaveCount(1)
+      await expect(gPage.locator('.drawing-workspace')).toHaveCount(0)
+    } finally {
+      await gApp.close()
+    }
+  })
+
+  test('Overflow tab double-click closes the clicked clipped tab, defers single-click scroll, and ignores cross-tab mismatches', async() => {
+    const launch = await launchWithMarkdown('# overflow dblclick\n', {
+      windowLayout: { showTabBar: true },
+      preferences: { language: 'en', autoSave: false }
+    })
+    const oApp = launch.app
+    const oPage = launch.page
+    try {
+      for (let i = 0; i < 25; i++) {
+        const before = await oPage.locator(tabSelector).count()
+        await sendIpcToRenderer(oApp, 'mt::new-untitled-tab', true, '')
+        await oPage.waitForFunction(
+          ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
+          { selector: tabSelector, prev: before },
+          { timeout: 5000 }
+        )
+      }
+
+      // Switch to tab 0 so the strip scrolls to the left edge and tabs overflow off the right.
+      await sendIpcToRenderer(oApp, 'mt::switch-tab-by-index', 0)
+      await expect.poll(() =>
+        oPage.evaluate(() => {
+          const c = document.querySelector('.scrollable-tabs') as HTMLElement | null
+          return !!c && c.scrollWidth > c.clientWidth + 4 && c.scrollLeft === 0
+        })
+      ).toBe(true)
+
+      const findClippedRightTab = () =>
+        oPage.evaluate(() => {
+          const container = document.querySelector('.scrollable-tabs')
+          const items = Array.from(document.querySelectorAll<HTMLElement>('.tabs-container > li'))
+          if (!container) return null
+          const cRect = container.getBoundingClientRect()
+          for (let i = 0; i < items.length - 1; i++) {
+            const rect = items[i].getBoundingClientRect()
+            const visibleWidth = Math.min(rect.right, cRect.right) - Math.max(rect.left, cRect.left)
+            if (rect.left >= cRect.left && rect.left < cRect.right - 12 && rect.right > cRect.right + 4 && visibleWidth >= 14) {
+              return {
+                id: items[i].getAttribute('data-id') ?? '',
+                neighborId: items[i + 1].getAttribute('data-id') ?? '',
+                clickX: rect.left + Math.min(visibleWidth / 2, 12),
+                clickY: rect.top + rect.height / 2
+              }
+            }
+          }
+          return null
+        })
+
+      // Ensure a clipped tab exists at the right viewport boundary (adjust scrollLeft slightly if an exact boundary aligns).
+      let clipped = await findClippedRightTab()
+      if (!clipped) {
+        await oPage.evaluate(() => {
+          const container = document.querySelector('.scrollable-tabs') as HTMLElement | null
+          if (container) container.scrollLeft = 24
+        })
+        clipped = await findClippedRightTab()
+      }
+      if (!clipped) throw new Error('Could not find a partially clipped tab on the right edge')
+
+      // E15 positive: double-clicking the clipped tab closes that exact tab and keeps its neighbor open.
+      await oPage.mouse.dblclick(clipped.clickX, clipped.clickY)
+      await expect.poll(async() => readTabIds(oPage)).not.toContain(clipped.id)
+      expect(await readTabIds(oPage)).toContain(clipped.neighborId)
+
+      // E15 single-click deferred scroll: click a partially clipped tab and verify it scrolls into view after 500ms.
+      await sendIpcToRenderer(oApp, 'mt::switch-tab-by-index', 0)
+      await oPage.evaluate(() => {
+        const container = document.querySelector('.scrollable-tabs') as HTMLElement | null
+        if (container) container.scrollLeft = 24
+      })
+      const clippedForSingle = await findClippedRightTab()
+      if (!clippedForSingle) throw new Error('Could not find clipped tab for single-click scroll check')
+      await oPage.mouse.click(clippedForSingle.clickX, clippedForSingle.clickY)
+      expect(await activeTabId(oPage)).toBe(clippedForSingle.id)
+      // Within the 500ms window, the tab must still be clipped (strip has not jumped under the pointer).
+      await oPage.waitForTimeout(150)
+      const stillClipped = await oPage.evaluate((id) => {
+        const container = document.querySelector('.scrollable-tabs')
+        const tab = document.querySelector(`.tabs-container > li[data-id="${id}"]`)
+        if (!container || !tab) return false
+        return tab.getBoundingClientRect().right > container.getBoundingClientRect().right + 1
+      }, clippedForSingle.id)
+      expect(stillClipped).toBe(true)
+      // After 500ms, the clicked tab scrolls fully into view.
+      await expect.poll(
+        () =>
+          oPage.evaluate((id) => {
+            const container = document.querySelector('.scrollable-tabs')
+            const tab = document.querySelector(`.tabs-container > li[data-id="${id}"]`)
+            if (!container || !tab) return false
+            const c = container.getBoundingClientRect()
+            const t = tab.getBoundingClientRect()
+            return t.left >= c.left - 1 && t.right <= c.right + 1
+          }, clippedForSingle.id),
+        { timeout: 2000 }
+      ).toBe(true)
+
+      // E15 negative: click tab A then shift tab B under the exact same pointer before click #2 (genuine detail=2 + dblclick on B).
+      // B must become active and neither A nor B may be closed.
+      await sendIpcToRenderer(oApp, 'mt::switch-tab-by-index', 0)
+      const shiftPair = await oPage.evaluate(() => {
+        const items = Array.from(document.querySelectorAll<HTMLElement>('.tabs-container > li'))
+        if (items.length < 3) return null
+        const first = items[1]
+        const second = items[2]
+        const r1 = first.getBoundingClientRect()
+        const r2 = second.getBoundingClientRect()
+        return {
+          firstId: first.getAttribute('data-id') ?? '',
+          secondId: second.getAttribute('data-id') ?? '',
+          clickX: r1.left + 16,
+          clickY: r1.top + r1.height / 2,
+          deltaX: r2.left - r1.left
+        }
+      })
+      if (!shiftPair) throw new Error('Missing adjacent tabs for mismatch check')
+      await oPage.evaluate((secondId) => {
+        const tracker = { secondClickDetail: 0, secondDblClick: false }
+        ;(globalThis as unknown as { __mismatchTracker?: typeof tracker }).__mismatchTracker = tracker
+        const secondEl = document.querySelector(`.tabs-container > li[data-id="${secondId}"]`)
+        secondEl?.addEventListener('click', (event) => {
+          tracker.secondClickDetail = (event as MouseEvent).detail
+        }, { capture: true })
+        secondEl?.addEventListener('dblclick', () => {
+          tracker.secondDblClick = true
+        }, { capture: true })
+      }, shiftPair.secondId)
+      await oPage.mouse.click(shiftPair.clickX, shiftPair.clickY)
+      await oPage.evaluate((dx) => {
+        const container = document.querySelector('.scrollable-tabs') as HTMLElement | null
+        if (container) container.scrollLeft += dx
+      }, shiftPair.deltaX)
+      // Dispatch the second click of the double-click gesture (clickCount: 2) onto the shifted neighbor tab.
+      await oPage.mouse.move(shiftPair.clickX, shiftPair.clickY)
+      await oPage.mouse.down({ clickCount: 2 })
+      await oPage.mouse.up({ clickCount: 2 })
+      await oPage.waitForTimeout(150)
+      const tracker = await oPage.evaluate(() =>
+        (globalThis as unknown as { __mismatchTracker?: { secondClickDetail: number; secondDblClick: boolean } }).__mismatchTracker
+      )
+      expect(tracker?.secondClickDetail).toBe(2)
+      expect(tracker?.secondDblClick).toBe(true)
+      expect(await activeTabId(oPage)).toBe(shiftPair.secondId)
+      const remaining = await readTabIds(oPage)
+      expect(remaining).toContain(shiftPair.firstId)
+      expect(remaining).toContain(shiftPair.secondId)
+    } finally {
+      await oApp.close()
     }
   })
 })

@@ -397,7 +397,7 @@ export class Muya {
     replaceContent(
         content: TState[] | string,
         recordSelection?: Nullable<TSelectionState>,
-        { preventScroll = false } = {},
+        { preventScroll = false, preserveFocus = false } = {},
     ): boolean {
         this.editor.transactions.assertStandalone();
         this.flush();
@@ -414,6 +414,7 @@ export class Muya {
                 history: 'separate',
                 recordSelection: boundarySelection,
                 preventScroll,
+                preserveFocus,
             });
         });
         this._refreshReadingPresentation();
@@ -678,7 +679,7 @@ export class Muya {
         return this.editor.selection.getSelectionState();
     }
 
-    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean }): boolean {
+    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean; preserveFocus?: boolean }): boolean {
         return this.editor.selection.setSelection(state, options);
     }
 
@@ -1124,7 +1125,7 @@ export class Muya {
      * Restore a source-mode line/ch cursor without changing the document or
      * undo history. Returns false when the cursor cannot be resolved.
      */
-    setCursorByOffset(indexCursor: IIndexCursor): boolean {
+    setCursorByOffset(indexCursor: IIndexCursor, options?: { preserveFocus?: boolean }): boolean {
         const { scrollPage } = this.editor;
         if (!scrollPage)
             return false;
@@ -1148,7 +1149,7 @@ export class Muya {
         if (!cursor)
             return false;
 
-        return this.setSelection(cursor);
+        return this.setSelection(cursor, options);
     }
 
     /**

@@ -174,11 +174,13 @@ class Selection {
     }
 
     getImageSelection(): IImageSelection | null {
-        const selection = this.getSelection();
-        return selection?.kind === SelectionType.IMAGE ? selection : null;
+        if (this._state?.kind !== SelectionType.IMAGE)
+            return null;
+        const state = copySelectionState(this._state) as Extract<TSelectionState, { kind: SelectionType.IMAGE }>;
+        return this._resolveImage(state);
     }
 
-    setSelection(state: TSelectionState | null, { preventScroll = false } = {}): boolean {
+    setSelection(state: TSelectionState | null, { preventScroll = false, preserveFocus = false } = {}): boolean {
         if (state !== null && !isSelectionState(state))
             return false;
         const selection = state ? this._resolve(state) : null;
@@ -209,13 +211,14 @@ class Selection {
                         path: [...focus.path],
                         block: focusBlock,
                     },
+                    { syncDom: !preserveFocus },
                 );
             }
             else {
                 if (selection?.kind === SelectionType.IMAGE)
                     this._image.setSelection(this._resolveImage(selection) ?? selection);
                 else if (selection?.kind === SelectionType.TABLE)
-                    this._table.setSelection(selection);
+                    this._table.setSelection(selection, { preserveFocus });
             }
         }
         finally {

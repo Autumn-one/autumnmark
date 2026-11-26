@@ -676,7 +676,7 @@
         "tocRight": "Direita",
         "showOpenedFiles": "Mostrar arquivos abertos",
         "autoReveal": "Mostrar o arquivo ativo na barra lateral",
-        "openFilesInPreviewMode": "Abrir arquivos da barra lateral em abas de visualização. Editar ou clicar duas vezes mantém a aba.",
+        "openFilesInPreviewMode": "Abrir arquivos da barra lateral em abas de visualização. Editar a visualização ou clicar duas vezes no arquivo na barra lateral mantém a aba.",
         "excludePatterns": "Regras de exclusão da árvore de arquivos",
         "excludePatternsNotes": "Os caminhos que correspondem a qualquer regra glob são excluídos da árvore de arquivos. Pressione Enter para adicionar uma regra e clique em × para removê-la; as vírgulas dentro de uma regra são preservadas. Abra a pasta novamente para aplicar todas as alterações.",
         "removePattern": "Remover",

@@ -537,7 +537,7 @@
     "default": true
   },
   "openFilesInPreviewMode": {
-    "description": "General--Open sidebar files in a reusable preview tab. Editing or double-clicking keeps the tab open.",
+    "description": "General--Open sidebar files in preview tabs. Editing the preview, or double-clicking the file in the sidebar, keeps the tab open.",
     "type": "boolean",
     "default": true
   },

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Locator } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import type CodeMirror from 'codemirror'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -907,6 +907,360 @@ test('flushes the clicked nested drawing on a native window close with identical
     expect(markdown).toContain(fence)
     const nested = /^> ```excalidraw\n([\s\S]*?)\n> ```$/m.exec(markdown)?.[1]
     expect(nested && JSON.parse(nested.replace(/^> /gm, '')).elements).toMatchObject([{ type: 'image' }])
+  } finally {
+    await app.close()
+  }
+})
+
+test('keeps the text input focused in the embedded drawing dialog across auto-save pauses', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`Before\n\n${blankInlineDrawing}\n\nAfter\n`, {
+    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+  })
+  try {
+    const preview = page.locator('.mu-editor .mu-inline-drawing img')
+    await expect(preview).toBeVisible()
+    await page.locator('.mu-editor .mu-paragraph').first().click()
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup).toBeVisible()
+    const interactive = popup.locator('canvas.interactive')
+    await expect(interactive).toBeVisible()
+
+    const beforeDisk = await readFile(filePath, 'utf8')
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    const box = await interactive.boundingBox()
+    if (!box) throw new Error('Missing interactive canvas bounds')
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+
+    const wysiwyg = popup.locator('textarea.excalidraw-wysiwyg')
+    await expect(wysiwyg).toBeVisible()
+    await expect(wysiwyg).toBeFocused()
+    await page.waitForTimeout(600)
+    await expect(wysiwyg).toBeFocused()
+    expect(await readFile(filePath, 'utf8')).toBe(beforeDisk)
+
+    await page.keyboard.insertText('Hello ')
+    await page.waitForTimeout(600)
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText('world')
+    await page.keyboard.press('Escape')
+    await expect(wysiwyg).toBeHidden()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'Hello world' }])
+  } finally {
+    await app.close()
+  }
+})
+
+test('explicit save keeps text editing focused and omits uncommitted empty text and bindings', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`Before\n\n${blankInlineDrawing}\n\nAfter\n`, {
+    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+  })
+  try {
+    const preview = page.locator('.mu-editor .mu-inline-drawing img')
+    await expect(preview).toBeVisible()
+    await page.locator('.mu-editor .mu-paragraph').first().click()
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup).toBeVisible()
+    const interactive = popup.locator('canvas.interactive')
+    await expect(interactive).toBeVisible()
+    const box = await interactive.boundingBox()
+    if (!box) throw new Error('Missing interactive canvas bounds')
+
+    const shortcut = process.platform === 'darwin' ? 'Meta+s' : 'Control+s'
+    const wysiwyg = popup.locator('textarea.excalidraw-wysiwyg')
+
+    // Unbound empty text: Ctrl+S keeps focus and leaves disk bytes untouched.
+    const beforeEmptyDisk = await readFile(filePath, 'utf8')
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.3)
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.press(shortcut)
+    await page.waitForTimeout(450)
+    await expect(wysiwyg).toBeFocused()
+    expect(await readFile(filePath, 'utf8')).toBe(beforeEmptyDisk)
+
+    // Non-empty text: Ctrl+S persists live text while keeping the text box focused.
+    await page.keyboard.insertText('Saved inline')
+    await page.keyboard.press(shortcut)
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'Saved inline' }])
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText(' more')
+    await page.keyboard.press('Escape')
+    await expect(wysiwyg).toBeHidden()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'Saved inline more' }])
+
+    // Bound empty text inside a rectangle: Ctrl+S strips both the empty text and the container's boundElements ref.
+    await popup.locator('input[data-testid="toolbar-rectangle"]').click({ force: true })
+    const rectStartX = box.x + box.width * 0.55
+    const rectStartY = box.y + box.height * 0.45
+    const rectEndX = box.x + box.width * 0.8
+    const rectEndY = box.y + box.height * 0.72
+    await page.mouse.move(rectStartX, rectStartY)
+    await page.mouse.down()
+    await page.mouse.move(rectEndX, rectEndY, { steps: 6 })
+    await page.mouse.up()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length).toBe(2)
+
+    await page.mouse.dblclick((rectStartX + rectEndX) / 2, (rectStartY + rectEndY) / 2)
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.press(shortcut)
+    await page.waitForTimeout(450)
+    await expect(wysiwyg).toBeFocused()
+    const savedAfterBoundEmpty = inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements ?? []
+    expect(savedAfterBoundEmpty).toHaveLength(2)
+    const savedRect = savedAfterBoundEmpty.find((el: { type: string }) => el.type === 'rectangle')
+    expect(savedRect?.boundElements ?? null).toBeNull()
+
+    await page.keyboard.insertText('Inside box')
+    await page.keyboard.press('Escape')
+    await expect(wysiwyg).toBeHidden()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'text', originalText: 'Inside box' }),
+        expect.objectContaining({ type: 'rectangle', boundElements: expect.arrayContaining([expect.objectContaining({ type: 'text' })]) })
+      ]))
+  } finally {
+    await app.close()
+  }
+})
+
+test('commits or discards active canvas text cleanly on native close and open-in-tab flush', async() => {
+  const { app, page, filePath } = await launchWithMarkdown(`Before\n\n${blankInlineDrawing}\n\nAfter\n`, {
+    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+  })
+  try {
+    const preview = page.locator('.mu-editor .mu-inline-drawing img')
+    await expect(preview).toBeVisible()
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    const interactive = popup.locator('canvas.interactive')
+    await expect(interactive).toBeVisible()
+    const box = await interactive.boundingBox()
+    if (!box) throw new Error('Missing interactive canvas bounds')
+
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    await page.mouse.click(box.x + box.width * 0.4, box.y + box.height * 0.4)
+    const wysiwyg = popup.locator('textarea.excalidraw-wysiwyg')
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText('Flushed to tab')
+    await popup.getByRole('button', { name: 'Open in Tab' }).click()
+    await expect(popup).toBeHidden()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'Flushed to tab' }])
+
+    // Reopen dialog, leave an uncommitted empty text box open, and close the window natively.
+    const tabClose = page.locator('.editor-tabs li.active .close-icon')
+    await tabClose.click()
+    await preview.click()
+    await expect(popup).toBeVisible()
+    await expect(interactive).toBeVisible()
+    const box2 = await interactive.boundingBox()
+    if (!box2) throw new Error('Missing reopened canvas bounds')
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    await page.mouse.click(box2.x + box2.width * 0.7, box2.y + box2.height * 0.7)
+    await expect(wysiwyg).toBeFocused()
+
+    const native = await app.browserWindow(page)
+    const closed = page.waitForEvent('close')
+    await native.evaluate(win => win.close())
+    await closed
+    const finalElements = inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements ?? []
+    expect(finalElements).toMatchObject([{ type: 'text', originalText: 'Flushed to tab' }])
+  } finally {
+    await app.close()
+  }
+})
+
+test('preserves canvas text focus during an external disk reload of the underlying note', async() => {
+  const initialMarkdown = `Before reload\n\n${blankInlineDrawing}\n\nAfter\n`
+  const { app, page, filePath } = await launchWithMarkdown(initialMarkdown, {
+    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+  })
+  try {
+    const preview = page.locator('.mu-editor .mu-inline-drawing img')
+    await expect(preview).toBeVisible()
+    await page.locator('.mu-editor .mu-paragraph').first().click()
+    await page.waitForTimeout(300)
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    const interactive = popup.locator('canvas.interactive')
+    await expect(interactive).toBeVisible()
+    const box = await interactive.boundingBox()
+    if (!box) throw new Error('Missing interactive canvas bounds')
+
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    const wysiwyg = popup.locator('textarea.excalidraw-wysiwyg')
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText('During ')
+
+    // Trigger the real file watcher reload while the text editor is active.
+    await writeFile(filePath, `Reloaded outside\n\n${blankInlineDrawing}\n\nAfter\n`, 'utf8')
+    await expect.poll(() => page.evaluate(() => document.querySelector('.mu-editor')?.textContent ?? ''), { timeout: 8000 })
+      .toContain('Reloaded outside')
+
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText('reload')
+    await page.keyboard.press('Escape')
+    await expect(wysiwyg).toBeHidden()
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'During reload' }])
+  } finally {
+    await app.close()
+  }
+})
+
+test('preserves canvas text focus when the underlying note has a table rectangle selection', async() => {
+  const tableMarkdown = '| A | B |\n| --- | --- |\n| C | D |\n\nAfter table\n'
+  const { app, page, filePath } = await launchWithMarkdown(tableMarkdown, {
+    preferences: { language: 'en', embedDrawings: true, autoSave: false }
+  })
+  try {
+    const cells = page.locator('.mu-editor table td, .mu-editor table th')
+    await expect(cells).toHaveCount(4)
+    const firstBox = await cells.nth(0).boundingBox()
+    const lastBox = await cells.nth(3).boundingBox()
+    if (!firstBox || !lastBox) throw new Error('Missing table cell bounds')
+    await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(lastBox.x + lastBox.width / 2, lastBox.y + lastBox.height / 2, { steps: 6 })
+    await page.mouse.up()
+    await expect(page.locator('.mu-editor .mu-table-cell-selected')).toHaveCount(4)
+
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'drawing.insert')
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup).toBeVisible()
+    const interactive = popup.locator('canvas.interactive')
+    await expect(interactive).toBeVisible()
+    const box = await interactive.boundingBox()
+    if (!box) throw new Error('Missing interactive canvas bounds')
+
+    await popup.locator('input[data-testid="toolbar-text"]').click({ force: true })
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    const wysiwyg = popup.locator('textarea.excalidraw-wysiwyg')
+    await expect(wysiwyg).toBeFocused()
+    await page.keyboard.insertText('Table safe')
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+s' : 'Control+s')
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements)
+      .toMatchObject([{ type: 'text', originalText: 'Table safe' }])
+    await expect(wysiwyg).toBeFocused()
+  } finally {
+    await app.close()
+  }
+})
+
+async function drawShape(page: Page, popup: Locator, tool: string, offsetX = 0, offsetY = 0) {
+  await popup.locator('label').filter({ has: page.getByTestId(tool) }).click()
+  const canvas = await popup.locator('canvas.interactive').boundingBox()
+  if (!canvas) throw new Error('Missing drawing canvas bounds')
+  const x = canvas.x + canvas.width / 2 + offsetX
+  const y = canvas.y + canvas.height / 2 + offsetY
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 70, y + 40, { steps: 5 })
+  await page.mouse.up()
+}
+
+for (const autoSave of [false, true]) {
+  test(`keeps a long document scrolled when a drawing autosaves two new elements (autoSave ${autoSave})`, async() => {
+    const front = Array.from({ length: 45 }, (_, index) => `Front ${index + 1}. ${'scroll '.repeat(18)}`).join('\n\n')
+    const back = Array.from({ length: 25 }, (_, index) => `Back ${index + 1}. ${'tail '.repeat(12)}`).join('\n\n')
+    const { app, page, filePath } = await launchWithMarkdown(`${front}\n\n${blankInlineDrawing}\n\n${back}\n`, {
+      preferences: { language: 'en', autoSave, embedDrawings: true }
+    })
+    try {
+      const scroller = page.locator('.editor-component')
+      const preview = page.locator('.mu-editor').getByRole('img', { name: 'Embedded drawing' })
+      await preview.scrollIntoViewIfNeeded()
+      const beforeScrollTop = await scroller.evaluate(element => element.scrollTop)
+      expect(beforeScrollTop).toBeGreaterThan(1000)
+
+      await preview.click()
+      const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+      await expect(popup.locator('canvas.interactive')).toBeVisible()
+      const elementCount = async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length ?? 0
+
+      await drawShape(page, popup, 'toolbar-rectangle', -120, -40)
+      await expect.poll(elementCount).toBe(1)
+      const afterFirst = await scroller.evaluate(element => element.scrollTop)
+      expect(Math.abs(afterFirst - beforeScrollTop)).toBeLessThan(50)
+      expect(afterFirst).toBeGreaterThan(1000)
+
+      await drawShape(page, popup, 'toolbar-ellipse', 40, 20)
+      await expect.poll(elementCount).toBe(2)
+      const afterSecond = await scroller.evaluate(element => element.scrollTop)
+      expect(Math.abs(afterSecond - beforeScrollTop)).toBeLessThan(50)
+      expect(afterSecond).toBeGreaterThan(1000)
+    } finally {
+      await app.close()
+    }
+  })
+}
+
+test('keeps scroll and a folded heading when a mixed document drawing autosaves', async() => {
+  const hidden = 'Hidden under the folded heading.'
+  const lead = Array.from({ length: 40 }, (_, index) => `Visible ${index + 1}. ${'section '.repeat(16)}`).join('\n\n')
+  const markdown = [
+    '# Folded chapter',
+    '',
+    hidden,
+    '',
+    '# Visible chapter',
+    '',
+    lead,
+    '',
+    '```js',
+    'const value = 1',
+    '```',
+    '',
+    '| a | b |',
+    '| --- | --- |',
+    '| c | d |',
+    '',
+    '[ref]: https://example.com',
+    '',
+    'see [ref]',
+    '',
+    blankInlineDrawing,
+    '',
+    blankDrawingFence,
+    ''
+  ].join('\n')
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: true }
+  })
+  try {
+    const folded = page.locator('.editor-component .mu-folded-content')
+    await page.locator('.mu-fold-toggle').first().click()
+    await expect(folded).toHaveCount(1)
+    await expect(page.getByText(hidden)).toBeHidden()
+
+    const scroller = page.locator('.editor-component')
+    const drawings = page.locator('.mu-editor').getByRole('img', { name: 'Embedded drawing' })
+    const preview = drawings.first()
+    await preview.scrollIntoViewIfNeeded()
+    const beforeScrollTop = await scroller.evaluate(element => element.scrollTop)
+    expect(beforeScrollTop).toBeGreaterThan(1000)
+
+    await preview.click()
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    await expect(popup.locator('canvas.interactive')).toBeVisible()
+    await drawShape(page, popup, 'toolbar-rectangle')
+    await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length ?? 0).toBe(1)
+
+    const afterScrollTop = await scroller.evaluate(element => element.scrollTop)
+    expect(Math.abs(afterScrollTop - beforeScrollTop)).toBeLessThan(50)
+    expect(afterScrollTop).toBeGreaterThan(1000)
+    await expect(folded).toHaveCount(1)
+    await expect(page.getByText(hidden)).toBeHidden()
+    await expect(page.locator('.mu-editor .mu-fenced-code')).toBeVisible()
+    await expect(page.locator('.mu-editor table')).toBeVisible()
+    await expect(page.getByText('see [ref]')).toBeVisible()
+    await expect(drawings).toHaveCount(2)
   } finally {
     await app.close()
   }

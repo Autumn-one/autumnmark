@@ -676,7 +676,7 @@
         "tocRight": "오른쪽",
         "showOpenedFiles": "열린 파일 표시",
         "autoReveal": "사이드바에서 활성 파일 표시",
-        "openFilesInPreviewMode": "사이드바 파일을 미리보기 탭에서 엽니다. 편집하거나 두 번 클릭하면 탭이 유지됩니다.",
+        "openFilesInPreviewMode": "사이드바 파일을 미리보기 탭에서 엽니다. 미리보기를 편집하거나 사이드바에서 파일을 두 번 클릭하면 탭이 유지됩니다.",
         "excludePatterns": "파일 트리 제외 규칙",
         "excludePatternsNotes": "glob 규칙 중 하나와 일치하는 경로는 파일 트리에서 제외됩니다. Enter를 눌러 규칙을 추가하고 ×를 클릭해 삭제하세요. 규칙 안의 쉼표는 그대로 유지됩니다. 변경 사항을 완전히 적용하려면 폴더를 다시 여세요.",
         "removePattern": "삭제",

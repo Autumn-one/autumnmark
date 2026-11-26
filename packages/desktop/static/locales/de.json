@@ -676,7 +676,7 @@
         "tocRight": "Rechts",
         "showOpenedFiles": "Geöffnete Dateien anzeigen",
         "autoReveal": "Aktive Datei in der Seitenleiste anzeigen",
-        "openFilesInPreviewMode": "Sidebar-Dateien in Vorschauregistern öffnen. Bearbeiten oder Doppelklicken behält das Register bei.",
+        "openFilesInPreviewMode": "Sidebar-Dateien in Vorschauregistern öffnen. Das Bearbeiten der Vorschau oder ein Doppelklick auf die Datei in der Sidebar behält das Register bei.",
         "excludePatterns": "Ausschlussregeln für den Dateibaum",
         "excludePatternsNotes": "Pfade, die einer glob-Regel entsprechen, werden aus dem Dateibaum ausgeschlossen. Drücken Sie Enter, um eine Regel hinzuzufügen, und klicken Sie auf ×, um sie zu entfernen; Kommas innerhalb einer Regel bleiben erhalten. Öffnen Sie den Ordner erneut, um die Änderungen vollständig anzuwenden.",
         "removePattern": "Entfernen",

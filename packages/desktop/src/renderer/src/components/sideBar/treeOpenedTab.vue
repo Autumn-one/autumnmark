@@ -111,9 +111,6 @@ const removeFileInTab = (file: TabDescriptor): void => {
 .opened-file.preview > .name {
   font-style: italic;
 }
-.unsaved.opened-file > .close-icon {
-  opacity: 0;
-}
 .unsaved.opened-file::before {
   content: '';
   width: 7px;
@@ -124,13 +121,10 @@ const removeFileInTab = (file: TabDescriptor): void => {
   top: 50%;
   left: calc(var(--indicator-center) - 3.5px);
   transform: translateY(-50%);
+  pointer-events: none;
 }
-.unsaved.opened-file:has(> .close-icon:hover) > .close-icon,
-.unsaved.opened-file > .close-icon:focus-visible {
-  opacity: 1;
-}
-.unsaved.opened-file:has(> .close-icon:hover)::before,
-.unsaved.opened-file:focus-within::before {
+.unsaved.opened-file:hover::before,
+.unsaved.opened-file:has(> .close-icon:focus-visible)::before {
   visibility: hidden;
 }
 </style>

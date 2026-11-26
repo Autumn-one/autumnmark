@@ -676,7 +676,7 @@
         "tocRight": "Destra",
         "showOpenedFiles": "Mostra i file aperti",
         "autoReveal": "Mostra il file attivo nella barra laterale",
-        "openFilesInPreviewMode": "Apri i file della barra laterale in schede di anteprima. La modifica o il doppio clic mantengono aperta la scheda",
+        "openFilesInPreviewMode": "Apri i file della barra laterale in schede di anteprima. Modificare l’anteprima o fare doppio clic sul file nella barra laterale mantiene aperta la scheda.",
         "excludePatterns": "Regole di esclusione dall’albero dei file",
         "excludePatternsNotes": "I percorsi (path) che corrispondono a una qualsiasi regola \"glob\" vengono esclusi dall’albero dei file. Premere ‘Invio’ per aggiungere una regola e fare clic su × per rimuoverla; le virgole all’interno di una regola vengono mantenute. Riaprire la cartella per applicare tutte le modifiche.",
         "removePattern": "Rimuovi",

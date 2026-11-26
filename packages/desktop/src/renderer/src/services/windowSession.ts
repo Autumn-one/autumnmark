@@ -52,6 +52,7 @@ class WindowSession {
   private _workspace: WindowInitialization['snapshot']['workspace'] = null
   private _sequence = 0
   private _initializing = true
+  private _closing = false
   private _interactionEpoch = 0
   private _deferredSelection: string | null = null
   private _queue: Promise<unknown> = Promise.resolve()
@@ -599,27 +600,33 @@ class WindowSession {
 
   private async _close(ids: string[]): Promise<void> {
     if (!ids.length || !this._context) return
-    const managed = ids.filter(id => !drawingEditorTabs.has(id))
-    const drawings = [...drawingEditorTabs].filter(([id, drawing]) => ids.includes(id) || (drawing.noteId && managed.includes(drawing.noteId)))
-    const popup = drawingDialog.value
-    const closesPopup = popup?.noteId && managed.includes(popup.noteId)
-    if (closesPopup) {
-      const close = await popup.beforeClose?.()
-      if (close === false) return
-    }
-    for (const [, drawing] of drawings) {
-      const close = await drawing.beforeClose?.()
-      if (close === false) return
-    }
-    if (managed.length) {
-      const result = await window.electron.ipcRenderer.invoke('mt::state::close-documents', this._context.contextToken, managed)
-      if (result.status !== 'closed') return
-    }
-    if (closesPopup && drawingDialog.value === popup) drawingDialog.value = null
-    for (const [id] of drawings) {
-      const tab = this._editor.tabs.find(file => file.id === id)
-      if (tab) this._editor.FORCE_CLOSE_TAB(tab)
-      drawingEditorTabs.delete(id)
+    if (this._closing) return
+    this._closing = true
+    try {
+      const managed = ids.filter(id => !drawingEditorTabs.has(id))
+      const drawings = [...drawingEditorTabs].filter(([id, drawing]) => ids.includes(id) || (drawing.noteId && managed.includes(drawing.noteId)))
+      const popup = drawingDialog.value
+      const closesPopup = popup?.noteId && managed.includes(popup.noteId)
+      if (closesPopup) {
+        const close = await popup.beforeClose?.()
+        if (close === false) return
+      }
+      for (const [, drawing] of drawings) {
+        const close = await drawing.beforeClose?.()
+        if (close === false) return
+      }
+      if (managed.length) {
+        const result = await window.electron.ipcRenderer.invoke('mt::state::close-documents', this._context.contextToken, managed)
+        if (result.status !== 'closed') return
+      }
+      if (closesPopup && drawingDialog.value === popup) drawingDialog.value = null
+      for (const [id] of drawings) {
+        const tab = this._editor.tabs.find(file => file.id === id)
+        if (tab) this._editor.FORCE_CLOSE_TAB(tab)
+        drawingEditorTabs.delete(id)
+      }
+    } finally {
+      this._closing = false
     }
   }
 

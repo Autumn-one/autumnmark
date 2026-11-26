@@ -1,3 +1,9 @@
+## AutumnMark 0.24.65
+
+- Editing text in an embedded drawing popup now keeps the text input focused across auto-save pauses, `Ctrl/Cmd+S` saves, external disk reloads, and table selections, while cleanly committing or discarding active text on close or Open in Tab.
+- Adding elements in an embedded drawing no longer resets the underlying Markdown document's scroll position to the top during auto-save rebuilds.
+- Double-clicking a tab closes it (while suppressing accidental closes after drag-reordering), unsaved dot indicators hide cleanly on tab hover, and overlapping tab close requests are serialized.
+
 ## AutumnMark 0.24.64
 
 - The tab bar now automatically appears when multiple files or a drawing tab are open, and automatically hides again when closing back to a single document.

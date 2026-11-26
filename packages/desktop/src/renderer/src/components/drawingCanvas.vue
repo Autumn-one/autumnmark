@@ -259,7 +259,7 @@ import '@/services/drawingFonts'
 import '@excalidraw/excalidraw/index.css'
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, languages, newElementWith, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
 import type { FileId } from '@excalidraw/excalidraw/element/types'
-import type { BinaryFileData, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { AppState, BinaryFileData, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { createElement } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
@@ -368,6 +368,9 @@ const language = computed(() => {
     languages.find(item => item.code === locale.split('-')[0])?.code ?? 'en'
 })
 const theme = computed(() => isDarkThemeId(preferences.theme) ? 'dark' : 'light')
+type SaveMode = 'auto' | 'flush' | 'explicit'
+type SaveOutcome = 'saved' | 'skipped' | 'failed'
+
 let root: Root | undefined
 let baseline: string | undefined
 let incoming = props.file?.markdown ?? session?.unsavedSource ?? session?.source ?? ''
@@ -375,9 +378,48 @@ let disposed = false
 let refreshVersion = 0
 let dirtyTimer: ReturnType<typeof setTimeout> | undefined
 let pendingSourceApply: Promise<void> | undefined
-let pendingSave: Promise<boolean> | undefined
+let pendingSave: Promise<SaveOutcome> | undefined
 let discarded: { transactionId: string; content: string } | undefined
 let cardRequest = 0
+
+function isEditingInteraction(state: Partial<AppState> | undefined): boolean {
+  return Boolean(
+    state?.editingTextElement ||
+    state?.newElement ||
+    state?.resizingElement ||
+    state?.multiElement ||
+    state?.selectedElementsAreBeingDragged ||
+    state?.selectionElement ||
+    state?.editingLinearElement ||
+    state?.croppingElementId
+  )
+}
+
+function commitActiveTextEditor(): void {
+  const active = document.activeElement
+  if (active instanceof HTMLTextAreaElement && active.classList.contains('excalidraw-wysiwyg') && canvas.value?.contains(active)) {
+    active.blur()
+  }
+}
+
+// Explicit save keeps the active text box open; strip a still-empty text element
+// and its container binding from the serialized snapshot without mutating live scene state.
+function sceneForExplicitSave(scene: DrawingScene): DrawingScene {
+  const editing = scene.appState.editingTextElement
+  if (!editing) return scene
+  const live = scene.elements.find(element => element.id === editing.id)
+  if (!live || live.type !== 'text' || live.originalText.trim()) return scene
+  const containerId = live.containerId
+  const elements = scene.elements.flatMap(element => {
+    if (element.id === live.id) return []
+    if (containerId && element.id === containerId && element.boundElements?.some(bound => bound.id === live.id)) {
+      const remaining = element.boundElements.filter(bound => bound.id !== live.id)
+      return [{ ...element, boundElements: remaining.length ? remaining : null }]
+    }
+    return [element]
+  })
+  return { ...scene, elements }
+}
 
 function currentScene(): DrawingScene | undefined {
   const current = api.value
@@ -458,7 +500,7 @@ async function applySourceDraft() {
     busy.value = false
   }
   sourceDraft.value = sourceBaseline.value = readSource()
-  if (!session.draft) await saveSession(false)
+  if (!session.draft) await saveSession('flush')
 }
 
 async function confirmSourceDiscard() {
@@ -490,7 +532,7 @@ function syncDrawing() {
 
 function scheduleSessionSave() {
   clearTimeout(dirtyTimer)
-  dirtyTimer = setTimeout(() => { void saveSession(false) }, 350)
+  dirtyTimer = setTimeout(() => { void saveSession('auto') }, 350)
 }
 
 const initialData = (async() => {
@@ -527,9 +569,13 @@ watch([canvas, theme, language, name, readOnly], ([container, activeTheme, langC
         ready.value = true
         session?.insertionTrace?.('canvas-ready')
       })
-      if (props.file) {
+      if (isEditingInteraction(state)) {
         clearTimeout(dirtyTimer)
-        dirtyTimer = setTimeout(syncDrawing, 120)
+      } else if (props.file) {
+        clearTimeout(dirtyTimer)
+        dirtyTimer = setTimeout(() => {
+          if (!isEditingInteraction(api.value?.getAppState())) syncDrawing()
+        }, 120)
       } else if (props.session?.noteId && !props.session.draft && !readOnly.value) {
         scheduleSessionSave()
       }
@@ -567,7 +613,7 @@ onMounted(() => {
   window.addEventListener('focus', refreshCards)
   bus.on('flush-active-editor', syncDrawing)
   if (session) {
-    session.save = () => saveSession(true)
+    session.save = async() => (await saveSession('explicit')) === 'saved'
     session.beforeClose = beforeClose
   }
 })
@@ -610,21 +656,24 @@ async function refreshCards() {
   syncDrawing()
 }
 
-async function saveSession(explicit: boolean): Promise<boolean> {
+async function saveSession(mode: SaveMode): Promise<SaveOutcome> {
   clearTimeout(dirtyTimer)
   while (pendingSave) await pendingSave
+  if (mode === 'flush') commitActiveTextEditor()
   const scene = currentScene()
-  if (!session || !scene || !ready.value || readOnly.value || disposed) return true
-  if (!explicit && session.draft) return true
-  const content = serializeDrawing(scene)
-  if (!session.draft && content === baseline && !saveFailed.value) return true
+  if (!session || !scene || !ready.value || readOnly.value || disposed) return 'saved'
+  if (mode !== 'explicit' && session.draft) return mode === 'auto' ? 'skipped' : 'saved'
+  if (mode === 'auto' && isEditingInteraction(scene.appState)) return 'skipped'
+  const snapshot = mode === 'explicit' ? sceneForExplicitSave(scene) : scene
+  const content = serializeDrawing(snapshot)
+  if (!session.draft && content === baseline && !saveFailed.value) return 'saved'
   const wasDraft = session.draft
   busy.value = true
   error.value = ''
-  const save = async() => {
+  const save = async(): Promise<SaveOutcome> => {
     try {
       const saved = await session.commit(content, filename.value)
-      if (!saved) return false
+      if (!saved) return 'failed'
       session.source = content
       session.unsavedSource = undefined
       baseline = content
@@ -634,11 +683,11 @@ async function saveSession(explicit: boolean): Promise<boolean> {
         if (latest && serializeDrawing(latest) !== content) scheduleSessionSave()
         else props.inserted?.()
       }
-      return true
+      return 'saved'
     } catch (reason) {
       saveFailed.value = true
       error.value = t('drawing.saveFailed', { reason: String(reason) })
-      return false
+      return 'failed'
     } finally {
       busy.value = false
       pendingSave = undefined
@@ -653,9 +702,10 @@ async function moveToTab() {
   if (!session || !props.openInTab) return
   const discardSource = await confirmSourceDiscard()
   if (!discardSource) return
+  commitActiveTextEditor()
   if (session.noteId && !session.draft && !readOnly.value) {
-    const saved = await saveSession(false)
-    if (!saved && !session.embedded) return
+    const result = await saveSession('flush')
+    if (result !== 'saved' && !session.embedded) return
   }
   const scene = currentScene()
   if (!scene) return
@@ -680,7 +730,7 @@ async function commitDrawing(action: 'save' | 'insert') {
       const discardSource = await confirmSourceDiscard()
       if (!discardSource) return
     }
-    await saveSession(true)
+    await saveSession('explicit')
     return
   }
   busy.value = true
@@ -713,10 +763,12 @@ async function beforeClose(transactionId?: string): Promise<boolean> {
   if (busy.value && !pendingSave) return false
   const discardSource = await confirmSourceDiscard()
   if (!discardSource) return false
-  const pending = pendingSave ? await pendingSave : true
+  const pendingOutcome = pendingSave ? await pendingSave : 'saved'
+  const pending = pendingOutcome !== 'failed'
+  commitActiveTextEditor()
   if (pending && session.noteId && !session.draft) {
-    const saved = await saveSession(false)
-    if (saved) return true
+    const result = await saveSession('flush')
+    if (result === 'saved') return true
   }
   const scene = currentScene()
   const content = scene && serializeDrawing(scene)

@@ -676,7 +676,7 @@
         "tocRight": "Derecha",
         "showOpenedFiles": "Mostrar archivos abiertos",
         "autoReveal": "Mostrar el archivo activo en la barra lateral",
-        "openFilesInPreviewMode": "Abrir archivos de la barra lateral en pestañas de vista previa. Al editar o hacer doble clic se conserva la pestaña.",
+        "openFilesInPreviewMode": "Abrir archivos de la barra lateral en pestañas de vista previa. Editar la vista previa o hacer doble clic en el archivo en la barra lateral conserva la pestaña.",
         "excludePatterns": "Reglas de exclusión del árbol de archivos",
         "excludePatternsNotes": "Las rutas que coincidan con cualquier regla glob se excluyen del árbol de archivos. Pulsa Enter para añadir una regla y haz clic en × para eliminarla; se conservan las comas dentro de una regla. Vuelve a abrir la carpeta para aplicar todos los cambios.",
         "removePattern": "Eliminar",

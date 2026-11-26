@@ -17,6 +17,7 @@ export interface ITransactionOptions {
     history?: 'merge' | 'isolated' | 'separate' | 'ignore';
     replay?: boolean;
     preventScroll?: boolean;
+    preserveFocus?: boolean;
     recordSelection?: Nullable<TSelectionState>;
 }
 
@@ -225,6 +226,7 @@ export class EditTransactions {
             history,
             replay: options.replay ?? false,
             preventScroll: options.preventScroll ?? false,
+            preserveFocus: options.preserveFocus ?? false,
             source: options.source ?? ChangeSource.User,
             selection: options.selection ?? null,
             recordSelection: options.recordSelection,

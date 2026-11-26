@@ -9,6 +9,11 @@ interface AutoScroller {
   destroy(forceCleanAnimation?: boolean): void
 }
 
+export interface TabReorderControl {
+  isDblClickSuppressed: () => boolean
+  clearDblClickSuppression: () => void
+}
+
 // CSS pixels; tolerate pointer drift so a click is not swallowed as a drag (#4895).
 const DRAG_THRESHOLD_PX = 5
 
@@ -16,8 +21,9 @@ export const useTabReorder = (
   container: Ref<HTMLElement | null>,
   scrollContainer: Ref<HTMLElement | null>,
   direction: 'horizontal' | 'vertical'
-): void => {
+): TabReorderControl => {
   const editorStore = useEditorStore()
+  let suppressDblClick = false
 
   watch([container, scrollContainer], ([list, scroller], _previous, onCleanup) => {
     if (!list || !scroller) return
@@ -72,6 +78,7 @@ export const useTabReorder = (
         !handle?.closest('button')
     })
       .on('drag', (element) => {
+        suppressDblClick = true
         originalNext = element.nextSibling
         rememberPositions()
       })
@@ -93,6 +100,11 @@ export const useTabReorder = (
         positions.clear()
       })
 
+    const handlePointerDown = (): void => {
+      if (!drake.dragging) suppressDblClick = false
+    }
+    document.addEventListener('pointerdown', handlePointerDown, true)
+
     const autoScroller: AutoScroller = autoScroll([scroller], {
       margin: 20,
       maxSpeed: 6,
@@ -101,10 +113,19 @@ export const useTabReorder = (
     })
 
     onCleanup(() => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      suppressDblClick = false
       stopAnimations()
       autoScroller.destroy(true)
       drake.cancel(true)
       drake.destroy()
     })
   }, { flush: 'post' })
+
+  return {
+    isDblClickSuppressed: () => suppressDblClick,
+    clearDblClickSuppression: () => {
+      suppressDblClick = false
+    }
+  }
 }

@@ -770,7 +770,7 @@
         "tocRight": "Right",
         "showOpenedFiles": "Show opened files",
         "autoReveal": "Reveal the active file in the sidebar",
-        "openFilesInPreviewMode": "Open sidebar files in preview tabs. Editing or double-clicking keeps the tab open.",
+        "openFilesInPreviewMode": "Open sidebar files in preview tabs. Editing the preview, or double-clicking the file in the sidebar, keeps the tab open.",
         "excludePatterns": "File tree exclusion rules",
         "excludePatternsNotes": "Paths matching any glob rule are excluded from the file tree. Press Enter to add a rule and click × to remove one; commas within a rule are preserved. Reopen the folder to fully apply changes.",
         "removePattern": "Remove",
