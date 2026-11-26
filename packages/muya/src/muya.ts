@@ -707,8 +707,10 @@ export class Muya {
      * bar do not linger after the editor is blurred.
      */
     blur(isRemoveAllRange = false, unSelect = false) {
-        if (isRemoveAllRange)
+        if (isRemoveAllRange) {
             document.getSelection()?.removeAllRanges();
+            this.editor.selection.markNativeSelectionCleared();
+        }
 
         if (unSelect)
             this.editor.selection.clearImage();

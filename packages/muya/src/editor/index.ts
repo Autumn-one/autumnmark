@@ -710,8 +710,10 @@ export class Editor {
     }
 
     private _restoreSelection(selection: Nullable<TSelectionState>, preserveFocus = false) {
-        if (!selection)
+        if (!selection) {
+            this.selection.refreshNativeSelectionPresence();
             return;
+        }
         if (!preserveFocus) {
             const endpoints = resolveTextSelectionEndpoints(this._muya, selection);
             if (endpoints) {

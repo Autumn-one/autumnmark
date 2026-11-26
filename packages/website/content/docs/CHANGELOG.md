@@ -1,3 +1,8 @@
+## AutumnMark 0.24.71
+
+- Closing an embedded Excalidraw drawing dialog via the close button (`×`) after editing now preserves the editor's scroll position and bottom caret instead of jumping to the top of long documents.
+- Restored Muya's cached selection without scrolling when the `contenteditable` editor root regains non-pointer focus with an empty native selection (such as modal focus-trap return), while preserving pointer-click placement, table/image selections, and folded blocks.
+
 ## AutumnMark 0.24.70
 
 - Restored support for the **Maximum editor content width** (`editorLineWidth`) setting in the visual editor so custom `px`, `ch`, and `%` widths apply to `.mu-container` again while keeping the theme catalog preview capped at `680px`.

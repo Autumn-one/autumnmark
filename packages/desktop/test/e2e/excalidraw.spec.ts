@@ -1451,3 +1451,153 @@ test('updates a linked excalidraw preview without invalidating unrelated images'
     await app.close()
   }
 })
+
+async function readEditorSelectionSnapshot(page: Page) {
+  return await page.evaluate(() => {
+    const scroller = document.querySelector('.editor-component') as HTMLElement | null
+    const container = document.querySelector('.mu-container') as (HTMLElement & {
+      __MUYA_BLOCK__?: {
+        muya: { getSelectionState(): { kind: string; anchor?: { path: (string | number)[]; offset: number } } | null }
+        children: { length: number }
+      }
+    }) | null
+    const scrollPage = container?.__MUYA_BLOCK__
+    const selectionState = scrollPage?.muya.getSelectionState() ?? null
+    const native = document.getSelection()
+    const anchorEl = native?.anchorNode
+      ? (native.anchorNode.nodeType === Node.TEXT_NODE ? native.anchorNode.parentElement : native.anchorNode as Element)
+      : null
+    const topBlock = anchorEl?.closest('.mu-container > *') ?? null
+    const nativeBlockIndex = topBlock && container ? [...container.children].indexOf(topBlock) : -1
+    return {
+      scrollTop: scroller?.scrollTop ?? -1,
+      totalBlocks: scrollPage?.children.length ?? -1,
+      selectionPath: selectionState?.kind === 'text' ? selectionState.anchor?.path ?? null : null,
+      nativeBlockIndex
+    }
+  })
+}
+
+async function scrollEditorToBottom(page: Page) {
+  await page.evaluate(async() => {
+    const scroller = document.querySelector('.editor-component') as HTMLElement | null
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  })
+}
+
+async function triggerSlashDrawingInsert(page: Page) {
+  await page.keyboard.type('/excalidraw')
+  const floatWrapper = page.locator('.mu-float-wrapper:has(.mu-quick-insert)')
+  const command = page.locator('.mu-quick-insert [data-label="insert-drawing"]')
+  await expect(floatWrapper).toHaveCSS('opacity', '1')
+  await expect(command).toHaveClass(/active/)
+  await page.keyboard.press('Enter')
+}
+
+for (const method of ['slash', 'command'] as const) {
+  test(`keeps bottom scroll and caret when closing an inserted drawing dialog after drawing (${method})`, async() => {
+    const body = Array.from({ length: 45 }, (_, index) => `Section ${index + 1}. ${'scroll '.repeat(18).trim()}`).join('\n\n')
+    const markdown = `# Top Heading\n\n${body}\n\n> Bottom quote\n`
+    const { app, page, filePath } = await launchWithMarkdown(markdown, {
+      preferences: { language: 'en', autoSave: false, embedDrawings: true }
+    })
+    try {
+      const bqContent = page.locator('.mu-container > blockquote .mu-paragraph-content').last()
+      await bqContent.scrollIntoViewIfNeeded()
+      await bqContent.click()
+      await page.keyboard.press('End')
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Enter')
+      await scrollEditorToBottom(page)
+
+      if (method === 'slash') {
+        await triggerSlashDrawingInsert(page)
+      } else {
+        await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'drawing.insert')
+      }
+
+      const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+      await expect(popup.locator('canvas.interactive')).toBeVisible()
+      await drawShape(page, popup, 'toolbar-rectangle')
+      await expect.poll(async() => inlineScenes(await readFile(filePath, 'utf8'))[0]?.elements.length ?? 0).toBe(1)
+
+      const beforeClose = await readEditorSelectionSnapshot(page)
+      expect(beforeClose.scrollTop).toBeGreaterThan(1000)
+      expect(beforeClose.selectionPath?.[0]).toBe(beforeClose.totalBlocks - 1)
+
+      await page.locator('.el-dialog__headerbtn').click()
+      await expect(popup).toBeHidden()
+      await page.waitForTimeout(150)
+
+      const afterClose = await readEditorSelectionSnapshot(page)
+      expect(Math.abs(afterClose.scrollTop - beforeClose.scrollTop)).toBeLessThan(50)
+      expect(afterClose.scrollTop).toBeGreaterThan(1000)
+      expect(afterClose.selectionPath?.[0]).toBe(beforeClose.totalBlocks - 1)
+      expect(afterClose.nativeBlockIndex).toBe(beforeClose.totalBlocks - 1)
+    } finally {
+      await app.close()
+    }
+  })
+}
+
+test('keeps scroll across middle drawings, consecutive bottom drawings, and interleaved text', async() => {
+  const top = Array.from({ length: 20 }, (_, index) => `Top ${index + 1}. ${'scroll '.repeat(18).trim()}`).join('\n\n')
+  const bottom = Array.from({ length: 25 }, (_, index) => `Bottom ${index + 1}. ${'tail '.repeat(18).trim()}`).join('\n\n')
+  const markdown = `# Top Heading\n\n${top}\n\n${blankInlineDrawing}\n\n${bottom}\n`
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { language: 'en', autoSave: false, embedDrawings: true }
+  })
+  try {
+    const popup = page.getByRole('dialog', { name: 'Embedded drawing' })
+    const closeAndVerify = async(expectedCount: number, expectedElementsAtLast: number) => {
+      await expect(popup.locator('canvas.interactive')).toBeVisible()
+      await drawShape(page, popup, 'toolbar-rectangle')
+      await expect.poll(async() => {
+        const scenes = inlineScenes(await readFile(filePath, 'utf8'))
+        return scenes.length === expectedCount ? (scenes[expectedCount - 1]?.elements.length ?? 0) : -1
+      }).toBe(expectedElementsAtLast)
+
+      const beforeClose = await readEditorSelectionSnapshot(page)
+      expect(beforeClose.scrollTop).toBeGreaterThan(1000)
+      expect(beforeClose.selectionPath?.[0]).toBe(beforeClose.totalBlocks - 1)
+
+      await page.locator('.el-dialog__headerbtn').click()
+      await expect(popup).toBeHidden()
+      await page.waitForTimeout(150)
+
+      const afterClose = await readEditorSelectionSnapshot(page)
+      expect(Math.abs(afterClose.scrollTop - beforeClose.scrollTop)).toBeLessThan(50)
+      expect(afterClose.scrollTop).toBeGreaterThan(1000)
+      expect(afterClose.selectionPath?.[0]).toBe(beforeClose.totalBlocks - 1)
+      expect(afterClose.nativeBlockIndex).toBe(beforeClose.totalBlocks - 1)
+    }
+
+    // 1. Insert at bottom when a drawing already exists in the middle.
+    await expect(page.locator('.mu-editor .mu-inline-drawing img')).toHaveCount(1)
+    const lastParagraph = page.locator('.mu-container > p .mu-paragraph-content').last()
+    await lastParagraph.scrollIntoViewIfNeeded()
+    await lastParagraph.click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Enter')
+    await scrollEditorToBottom(page)
+    await triggerSlashDrawingInsert(page)
+    await closeAndVerify(2, 1)
+
+    // 2. Insert a second consecutive drawing at the bottom.
+    await page.keyboard.press('End')
+    await page.keyboard.press('Enter')
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'drawing.insert')
+    await closeAndVerify(3, 1)
+
+    // 3. Insert text after the bottom drawing, then add another drawing below it.
+    await page.keyboard.press('End')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('Interleaved paragraph between bottom drawings')
+    await page.keyboard.press('Enter')
+    await triggerSlashDrawingInsert(page)
+    await closeAndVerify(4, 1)
+  } finally {
+    await app.close()
+  }
+})
