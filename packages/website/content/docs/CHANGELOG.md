@@ -1,3 +1,8 @@
+## AutumnMark 0.24.70
+
+- Restored support for the **Maximum editor content width** (`editorLineWidth`) setting in the visual editor so custom `px`, `ch`, and `%` widths apply to `.mu-container` again while keeping the theme catalog preview capped at `680px`.
+- Changed the default editor content maximum width (both `editorLineWidth` and the empty-value fallback across all built-in themes) to `100%` so the editor fills available width by default while allowing users to narrow it on demand.
+
 ## AutumnMark 0.24.69
 
 - Added a **Paragraph newlines when copying** setting under **Preferences → Editor → Writing preferences** (`Standard Markdown (double newline)` by default, or `Plain-text visual (single newline)` for pasting into AI prompts and plain-text apps) without changing saved `.md` files or empty lines inside code blocks.

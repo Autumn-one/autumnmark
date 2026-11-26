@@ -17,6 +17,7 @@
 
 .mu-container {
     box-sizing: border-box;
+    max-width: var(--editor-area-width, 800px);
     min-height: 100%;
     margin: 0 auto;
 
@@ -30,7 +31,10 @@
        text, so it has to state the I-beam rather than inherit from there. */
     cursor: text;
 
-    /* Inline math uses cqw to size its popup against the available text width. */
+    /* `--editor-area-width` may be a percentage (marktext's Max width
+       preference), so the text column's width is only known at layout time.
+       Naming it a query container lets content that must not outgrow the
+       column — the inline-math popup — measure it in `cqw`. */
     container-type: inline-size;
 }
 

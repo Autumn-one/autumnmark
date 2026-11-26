@@ -16,6 +16,8 @@
   --proseAccent: #11977d;
 
   /* The original light palette still applies inside tables and media tools. */
+  --editorAreaWidth: 100%;
+  --editor-area-width: var(--editorAreaWidth);
   --link-color: var(--theme-color);
   --blockquote-border-color: var(--theme-color);
 }

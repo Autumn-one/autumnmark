@@ -43,7 +43,7 @@ body.catalog-preview #sidebar {
   background: var(--itemBgColor); color: var(--sideBarTitleColor);
 }
 body.catalog-preview :is(main, .source-code) { grid-area: 2 / 2; min-width: 0; min-height: 0; }
-body.catalog-preview .mu-container { padding-inline: clamp(9px, 3vw, 22px); padding-block-end: 20px; }
+body.catalog-preview .mu-container { max-width: 680px; margin-inline: auto; padding-inline: clamp(9px, 3vw, 22px); padding-block-end: 20px; }
 @media (max-width: 490px) {
   body.catalog-preview { grid-template-columns: minmax(0, 1fr); }
   body.catalog-preview #sidebar { display: none; }

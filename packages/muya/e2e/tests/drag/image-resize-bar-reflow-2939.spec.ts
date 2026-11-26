@@ -65,60 +65,74 @@ async function contentInnerWidth(content: Locator): Promise<number> {
 }
 
 test.describe('ImageResizeBar full-width 100% layout', () => {
-    test('inline image expands to 100% beyond natural width and tracks viewport widen/narrow', async ({ page }) => {
-        await page.setViewportSize({ width: 960, height: 900 });
+    test('inline image expands to 100% beyond natural width and tracks viewport and editor-width changes', async ({ page }) => {
+        await page.setViewportSize({ width: 680, height: 900 });
         await page.evaluate(uri => window.muya!.setContent(`![alt](${uri})`), DATA_URI);
 
-        const content = page.locator('.mu-paragraph-content').first();
-        const wrapper = page.locator(editor.image).first();
-        await expect(wrapper).toBeVisible();
-        await expect.poll(async () => wrapper.evaluate(el =>
-            el.classList.contains('mu-image-success')), { timeout: 5_000 }).toBe(true);
+        try {
+            const content = page.locator('.mu-paragraph-content').first();
+            const wrapper = page.locator(editor.image).first();
+            await expect(wrapper).toBeVisible();
+            await expect.poll(async () => wrapper.evaluate(el =>
+                el.classList.contains('mu-image-success')), { timeout: 5_000 }).toBe(true);
 
-        const innerImg = wrapper.locator('img').first();
-        await innerImg.click();
+            const innerImg = wrapper.locator('img').first();
+            await innerImg.click();
 
-        const rightHandle = page.locator(`${floats.imageTransformer} .bar.right`);
-        await expect(rightHandle).toBeVisible();
+            const rightHandle = page.locator(`${floats.imageTransformer} .bar.right`);
+            await expect(rightHandle).toBeVisible();
 
-        const handleBox = (await rightHandle.boundingBox())!;
-        const contentBox = (await content.boundingBox())!;
-        const startX = handleBox.x + handleBox.width / 2;
-        const startY = handleBox.y + handleBox.height / 2;
-        await page.mouse.move(startX, startY);
-        await page.mouse.down();
-        await page.mouse.move(contentBox.x + contentBox.width + 40, startY, { steps: 10 });
-        await page.mouse.up();
+            const handleBox = (await rightHandle.boundingBox())!;
+            const contentBox = (await content.boundingBox())!;
+            const startX = handleBox.x + handleBox.width / 2;
+            const startY = handleBox.y + handleBox.height / 2;
+            await page.mouse.move(startX, startY);
+            await page.mouse.down();
+            await page.mouse.move(contentBox.x + contentBox.width + 40, startY, { steps: 10 });
+            await page.mouse.up();
 
-        const markdown = await page.evaluate(() => window.muya!.getMarkdown());
-        expect(markdown).toContain('width="100%"');
-        await expect(wrapper).toHaveClass(/mu-image-full-width/);
+            await expect.poll(() => page.evaluate(() => window.muya!.getMarkdown()), { timeout: 5_000 })
+                .toContain('width="100%"');
+            await expect(wrapper).toHaveClass(/mu-image-full-width/);
 
-        const assertMatchesContentWidth = async () => {
-            await expect.poll(async () => {
-                const expected = await contentInnerWidth(content);
-                const actual = Math.round((await wrapper.locator('img').first().boundingBox())!.width);
-                return Math.abs(actual - expected);
-            }, { timeout: 5_000 }).toBeLessThanOrEqual(2);
-        };
+            const assertMatchesContentWidth = async () => {
+                await expect.poll(async () => {
+                    const expected = await contentInnerWidth(content);
+                    const actual = Math.round((await wrapper.locator('img').first().boundingBox())!.width);
+                    return Math.abs(actual - expected);
+                }, { timeout: 5_000 }).toBeLessThanOrEqual(2);
+            };
 
-        const initialExpected = await contentInnerWidth(content);
-        expect(initialExpected).toBeGreaterThan(420);
-        await assertMatchesContentWidth();
+            const initialExpected = await contentInnerWidth(content);
+            expect(initialExpected).toBeGreaterThan(420);
+            await assertMatchesContentWidth();
 
-        // Widen viewport: the 100% image must grow past the drag-time pixel width.
-        await page.setViewportSize({ width: 1400, height: 900 });
-        await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeGreaterThan(initialExpected);
-        await assertMatchesContentWidth();
+            // Widen viewport up to the default 800px column cap: the 100% image must grow past the drag-time pixel width.
+            await page.setViewportSize({ width: 960, height: 900 });
+            await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeGreaterThan(initialExpected);
+            const defaultCapWidth = await contentInnerWidth(content);
+            await assertMatchesContentWidth();
 
-        // Narrow viewport: the 100% image must shrink to fit the narrower container.
-        await page.setViewportSize({ width: 620, height: 900 });
-        await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeLessThan(initialExpected);
-        await assertMatchesContentWidth();
+            // Raising --editor-area-width to 100% on a wider viewport must let the 100% image expand past the default cap.
+            await page.evaluate(() => document.documentElement.style.setProperty('--editor-area-width', '100%'));
+            await page.setViewportSize({ width: 1400, height: 900 });
+            await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeGreaterThan(defaultCapWidth);
+            await assertMatchesContentWidth();
+
+            // Narrow viewport: the 100% image must shrink to fit the narrower container.
+            await page.setViewportSize({ width: 560, height: 900 });
+            await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeLessThan(initialExpected);
+            await assertMatchesContentWidth();
+        }
+        finally {
+            await page.evaluate(() => {
+                document.documentElement.style.removeProperty('--editor-area-width');
+            });
+        }
     });
 
-    test('embedded picture expands to 100% beyond natural width and tracks viewport widen/narrow', async ({ page }) => {
-        await page.setViewportSize({ width: 960, height: 900 });
+    test('embedded picture expands to 100% beyond natural width and tracks viewport and editor-width changes', async ({ page }) => {
+        await page.setViewportSize({ width: 680, height: 900 });
         await page.evaluate((uri) => {
             window.muya!.options.editEmbeddedImage = () => {};
             window.muya!.setContent(`![alt](${uri})`);
@@ -143,8 +157,8 @@ test.describe('ImageResizeBar full-width 100% layout', () => {
             await page.mouse.move(contentBox.x + contentBox.width + 40, startY, { steps: 10 });
             await page.mouse.up();
 
-            const markdown = await page.evaluate(() => window.muya!.getMarkdown());
-            expect(markdown).toContain('width="100%"');
+            await expect.poll(() => page.evaluate(() => window.muya!.getMarkdown()), { timeout: 5_000 })
+                .toContain('width="100%"');
             await expect(picture).toHaveClass(/mu-image-full-width/);
 
             const assertMatchesContentWidth = async () => {
@@ -159,16 +173,23 @@ test.describe('ImageResizeBar full-width 100% layout', () => {
             expect(initialExpected).toBeGreaterThan(420);
             await assertMatchesContentWidth();
 
-            await page.setViewportSize({ width: 1400, height: 900 });
+            await page.setViewportSize({ width: 960, height: 900 });
             await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeGreaterThan(initialExpected);
+            const defaultCapWidth = await contentInnerWidth(content);
             await assertMatchesContentWidth();
 
-            await page.setViewportSize({ width: 620, height: 900 });
+            await page.evaluate(() => document.documentElement.style.setProperty('--editor-area-width', '100%'));
+            await page.setViewportSize({ width: 1400, height: 900 });
+            await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeGreaterThan(defaultCapWidth);
+            await assertMatchesContentWidth();
+
+            await page.setViewportSize({ width: 560, height: 900 });
             await expect.poll(async () => contentInnerWidth(content), { timeout: 5_000 }).toBeLessThan(initialExpected);
             await assertMatchesContentWidth();
         }
         finally {
             await page.evaluate(() => {
+                document.documentElement.style.removeProperty('--editor-area-width');
                 window.muya!.options.editEmbeddedImage = undefined;
             });
         }
