@@ -1,3 +1,7 @@
+## AutumnMark 0.24.72
+
+- Widened the Windows NSIS installer's **Next** button (and shifted **Back** accordingly) so localized labels with the UAC shield icon no longer clip the icon or trailing `>`.
+
 ## AutumnMark 0.24.71
 
 - Closing an embedded Excalidraw drawing dialog via the close button (`×`) after editing now preserves the editor's scroll position and bottom caret instead of jumping to the top of long documents.
