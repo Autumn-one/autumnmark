@@ -48,6 +48,15 @@ test.describe('Persistent title bar menus', () => {
     await expect(page.locator('.document-status .word-count')).toBeVisible()
   })
 
+  test('opens the announcement without a header divider', async() => {
+    await page.locator('.announcement-trigger').click()
+    const dialog = page.locator('.announcement-dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('.el-dialog__header')).toHaveCSS('border-bottom-width', '0px')
+    await dialog.locator('.el-dialog__headerbtn').click()
+    await expect(dialog).toBeHidden()
+  })
+
   test('opens and closes the existing native submenu', async() => {
     const file = page.getByRole('menuitem', { name: '文件', exact: true })
     await app.evaluate(({ Menu }) => {
