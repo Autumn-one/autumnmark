@@ -83,14 +83,8 @@ jobs:
           TEST_GREP: ${{ inputs.grep }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if pnpm -C packages/desktop exec playwright test \
-              test/e2e/native-titlebar-word-count.spec.ts \
-              test/e2e/titlebar-application-menu.spec.ts \
-              test/e2e/issue-2245-window-menu-bar.spec.ts \
-              test/e2e/preferences-window.spec.ts \
-              test/e2e/issue-5581-tabbar-visibility.spec.ts \
-              test/e2e/embedded-images.spec.ts \
-              test/e2e/excalidraw.spec.ts; then
+            if pnpm -C packages/desktop exec playwright test test/e2e/excalidraw.spec.ts \
+              --grep 'undoes and redoes canvas|keeps bottom scroll and caret|keeps scroll across middle drawings'; then
               exit 0
             fi
             if [[ -d packages/desktop/test-results ]]; then

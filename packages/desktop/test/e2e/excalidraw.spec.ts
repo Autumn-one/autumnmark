@@ -389,8 +389,28 @@ test('undoes and redoes canvas edits with the keyboard and the edit menu', async
     await drawRectangle(drawing)
     await expect(drawing.getByTestId('button-undo')).toBeEnabled()
     await expect.poll(elementCount).toBe(2)
+    const events: string[] = []
+    page.on('console', message => {
+      if (message.text().startsWith('[drawing-menu]')) events.push(message.text())
+    })
+    await drawing.evaluate(workspace => {
+      window.electron.ipcRenderer.on('mt::editor-edit-action', (_event, action) => {
+        console.log('[drawing-menu]', action, document.activeElement?.outerHTML.slice(0, 250))
+      })
+      workspace.addEventListener('drawing-history', () => {
+        console.log('[drawing-menu]', 'history event', document.activeElement?.outerHTML.slice(0, 250))
+      })
+      workspace.querySelector('[data-testid="button-undo"]')?.addEventListener('click', () => {
+        console.log('[drawing-menu]', 'undo toolbar activated')
+      })
+    })
     await clickMenuById(app, 'undoMenuItem', page)
-    await expect.poll(elementCount).toBe(1)
+    try {
+      await expect.poll(elementCount).toBe(1)
+    } catch (error) {
+      console.log('Drawing menu events', events)
+      throw error
+    }
     await clickMenuById(app, 'redoMenuItem', page)
     await expect.poll(elementCount).toBe(2)
   } finally {
@@ -1526,12 +1546,17 @@ async function scrollEditorToBottom(page: Page) {
 }
 
 async function triggerSlashDrawingInsert(page: Page) {
+  console.log('Slash before typing', await readEditorSelectionSnapshot(page))
   await page.keyboard.type('/excalidraw')
   const floatWrapper = page.locator('.mu-float-wrapper:has(.mu-quick-insert)')
   const command = page.locator('.mu-quick-insert [data-label="insert-drawing"]')
   await expect(floatWrapper).toHaveCSS('opacity', '1')
   await expect(command).toHaveClass(/active/)
+  console.log('Slash before Enter', await readEditorSelectionSnapshot(page))
   await page.keyboard.press('Enter')
+  console.log('Slash after Enter', await readEditorSelectionSnapshot(page))
+  await expect(page.locator('.drawing-dialog-canvas')).toBeVisible()
+  console.log('Slash after dialog', await readEditorSelectionSnapshot(page))
 }
 
 for (const method of ['slash', 'command'] as const) {
