@@ -350,7 +350,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
                     block.replaceTextRange(0, block.text.length, replacement.text);
                     block.setCursor(replacement.text.length, replacement.text.length, true);
                     muya.editor.selection.preventScrollOnNextNotification();
-                }, true);
+                });
             },
         }, trace);
     }
