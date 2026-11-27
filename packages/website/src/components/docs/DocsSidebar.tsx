@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { DocTab, DocTabId } from '@/lib/docs-nav'
 import { DOC_TABS } from '@/lib/docs-nav'
 import { DOWNLOAD } from '@/lib/downloads'
@@ -134,7 +134,7 @@ function SideGroup({
   label: string
   collapsed: boolean
   onToggle: () => void
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const listRef = useRef<HTMLDivElement | null>(null)
   const [maxHeight, setMaxHeight] = useState<string | undefined>(undefined)

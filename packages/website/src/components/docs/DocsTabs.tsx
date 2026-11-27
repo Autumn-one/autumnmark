@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { JSX } from 'react'
 import type { DocTabId } from '@/lib/docs-nav'
 import { DOC_TABS, firstPageOfTab } from '@/lib/docs-nav'
 
@@ -32,7 +33,7 @@ const TAB_ICONS = {
       <path d="m8 16-4-4 4-4M16 8l4 4-4 4M14.5 4l-5 16" />
     </svg>
   )
-} satisfies Record<DocTabId, React.JSX.Element>
+} satisfies Record<DocTabId, JSX.Element>
 
 export default function DocsTabs({ activeTab }: Props) {
   return (

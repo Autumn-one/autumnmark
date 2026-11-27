@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import DocsChrome from '@/components/docs/DocsChrome'
 import './docs.css'
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
     'Guides, reference and developer documentation for MarkText — the WYSIWYG markdown editor.'
 }
 
-export default function DocsLayout({ children }: { children: React.ReactNode }) {
+export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="bg-fx" />

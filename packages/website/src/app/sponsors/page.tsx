@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Nav from '@/components/Nav'
 import { BugIcon, ReleaseIcon, CommunityIcon, ServerIcon } from '@/components/Icons'
 import Footer from '@/components/Footer'
@@ -53,7 +54,7 @@ const fundingIcons = {
   server: ServerIcon
 }
 
-function SponsorLink({ children }: { children: React.ReactNode }) {
+function SponsorLink({ children }: { children: ReactNode }) {
   return (
     <a className="btn btn-primary btn-lg" href={DOWNLOAD.sponsor} {...EXT_LINK}>
       {children}
