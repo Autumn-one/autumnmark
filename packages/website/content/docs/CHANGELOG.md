@@ -1,3 +1,8 @@
+## AutumnMark 0.24.76
+
+- Kept the block front button (`¶`) and diagram/preview toolbar strictly inside the editor scrollport so scrolling a tall block's top edge behind the tab bar or title bar no longer paints floating hover controls over the tab bar, clamping within the visible block bounds or hiding when space runs out.
+- Dismissed block hover controls immediately when the pointer leaves the editor viewport (including over the tab bar, sidebar, or find bar) and scoped hover/drag hit-testing to the owning editor instance.
+
 ## AutumnMark 0.24.75
 
 - Restored compact Windows NSIS installer proportions in Chinese locales by using `Segoe UI` 8pt for the dialog template while applying `Microsoft YaHei UI` / `Microsoft JhengHei UI` 8pt to multi-line status labels for balanced line spacing.

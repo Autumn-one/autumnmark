@@ -1,14 +1,17 @@
+import type { Middleware } from '@floating-ui/dom';
 import type { VNode } from 'snabbdom';
 import type HTMLBlock from '../../block/commonMark/html';
 import type DiagramBlock from '../../block/extra/diagram';
 import type MathBlock from '../../block/extra/math';
 import type { Muya } from '../../index';
 import type { IPreviewToolIcon } from './config';
+import { offset } from '@floating-ui/dom';
 import { ScrollPage } from '../../block/scrollPage';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
 import BaseFloat from '../baseFloat';
+import { constrainToEditorViewport, isPointerInEditorViewport } from '../utils/editorViewport';
 import { PREVIEW_BLOCK_NAMES, previewToolBarItems } from './config';
 
 import './index.css';
@@ -39,6 +42,7 @@ export class PreviewToolBar extends BaseFloat {
     private _oldVNode: VNode | null = null;
     private _block: TPreviewBlock | null = null;
     private _iconContainer: HTMLDivElement = document.createElement('div');
+    private _cancelHover: (() => void) | null = null;
 
     constructor(muya: Muya, options = {}) {
         const name = 'mu-preview-tools';
@@ -50,6 +54,13 @@ export class PreviewToolBar extends BaseFloat {
         this.listen();
     }
 
+    protected override getPositionMiddleware(): Middleware[] {
+        return [
+            offset(this.options.offsetOptions),
+            constrainToEditorViewport(),
+        ];
+    }
+
     override listen() {
         const { eventCenter } = this.muya;
         super.listen();
@@ -57,12 +68,21 @@ export class PreviewToolBar extends BaseFloat {
         const handler = throttle((event: Event) => {
             if (!isMouseEvent(event))
                 return;
+            if (!isPointerInEditorViewport(event, this.muya.domNode, this.floatBox)) {
+                this.hide();
+                return;
+            }
 
             const { x, y } = event;
+            const topmost = document.elementFromPoint(x, y);
+            if (this.status && topmost && this.floatBox?.contains(topmost))
+                return;
+
             const eles = [...document.elementsFromPoint(x, y)];
             const container = [...eles].find(
                 ele =>
                     ele[BLOCK_DOM_PROPERTY]
+                    && this.muya.domNode.contains(ele)
                     && PREVIEW_BLOCK_NAMES.has((ele[BLOCK_DOM_PROPERTY] as TPreviewBlock).blockName),
             );
             if (container && !(container[BLOCK_DOM_PROPERTY] as TPreviewBlock).active) {
@@ -79,25 +99,47 @@ export class PreviewToolBar extends BaseFloat {
                 this.hide();
             }
         }, 300);
+        this._cancelHover = handler.cancel;
 
-        eventCenter.attachDOMEvent(document.body, 'mousemove', handler);
+        eventCenter.attachDOMEvent(document, 'mousemove', (event) => {
+            if (!isMouseEvent(event))
+                return;
+            if (!isPointerInEditorViewport(event, this.muya.domNode, this.floatBox)) {
+                handler.cancel();
+                this.hide();
+                return;
+            }
+            handler(event);
+        });
     }
 
     // The float outlives the hover, and the block it was built for can be
     // deleted while this reference is the only thing still holding its DOM.
     override hide() {
+        this._cancelHover?.();
         super.hide();
         this._block = null;
+    }
+
+    override destroy() {
+        this._cancelHover?.();
+        this._cancelHover = null;
+        super.destroy();
     }
 
     // `right-start` puts the float's left edge on the block's right edge; a
     // negative mainAxis pulls it back inside the block's top-right corner.
     // Measured after `render()` and before `show()`, so the first
-    // `computePosition` already sees the width this toolbar will have.
+    // `computePosition` already sees the size this toolbar will have.
     private _tuckInsideBlock() {
         const width = this.container?.offsetWidth ?? 0;
-        if (this.floatBox)
-            this.floatBox.style.width = `${width}px`;
+        const height = this.container?.offsetHeight ?? 0;
+        if (this.floatBox) {
+            if (width > 0)
+                this.floatBox.style.width = `${width}px`;
+            if (height > 0)
+                this.floatBox.style.height = `${height}px`;
+        }
         this.options.offsetOptions = {
             mainAxis: -(width + INSET),
             crossAxis: INSET,
