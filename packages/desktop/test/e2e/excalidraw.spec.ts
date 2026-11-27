@@ -358,6 +358,9 @@ test('undoes and redoes canvas edits with the keyboard and the edit menu', async
   const { app, page, filePath } = await launchWithMarkdown(`${blankInlineDrawing}\n`, {
     preferences: { language: 'en', autoSave: false }
   })
+  page.on('console', message => {
+    if (message.text().startsWith('[draw-history]')) console.log(message.text())
+  })
   try {
     await page.locator('.mu-editor .mu-inline-drawing').getByRole('img').click()
     const popup = page.getByRole('dialog', { name: 'Embedded drawing' })

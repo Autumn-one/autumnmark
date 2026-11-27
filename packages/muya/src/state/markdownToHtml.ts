@@ -144,7 +144,7 @@ export class MarkdownToHtml {
                 else if (functionType === 'flowchart' || functionType === 'sequence') {
                     const diagram = render.parse(rawCode);
                     diagramContainer.innerHTML = '';
-                    diagram.drawSVG(diagramContainer, options);
+                    await diagram.drawSVG(diagramContainer, options);
                 }
                 else if (functionType === 'vega-lite') {
                     await render(diagramContainer, JSON.parse(rawCode), options);

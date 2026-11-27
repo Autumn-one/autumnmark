@@ -3,7 +3,7 @@ import type { ElectronApplication, Page } from 'playwright'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import { launchElectron, waitForEditor, waitForMenuReady } from './helpers'
 
 // Checklist 122 — integration coverage for the Phase G "G1" blocker: a
@@ -103,8 +103,7 @@ test.describe('Relative-path image resolves to a DIRNAME-anchored file:// URL', 
     // relative path and contains the document directory.
     const withoutQuery = value.split('?')[0]
     expect(withoutQuery.endsWith('assets/cat.png')).toBe(true)
-    const expectedSrc = pathToFileURL(path.join(docDir, 'assets', 'cat.png')).href
-    expect(withoutQuery).toBe(expectedSrc)
+    expect(fileURLToPath(withoutQuery)).toBe(path.join(docDir, 'assets', 'cat.png'))
   })
 
   test('the anchored file:// URL points at a file that exists on disk', async() => {

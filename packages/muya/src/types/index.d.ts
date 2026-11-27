@@ -37,7 +37,7 @@ declare module '*sequence-diagram-snap' {
         [key: string]: unknown;
     }
     interface ISequenceDiagramInstance {
-        drawSVG: (container: HTMLElement | string, options?: ISequenceDrawOptions) => void;
+        drawSVG: (container: HTMLElement | string, options?: ISequenceDrawOptions) => Promise<void>;
     }
     interface ISequenceDiagramConstructor {
         parse: (input: string) => ISequenceDiagramInstance;

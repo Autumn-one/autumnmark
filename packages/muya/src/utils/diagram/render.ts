@@ -162,6 +162,6 @@ export async function renderDiagram({
     else if (type === 'flowchart' || type === 'sequence') {
         const diagram = render.parse(code);
         target.innerHTML = '';
-        diagram.drawSVG(target, options);
+        await diagram.drawSVG(target, options);
     }
 }
