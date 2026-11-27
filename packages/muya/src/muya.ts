@@ -41,7 +41,7 @@ import { isAnyListState, isAtxHeadingState, isCodeBlockState, isSetextHeadingSta
 import { ChangeSource } from './types';
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
-import { findScrollContainer, getBlock } from './utils/dom';
+import { getBlock } from './utils/dom';
 import { GITHUB_ALERT_TYPES, githubAlertBlockType, githubAlertMarker } from './utils/githubAlerts';
 import { imageToMarkdown } from './utils/image';
 import { toListDelimiter } from './utils/listMarker';
@@ -466,23 +466,15 @@ export class Muya {
 
         const selection = this.editor.selection.getSelectionState();
         const boundarySelection = recordSelection !== undefined ? recordSelection : selection;
-        const viewport = preventScroll ? findScrollContainer(this.domNode) : null;
-        const scrollTop = viewport?.scrollTop ?? 0;
-        try {
-            this.runDocumentUpdate(() => {
-                this.editor.rebuildContents(op, this.isReadOnly ? null : selection, ChangeSource.Api, {
-                    history: 'separate',
-                    recordSelection: boundarySelection,
-                    preventScroll,
-                    preserveFocus,
-                });
+        this.runDocumentUpdate(() => {
+            this.editor.rebuildContents(op, this.isReadOnly ? null : selection, ChangeSource.Api, {
+                history: 'separate',
+                recordSelection: boundarySelection,
+                preventScroll,
+                preserveFocus,
             });
-            this._refreshReadingPresentation();
-        }
-        finally {
-            if (viewport)
-                viewport.scrollTop = scrollTop;
-        }
+        });
+        this._refreshReadingPresentation();
 
         return true;
     }

@@ -11,6 +11,7 @@ export interface IDrawingInsertion {
     markdown: string;
     embeddedIndex: number;
     replace: (markup: string) => string;
+    insert?: (markup: string) => void;
 }
 
 export type TDrawingInsertTrace = (stage: string, details?: Record<string, boolean | string>) => void;

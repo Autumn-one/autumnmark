@@ -13,7 +13,9 @@ test('clicking rendered diagrams while reading opens the diagram viewer and reta
     await toggleReadingMode(page)
     const previews = page.locator('.editor-component .mu-diagram-preview')
     for (let index = 0; index < 2; index++) {
-      const svg = previews.nth(index).locator('svg')
+      const preview = previews.nth(index)
+      await preview.scrollIntoViewIfNeeded()
+      const svg = preview.locator('svg')
       await expect(svg).toBeVisible({ timeout: 20000 })
       await svg.click()
       await expect(page.locator('.image-viewer')).toBeVisible()

@@ -9,7 +9,9 @@ import Fuse from 'fuse.js';
 import { replaceOp, type } from 'ot-json1';
 import { canInsertLabel, replaceBlockByLabel } from '../../block/blockTransforms';
 import ParagraphContent from '../../block/content/paragraphContent';
+import { SelectionType } from '../../selection/types';
 import { asDoc, asState } from '../../state';
+import { ChangeSource } from '../../types';
 import { deepClone } from '../../utils';
 import { query } from '../../utils/dom';
 import { h, patch } from '../../utils/snabbdom';
@@ -340,6 +342,19 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
                 const [replacement] = jsonState.markdownToState(markup);
                 const op = replaceOp(path, asDoc(previous), asDoc(replacement));
                 return jsonState.getMarkdownFromState(asState(type.apply(asDoc(snapshot), op)));
+            },
+            insert: (markup) => {
+                muya.flush();
+                const [replacement] = jsonState.markdownToState(markup);
+                if (jsonState.rawState !== snapshot || !muya.isBlockInDocument(block) || muya.isReadOnly || replacement?.name !== 'paragraph')
+                    throw new Error('The drawing insertion target changed');
+                const endpoint = { path: block.path, offset: replacement.text.length };
+                muya.editor.transactions.apply(replaceOp(endpoint.path, block.text, replacement.text), {
+                    selection: { kind: SelectionType.TEXT, anchor: endpoint, focus: endpoint },
+                    source: ChangeSource.Api,
+                    history: 'isolated',
+                    preventScroll: true,
+                });
             },
         }, trace);
     }

@@ -215,20 +215,13 @@ export const waitForMenuReady = async(
   throw new Error('Application menu was not built within timeout')
 }
 
-export const clickMenuById = async(app: ElectronApplication, id: string, page?: Page): Promise<void> => {
-  const windowId = await page?.evaluate(() => {
-    const id = window.marktext?.env?.windowId
-    if (id === undefined) throw new Error('Missing editor window ID')
-    return id
-  })
-  await app.evaluate(({ Menu, BrowserWindow }, { menuId, windowId }) => {
+export const clickMenuById = async(app: ElectronApplication, id: string): Promise<void> => {
+  await app.evaluate(({ Menu, BrowserWindow }, menuId) => {
     const menu = Menu.getApplicationMenu()
     if (!menu) throw new Error('Application menu is not built yet')
     const item = menu.getMenuItemById(menuId)
     if (!item) throw new Error('Menu id not found: ' + menuId)
-    const win = windowId === undefined
-      ? BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
-      : BrowserWindow.fromId(windowId)
+    const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
     // Electron auto-toggles `checked` for checkbox/radio items on a real
     // click. Replicate that here so handlers that read `menuItem.checked`
     // (e.g. theme `follow-system-theme`) behave the same under tests.
@@ -243,7 +236,7 @@ export const clickMenuById = async(app: ElectronApplication, id: string, page?: 
     // Do not call win.focus() — on xvfb that can collapse the renderer's
     // current DOM selection, breaking format/selection-driven menu actions.
     item.click(undefined, win, win ? win.webContents : undefined)
-  }, { menuId: id, windowId })
+  }, id)
 }
 
 export const waitForEditor = async(page: Page, timeout = 15000): Promise<void> => {

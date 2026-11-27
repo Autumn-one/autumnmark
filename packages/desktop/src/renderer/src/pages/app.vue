@@ -201,6 +201,10 @@ function insertNoteDrawing(note: IFileState, markup: string, target?: IDrawingIn
     appendDrawing(note, markup)
     return
   }
+  if (target.insert && currentFile.value?.id === note.id) {
+    target.insert(markup)
+    return
+  }
   editDrawingNote(note, markdown => {
     if (markdown.trimEnd() !== target.markdown.trimEnd()) {
       trace?.('target-markdown-changed')
