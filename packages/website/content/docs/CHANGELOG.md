@@ -1,3 +1,7 @@
+## AutumnMark 0.24.79
+
+- Removed the divider below the Announcement title to keep it clear of the content panel borders.
+
 ## AutumnMark 0.24.78
 
 - Windows portable editions can download verified updates and install them on restart. Updates keep the portable user data folder and files stored alongside the app.
