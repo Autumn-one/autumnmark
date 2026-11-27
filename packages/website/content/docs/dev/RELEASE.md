@@ -92,10 +92,10 @@ gh release view vX.Y.Z-rc.N
 Confirm:
 
 - `Pre-release` badge on the release page (RC only)
-- **17 assets**:
+- **18 assets**:
   - **Linux x64** (5): `AppImage`, `deb`, `rpm`, `snap`, `tar.gz`
   - **macOS arm64** (4): `dmg`, `dmg.blockmap`, `zip`, `zip.blockmap`
-  - **Windows x64** (3): `setup.exe`, `setup.exe.blockmap`, `zip`
+  - **Windows x64** (4): `setup.exe`, `setup.exe.blockmap`, `zip`, `7z`
   - **Auto-updater metadata** (3): `autumnmark.yml`, `autumnmark-mac.yml`, `autumnmark-linux.yml`
   - **Build diagnostics** (1): `builder-debug.yml`
   - **Checksums** (1): `SHA256SUMS.txt`

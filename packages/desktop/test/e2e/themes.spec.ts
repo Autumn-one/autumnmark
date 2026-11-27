@@ -3,22 +3,105 @@ import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, clickMenuById, setSourceMarkdown } from './helpers'
 
 test('Pine Ink is the default light theme and renders its paper and heading colors', async() => {
-  const { app, page } = await launchWithMarkdown('# Title\n\n## Section', {
+  const markdown = '# Title\n\n## Section\n\n### Subsection\n\n#### Detail\n\n##### Note\n\n###### Colophon'
+  const { app, page } = await launchWithMarkdown(markdown, {
     preferences: { language: 'en', followSystemTheme: false }
   })
   try {
     const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
-    expect(preferences).toMatchObject({ theme: 'pine-ink', lightModeTheme: 'pine-ink', darkModeTheme: 'dark', localThemes: [] })
+    expect(preferences).toMatchObject({ theme: 'pine-ink', lightModeTheme: 'pine-ink', darkModeTheme: 'violet-diary', localThemes: [] })
     const theme = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('pine-ink')?.label)
-    expect(theme).toBe('松墨（Pine Ink）')
+    expect(theme).toBe('松风明月')
     const background = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--editorBgColor').trim())
     await expect.poll(background).toBe('#faf7ef')
-    await expect(page.locator('.mu-container h2')).toHaveCSS('color', 'rgb(33, 62, 50)')
-    await expect(page.locator('.mu-container h2')).toHaveCSS('border-left-color', 'rgb(171, 121, 65)')
+    const editor = page.locator('.mu-container')
+    const section = editor.locator('h2')
+    await expect(section).toHaveCSS('color', 'rgb(33, 62, 50)')
+    await expect(section).toHaveCSS('background-image', /radial-gradient/)
+    await expect.poll(() => section.evaluate(el => getComputedStyle(el, '::before').backgroundImage))
+      .toMatch(/linear-gradient/)
+    const subsection = editor.locator('h3')
+    await expect(subsection).toHaveCSS('color', 'rgb(33, 69, 55)')
+    await expect.poll(() => subsection.evaluate(el => getComputedStyle(el, '::before').borderTopColor))
+      .toBe('rgb(171, 121, 65)')
+    await expect(editor.locator('h4')).toHaveCSS('color', 'rgb(38, 76, 61)')
+    await expect(editor.locator('h5')).toHaveCSS('color', 'rgb(57, 87, 74)')
+    await expect(editor.locator('h6')).toHaveCSS('color', 'rgb(107, 88, 65)')
+    await expect(editor.locator('h6')).toHaveCSS('font-weight', '600')
     const openingSettings = app.waitForEvent('window')
     await clickMenuById(app, 'openThemeSettings')
     const settings = await openingSettings
-    await expect(settings.locator('.theme-card').first().getByRole('heading', { name: '松墨（Pine Ink）', exact: true })).toBeVisible()
+    await expect(settings.locator('.theme-card').first().getByRole('heading', { name: '松风明月', exact: true })).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('Violet Diary is a built-in dark theme with distinct section and subsection headings', async() => {
+  const markdown = '# 山间手记\n\n## 雾起之前\n\n### 溪边小径\n\n归途随记\n----'
+  const { app, page } = await launchWithMarkdown(markdown, {
+    preferences: { language: 'en', followSystemTheme: false }
+  })
+  try {
+    const menuLabel = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('violet-diary')?.label)
+    expect(menuLabel).toBe('暮紫日记')
+    await clickMenuById(app, 'violet-diary')
+    await expect(page.locator('body')).toHaveClass(/(^|\s)dark(\s|$)/)
+    const editor = page.locator('.mu-container')
+    const section = editor.locator('h2.mu-atx-heading')
+    await expect(section).toHaveCSS('font-size', '27px')
+    await expect(section).toHaveCSS('background-image', /radial-gradient/)
+    await expect(editor.locator('h2.mu-setext-heading')).toHaveCSS('font-size', '27px')
+    const subsection = editor.locator('h3')
+    await expect(subsection).toHaveCSS('font-size', '20px')
+    await expect.poll(() => subsection.evaluate(el => getComputedStyle(el, '::before').borderTopColor))
+      .toBe('rgb(218, 174, 213)')
+    const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(preferences).toMatchObject({ theme: 'violet-diary', localThemes: [] })
+    const openingSettings = app.waitForEvent('window')
+    await clickMenuById(app, 'openThemeSettings')
+    const settings = await openingSettings
+    await expect(settings.locator('.theme-card.is-active').getByRole('heading', { name: '暮紫日记', exact: true })).toBeVisible()
+
+    await clickMenuById(app, 'rose-pine-moon')
+    await expect(section).toHaveCSS('background-image', 'none')
+  } finally {
+    await app.close()
+  }
+})
+
+test('Violet Diary retains a saved custom theme with a distinct name in the menu and settings', async() => {
+  const local = {
+    version: 1 as const,
+    id: 'local:rose-pine-moon:12345678-1234-4567-8234-123456789012',
+    name: '暮紫日记',
+    base: 'rose-pine-moon',
+    values: { accent: '#efabc8' },
+    css: ':root { --editorColor: #e5dbea; }'
+  }
+  const { app, page } = await launchWithMarkdown('# Violet Diary', {
+    preferences: { language: 'en', theme: local.id, darkModeTheme: local.id, followSystemTheme: false, localThemes: [local] }
+  })
+  try {
+    const menu = await app.evaluate(({ Menu }, localId) => {
+      const menu = Menu.getApplicationMenu()
+      return {
+        builtin: menu?.getMenuItemById('violet-diary')?.label,
+        custom: menu?.getMenuItemById(localId)?.label
+      }
+    }, local.id)
+    expect(menu).toEqual({ builtin: '暮紫日记', custom: '暮紫日记 · Custom' })
+    const preferences = await page.evaluate(() => window.electron.ipcRenderer.invoke('mt::preferences::get'))
+    expect(preferences).toMatchObject({ theme: local.id, darkModeTheme: local.id, localThemes: [local] })
+
+    const openingSettings = app.waitForEvent('window')
+    await clickMenuById(app, 'openThemeSettings')
+    const settings = await openingSettings
+    const cards = settings.locator('.theme-card')
+    await expect(cards.getByRole('heading', { name: '暮紫日记', exact: true })).toHaveCount(1)
+    await expect(cards.filter({ has: settings.getByRole('heading', { name: '暮紫日记 · Custom', exact: true }) }))
+      .toHaveClass(/is-active/)
+    await expect(settings.locator('.theme-slot strong')).toHaveText('暮紫日记 · Custom')
   } finally {
     await app.close()
   }

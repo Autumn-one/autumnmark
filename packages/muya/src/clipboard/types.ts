@@ -1,6 +1,7 @@
 export enum CopyType {
     NORMAL = 'normal',
     COPY_AS_MARKDOWN = 'copyAsMarkdown',
+    COPY_ALTERNATE_NEWLINES = 'copyAlternateNewlines',
     COPY_AS_HTML = 'copyAsHtml',
     COPY_AS_RICH = 'copyAsRich',
     COPY_CODE_CONTENT = 'copyCodeContent',

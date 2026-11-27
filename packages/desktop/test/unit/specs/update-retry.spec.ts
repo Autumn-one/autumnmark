@@ -3,8 +3,16 @@ import { app, ipcMain, type BrowserWindow } from 'electron'
 import type * as DesktopUpdates from '../../../src/main/updates'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { updater, isUpdatable } = vi.hoisted(() => ({
+const { updater, portable, isUpdatable, quit } = vi.hoisted(() => ({
   isUpdatable: vi.fn(),
+  quit: vi.fn(),
+  portable: {
+    isUpdatable: vi.fn(),
+    check: vi.fn(),
+    download: vi.fn(),
+    prepare: vi.fn(),
+    discard: vi.fn()
+  },
   updater: {
     allowPrerelease: true,
     autoDownload: true,
@@ -18,10 +26,19 @@ const { updater, isUpdatable } = vi.hoisted(() => ({
 vi.mock('electron-updater', () => ({ autoUpdater: updater }))
 vi.mock('electron', async() => {
   const { EventEmitter } = await import('node:events')
-  return { app: new EventEmitter(), ipcMain: new EventEmitter(), BrowserWindow: {} }
+  return { app: Object.assign(new EventEmitter(), { quit }), ipcMain: new EventEmitter(), BrowserWindow: {} }
 })
 vi.mock('electron-log', () => ({ default: { warn: vi.fn() } }))
-vi.mock('../../../src/main/utils/isUpdatable', () => ({ isUpdatable }))
+vi.mock('../../../src/main/utils/isUpdatable', () => ({
+  isUpdatable,
+  isPortableUpdatable: portable.isUpdatable
+}))
+vi.mock('../../../src/main/portableUpdates', () => ({
+  checkPortableUpdate: portable.check,
+  downloadPortableUpdate: portable.download,
+  preparePortableInstall: portable.prepare,
+  discardPortableFiles: portable.discard
+}))
 
 const interval = 20 * 60 * 1000
 const send = vi.fn()
@@ -42,6 +59,7 @@ describe('desktop updates', () => {
     updaterEvents.removeAllListeners()
     updater.on.mockImplementation((event, callback) => updaterEvents.on(event, callback))
     isUpdatable.mockReturnValue(true)
+    portable.isUpdatable.mockReturnValue(false)
     updater.checkForUpdates.mockResolvedValue({ isUpdateAvailable: false })
     updater.downloadUpdate.mockResolvedValue([])
     updates = await import('../../../src/main/updates')
@@ -51,6 +69,7 @@ describe('desktop updates', () => {
 
   afterEach(() => {
     app.emit('will-quit', {} as Electron.Event)
+    app.removeAllListeners('quit')
     vi.useRealTimers()
   })
 
@@ -154,5 +173,43 @@ describe('desktop updates', () => {
     ipcMain.emit('mt::update-install', { sender }, '1.4')
     expect(updater.quitAndInstall).toHaveBeenCalledTimes(2)
     expect(updater.downloadUpdate).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses the portable archive and only applies it after a confirmed quit', async() => {
+    portable.isUpdatable.mockReturnValue(true)
+    const release = { version: '0.25.0' }
+    const download = { directory: 'download', archivePath: 'download/portable.zip' }
+    const cancel = vi.fn()
+    const apply = vi.fn()
+    const progress = { transferred: 20, total: 100, bytesPerSecond: 7 }
+    portable.check.mockResolvedValue(release)
+    portable.download.mockImplementation(async(_release, report) => {
+      report(progress)
+      return download
+    })
+    portable.prepare.mockResolvedValue({ cancel, apply })
+
+    updates.startAutomaticUpdateChecks(() => win)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(send).toHaveBeenCalledWith('mt::update-state', { phase: 'downloading', version: release.version, progress })
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'ready', version: release.version }, true)
+    expect(updater.checkForUpdates).not.toHaveBeenCalled()
+    expect(updater.downloadUpdate).not.toHaveBeenCalled()
+
+    ipcMain.emit('mt::update-install', { sender }, release.version)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(portable.prepare).toHaveBeenCalledWith(download)
+    expect(quit).toHaveBeenCalledOnce()
+    expect(apply).not.toHaveBeenCalled()
+    ipcMain.emit('app-quit-canceled')
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(send).toHaveBeenLastCalledWith('mt::update-state', { phase: 'ready', version: release.version })
+
+    ipcMain.emit('mt::update-install', { sender }, release.version)
+    await vi.advanceTimersByTimeAsync(0)
+    app.emit('quit', {} as Electron.Event, 0)
+    expect(apply).toHaveBeenCalledOnce()
+    expect(portable.discard).toHaveBeenCalledWith(download.directory)
+    expect(updater.quitAndInstall).not.toHaveBeenCalled()
   })
 })

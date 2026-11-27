@@ -172,6 +172,7 @@
     />
     <form
       v-else
+      class="chat-composer"
       @submit.prevent="send"
     >
       <textarea
@@ -181,7 +182,7 @@
         :placeholder="t('documentChat.message')"
         :maxlength="maxDocumentChatPromptLength"
         :disabled="creating"
-        rows="3"
+        rows="2"
         @keydown.enter="composerEnter"
       />
       <div class="composer-actions">
@@ -201,18 +202,22 @@
         <button
           v-if="sending.has(selectedId)"
           type="button"
-          class="send"
+          class="composer-action"
+          :aria-label="t('studio.stop')"
+          :title="t('studio.stop')"
           @click="stop"
         >
-          {{ t('studio.stop') }}
+          <span class="stop-icon" aria-hidden="true" />
         </button>
         <button
           v-else
           type="submit"
-          class="send"
+          class="composer-action"
+          :aria-label="t('studio.send')"
+          :title="t('studio.send')"
           :disabled="!canSend"
         >
-          {{ t('studio.send') }}
+          <Top aria-hidden="true" />
         </button>
       </div>
     </form>
@@ -229,11 +234,11 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue'
-import { MoreFilled, Plus, RefreshLeft } from '@element-plus/icons-vue'
+import { MoreFilled, Plus, RefreshLeft, Top } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { AiModelProfile } from '@shared/aiModel'
 import {
-  maxDocumentChatPromptLength, type DocumentChat,
+  chatDocumentTarget, maxDocumentChatPromptLength, type DocumentChat,
   type DocumentChatDocument, type DocumentChatEffects, type DocumentChatMarkdownEffect, type DocumentChatProposal,
   type DocumentChatSummary, type DocumentChatTarget, type DocumentChatThemeEffect, type DocumentChatTurn
 } from '@shared/documentChat'
@@ -241,6 +246,7 @@ import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
 import { reverseTextChange, textChanges } from '@shared/reversibleText'
 import { isDrawingPath } from '@shared/drawing'
 import type { LocalTheme } from '@shared/localTheme'
+import type { IFileState } from '@shared/types/files'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import MediaViewer from '@/components/mediaViewer/index.vue'
@@ -285,10 +291,20 @@ const turnError: Record<NonNullable<DocumentChatTurn['error']>, string> = {
   cancelled: 'studio.stopped'
 }
 
-const editableTab = computed(() => {
-  const tab = editor.currentFile
-  return tab && !tab.readOnly && !tab.modeChanging && !tab.diskConflict && !isDrawingPath(tab.pathname || tab.filename) ? tab : undefined
-})
+function isEditableTab(tab: IFileState | null | undefined): tab is IFileState {
+  return !!tab && !tab.readOnly && !tab.modeChanging && !tab.diskConflict && !isDrawingPath(tab.pathname || tab.filename)
+}
+
+function sameTarget(a: DocumentChatTarget, b: DocumentChatTarget): boolean {
+  return a.id === b.id || (!!a.pathname && !!b.pathname && window.fileUtils.isSamePathSync(a.pathname, b.pathname))
+}
+
+function findTab(target: DocumentChatTarget): IFileState | undefined {
+  return editor.tabs.find(file => sameTarget(file, target))
+}
+
+const editableTab = computed(() => isEditableTab(editor.currentFile) ? editor.currentFile : undefined)
+const boundTarget = computed(() => chatDocumentTarget(chat.value))
 const profileId = computed({
   get() {
     const id = modelChoices.get(selectedId.value) ?? chat.value?.profileId
@@ -391,19 +407,62 @@ function composerEnter(event: KeyboardEvent): void {
   if (!event.repeat) void send()
 }
 
+async function readTargetDocument(target: DocumentChatTarget): Promise<DocumentChatDocument | undefined> {
+  const tab = findTab(target)
+  if (!tab) {
+    if (!target.pathname) return
+    try {
+      const { markdown } = await ipc.invoke('mt::media::read-document', target.pathname, preferences.autoGuessEncoding)
+      return { id: target.id, filename: target.filename, pathname: target.pathname, markdown }
+    } catch {
+      return
+    }
+  }
+  if (!isEditableTab(tab)) return
+  const previous = editor.currentFile
+  if (previous?.id !== tab.id) {
+    editor.UPDATE_CURRENT_FILE(tab)
+    await nextTick()
+  }
+  try {
+    const markdown = props.readMarkdown(tab.id)
+    if (markdown === undefined) return
+    return { id: tab.id, filename: tab.filename, pathname: tab.pathname, markdown }
+  } finally {
+    if (previous && previous.id !== tab.id && editor.currentFile?.id === tab.id && editor.tabs.some(file => file.id === previous.id)) {
+      editor.UPDATE_CURRENT_FILE(previous)
+      await nextTick()
+    }
+  }
+}
+
 async function send(): Promise<void> {
   if (!canSend.value) return
   error.value = ''
   const prompt = draft.value.trim()
   const model = profileId.value
-  const tab = editableTab.value
-  const documentId = editor.currentFile?.id
+  const initialId = selectedId.value
+  const locked = initialId ? boundTarget.value : undefined
   let document: DocumentChatDocument | undefined
-  if (tab) {
-    const { id, filename, pathname } = tab
-    const markdown = props.readMarkdown(id)
-    if (markdown !== undefined) {
-      document = { id, filename, pathname, markdown }
+  let documentId: string | undefined
+  if (locked) {
+    sending.add(initialId)
+    try {
+      document = await readTargetDocument(locked)
+    } finally {
+      sending.delete(initialId)
+    }
+    if (selectedId.value !== initialId) return
+    documentId = editor.currentFile && sameTarget(locked, editor.currentFile) ? editor.currentFile.id : undefined
+  } else {
+    const tab = editableTab.value
+    documentId = editor.currentFile?.id
+    if (tab) {
+      const { id, filename, pathname } = tab
+      const markdown = props.readMarkdown(id)
+      if (markdown !== undefined) {
+        document = { id, filename, pathname, markdown }
+      }
     }
   }
 
@@ -411,7 +470,7 @@ async function send(): Promise<void> {
   const id = selectedId.value || await newChat()
   if (!id) return
   if (firstMessage) prompts.delete('')
-  if (documentId !== editor.currentFile?.id || (document && !matchesTarget(document))) {
+  if (!locked && (documentId !== editor.currentFile?.id || (document && !matchesTarget(document)))) {
     prompts.set(id, prompt)
     error.value = 'documentChat.changed'
     return
@@ -424,15 +483,19 @@ async function send(): Promise<void> {
       chatId: id, profileId: model, prompt, document, previewDocumentId: documentId, theme: preview?.getContext()
     })
     await applyReply(id, turn, preview, model, document?.markdown)
-    if (turn.capture && selectedId.value === id && documentId === editor.currentFile?.id) {
+    if (turn.capture && selectedId.value === id && documentId && documentId === editor.currentFile?.id) {
       await nextTick()
       await ipc.invoke('mt::document-chat::capture', id, turn.id).catch(() => {
         if (selectedId.value === id) error.value = 'ai.previewFailed'
       })
     }
-  } catch {
+  } catch (reason) {
     if (!prompts.has(id)) prompts.set(id, prompt)
-    if (selectedId.value === id) error.value = 'documentChat.sendFailed'
+    if (selectedId.value === id) {
+      error.value = reason instanceof Error && reason.message.includes('documentTargetMismatch')
+        ? 'documentChat.changed'
+        : 'documentChat.sendFailed'
+    }
   } finally {
     sending.delete(id)
   }
@@ -451,7 +514,7 @@ async function markdownHash(text: string): Promise<string> {
 }
 
 async function changeDocument(target: DocumentChatTarget, transform: (markdown: string) => Promise<string>): Promise<DocumentChatMarkdownEffect> {
-  const tab = editor.tabs.find(file => file.id === target.id || (!!target.pathname && window.fileUtils.isSamePathSync(file.pathname, target.pathname)))
+  const tab = findTab(target)
   if (!tab) {
     if (!target.pathname) throw new Error('Document unavailable')
     const encoding = preferences.autoGuessEncoding
@@ -638,8 +701,7 @@ onUnmounted(() => {
 
 <style scoped>
 .document-chat { display: flex; flex-direction: column; height: 100%; font-size: 13px; }
-.chat-toolbar, form { padding: 8px; }
-.chat-toolbar { display: flex; gap: 6px; align-items: center; }
+.chat-toolbar { display: flex; gap: 6px; align-items: center; padding: 8px; }
 .chat-toolbar svg { display: block; width: 14px; height: 14px; }
 .chat-timeline { flex: 1; min-height: 0; overflow: auto; padding: 0 8px; user-select: text; }
 .after-history { max-height: 65%; border-top: 1px solid var(--editorColor10); }
@@ -669,22 +731,78 @@ summary { cursor: pointer; overflow-wrap: anywhere; }
 .patch :is(ins, del) { display: block; padding: 5px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: monospace; text-decoration: none; }
 .patch ins { background: var(--themeColor10); border-inline-start: 2px solid var(--themeColor); }
 .patch del { background: color-mix(in srgb, var(--deleteColor) 10%, transparent); border-inline-start: 2px solid var(--deleteColor); text-decoration: line-through; }
-form { display: grid; gap: 6px; border-top: 1px solid var(--editorColor10); }
 .composer-actions, .turn-actions { display: flex; align-items: center; gap: 6px; }
-.composer-actions select { flex: 1; min-width: 0; width: 0; }
 .turn-actions { flex-wrap: wrap; }
 .turn-actions button { display: inline-flex; align-items: center; gap: 4px; }
 .turn-actions svg { width: 13px; height: 13px; flex: none; }
 .turn-menu { margin-inline-start: auto; }
 .turn-menu button { padding: 0 5px; min-height: 24px; border-color: transparent; background: transparent; }
 .reverted-status { color: var(--editorColor70); }
-textarea { width: 100%; min-height: 3em; max-height: 20vh; box-sizing: border-box; padding: 6px; resize: vertical; }
-select, button, :deep(.preview-actions button), textarea { color: inherit; font: inherit; background: var(--editorBgColor); border: 1px solid var(--editorColor20); border-radius: 5px; }
-select, button, :deep(.preview-actions button) { padding: 4px 6px; min-height: 28px; }
+button, :deep(.preview-actions button) { color: inherit; font: inherit; background: var(--editorBgColor); border: 1px solid var(--editorColor20); border-radius: 5px; padding: 4px 6px; min-height: 28px; }
 button:enabled, :deep(.preview-actions button:enabled) { cursor: pointer; }
 button:enabled:hover, :deep(.preview-actions button:enabled:hover) { border-color: var(--themeColor); }
 button:disabled, :deep(.preview-actions button:disabled) { opacity: .5; }
-.send { flex: none; margin-inline-start: auto; min-width: 52px; }
+.chat-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0 10px 8px;
+  padding: 10px;
+  border: 1px solid var(--editorColor20);
+  border-radius: 12px;
+  color: var(--editorColor);
+  background: var(--editorBgColor);
+}
+.chat-composer:focus-within { border-color: var(--themeColor); }
+.chat-composer textarea {
+  field-sizing: content;
+  display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: calc(2lh + 4px);
+  max-block-size: 20vh;
+  padding: 2px 0;
+  border: 0;
+  outline: none;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: 1.5;
+  resize: none;
+}
+.chat-composer textarea::placeholder { color: var(--editorColor60); }
+.composer-actions select {
+  field-sizing: content;
+  min-inline-size: 0;
+  block-size: 28px;
+  padding-inline: 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: inherit;
+  background: color-mix(in srgb, var(--editorBgColor), var(--sideBarBgColor) 82%);
+  font: inherit;
+  cursor: pointer;
+}
+.composer-actions select:hover { background: color-mix(in srgb, var(--sideBarBgColor), var(--editorColor) 8%); }
+.composer-actions :is(select, button):focus-visible { outline: 2px solid var(--themeColor); outline-offset: 2px; }
+.composer-action {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--buttonPrimaryFontColor);
+  background: var(--buttonPrimaryBgColor);
+}
+.composer-action:enabled:hover { border-color: transparent; color: var(--buttonPrimaryFontColorHover); background: var(--buttonPrimaryBgColorHover); }
+.composer-action:disabled { color: var(--editorColor60); background: var(--editorColor10); opacity: 1; }
+.composer-action svg { inline-size: 16px; block-size: 16px; }
+.stop-icon { inline-size: 10px; block-size: 10px; border-radius: 2px; background: currentColor; }
 .chat-error { color: var(--deleteColor); }
 .panel-error { padding: 0 8px 8px; }
 </style>

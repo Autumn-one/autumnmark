@@ -4,6 +4,7 @@
     class="application-menubar"
     role="menubar"
     :aria-label="t('titleBar.applicationMenu')"
+    @focusout="handleFocusOut"
   >
     <button
       v-for="(category, index) in categories"
@@ -27,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApplicationMenuCategory } from '@shared/types/menu'
 
@@ -36,6 +37,15 @@ const categories = ref<ApplicationMenuCategory[]>([])
 const menubar = ref<HTMLElement | null>(null)
 const focusedIndex = ref(0)
 const openIndex = ref<number | null>(null)
+
+interface MenuFocus {
+  element: HTMLElement
+  documentId?: string
+  selection?: { range: Range; backward: boolean }
+}
+
+let altPending = false
+let returnFocus: MenuFocus | undefined
 
 const displayLabel = (label: string): string =>
   label.replace(/\(&.\)/g, '').replace(/&&|&/g, (marker) => (marker === '&&' ? '&' : ''))
@@ -56,7 +66,114 @@ const offCategoriesChanged = window.electron.ipcRenderer.on(
   'mt::menu::application-categories-changed',
   loadCategories
 )
-onBeforeUnmount(offCategoriesChanged)
+
+const rememberFocus = (element: Element | null): void => {
+  returnFocus = undefined
+  if (!(element instanceof HTMLElement) || element === document.body) return
+
+  const documentId = element.closest<HTMLElement>('.document-body')?.dataset.documentId
+  returnFocus = { element, documentId }
+  const editor = element.closest('.editor-component')
+  const selection = document.getSelection()
+  if (!editor || !selection?.rangeCount) return
+
+  const range = selection.getRangeAt(0)
+  if (editor.contains(range.commonAncestorContainer)) {
+    returnFocus.selection = {
+      range: range.cloneRange(),
+      backward: selection.anchorNode === range.endContainer && selection.anchorOffset === range.endOffset
+    }
+  }
+}
+
+const leaveMenu = (): void => {
+  const previous = returnFocus
+  returnFocus = undefined
+  const active = document.activeElement
+  if (previous?.element.isConnected &&
+      previous.documentId === previous.element.closest<HTMLElement>('.document-body')?.dataset.documentId) {
+    const { element, selection } = previous
+    element.focus({ preventScroll: true })
+    if (document.activeElement === element) {
+      if (selection && element.closest('.editor-component')?.contains(selection.range.commonAncestorContainer)) {
+        const { startContainer, startOffset, endContainer, endOffset } = selection.range
+        document.getSelection()?.setBaseAndExtent(
+          selection.backward ? endContainer : startContainer,
+          selection.backward ? endOffset : startOffset,
+          selection.backward ? startContainer : endContainer,
+          selection.backward ? startOffset : endOffset
+        )
+      }
+      return
+    }
+  }
+
+  const editors = document.querySelectorAll<HTMLElement>(
+    '.document-body :is(.CodeMirror textarea, .editor-wrapper:not(.source) .editor-component)'
+  )
+  const editor = Array.from(editors).find(element => element.getClientRects().length && !element.closest('[inert]'))
+  editor?.focus({ preventScroll: true })
+  if (document.activeElement === active && active instanceof HTMLElement) active.blur()
+}
+
+const handleFocusOut = (event: FocusEvent): void => {
+  if (event.relatedTarget instanceof Node && !menubar.value?.contains(event.relatedTarget)) {
+    returnFocus = undefined
+  }
+}
+
+const blocksAlt = (target: Element | null): boolean => {
+  if (openIndex.value !== null) return true
+  if (target?.closest('input, textarea, select') && !target.closest('.CodeMirror')) return true
+  const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]')
+  return Array.from(dialogs).some(dialog => dialog.getClientRects().length && getComputedStyle(dialog).visibility === 'visible')
+}
+
+const isPlainAlt = (event: KeyboardEvent): boolean =>
+  event.key === 'Alt' && !event.ctrlKey && !event.metaKey && !event.shiftKey &&
+  !event.isComposing && !event.getModifierState('AltGraph')
+
+const cancelAlt = (): void => { altPending = false }
+
+const handleAltDown = (event: KeyboardEvent): void => {
+  if (event.repeat && isPlainAlt(event)) return
+  altPending = isPlainAlt(event) && !blocksAlt(document.activeElement)
+}
+
+const handleAltUp = (event: KeyboardEvent): void => {
+  if (event.key !== 'Alt') return
+  const wasPending = altPending
+  cancelAlt()
+  const active = document.activeElement
+  if (!wasPending || !isPlainAlt(event) || blocksAlt(active)) return
+
+  if (menubar.value?.contains(active)) {
+    event.preventDefault()
+    leaveMenu()
+    return
+  }
+
+  const first = menubar.value?.querySelector<HTMLButtonElement>('button:enabled')
+  if (first) {
+    event.preventDefault()
+    rememberFocus(active)
+    first.focus()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleAltDown, true)
+  window.addEventListener('keyup', handleAltUp, true)
+  window.addEventListener('pointerdown', cancelAlt, true)
+  window.addEventListener('blur', cancelAlt)
+})
+onBeforeUnmount(() => {
+  offCategoriesChanged()
+  window.removeEventListener('keydown', handleAltDown, true)
+  window.removeEventListener('keyup', handleAltUp, true)
+  window.removeEventListener('pointerdown', cancelAlt, true)
+  window.removeEventListener('blur', cancelAlt)
+})
 
 const openMenu = async (category: ApplicationMenuCategory, event: Event): Promise<void> => {
   if (!category.enabled || openIndex.value !== null) return
@@ -76,6 +193,13 @@ const openMenu = async (category: ApplicationMenuCategory, event: Event): Promis
 }
 
 const handleKeydown = (event: KeyboardEvent, index: number): void => {
+  if (openIndex.value !== null) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    leaveMenu()
+    return
+  }
   const buttons = Array.from(
     menubar.value?.querySelectorAll<HTMLButtonElement>('button:enabled') ?? []
   )

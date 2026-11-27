@@ -9,7 +9,7 @@
     :class="[{ 'side-bar-toc-overflow': !wordWrapInToc, 'side-bar-toc-wordwrap': wordWrapInToc }]"
   >
     <el-tree
-      v-if="keyedToc.length"
+      v-if="props.visible !== false && keyedToc.length"
       :key="currentFile?.id"
       ref="tocTreeRef"
       :data="keyedToc"
@@ -109,9 +109,21 @@ const plainLabel = (data: TocNodeData): string =>
 const escapeHtml = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+const MAX_SANITIZED_LABEL_CACHE = 512
+const sanitizedLabelCache = new Map<string, string>()
+
 const labelHtmlOf = (data: TocNodeData): string => {
   const html = typeof data.labelHtml === 'string' ? data.labelHtml : ''
-  return html ? sanitize(html, TOC_DOMPURIFY_CONFIG) : escapeHtml(plainLabel(data))
+  if (!html) return escapeHtml(plainLabel(data))
+  const cached = sanitizedLabelCache.get(html)
+  if (cached !== undefined) return cached
+  const sanitized = sanitize(html, TOC_DOMPURIFY_CONFIG)
+  if (sanitizedLabelCache.size >= MAX_SANITIZED_LABEL_CACHE) {
+    const oldest = sanitizedLabelCache.keys().next().value
+    if (oldest !== undefined) sanitizedLabelCache.delete(oldest)
+  }
+  sanitizedLabelCache.set(html, sanitized)
+  return sanitized
 }
 
 const { toc, currentFile } = storeToRefs(editorStore)
@@ -246,35 +258,56 @@ const expandedKeys = computed<string[]>(() => {
   return keys
 })
 
-watch([() => currentFile.value?.id, keyedToc, collapsedKeys], async() => {
+let restoreTreeFrame: number | null = null
+const cancelRestoreTreeFrame = (): void => {
+  if (restoreTreeFrame !== null) {
+    cancelAnimationFrame(restoreTreeFrame)
+    restoreTreeFrame = null
+  }
+}
+
+watch([() => props.visible, () => currentFile.value?.id, keyedToc, collapsedKeys], () => {
+  cancelRestoreTreeFrame()
+  if (props.visible === false) return
   const tabId = currentFile.value?.id
   const nodes = keyedToc.value
-  await nextTick()
-  if (tabId !== currentFile.value?.id || nodes !== keyedToc.value) return
-  const tree = tocTreeRef.value
-  if (!tree) return
+  const apply = () => {
+    restoreTreeFrame = null
+    if (props.visible === false || tabId !== currentFile.value?.id || nodes !== keyedToc.value) return
+    const tree = tocTreeRef.value
+    if (!tree) return
 
-  // default-expanded-keys only expands nodes; a rebuilt tree also needs collapses.
-  const restore = (items: KeyedTocNode[]): void => {
-    for (const item of items) {
-      const node = tree.getNode(item.key)
-      if (node) {
-        const expanded = !collapsedKeys.value.has(item.key)
-        if (node.expanded !== expanded) {
-          if (expanded) node.expand(undefined, false)
-          else node.collapse()
+    // default-expanded-keys only expands nodes; a rebuilt tree also needs collapses.
+    const restore = (items: KeyedTocNode[]): void => {
+      for (const item of items) {
+        const node = tree.getNode(item.key)
+        if (node) {
+          const expanded = !collapsedKeys.value.has(item.key)
+          if (node.expanded !== expanded) {
+            if (expanded) node.expand(undefined, false)
+            else node.collapse()
+          }
         }
+        restore(item.children)
       }
-      restore(item.children)
+    }
+    restoringTree = true
+    try {
+      restore(nodes)
+    } finally {
+      restoringTree = false
     }
   }
-  restoringTree = true
-  try {
-    restore(nodes)
-  } finally {
-    restoringTree = false
+  if (typeof requestAnimationFrame === 'function') {
+    restoreTreeFrame = requestAnimationFrame(apply)
+  } else {
+    void nextTick(apply)
   }
 }, { flush: 'post', immediate: true })
+
+onBeforeUnmount(() => {
+  cancelRestoreTreeFrame()
+})
 
 // The store names the caret's heading by engine slug; el-tree keys its nodes by
 // githubSlug. Both sit on the same node, so one resolves to the other.
@@ -292,13 +325,17 @@ const activeNodeKey = computed<string>(() => {
   return findKey(keyedToc.value)
 })
 
+const isTocHidden = (): boolean => props.visible === false
+
 // The current-node-key prop also expands ancestors, so synchronize only through
 // the setter to preserve user-collapsed sections during heading changes.
 const revealActiveHeading = async(): Promise<void> => {
+  if (isTocHidden()) return
   await nextTick()
+  if (isTocHidden()) return
   const tree = tocTreeRef.value
   tree?.setCurrentKey(activeNodeKey.value || undefined, false)
-  if (!tree || props.visible === false) return
+  if (!tree) return
   const treeElement = tree.$el as HTMLElement
   let node = activeNodeKey.value ? tree.getNode(activeNodeKey.value) : null
   for (let ancestor = node?.parent; ancestor?.level; ancestor = ancestor.parent) {

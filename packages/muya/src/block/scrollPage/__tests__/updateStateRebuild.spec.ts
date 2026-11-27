@@ -36,6 +36,26 @@ function contentBlocks(muya: Muya): Content[] {
 }
 
 describe('scrollPage.updateState rebuild', () => {
+    it('only releases the old preview scope after a candidate tree is committed', () => {
+        const muya = boot('alpha');
+        const page = muya.editor.scrollPage!;
+        const original = page.previewScope!;
+        const paragraph = page.firstChild!.domNode!;
+        const state = muya.getState();
+        vi.spyOn(ScrollPage.loadBlock('paragraph'), 'create').mockImplementationOnce(() => {
+            throw new Error('construction failed');
+        });
+
+        expect(() => page.updateState(state)).toThrow('construction failed');
+        expect(page.previewScope).toBe(original);
+        expect(original.canCommit(paragraph)).toBe(true);
+
+        page.updateState(state);
+        expect(page.previewScope).not.toBe(original);
+        expect(original.canCommit(paragraph)).toBe(false);
+        expect(page.previewScope?.canCommit(page.firstChild!.domNode!)).toBe(true);
+    });
+
     it('creates the next tree before swapping, and drops stray container nodes', () => {
         const muya = boot('alpha\n\nbeta\n');
         const page = muya.editor.scrollPage!;
@@ -50,11 +70,14 @@ describe('scrollPage.updateState rebuild', () => {
             duringCreate.push(container.childElementCount);
             return create(...args as Parameters<typeof create>);
         });
+        const replaceChildren = vi.spyOn(container, 'replaceChildren');
 
         page.updateState(muya.getState());
 
         expect(duringCreate.length).toBeGreaterThan(0);
         expect(duringCreate.every(count => count > 0)).toBe(true);
+        expect(replaceChildren).toHaveBeenCalledTimes(1);
+        expect(replaceChildren.mock.calls[0]).toHaveLength(2);
         expect(container.querySelector('[data-stray]')).toBeNull();
         expect([...container.children].map(node => node.className)).toEqual(['mu-paragraph', 'mu-paragraph']);
     });

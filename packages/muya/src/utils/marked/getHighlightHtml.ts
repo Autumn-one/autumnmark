@@ -6,6 +6,7 @@ import { codeFenceLanguage } from '../codeFenceAnnotations';
 import compactNestedLists from './compactNestedLists';
 import codeFenceAnnotationsExtension from './extensions/codeFenceAnnotations';
 import contentTabsExtension from './extensions/contentTabs';
+import drawingLayoutExtension from './extensions/drawingLayout';
 import emojiExtension from './extensions/emoji';
 import fancyListsHtmlExtension from './extensions/fancyListsHtml';
 import foldBlocksExtension from './extensions/foldBlocks';
@@ -57,6 +58,7 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
     const marked = new Marked(markedHighlight({ highlight }), foldBlocksExtension(), referenceDefinitionTabs());
     marked.use(codeFenceAnnotationsExtension());
     marked.use(tableLayoutExtension());
+    marked.use(drawingLayoutExtension());
 
     marked.use({
         walkTokens: walkTokens({ texMathDollars, texMathGfm }),

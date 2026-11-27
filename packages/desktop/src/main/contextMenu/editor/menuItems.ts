@@ -21,6 +21,22 @@ export const getPASTE = (): MenuItemConstructorOptions => ({
   role: 'paste'
 })
 
+export const getCopyAlternateNewlines = (
+  copyParagraphNewlines: 'double' | 'single' = 'double'
+): MenuItemConstructorOptions => ({
+  label: t(
+    copyParagraphNewlines === 'single'
+      ? 'contextMenu.copyAsStandardMarkdown'
+      : 'contextMenu.copyAsSingleNewline'
+  ),
+  id: 'copyAlternateNewlinesMenuItem',
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::cm-copy-alternate-newlines')
+    }
+  }
+})
+
 export const getCopyAsRich = (): MenuItemConstructorOptions => ({
   label: t('contextMenu.copyAsRich'),
   id: 'copyAsRichMenuItem',

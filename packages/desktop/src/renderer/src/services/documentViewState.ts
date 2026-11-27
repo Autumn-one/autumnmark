@@ -40,10 +40,16 @@ const keys = (values: string[]): string[] =>
   )
 /** Applies editor view state without reading or writing document files or editor contents. */
 export class DocumentViewAdapter {
+  private readonly _hashCache = new Map<string, { markdown: string; sha256: string }>()
+
   constructor(
     private readonly _hash: (markdown: string) => Promise<string> =
       (markdown) => getHash(markdown, 'utf8', 'sha256')
   ) {}
+
+  evictHash(id: string): void {
+    this._hashCache.delete(id)
+  }
 
   async capture(markdown: string, ports: ViewPorts): Promise<DocumentViewState> {
     const source = ports.source?.editor
@@ -102,7 +108,6 @@ export class DocumentViewAdapter {
         engine.setSelection(null)
         engine.focus()
       }
-      ports.rendered.refreshToc?.()
       container.scrollTop = enabled ? nonnegative(state?.renderedScrollTopPx ?? 0) : 0
     }
     if (
@@ -116,8 +121,20 @@ export class DocumentViewAdapter {
   }
 
   private async _viewHash(markdown: string, id?: string) {
+    if (id) {
+      const cached = this._hashCache.get(id)
+      if (cached && cached.markdown === markdown) return cached.sha256
+    }
     const key = id ? await documentVideos(id).viewKey(markdown) : markdown
-    return this._hash(key)
+    const sha256 = await this._hash(key)
+    if (id) {
+      if (this._hashCache.size >= 64) {
+        const oldest = this._hashCache.keys().next().value
+        if (oldest !== undefined) this._hashCache.delete(oldest)
+      }
+      this._hashCache.set(id, { markdown, sha256 })
+    }
+    return sha256
   }
 }
 
@@ -189,6 +206,10 @@ export const isDocumentViewReady = (id: string, markdown: string, trimTrailingNe
   return current !== null &&
     adjustTrailingNewlines(current, trimTrailingNewline) === adjustTrailingNewlines(markdown, trimTrailingNewline)
 }
+export const evictDocumentViewHash = (id: string): void => {
+  adapter.evictHash(id)
+}
+
 export const restoreDocumentView = (
   id: string,
   markdown: string,

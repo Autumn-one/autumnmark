@@ -131,6 +131,76 @@ export function resolveSentinelCursor(scrollPage: ScrollPage): ITextSelectionSta
     };
 }
 
+interface IStateSentinelHit {
+    path: (string | number)[];
+    offset: number;
+}
+
+function _samePath(a: readonly (string | number)[], b: readonly (string | number)[]): boolean {
+    return a.length === b.length && a.every((seg, i) => seg === b[i]);
+}
+
+function _findSentinelInState(
+    states: readonly TState[],
+    sentinel: string,
+    prefix: readonly (string | number)[] = [],
+): IStateSentinelHit | null {
+    for (let i = 0; i < states.length; i++) {
+        const block = states[i]!;
+        const blockPath = [...prefix, i];
+        if (block.name === 'code-block' && typeof block.meta?.lang === 'string') {
+            const langIdx = block.meta.lang.indexOf(sentinel);
+            if (langIdx > -1)
+                return { path: [...blockPath, 'meta', 'lang'], offset: langIdx };
+        }
+        if ('text' in block && typeof block.text === 'string') {
+            const idx = block.text.indexOf(sentinel);
+            if (idx > -1)
+                return { path: [...blockPath, 'text'], offset: idx };
+        }
+        if ('children' in block && Array.isArray(block.children)) {
+            const childHit = _findSentinelInState(block.children as readonly TState[], sentinel, [...blockPath, 'children']);
+            if (childHit)
+                return childHit;
+        }
+    }
+    return null;
+}
+
+// Pure offscreen sentinel resolution on TState[] avoids destroying and rebuilding live DOM twice.
+export function resolveSentinelCursorFromState(state: readonly TState[]): ITextSelectionState | null {
+    const anchorHit = _findSentinelInState(state, ANCHOR_SENTINEL);
+    const focusHit = _findSentinelInState(state, FOCUS_SENTINEL);
+
+    if (!anchorHit && !focusHit)
+        return null;
+
+    const anchor = anchorHit ?? focusHit!;
+    const focus = focusHit ?? anchorHit!;
+
+    let anchorOffset = anchor.offset;
+    let focusOffset = focus.offset;
+
+    if (_samePath(anchor.path, focus.path)) {
+        if (anchorOffset <= focusOffset)
+            focusOffset = Math.max(focusOffset - ANCHOR_SENTINEL.length, anchorOffset);
+        else
+            anchorOffset = Math.max(anchorOffset - FOCUS_SENTINEL.length, focusOffset);
+    }
+
+    return {
+        kind: SelectionType.TEXT,
+        anchor: {
+            offset: anchorOffset,
+            path: anchor.path,
+        },
+        focus: {
+            offset: focusOffset,
+            path: focus.path,
+        },
+    };
+}
+
 // Mutate the supplied state at a text path with a clamped offset.
 // Return false when the path has no string text; callers must supply a throwaway clone.
 function _injectSentinelAtPath(

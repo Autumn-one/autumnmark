@@ -6,10 +6,11 @@ import inlineFormatIcons from '@muyajs/core/ui/inlineFormatToolbar/config'
 vi.mock('@muyajs/core/config', () => ({ isOsx: true }))
 
 describe('macOS inline code shortcut (#3085)', () => {
-  it('leaves window cycling unbound and keeps inline code distinct from rich-text copy', () => {
+  it('leaves window cycling unbound and keeps inline code distinct from alternate copy', () => {
     const inlineCode = keybindingsDarwin.get('format.inline-code') ?? ''
     expect(isEqualAccelerator(inlineCode, 'Control+Command+C')).toBe(true)
-    expect(keybindingsDarwin.get('edit.copy-as-rich')).toBe('Command+Shift+C')
+    expect(keybindingsDarwin.get('edit.copy-alternate-newlines')).toBe('Command+Shift+C')
+    expect(keybindingsDarwin.get('edit.copy-as-rich')).toBe('')
 
     for (const [id, accelerator] of keybindingsDarwin) {
       if (!accelerator) continue

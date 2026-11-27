@@ -243,7 +243,9 @@
       "screenshot": "Ekran Görüntüsü",
       "lineEnding": "Satır Sonu",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "Kopyala (Tek Satır Sonu)",
+      "copyAsStandardMarkdown": "Kopyala (Standart Markdown)"
     },
     "paragraph": {
       "title": "Paragraf",
@@ -410,7 +412,9 @@
       "showInFolder": "Klasörde göster",
       "showInSideBar": "Kenar çubuğunda göster",
       "openContainingFolder": "Dosyanın bulunduğu klasörü kenar çubuğunda aç"
-    }
+    },
+    "copyAsSingleNewline": "Kopyala (Tek Satır Sonu)",
+    "copyAsStandardMarkdown": "Kopyala (Standart Markdown)"
   },
   "search": {
     "searchPlaceholder": "Ara",
@@ -676,7 +680,7 @@
         "tocRight": "Sağ",
         "showOpenedFiles": "Açık dosyaları göster",
         "autoReveal": "Etkin dosyayı kenar çubuğunda göster",
-        "openFilesInPreviewMode": "Kenar çubuğu dosyalarını önizleme sekmelerinde açar. Düzenleme veya çift tıklama sekmeyi korur.",
+        "openFilesInPreviewMode": "Kenar çubuğu dosyalarını önizleme sekmelerinde açar. Önizlemeyi düzenlemek veya kenar çubuğundaki dosyaya çift tıklamak sekmeyi korur.",
         "excludePatterns": "Dosya ağacı dışlama kuralları",
         "excludePatternsNotes": "Herhangi bir glob kuralıyla eşleşen yollar dosya ağacından dışlanır. Kural eklemek için Enter tuşuna basın, kaldırmak için × simgesine tıklayın; kural içindeki virgüller korunur. Değişiklikleri tamamen uygulamak için klasörü yeniden açın.",
         "removePattern": "Kaldır",
@@ -740,7 +744,13 @@
         "title": "Yazım tercihleri",
         "autoCloseBrackets": "Parantezleri otomatik kapat",
         "autoCompleteMarkdown": "Markdown işaretlerini çift olarak tamamla",
-        "autoCloseQuotes": "Tırnakları otomatik kapat"
+        "autoCloseQuotes": "Tırnakları otomatik kapat",
+        "copyParagraphNewlines": {
+          "title": "Kopyalarken paragraf satır sonları",
+          "note": "Kaydedilen Markdown dosyalarını değiştirmeden normal kopyalamadaki paragraf aralığını belirler. Alternatif kopyalama kısayolu (varsayılan Ctrl+Shift+C / ⌘⇧C) her zaman diğer modu kullanır.",
+          "double": "Standart Markdown (çift satır sonu)",
+          "single": "Düz metin görünümü (tek satır sonu)"
+        }
       },
       "fileRepresentation": {
         "title": "Dosya Gösterimi",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Öncekini Bul",
       "replace": "Değiştir",
       "findInFolder": "Klasörde Bul",
-      "screenshot": "Ekran Görüntüsü"
+      "screenshot": "Ekran Görüntüsü",
+      "copyAlternateNewlines": "Alternatif Paragraf Satır Sonuyla Kopyala"
     },
     "paragraph": {
       "heading1": "Başlık 1",

@@ -19,8 +19,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    while (bootedMuyas.length)
-        bootedMuyas.pop()!.destroy();
+    while (bootedMuyas.length) {
+        const muya = bootedMuyas.pop()!;
+        muya.destroy();
+        muya.domNode.remove();
+    }
     if (hadVersion)
         window.MUYA_VERSION = originalVersion as string;
     else

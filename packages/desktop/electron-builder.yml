@@ -14,33 +14,28 @@ directories:
   buildResources: build
   output: ../../dist
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!scripts/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!node_modules/dragula/resources'
+  - package.json
   - '!node_modules/**/*.js.map'
   - '!node_modules/**/*.cjs.map'
   - '!node_modules/**/*.mjs.map'
   - '!node_modules/**/*.ts.map'
-  - '!node_modules/@vscode/ripgrep/{jsconfig.json,*.md,LICENSE}'
+  - '!node_modules/@vscode/ripgrep/{jsconfig.json,*.md}'
   - '!node_modules/@vscode/ripgrep/lib/download.js'
   - '!node_modules/@vscode/ripgrep/lib/postinstall.js'
-  - '!node_modules/ced/vendor'
-  - '!node_modules/mermaid/dist/mermaid.js'
-  - '!node_modules/mermaid/dist/mermaid.min.js'
-  - '!node_modules/mermaid/dist/mermaid.esm.min.mjs'
-  - '!node_modules/katex/dist/katex.min.js'
-  - '!node_modules/katex/dist/katex.mjs'
+  # electron-rebuild copies ced.node to bin/, but ced's bindings loader uses build/Release.
+  - '!node_modules/ced/{bin,vendor,build/vendor,ced.cpp}'
   - '!node_modules/ced/build/Release/compact_enc_det.a'
+  - '!node_modules/native-keymap/{src,deps}'
   - '!node_modules/**/{*.vcxproj,*.vcxproj.filters}'
   - '!node_modules/**/build/Release/{*.lib,*.exp,*.ilk,*.pdb,*.iobj,*.ipdb}'
   - '!node_modules/**/build/Release/obj'
-  - '!eslint.config.js'
-  - '!jsconfig.json'
-  - '!docs/*'
+  # Other out directories may contain local preview builds.
+  - from: out
+    to: out
+    filter:
+      - 'main/**/*'
+      - 'preload/**/*'
+      - 'renderer/**/*'
 extraResources:
   - from: build/icons
     to: icons
@@ -98,6 +93,8 @@ win:
     - target: 'nsis'
       arch: [x64]
     - target: 'zip'
+      arch: [x64]
+    - target: '7z'
       arch: [x64]
   icon: static/icon.ico
 nsis:

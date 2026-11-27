@@ -243,7 +243,9 @@
       "screenshot": "Schermafbeelding",
       "lineEnding": "Regeleinde",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Linux/Mac)"
+      "lineEndingLf": "LF (Linux/Mac)",
+      "copyAsSingleNewline": "Kopiëren (enkele regelovergang)",
+      "copyAsStandardMarkdown": "Kopiëren (standaard Markdown)"
     },
     "paragraph": {
       "title": "Alinea",
@@ -410,7 +412,9 @@
       "showInFolder": "Tonen in map",
       "showInSideBar": "Tonen in zijbalk",
       "openContainingFolder": "Bovenliggende map openen in zijbalk"
-    }
+    },
+    "copyAsSingleNewline": "Kopiëren (enkele regelovergang)",
+    "copyAsStandardMarkdown": "Kopiëren (standaard Markdown)"
   },
   "search": {
     "searchPlaceholder": "Zoeken",
@@ -676,7 +680,7 @@
         "tocRight": "Rechts",
         "showOpenedFiles": "Geopende bestanden tonen",
         "autoReveal": "Actief bestand tonen in de zijbalk",
-        "openFilesInPreviewMode": "Bestanden in de zijbalk openen in voorbeeldtabbladen. Bewerken of dubbelklikken houdt het tabblad open.",
+        "openFilesInPreviewMode": "Bestanden in de zijbalk openen in voorbeeldtabbladen. Het voorbeeld bewerken of dubbelklikken op het bestand in de zijbalk houdt het tabblad open.",
         "excludePatterns": "Uitsluitregels voor de bestandsboom",
         "excludePatternsNotes": "Paden die overeenkomen met een glob-regel worden uitgesloten van de bestandsboom. Druk op Enter om een regel toe te voegen en klik op × om deze te verwijderen; komma’s binnen een regel blijven behouden. Open de map opnieuw om alle wijzigingen toe te passen.",
         "removePattern": "Verwijderen",
@@ -740,7 +744,13 @@
         "title": "Schrijfvoorkeuren",
         "autoCloseBrackets": "Haakjes automatisch sluiten",
         "autoCompleteMarkdown": "Markdown-markeringen als paar aanvullen",
-        "autoCloseQuotes": "Aanhalingstekens automatisch sluiten"
+        "autoCloseQuotes": "Aanhalingstekens automatisch sluiten",
+        "copyParagraphNewlines": {
+          "title": "Alinea-overgangen bij kopiëren",
+          "note": "Bepaalt de alinea-afstand bij normaal kopiëren zonder opgeslagen Markdown-bestanden te wijzigen. De alternatieve sneltoets (standaard Ctrl+Shift+C / ⌘⇧C) gebruikt altijd de andere modus.",
+          "double": "Standaard Markdown (dubbele regelovergang)",
+          "single": "Platte tekst visueel (enkele regelovergang)"
+        }
       },
       "fileRepresentation": {
         "title": "Bestandsweergave",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Vorige zoeken",
       "replace": "Vervangen",
       "findInFolder": "Zoeken in map",
-      "screenshot": "Schermafbeelding"
+      "screenshot": "Schermafbeelding",
+      "copyAlternateNewlines": "Kopiëren met alternatieve alinea-overgang"
     },
     "paragraph": {
       "heading1": "Kop 1",

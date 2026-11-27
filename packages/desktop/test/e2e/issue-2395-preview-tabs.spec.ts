@@ -89,6 +89,36 @@ test.describe('Issue #2395 sidebar preview tabs', () => {
     await expect(tabFor(page, 'alpha.md')).not.toHaveClass(/preview/)
   })
 
+  test('replacing a preview renders the requested file without rebuilding the pinned tab', async() => {
+    await launchProject()
+    await page.locator('.side-bar-file[title$="alpha.md"]').dblclick()
+    await expect(tabFor(page, 'alpha.md')).not.toHaveClass(/preview/)
+    await page.locator('.side-bar-file[title$="beta.md"]').click()
+    await expect(tabFor(page, 'beta.md')).toHaveClass(/preview/)
+
+    const headings = await page.locator('.editor-component .mu-container').evaluate((editor) => {
+      const row = document.querySelector<HTMLElement>('.side-bar-file[title$="gamma.md"]')
+      if (!row) throw new Error('Missing gamma.md in the sidebar')
+      return new Promise<string[]>((resolve) => {
+        const observer = new MutationObserver((records) => {
+          const headings = records.flatMap(record => [...record.addedNodes])
+            .filter(node => node instanceof HTMLHeadingElement)
+            .map(node => node.textContent?.replace(/^#+\s*/, '').trim() ?? '')
+          if (headings.includes('gamma')) {
+            observer.disconnect()
+            resolve(headings)
+          }
+        })
+        observer.observe(editor, { childList: true })
+        row.click()
+      })
+    })
+
+    expect(headings).toEqual(['gamma'])
+    await expect(tabFor(page, 'gamma.md')).toHaveClass(/preview/)
+    await expect(tabFor(page, 'beta.md')).toHaveCount(0)
+  })
+
   test('disabling preview mode restores one tab per file', async() => {
     await launchProject({ openFilesInPreviewMode: false })
 

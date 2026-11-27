@@ -23,7 +23,7 @@ import EditorWindow, { type FileOpenOptions } from '../windows/editor'
 import SettingWindow from '../windows/setting'
 import { setLanguage } from '../i18n'
 import { matchSupportedLanguage } from 'common/i18n'
-import { getNativeThemeSource } from './nativeTheme'
+import { getNativeThemeSource, resolveThemeBackground } from './nativeTheme'
 import type Accessor from './accessor'
 import type WindowManager from './windowManager'
 import type { PreparedSessionWindow } from '@shared/types/applicationState'
@@ -211,8 +211,14 @@ class App {
 
     if (!this._themeListenerRegistered) {
       onInternalChannel('broadcast-preferences-changed', (change: Record<string, unknown>) => {
-        if ('followSystemTheme' in change || 'theme' in change) {
-          nativeTheme.themeSource = getNativeThemeSource(preferences.getAll())
+        const backgroundChanged = 'theme' in change || 'localThemes' in change
+        if ('followSystemTheme' in change || backgroundChanged) {
+          const current = preferences.getAll()
+          nativeTheme.themeSource = getNativeThemeSource(current)
+          if (backgroundChanged) {
+            const color = resolveThemeBackground(current.theme, current.localThemes)
+            for (const window of this._windowManager.windows.values()) window.setThemeBackgroundColor(color)
+          }
         }
         if ('followSystemTheme' in change || 'lightModeTheme' in change || 'darkModeTheme' in change) syncSystemTheme()
       })

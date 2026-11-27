@@ -115,7 +115,16 @@ export const registerWindowHandlers = (): void => {
     popups.set(win.id, { sender: event.sender })
     try {
       const editor = options?.editor
-      const prefix = editor ? buildEditorContextMenu(editor.selectionText, editor.spellcheckerEnabled) : undefined
+      const prefix = editor
+        ? buildEditorContextMenu(
+          editor.selectionText,
+          editor.spellcheckerEnabled,
+          true,
+          undefined,
+          undefined,
+          editor.copyParagraphNewlines
+        )
+        : undefined
       const menu = buildMenu(template, win.id, prefix)
       menu.popup({
         window: win,

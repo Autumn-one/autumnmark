@@ -1,16 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ipcMain } from 'electron'
 
-// #2245: on Windows and Linux every window draws its own menu bar, and
-// `Menu.setApplicationMenu` writes the menu into *all* of them. Switching the
-// application menu on focus therefore stripped the menu bar from the editor
-// window while Preferences was focused, and handed the Preferences window the
-// editor's menu bar as soon as the editor was focused again.
-//
-// The fake windows below mirror what Electron 42 actually does on those
-// platforms: `Menu.setApplicationMenu` is `getAllWindows().map(w =>
-// w.setMenu(menu))`, and a window created afterwards inherits the application
-// menu in `BaseWindow._init`.
+// Electron attaches the application menu to existing and newly created windows.
+// Track that attachment separately from the menus used by the renderer.
 
 interface FakeMenu {
   template: unknown
@@ -27,7 +19,7 @@ const {
   buildFromTemplate,
   setApplicationMenu,
   getApplicationMenu,
-  fromId,
+  getAllWindows,
   configureMenu,
   configSettingMenu,
   createWindow,
@@ -73,7 +65,7 @@ const {
       }
     }),
     getApplicationMenu: vi.fn(() => applicationMenu),
-    fromId: vi.fn((id: number) => windows.get(id) ?? null),
+    getAllWindows: vi.fn(() => [...windows.values()]),
     configureMenu: vi.fn(() => ['EDITOR_TEMPLATE']),
     configSettingMenu: vi.fn(() => ['SETTINGS_TEMPLATE'])
   }
@@ -83,7 +75,7 @@ vi.mock('electron', () => ({
   app: { addRecentDocument: vi.fn(), clearRecentDocuments: vi.fn() },
   ipcMain: { on: vi.fn(), handle: vi.fn(), emit: vi.fn() },
   Menu: { buildFromTemplate, setApplicationMenu, getApplicationMenu },
-  BrowserWindow: { fromId, fromWebContents: (sender: { window: unknown }) => sender.window }
+  BrowserWindow: { getAllWindows, fromWebContents: (sender: { window: unknown }) => sender.window }
 }))
 
 vi.mock('common/filesystem', () => ({
@@ -115,36 +107,38 @@ const makeAppMenu = () => {
   return new AppMenu(preferences, keybindings, '/tmp/mt-test')
 }
 
-describe('Editor and Preferences keep their own menu bar on Linux (#2245)', () => {
+describe('Editor and Preferences keep their native menu bars detached (#2245)', () => {
   beforeEach(() => {
     reset()
     buildFromTemplate.mockClear()
     setApplicationMenu.mockClear()
   })
 
-  it('leaves the editor menu bar in place while Preferences is focused', () => {
+  it('keeps the editor menu model while Preferences is focused', () => {
     const appMenu = makeAppMenu()
     const editor = createWindow(1)
     appMenu.addEditorMenu(editor as never)
     appMenu.setActiveWindow(1)
 
-    const editorMenu = editor.menu
-    expect(editorMenu).toBeTruthy()
+    const editorMenu = appMenu.getWindowMenuById(1)
+    expect(getApplicationMenu()).toBe(editorMenu)
+    expect(editor.menu).toBeNull()
 
     const settings = createWindow(2)
     appMenu.addSettingMenu(settings as never)
     appMenu.setActiveWindow(2)
 
-    expect(editor.menu).toBe(editorMenu)
+    expect(appMenu.getWindowMenuById(1)).toBe(editorMenu)
+    expect(getApplicationMenu()).toBe(editorMenu)
+    expect(editor.menu).toBeNull()
     expect(settings.menu).toBeNull()
   })
 
-  it('does not hand the editor menu bar to Preferences when the editor is refocused', () => {
+  it('detaches the native menu from every window when the editor is refocused', () => {
     const appMenu = makeAppMenu()
     const editor = createWindow(1)
     appMenu.addEditorMenu(editor as never)
     appMenu.setActiveWindow(1)
-    const editorMenu = editor.menu
 
     const settings = createWindow(2)
     appMenu.addSettingMenu(settings as never)
@@ -152,7 +146,23 @@ describe('Editor and Preferences keep their own menu bar on Linux (#2245)', () =
     appMenu.setActiveWindow(1)
 
     expect(settings.menu).toBeNull()
-    expect(editor.menu).toBe(editorMenu)
+    expect(editor.menu).toBeNull()
+  })
+
+  it('detaches a rebuilt menu even from the active editor and a preloaded window', () => {
+    const appMenu = makeAppMenu()
+    const editor = createWindow(1)
+    appMenu.addEditorMenu(editor as never)
+    appMenu.setActiveWindow(1)
+    const oldMenu = appMenu.getWindowMenuById(1)
+    const preloaded = createWindow(2)
+
+    appMenu.updateAppMenu([])
+
+    expect(getApplicationMenu()).toBe(appMenu.getWindowMenuById(1))
+    expect(getApplicationMenu()).not.toBe(oldMenu)
+    expect(editor.menu).toBeNull()
+    expect(preloaded.menu).toBeNull()
   })
 
   it('gives a Preferences window opened from the editor no menu bar at all', () => {
@@ -191,7 +201,7 @@ describe('Title bar menus use the requesting window', () => {
     const appMenu = makeAppMenu()
     const editor = createWindow(1)
     appMenu.addEditorMenu(editor as never)
-    const menu = editor.menu as FakeMenu
+    const menu = appMenu.getWindowMenuById(1) as unknown as FakeMenu
     const popup = vi.fn(({ callback }: { callback: () => void }) => callback())
     menu.items = [
       { label: 'File', visible: true, enabled: true, submenu: { popup } },

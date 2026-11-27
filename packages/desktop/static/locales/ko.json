@@ -243,7 +243,9 @@
       "screenshot": "스크린샷",
       "lineEnding": "줄 끝",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "복사(단일 줄바꿈)",
+      "copyAsStandardMarkdown": "복사(표준 Markdown)"
     },
     "paragraph": {
       "title": "단락",
@@ -410,7 +412,9 @@
       "showInFolder": "폴더에서 보기",
       "showInSideBar": "사이드바에서 보기",
       "openContainingFolder": "사이드바에서 파일이 있는 폴더 열기"
-    }
+    },
+    "copyAsSingleNewline": "복사(단일 줄바꿈)",
+    "copyAsStandardMarkdown": "복사(표준 Markdown)"
   },
   "search": {
     "searchPlaceholder": "검색",
@@ -676,7 +680,7 @@
         "tocRight": "오른쪽",
         "showOpenedFiles": "열린 파일 표시",
         "autoReveal": "사이드바에서 활성 파일 표시",
-        "openFilesInPreviewMode": "사이드바 파일을 미리보기 탭에서 엽니다. 편집하거나 두 번 클릭하면 탭이 유지됩니다.",
+        "openFilesInPreviewMode": "사이드바 파일을 미리보기 탭에서 엽니다. 미리보기를 편집하거나 사이드바에서 파일을 두 번 클릭하면 탭이 유지됩니다.",
         "excludePatterns": "파일 트리 제외 규칙",
         "excludePatternsNotes": "glob 규칙 중 하나와 일치하는 경로는 파일 트리에서 제외됩니다. Enter를 눌러 규칙을 추가하고 ×를 클릭해 삭제하세요. 규칙 안의 쉼표는 그대로 유지됩니다. 변경 사항을 완전히 적용하려면 폴더를 다시 여세요.",
         "removePattern": "삭제",
@@ -740,7 +744,13 @@
         "title": "작성 환경설정",
         "autoCloseBrackets": "괄호 자동 닫기",
         "autoCompleteMarkdown": "Markdown 기호 쌍 자동 완성",
-        "autoCloseQuotes": "따옴표 자동 닫기"
+        "autoCloseQuotes": "따옴표 자동 닫기",
+        "copyParagraphNewlines": {
+          "title": "복사 시 단락 줄바꿈",
+          "note": "저장된 Markdown 파일을 변경하지 않고 일반 복사 시 단락 간격을 제어합니다. 대체 복사 단축키(기본값 Ctrl+Shift+C / ⌘⇧C)는 항상 반대 모드를 사용합니다.",
+          "double": "표준 Markdown(이중 줄바꿈)",
+          "single": "일반 텍스트 표시(단일 줄바꿈)"
+        }
       },
       "fileRepresentation": {
         "title": "파일 표현",
@@ -1120,7 +1130,8 @@
       "findPrevious": "이전 찾기",
       "replace": "바꾸기",
       "findInFolder": "폴더에서 찾기",
-      "screenshot": "스크린샷"
+      "screenshot": "스크린샷",
+      "copyAlternateNewlines": "대체 단락 줄바꿈으로 복사"
     },
     "paragraph": {
       "heading1": "제목 1",

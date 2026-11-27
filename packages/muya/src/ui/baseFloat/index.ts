@@ -1,11 +1,13 @@
 import type { Middleware, Placement, ReferenceElement } from '@floating-ui/dom';
 import type { Muya } from '../../index';
 import type { IBaseOptions } from '../types';
+import type { IEditorViewportConstraintData } from '../utils/editorViewport';
 import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import { EVENT_KEYS } from '../../config';
 
 import { isHTMLElement, isKeyboardEvent, noop } from '../../utils';
 import { findScrollContainer } from '../../utils/dom';
+import { EDITOR_VIEWPORT_MIDDLEWARE_NAME } from '../utils/editorViewport';
 
 import './index.css';
 
@@ -185,7 +187,8 @@ abstract class BaseFloat {
                 // stuck visible. Bail unless this pass is still the active one.
                 if (this._cleanup !== cleanup)
                     return;
-                if (middlewareData.hide?.referenceHidden) {
+                const constraint = middlewareData[EDITOR_VIEWPORT_MIDDLEWARE_NAME] as IEditorViewportConstraintData | undefined;
+                if (middlewareData.hide?.referenceHidden || constraint?.clipped) {
                     this.hide();
                     return;
                 }

@@ -93,9 +93,11 @@ const handleClick = (status: boolean) => {
 .msg {
   font-size: 13px;
   flex: 1;
+  overflow-wrap: anywhere;
 }
 .controls {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   justify-content: center;
   & > div {
@@ -109,9 +111,11 @@ const handleClick = (status: boolean) => {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 24px;
+    min-width: 24px;
     height: 24px;
+    padding-inline: 5px;
     font-size: 12px;
+    white-space: nowrap;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
   /* The bar is filled with the notification colour, which the text colour is

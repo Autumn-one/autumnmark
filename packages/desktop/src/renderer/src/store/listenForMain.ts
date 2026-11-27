@@ -3,18 +3,29 @@ import bus from '../bus'
 import { useEditorStore } from './editor'
 import { useLayoutStore } from './layout'
 import { usePreferencesStore } from './preferences'
+import { drawingDialog } from '@/services/drawingEditors'
 
 export const useListenForMainStore = defineStore('listenForMain', () => {
   let stopEditListener: (() => void) | undefined
   function EDITOR_EDIT_ACTION(type: string): void {
-    const imageDialog = document.querySelector('.embedded-image-workspace')
-    if (imageDialog && (type === 'undo' || type === 'redo')) {
-      imageDialog.dispatchEvent(new CustomEvent('image-history', { detail: type }))
-      return
+    const file = useEditorStore().currentFile
+    if (type === 'undo' || type === 'redo') {
+      const imageDialog = document.querySelector('.embedded-image-workspace')
+      if (imageDialog) {
+        imageDialog.dispatchEvent(new CustomEvent('image-history', { detail: type }))
+        return
+      }
+      const drawing = drawingDialog.value
+        ? document.querySelector('.drawing-dialog-canvas .drawing-workspace')
+        : file && document.getElementById('drawing-workspace-' + file.id)
+      if (drawing || drawingDialog.value) {
+        drawing?.dispatchEvent(new CustomEvent('drawing-history', { detail: type }))
+        return
+      }
     }
     if (
-      useEditorStore().currentFile?.readOnly &&
-      !['copy', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)
+      file?.readOnly &&
+      !['copy', 'copyAlternateNewlines', 'copyAsRich', 'copyAsHtml', 'selectAll', 'findInFolder'].includes(type)
     )
       return
     const layoutStore = useLayoutStore()

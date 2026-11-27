@@ -160,6 +160,7 @@ export class SessionHost {
         .catch((error) => this.report(error))
         .finally(() => {
           this._quitting = false
+          if (!this._quitAllowed) ipcMain.emit('app-quit-canceled')
         })
     })
   }
@@ -731,41 +732,47 @@ export class SessionHost {
           typeof options.requestId === 'number' &&
           this._previewRequests.get(id) !== options.requestId
       if (obsolete()) return
-      await this._requestCheckpoint(id)
-      if (obsolete()) return
       const location = createFileLocation(pathname)
-      const existing = this._owner()
-        .getWindow(id)
-        ?.documents.find(
-          (document) =>
-            document.resource.kind === 'file' && document.resource.location.key === location.key
-        )
-      if (existing) {
-        this._native(id).webContents.send(
-          'mt::switch-tab-by-file_path',
-          existing.resource.kind === 'file' ? existing.resource.location.path : pathname,
-          options
-        )
-        return existing.id
-      }
-      const loaded = await this._readDocument(pathname, options)
+      const current = this._owner().getWindow(id)
+      if (!current) return
+      const loaded = findFileTab(current, location) ? null : await this._readDocument(pathname, options)
       if (obsolete()) return
-      await this._requestCheckpoint(id)
-      if (obsolete()) return
-      const snapshot = this._owner().getWindow(id)!
+      // Checkpoint after the read so edits made during disk IO can keep the outgoing preview open.
+      let snapshot = loaded ? await this._requestCheckpoint(id) : current
       const preview = options.preview && this._accessor.preferences.getAll().openFilesInPreviewMode
-      const retire = snapshot.documents.filter(
-        (document) =>
-          (preview &&
-              this._previews.get(id) === document.id &&
-              document.content.kind === 'disk') ||
-            (selected &&
-              document.id === snapshot.activeDocumentId &&
-              isBlankMarkdownTab(document))
-      )
-      if (retire.length > 0) {
+      let replacedDocumentIds: string[] = []
+      for (let attempt = 0; ; attempt++) {
+        if (obsolete()) return
+        const existing = findFileTab(snapshot, location)
+        if (existing) {
+          this._native(id).webContents.send(
+            'mt::switch-tab-by-file_path',
+            existing.resource.kind === 'file' ? existing.resource.location.path : pathname,
+            options
+          )
+          return existing.id
+        }
+        if (!loaded) return
+        const retire = snapshot.documents.filter(
+          (document) =>
+            (preview &&
+                this._previews.get(id) === document.id &&
+                document.content.kind === 'disk') ||
+              (selected &&
+                document.id === snapshot.activeDocumentId &&
+                isBlankMarkdownTab(document))
+        )
+        if (!retire.length) break
         const ended = await this._endDocuments(id, retire, false, false)
-        if (ended.status !== 'persisted') throw new Error('Preview replacement was not committed')
+        if (ended.status === 'persisted') {
+          replacedDocumentIds = retire.map((document) => document.id)
+          break
+        }
+        if (ended.reason !== 'stale-sequence' || attempt > 0)
+          throw new Error('Preview replacement was not committed')
+        if (obsolete()) return
+        // A background checkpoint can invalidate the close while metadata is being written.
+        snapshot = await this._requestCheckpoint(id)
       }
       const result = await this._owner().addDocument(id, loaded.document, loaded.content.markdown)
       if (result.status !== 'persisted')
@@ -780,7 +787,7 @@ export class SessionHost {
         contentRevision: 0,
         selected,
         options,
-        replacedDocumentIds: retire.map((document) => document.id)
+        replacedDocumentIds
       }
       this._native(id).webContents.send('mt::state::document-opened', payload)
       return loaded.document.id
@@ -1054,13 +1061,15 @@ export class SessionHost {
     windowId: string,
     documentId: string,
     saveAs = false,
-    allowReadOnly = false
+    allowReadOnly = false,
+    preserveDiskChanges = false
   ): Promise<ManagedSaveResult> {
     const document = this._owner()
       .getWindow(windowId)
       ?.documents.find((document) => document.id === documentId)
     if (!document || (document.readOnly && !allowReadOnly)) return { status: 'failed' }
     let previousPath = ''
+    let conflictPath = ''
     let savedMarkdown = ''
     let savedFormat = document.saveFormat
     const sender = this._native(windowId).webContents
@@ -1089,12 +1098,16 @@ export class SessionHost {
           const current = await this._diskBaseline(destination)
           const baseline = capture.baseline
           const changed = baseline?.exists
-            ? current.exists &&
-              (current.rawSha256 !== baseline.rawSha256 ||
-                (resource.kind === 'file' &&
-                  createFileLocation(destination).key !== resource.location.key))
+            ? current.exists
+              ? current.rawSha256 !== baseline.rawSha256 ||
+                (resource.kind === 'file' && createFileLocation(destination).key !== resource.location.key)
+              : preserveDiskChanges
             : current.exists
           if (changed) {
+            if (preserveDiskChanges) {
+              conflictPath = destination
+              return null
+            }
             const choice = await dialog.showMessageBox(native, {
               type: 'warning',
               buttons: [t('dialog.replace'), t('dialog.cancel')],
@@ -1125,7 +1138,19 @@ export class SessionHost {
         }
         return { snapshot, markdown: capture.markdown }
       })
-      if (result.status === 'cancelled') return { status: 'canceled' }
+      if (result.status === 'cancelled') {
+        if (!conflictPath) return { status: 'canceled' }
+        const preferences = this._accessor.preferences
+        const { autoGuessEncoding, trimTrailingNewline, autoNormalizeLineEndings } = preferences.getAll()
+        const data = await loadMarkdownFile(conflictPath, preferences.getPreferredEol(), autoGuessEncoding,
+          trimTrailingNewline, autoNormalizeLineEndings).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error
+        })
+        if (!data) return { status: 'disk-changed' }
+        await this.observeFile(windowId, { type: 'change', change: { pathname: conflictPath, data } })
+        const change = { pathname: conflictPath, data: { ...data, encoding: { ...data.encoding, isBom: !!data.encoding.isBom } } }
+        return { status: 'disk-changed', change }
+      }
       if (result.status !== 'persisted') {
         this.report(new Error('Recovery metadata unavailable after save'), windowId)
         if (result.reason !== 'storage-unavailable') return { status: 'failed' }
@@ -1569,10 +1594,10 @@ export class SessionHost {
     )
     ipcMain.handle(
       'mt::state::save-document',
-      async(event, token: string, id: string, saveAs: boolean) => {
-        const editor = editorFor(event.sender)
-        if (!this._contextMatches(editor.sessionStateId!, token)) return { status: 'failed' }
-        return this.saveDocument(editor.sessionStateId!, id, saveAs)
+      async(event, token: string, id: string, saveAs: boolean, preserveDiskChanges?: boolean) => {
+        const windowId = editorFor(event.sender).sessionStateId
+        if (!windowId || !this._contextMatches(windowId, token)) return { status: 'failed' }
+        return this.saveDocument(windowId, id, saveAs, false, preserveDiskChanges === true)
       }
     )
     ipcMain.handle('mt::state::close-documents', (event, token: string, ids: string[]) => {

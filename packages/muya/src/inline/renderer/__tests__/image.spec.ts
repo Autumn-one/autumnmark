@@ -6,6 +6,7 @@ import type { IRenderCursor } from '../../../selection/types';
 import type { ImageToken } from '../../model/types';
 import type Renderer from '../index';
 import { describe, expect, it, vi } from 'vitest';
+import { getImageSrc } from '../../../utils/image';
 import { h } from '../../../utils/snabbdom';
 import { ImageResources } from '../../resources/images';
 import image from '../image';
@@ -19,6 +20,7 @@ import image from '../image';
 // width/height returned by `loadImageAsync`.
 
 interface IFakeRenderer {
+    imageSource: typeof getImageSrc;
     loadImageAsync: (
         info: { isUnknownType: boolean; src: string },
         attrs: Record<string, string>,
@@ -36,6 +38,7 @@ function makeRenderer(loadResult: {
     url?: string;
 }): IFakeRenderer {
     return {
+        imageSource: getImageSrc,
         loadImageAsync: vi.fn(() => loadResult),
         images: new ImageResources(),
         environment: { selectedImage: null, translate: (s: string) => s },
@@ -354,5 +357,41 @@ describe('image renderer — pins a width for images with no intrinsic size', ()
         );
 
         expect(findImgStyle(out)?.width).toBeUndefined();
+    });
+
+    it('renders full-width images via wrapper class and img attrs without height or default-object pinning', () => {
+        const renderer = makeRenderer({
+            id: 'mu-image-14',
+            isSuccess: true,
+            width: 300,
+            height: 150,
+        });
+
+        const out = image.call(
+            asRenderer(renderer),
+            { h, block: fakeBlock, token: makeImageToken({ width: '100%', height: '300' }), cursor: fakeCursor },
+        );
+
+        expect(getWrapperSelector(out)).toContain('.mu-image-full-width');
+        expect(findImgStyle(out)?.width).toBeUndefined();
+        expect(findImgSrc(out)).toBe('https://example.com/x.png');
+
+        let imgVNode: VNode | undefined;
+        const walk = (node: unknown) => {
+            if (!node || typeof node !== 'object')
+                return;
+            const vnode = node as VNode;
+            if (vnode.sel === 'img') {
+                imgVNode = vnode;
+                return;
+            }
+            if (Array.isArray(vnode.children))
+                vnode.children.forEach(walk);
+        };
+        (Array.isArray(out) ? out : [out]).forEach(walk);
+
+        expect(imgVNode?.data?.attrs?.width).toBe('100%');
+        expect(imgVNode?.data?.attrs?.height).toBeUndefined();
+        expect(imgVNode?.data?.props?.width).toBeUndefined();
     });
 });

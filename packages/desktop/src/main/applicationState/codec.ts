@@ -1,6 +1,6 @@
 import { RecoveryStatus, SessionLifecycle } from '@shared/types/applicationState'
 import path from 'node:path'
-import { createDefaultLayout } from '@shared/applicationState/defaults'
+import { createDefaultLayout, normalizeTabBarState } from '@shared/applicationState/defaults'
 import type {
   ApplicationState,
   DocumentSnapshot,
@@ -80,8 +80,7 @@ const layout = (value: unknown): WindowLayoutState => {
         result.sidebar.openedFiles.preferredHeightPx = sidebar.openedFiles.preferredHeightPx
     }
   }
-  if (object(value.tabBar) && typeof value.tabBar.visible === 'boolean')
-    result.tabBar.visible = value.tabBar.visible
+  result.tabBar = normalizeTabBarState(value.tabBar)
   if (object(value.modes)) {
     for (const key of ['sourceCode', 'focus', 'typewriter'] as const) {
       if (typeof value.modes[key] === 'boolean') result.modes[key] = value.modes[key]

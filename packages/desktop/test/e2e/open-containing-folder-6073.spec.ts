@@ -149,7 +149,7 @@ test('appends file locations to the editor menu on blank lines, line ends and ma
   const editorItems = [
     'insertParagraphBeforeMenuItem', 'insertParagraphAfterMenuItem', 'separator',
     'cutMenuItem', 'copyMenuItem', 'pasteMenuItem', 'separator',
-    'copyAsRichMenuItem', 'copyAsHtmlMenuItem', 'pasteAsPlainTextMenuItem'
+    'copyAlternateNewlinesMenuItem', 'copyAsRichMenuItem', 'copyAsHtmlMenuItem', 'pasteAsPlainTextMenuItem'
   ]
   const menuSuffix = [...editorItems, ...backgroundItems]
   await selectItem('Show in folder')

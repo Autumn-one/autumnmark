@@ -29,6 +29,42 @@ const preferences = async(app: ElectronApplication): Promise<Record<string, unkn
   return JSON.parse(readFileSync(join(directory, 'preferences.json'), 'utf8'))
 }
 
+for (const initialStyle of ['custom', 'native'] as const) {
+  test(`keeps the existing ${initialStyle} frame after changing the title bar preference`, async() => {
+    test.skip(process.platform === 'darwin', 'macOS always uses hiddenInset windows')
+    const { app, page } = await launchWithMarkdown('# Preferences\n', {
+      preferences: { language: 'en', titleBarStyle: initialStyle }
+    })
+    try {
+      const settings = await openSettings(app, page)
+      const nextLabel = initialStyle === 'custom' ? 'Native' : 'Custom'
+      await settings.locator('.pref-sidebar').getByRole('button', { name: 'Appearance', exact: true }).click({ timeout: 5000 })
+      await settings.locator('#setting-titleBarStyle .el-select').click({ timeout: 5000 })
+      await settings.getByRole('option', { name: nextLabel, exact: true }).click({ timeout: 5000 })
+      const nextStyle = nextLabel.toLowerCase()
+      await expect.poll(async() => (await preferences(app)).titleBarStyle).toBe(nextStyle)
+
+      const settingsBar = settings.locator('.pref-container .title-bar')
+      if (initialStyle === 'custom') {
+        await expect(settingsBar).toHaveCSS('-webkit-app-region', 'drag')
+        const closed = settings.waitForEvent('close', { timeout: 5000 })
+        await settingsBar.getByRole('button').click()
+        await closed
+      } else {
+        await expect(settingsBar).toHaveCount(0)
+        await closeSettings(app, settings)
+      }
+
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 10000 })
+      await expect(page.locator('.title-bar .application-menubar')).toBeVisible()
+      await expect(page.locator('.title-bar .window-controls')).toHaveCount(initialStyle === 'custom' ? 1 : 0)
+      await expect(page.locator('.title-bar.native-menubar')).toHaveCount(initialStyle === 'native' ? 1 : 0)
+    } finally {
+      await app.close()
+    }
+  })
+}
+
 test('the settings button reveals the prepared window without stealing focus on hover', async() => {
   const { app, page } = await launchWithMarkdown('# Preferences\n', {
     windowLayout: { showSideBar: true },
@@ -309,7 +345,7 @@ test('theme thumbnails apply the editor cascade to built-in and local themes', a
     await expect(local.locator('h1')).toHaveCSS('color', 'rgb(255, 192, 128)')
     await expect(local.locator('.mu-paragraph').last()).toHaveCSS('color', 'rgb(220, 230, 240)')
     await expect(thumbnail('GitBook Teal').locator('h1')).toHaveCSS('color', 'rgb(16, 185, 123)')
-    const pine = thumbnail('松墨（Pine Ink）')
+    const pine = thumbnail('松风明月')
     await expect(pine.locator('h1')).toHaveCSS('color', 'rgb(255, 245, 220)')
     expect(await pine.locator('code').evaluate(element =>
       element.getBoundingClientRect().bottom <= window.innerHeight
@@ -340,13 +376,19 @@ test('theme preview compares and switches samples before applying a local theme'
     await expect(nord.locator('.mu-footnote')).toHaveCount(1)
     await expect(nord.locator('.mu-inline-diff-addition')).toContainText('slippery')
     await expect(nord.locator('.mu-code-block-title')).toHaveText('trail-time.js')
+    await expect(nord.locator('strong em, em strong')).toHaveText('especially slippery')
+    await expect(nord.locator('.mu-hard-line-break')).toHaveCount(1)
+    await expect(nord.locator('.mu-code-block').filter({ hasText: 'visibility: 950 m' })).toBeVisible()
     await expect(nord.getByAltText('Sketch of the route between the three stops')).toHaveJSProperty('naturalWidth', 192)
+    await expect(nord.locator('main')).not.toContainText('base64,')
     await expect(nord.locator('.mu-diagram-preview svg')).toBeVisible()
     const tabs = nord.locator('.mu-content-tabs-bar').getByRole('tab')
     await expect(tabs).toHaveCount(2)
     await tabs.last().press('Space')
     await expect(tabs.last()).toHaveAttribute('aria-selected', 'true')
     await expect(nord.locator('.mu-html-preview kbd')).toHaveText(['Ctrl', 'S'])
+    await nord.locator('.mu-html-preview summary').press('Space')
+    await expect(nord.locator('.mu-html-preview details')).toHaveAttribute('open', '')
     await dialog.getByRole('button', { name: 'Compare with current theme' }).click()
     const current = dialog.frameLocator('iframe[title="GitBook Teal"]')
     await expect(current.locator('h1')).toContainText('Ridge notes')
@@ -355,6 +397,11 @@ test('theme preview compares and switches samples before applying a local theme'
       await expect(frame.locator('.CodeMirror-line').first()).toContainText('# Ridge notes')
       await expect(frame.locator('main')).toBeHidden()
     }
+    const markdown = await nord.locator('.CodeMirror').evaluate(element =>
+      (element as HTMLElement & { CodeMirror: { getValue(): string } }).CodeMirror.getValue()
+    )
+    expect(markdown).toContain('./ridge-map.png')
+    expect(markdown).not.toContain('base64,')
     const picker = dialog.getByRole('combobox', { name: 'Choose theme', exact: true })
     await picker.hover()
     await settings.mouse.wheel(0, 120)

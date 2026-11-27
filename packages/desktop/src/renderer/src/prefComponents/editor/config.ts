@@ -70,6 +70,17 @@ export const getTextDirectionOptions = (): PrefSelectOption<string>[] => [
   }
 ]
 
+export const getCopyParagraphNewlinesOptions = (): PrefSelectOption<'double' | 'single'>[] => [
+  {
+    label: t('preferences.editor.writingBehavior.copyParagraphNewlines.double'),
+    value: 'double'
+  },
+  {
+    label: t('preferences.editor.writingBehavior.copyParagraphNewlines.single'),
+    value: 'single'
+  }
+]
+
 let defaultEncodingOptions: PrefSelectOption<string>[] | null = null
 export const getDefaultEncodingOptions = (): PrefSelectOption<string>[] => {
   if (defaultEncodingOptions) {

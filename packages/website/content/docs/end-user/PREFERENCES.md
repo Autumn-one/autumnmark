@@ -38,7 +38,7 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 | fontSize                           | Number  | `16`               | Font size in pixels. Range `12`–`32`.                                                                                                                 |
 | lineHeight                         | Number  | `1.6`              | Line height. Range `1.2`–`2.0`.                                                                                                                       |
 | wrapCodeBlocks                     | Boolean | `true`             | Wrap text inside code blocks.                                                                                                                         |
-| editorLineWidth                    | String  | `""`               | Maximum editor area width. Empty or a value with a `ch`, `px` or `%` suffix.                                                                          |
+| editorLineWidth                    | String  | `"100%"`           | Maximum editor area width. Empty or a value with a `ch`, `px` or `%` suffix.                                                                          |
 | codeFontSize                       | Number  | `14`               | Font size inside code blocks. Range `12`–`28`.                                                                                                        |
 | codeFontFamily                     | String  | `DejaVu Sans Mono` | Font family for inline code and code blocks.                                                                                                          |
 | codeBlockLineNumbers               | Boolean | `false`            | Show line numbers inside code blocks.                                                                                                                 |
@@ -90,10 +90,10 @@ Invalid individual values fall back to defaults. An unreadable, malformed or non
 
 | Key               | Type    | Default           | Description                                                                                 |
 | ----------------- | ------- | ----------------- | ------------------------------------------------------------------------------------------- |
-| theme             | String  | System light/dark | Initial theme follows the system: `pine-ink` or `dark`. See [Themes](THEMES.md) for theme IDs. |
+| theme             | String  | System light/dark | Initial theme follows the system: `pine-ink` or `violet-diary`. See [Themes](THEMES.md) for theme IDs. |
 | followSystemTheme | Boolean | `true`            | Follow the system light/dark mode and switch automatically.                                 |
 | lightModeTheme    | String  | `pine-ink`        | Theme id used when the system is in light mode (only when `followSystemTheme` is `true`).   |
-| darkModeTheme     | String  | `dark`            | Theme id used when the system is in dark mode (only when `followSystemTheme` is `true`).    |
+| darkModeTheme     | String  | `violet-diary`    | Theme id used when the system is in dark mode (only when `followSystemTheme` is `true`).    |
 
 #### Spelling
 

@@ -3,6 +3,7 @@ import log from 'electron-log'
 import path from 'node:path'
 import { once } from 'node:events'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
+import { resolveThemeBackground } from '../app/nativeTheme'
 import { preferencesWinOptions } from '../config'
 import { t } from '../i18n'
 import type Accessor from '../app/accessor'
@@ -34,7 +35,7 @@ export default class ThemeStudioWindow extends BaseWindow {
       webPreferences: preferencesWinOptions.webPreferences,
       width: 1160, height: 780, minWidth: 640, minHeight: 460, show: false,
       autoHideMenuBar: true, title: t('studio.title'),
-      backgroundColor: this._getPreferredBackgroundColor(prefs.theme, prefs.localThemes)
+      backgroundColor: resolveThemeBackground(prefs.theme, prefs.localThemes)
     })
     this.browserWindow = win
     const windowId = win.id

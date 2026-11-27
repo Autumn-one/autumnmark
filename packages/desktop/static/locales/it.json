@@ -243,7 +243,9 @@
       "screenshot": "Cattura schermata",
       "lineEnding": "Carattere di fine riga",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Linux/Mac)"
+      "lineEndingLf": "LF (Linux/Mac)",
+      "copyAsSingleNewline": "Copia (a capo singolo)",
+      "copyAsStandardMarkdown": "Copia (Markdown standard)"
     },
     "paragraph": {
       "title": "Paragrafo",
@@ -410,7 +412,9 @@
       "showInFolder": "Mostra nella cartella",
       "showInSideBar": "Mostra nella barra laterale",
       "openContainingFolder": "Apri la cartella contenente nella barra laterale"
-    }
+    },
+    "copyAsSingleNewline": "Copia (a capo singolo)",
+    "copyAsStandardMarkdown": "Copia (Markdown standard)"
   },
   "search": {
     "searchPlaceholder": "Cerca",
@@ -676,7 +680,7 @@
         "tocRight": "Destra",
         "showOpenedFiles": "Mostra i file aperti",
         "autoReveal": "Mostra il file attivo nella barra laterale",
-        "openFilesInPreviewMode": "Apri i file della barra laterale in schede di anteprima. La modifica o il doppio clic mantengono aperta la scheda",
+        "openFilesInPreviewMode": "Apri i file della barra laterale in schede di anteprima. Modificare l’anteprima o fare doppio clic sul file nella barra laterale mantiene aperta la scheda.",
         "excludePatterns": "Regole di esclusione dall’albero dei file",
         "excludePatternsNotes": "I percorsi (path) che corrispondono a una qualsiasi regola \"glob\" vengono esclusi dall’albero dei file. Premere ‘Invio’ per aggiungere una regola e fare clic su × per rimuoverla; le virgole all’interno di una regola vengono mantenute. Riaprire la cartella per applicare tutte le modifiche.",
         "removePattern": "Rimuovi",
@@ -740,7 +744,13 @@
         "title": "Preferenze di scrittura",
         "autoCloseBrackets": "Chiusura automatica delle parentesi",
         "autoCompleteMarkdown": "Completamento delle coppie di marcatori Markdown",
-        "autoCloseQuotes": "Chiusura automatica delle virgolette"
+        "autoCloseQuotes": "Chiusura automatica delle virgolette",
+        "copyParagraphNewlines": {
+          "title": "Interruzioni di paragrafo durante la copia",
+          "note": "Controlla la spaziatura dei paragrafi nella copia normale senza modificare i file Markdown salvati. La scorciatoia alternativa (predefinita Ctrl+Maiusc+C / ⌘⇧C) usa sempre l’altra modalità.",
+          "double": "Markdown standard (doppio a capo)",
+          "single": "Testo semplice visivo (a capo singolo)"
+        }
       },
       "fileRepresentation": {
         "title": "Rappresentazione dei file",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Trova precedente",
       "replace": "Sostituisci",
       "findInFolder": "Trova nella cartella",
-      "screenshot": "Cattura schermata"
+      "screenshot": "Cattura schermata",
+      "copyAlternateNewlines": "Copia con a capo di paragrafo alternativo"
     },
     "paragraph": {
       "heading1": "Intestazione 1",

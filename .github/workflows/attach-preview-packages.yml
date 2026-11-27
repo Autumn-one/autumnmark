@@ -154,6 +154,8 @@ jobs:
             ...['AppImage', 'snap', 'deb', 'rpm', 'tar.gz'].map(ext => 'autumnmark-linux-' + version + '.' + ext)
           ]
           const files = readdirSync('dist')
+          const portable7z = 'autumnmark-win-x64-' + version + '.7z'
+          if (files.includes(portable7z)) expected.push(portable7z)
           for (const name of expected) {
             if (!files.includes(name)) throw new Error('Missing package: ' + name)
           }

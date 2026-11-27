@@ -46,6 +46,20 @@ class JSONState {
         return this._revision;
     }
 
+    /** Export underlying state array and revision without cloning for session hot-swapping. */
+    exportInternalState(): { state: TState[]; revision: number } {
+        return {
+            state: this._state,
+            revision: this._revision,
+        };
+    }
+
+    /** Swap underlying state array and revision in place, preserving JSONState object identity. */
+    importInternalState(snapshot: { state: TState[]; revision: number }): void {
+        this._state = snapshot.state;
+        this._revision = snapshot.revision;
+    }
+
     /** Read-only candidate: owns inserted values, shares untouched subtrees. */
     preview(op: JSONOp): readonly TState[] {
         return op === null ? this._state : asState(json1.type.apply(asDoc(this._state), deepClone(op)));

@@ -133,4 +133,28 @@ test.describe('Persistent title bar menus', () => {
     await expect(page.getByRole('menubar').getByRole('menuitem').first()).toHaveText('文件')
     await expectNoRendererErrors(app)
   })
+
+  test('keeps the Windows Mica backdrop while changing themes and window focus', async() => {
+    test.skip(!await page.evaluate(() => window.marktext?.env?.micaTitleBar), 'Mica requires Windows 11 22H2')
+    const editor = await app.browserWindow(page)
+    const titleBar = page.locator('.title-bar-editor-bg')
+    const startupColor = await editor.evaluate(win => win.getBackgroundColor())
+    await editor.evaluate(win => win.focus())
+    await expect(titleBar).toHaveClass(/mica-title-bar/)
+
+    const settingsOpened = app.waitForEvent('window')
+    await page.evaluate(() => window.electron.ipcRenderer.send('mt::open-setting-window'))
+    const settings = await settingsOpened
+    await expect(settings.locator('.pref-container')).toBeVisible()
+    await expect(titleBar).not.toHaveClass(/mica-title-bar/)
+    for (const theme of ['dark', 'light']) {
+      await settings.evaluate(theme => window.electron.ipcRenderer.invoke('mt::preferences::update', {
+        theme, followSystemTheme: false
+      }), theme)
+      await expect.poll(() => app.evaluate(({ nativeTheme }) => nativeTheme.themeSource)).toBe(theme)
+      expect(await editor.evaluate(win => win.getBackgroundColor())).toBe(startupColor)
+    }
+    await editor.evaluate(win => win.focus())
+    await expect(titleBar).toHaveClass(/mica-title-bar/)
+  })
 })

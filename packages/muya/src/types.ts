@@ -13,6 +13,8 @@ export interface IDrawingInsertion {
     replace: (markup: string) => string;
 }
 
+export type TDrawingInsertTrace = (stage: string, details?: Record<string, boolean | string>) => void;
+
 export interface IMuyaOptions {
     readOnly: boolean;
     fontSize: number;
@@ -60,6 +62,7 @@ export interface IMuyaOptions {
     githubAlerts: boolean;
     fancyLists: boolean;
     softNewlineAsSpace: boolean;
+    copyParagraphNewlines: 'double' | 'single';
     autoMoveCheckedToEnd: boolean;
     disableHtml: boolean;
     locale: {
@@ -120,14 +123,16 @@ export interface IMuyaOptions {
      */
     imageAction?: (state: IImageActionState) => Promise<string>;
     /** Resolve preview bytes without changing the image destination in Markdown. */
-    resolveImagePreview?: (src: string) => { key: string; load: () => Promise<string> } | undefined;
+    resolveImagePreview?: (src: string, documentPathname?: string) => { key: string; load: (signal?: AbortSignal) => Promise<string> } | undefined;
+    deferOffscreenPreviews?: boolean;
     embeddedDrawing?: {
-        preview: (source: string) => Promise<string>;
+        preview: (source: string, signal?: AbortSignal) => Promise<string>;
         open: (source: string, index: number) => void;
         label: () => string;
         quickInsert?: {
             title: () => string;
-            open: (target: IDrawingInsertion) => void;
+            startTrace?: () => TDrawingInsertTrace;
+            open: (target: IDrawingInsertion, trace?: TDrawingInsertTrace) => void;
         };
     };
     editEmbeddedImage?: (image: import('./utils/embeddedImage').IEmbeddedImageEdit, event?: MouseEvent) => void;
@@ -137,9 +142,9 @@ export interface IMuyaOptions {
     importVideo?: (input: File | string) => Promise<string>;
     /** The host owns tab-scoped attachment references and their playback URLs. */
     videoAttachments?: {
-        compact: (text: string) => string;
-        expand: (text: string) => string;
-        playback: (src: string) => string | undefined;
+        compact: (text: string, documentId?: string) => string;
+        expand: (text: string, documentId?: string) => string;
+        playback: (src: string, documentId?: string) => string | undefined;
     };
     /**
      * Check whether a local image drop can proceed before changing the document.
@@ -156,6 +161,13 @@ export interface IMuyaOptions {
      * file into the document. Return `''` when no path is available.
      */
     getPathForFile?: (file: File) => string;
+}
+
+/** Explicit per-document identity and path scope so offscreen rendering never reads ambient window.DIRNAME. */
+export interface IDocumentContext {
+    readonly id: string;
+    readonly pathname?: string;
+    readonly dirname?: string;
 }
 
 /**

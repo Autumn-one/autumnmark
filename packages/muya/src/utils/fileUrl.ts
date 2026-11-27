@@ -53,13 +53,13 @@ export function localPathToFileUrl(src: string): string {
     return `file://${normalized}`;
 }
 
-export function resolveVideoSource(src: string): string {
+export function resolveVideoSource(src: string, dirname = typeof window !== 'undefined' ? window.DIRNAME : undefined): string {
     if (/^(?:data:video\/|https?:\/\/|file:\/\/)/i.test(src))
         return src.replace(/&amp;/g, '&');
     if (ABSOLUTE_LOCAL_REG.test(src))
         return localPathToFileUrl(src);
-    return typeof window !== 'undefined' && window.DIRNAME
-        ? localPathToFileUrl(resolveRelativePath(encodeDirnameForUrl(window.DIRNAME), src))
+    return dirname
+        ? localPathToFileUrl(resolveRelativePath(encodeDirnameForUrl(dirname), src))
         : src;
 }
 

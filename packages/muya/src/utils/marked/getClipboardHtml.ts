@@ -3,6 +3,7 @@ import { Marked } from 'marked';
 import { EXPORT_DOMPURIFY_CONFIG } from '../../config';
 import { sanitize } from '../index';
 import codeFenceAnnotationsExtension from './extensions/codeFenceAnnotations';
+import drawingLayoutExtension from './extensions/drawingLayout';
 import fancyListsHtmlExtension from './extensions/fancyListsHtml';
 import foldBlocksExtension from './extensions/foldBlocks';
 import footnoteExtension from './extensions/footnote';
@@ -29,6 +30,7 @@ export function getClipBoardHtml(src: string, options: ILexOption = {}) {
     const marked = new Marked(foldBlocksExtension(true), referenceDefinitionTabs());
     marked.use(codeFenceAnnotationsExtension());
     marked.use(tableLayoutExtension());
+    marked.use(drawingLayoutExtension());
 
     marked.use({
         walkTokens: walkTokens({ texMathDollars, texMathGfm }),

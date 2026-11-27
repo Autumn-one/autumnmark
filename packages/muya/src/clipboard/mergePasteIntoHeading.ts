@@ -1,7 +1,8 @@
 import type Content from '../block/base/content';
 import type Parent from '../block/base/parent';
-import type { TState } from '../state/types';
+import type { IParagraphState, TState } from '../state/types';
 import type { Nullable } from '../types';
+import { splitDrawingWidths } from '../utils/drawingLayout';
 
 interface IPasteCursor {
     startOffset: number;
@@ -43,8 +44,16 @@ export function mergePasteIntoHeading(
         // following lines become a paragraph block below it.
         const [firstLine, ...restLines] = first.text.split('\n');
         anchorBlock.text = head + firstLine;
-        if (restLines.length > 0)
-            remaining.unshift({ name: 'paragraph', text: restLines.join('\n') });
+        if (restLines.length > 0) {
+            const restText = restLines.join('\n');
+            const tailWidths = splitDrawingWidths(first.meta?.drawingWidths, first.text, firstLine, restText).tail;
+            const paragraphState: IParagraphState = {
+                name: 'paragraph',
+                ...(tailWidths ? { meta: { drawingWidths: tailWidths } } : {}),
+                text: restText,
+            };
+            remaining.unshift(paragraphState);
+        }
     }
     anchorBlock.update();
 

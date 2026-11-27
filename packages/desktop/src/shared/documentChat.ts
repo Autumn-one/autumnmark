@@ -88,7 +88,19 @@ export interface DocumentChatTurn {
 
 export interface DocumentChat extends DocumentChatSummary {
   profileId?: string
+  target?: DocumentChatTarget
   turns: DocumentChatTurn[]
+}
+
+export function chatDocumentTarget(
+  chat: Pick<DocumentChat, 'target' | 'turns'> | null | undefined
+): DocumentChatTarget | undefined {
+  if (!chat) return
+  if (chat.target) return chat.target
+  for (const turn of chat.turns) {
+    const target = turn.effects?.markdown?.target ?? turn.proposal?.target
+    if (target) return target
+  }
 }
 
 export interface DocumentChatRequest {

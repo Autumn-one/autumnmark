@@ -72,7 +72,8 @@ class HTMLPreview extends Parent {
 
             for (const img of imgs) {
                 const src = img.getAttribute('src')!;
-                const imageSrc = getImageSrc(src);
+                const context = this.muya.editor.documentContext;
+                const imageSrc = getImageSrc(src, context ? context.dirname ?? '' : undefined);
                 img.setAttribute('src', imageSrc.src);
             }
 
@@ -87,7 +88,9 @@ class HTMLPreview extends Parent {
                     if (index < 0 || !(element instanceof HTMLVideoElement))
                         continue;
                     const [media] = videos.splice(index, 1);
-                    element.src = this.muya.options.videoAttachments?.playback(media.src) ?? resolveVideoSource(media.src);
+                    const context = this.muya.editor.documentContext;
+                    element.src = this.muya.options.videoAttachments?.playback(media.src, context?.id)
+                        ?? resolveVideoSource(media.src, context ? context.dirname ?? '' : undefined);
                     const activate = (event: Event) => {
                         const block = this.parent?.firstContentInDescendant();
                         if (block && block.text === html)

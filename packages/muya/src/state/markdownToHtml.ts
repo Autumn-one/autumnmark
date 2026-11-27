@@ -167,6 +167,16 @@ export class MarkdownToHtml {
                 const image = code.ownerDocument.createElement('img');
                 image.alt = drawing.label();
                 image.src = src;
+                const widthStyle = code.parentElement?.style.width;
+                if (widthStyle === '100%') {
+                    image.style.width = '100%';
+                    image.style.height = 'auto';
+                }
+                else if (widthStyle) {
+                    image.style.width = widthStyle;
+                    image.style.maxWidth = '100%';
+                    image.style.height = 'auto';
+                }
                 const figure = code.ownerDocument.createElement('figure');
                 figure.append(image);
                 code.parentElement?.replaceWith(figure);

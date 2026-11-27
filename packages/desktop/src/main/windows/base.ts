@@ -4,9 +4,6 @@ import { app, type BrowserWindow } from 'electron'
 import { TypedEmitter } from '@shared/types/typedEmitter'
 import type Accessor from '../app/accessor'
 import type { UserPreferences } from '@shared/types/preferences'
-import { getThemeBackgroundColor } from '../../common/theme'
-import { localThemeList } from '@shared/localTheme'
-import { themeWindowBackground } from '@shared/themeCss'
 
 
 export const WindowType = {
@@ -75,6 +72,11 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
     this.browserWindow?.reload()
   }
 
+  setThemeBackgroundColor(color: string): void {
+    const win = this.browserWindow
+    if (win && !win.isDestroyed()) win.setBackgroundColor(color)
+  }
+
   destroy(): void {
     this.lifecycle = WindowLifecycle.QUITTED
     this.emit('window-closed')
@@ -117,13 +119,6 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
     url.searchParams.set('tbs', titleBarStyle ?? '')
 
     return url
-  }
-
-  protected _getPreferredBackgroundColor(theme: string | undefined, library?: UserPreferences['localThemes']): string {
-    // Paint using the active theme immediately to avoid a white startup flash.
-    const local = localThemeList(library).find(item => item.id === theme)
-    const background = local?.css ? themeWindowBackground(local.css) : undefined
-    return background ?? local?.values.background ?? getThemeBackgroundColor(theme)
   }
 }
 

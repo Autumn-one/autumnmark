@@ -41,7 +41,7 @@ class TableRectSelection {
         return this._isSelecting && this._table != null && this._anchor != null && this._focus != null;
     }
 
-    setSelection(selection: ITableRectSelection): void {
+    setSelection(selection: ITableRectSelection, { preserveFocus = false } = {}): void {
         const { anchor, focus } = selection;
         const { table, anchorCell, focusCell } = selection.context;
         this._table = table;
@@ -54,7 +54,10 @@ class TableRectSelection {
             ...focus,
         };
         this._isSelecting = true;
-        this._freezeNativeSelection();
+        if (preserveFocus)
+            this._muya.editor.activeContentBlock = null;
+        else
+            this._freezeNativeSelection();
         this._renderHighlight();
     }
 

@@ -10,8 +10,10 @@
         :data-document-id="store.currentFile?.id"
       >
         <editor
-          v-if="!currentDrawing"
+          v-show="!currentDrawing"
           ref="renderedEditor"
+          :inert="currentDrawing || undefined"
+          :suspended="currentDrawing"
           :image-menu-item="imageMenuItem"
           :markdown="markdown"
           :cursor="cursor"
@@ -34,8 +36,10 @@
           <drawing-canvas
             v-if="openedDrawings.has(file.id)"
             v-show="currentDrawing && store.currentFile?.id === file.id"
+            :id="'drawing-workspace-' + file.id"
             :file="drawingEditorTabs.has(file.id) ? undefined : file"
             :session="drawingEditorTabs.get(file.id)"
+            :show-source="drawingEditorTabs.get(file.id)?.embedded"
             :can-insert="!drawingEditorTabs.has(file.id) && canInsertDrawing(file.id)"
             :insert="(path, content) => insertDrawing(file.id, path, content)"
           />
@@ -56,7 +60,7 @@
           @toggle-reading="store.SET_READ_ONLY(store.currentFile.id, $event)"
         />
         <document-image-status
-          :key="store.currentFile.id"
+          :document-id="store.currentFile.id"
           :embedded="imageCounts.embedded"
           :pending="imageCounts.pending"
           :progress="progress"
@@ -86,7 +90,7 @@ import DocumentImageStatus from './documentImageStatus.vue'
 import { imageDestinationEdits, isInlineImage } from '@/util/documentImages'
 import { isDrawingPath, isDrawingReference } from '@/util/drawingPaths'
 import type { EditMarkdown } from '@shared/markdownEdits'
-import { findDocumentImages, type IEmbeddedImageEdit } from '@muyajs/core'
+import { findDocumentImages, type IEmbeddedImageEdit, type IUpdateEmbeddedDrawingParams } from '@muyajs/core'
 import { useEditorStore } from '@/store/editor'
 import { documentVideos } from '@/util/videoAttachments'
 import EmbeddedImageDialog from './embeddedImageDialog.vue'
@@ -140,21 +144,49 @@ const renderedEditor = ref<InstanceType<typeof Editor> | null>(null)
 const activeEditor = computed(() => props.sourceCode ? sourceEditor.value : renderedEditor.value)
 const readMarkdown = (id: string): string | undefined => activeEditor.value?.readMarkdown(id)
 const drawingInsertion = (id: string) => activeEditor.value?.drawingInsertion(id)
-const editMarkdown: EditMarkdown = (id, prepare) => {
+const editMarkdown: EditMarkdown = (id, prepare, options) => {
   const view = activeEditor.value
   if (!view) throw new Error(t('batchMedia.changed'))
-  view.editMarkdown(id, prepare)
+  view.editMarkdown(id, prepare, options)
 }
-defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
+const updateEmbeddedDrawing = (id: string, params: IUpdateEmbeddedDrawingParams): boolean =>
+  props.sourceCode ? false : renderedEditor.value?.updateEmbeddedDrawing(id, params) ?? false
+defineExpose({ drawingInsertion, editMarkdown, readMarkdown, updateEmbeddedDrawing })
 const imageCounts = shallowRef({ embedded: 0, pending: 0 })
+const imageCountsCache = new Map<string, { markdown: string; counts: { embedded: number; pending: number } }>()
+const computeImageCounts = (markdown: string): { embedded: number; pending: number } => {
+  const images = findDocumentImages(markdown).filter(image => !isDrawingReference(image.src))
+  const pending = images.filter(image => !isInlineImage(image.src)).length
+  return { embedded: images.length - pending, pending }
+}
 watch([() => store.currentFile?.id, () => props.markdown], ([id, markdown], previous, onCleanup) => {
-  const refresh = () => {
-    const images = currentDrawing.value ? [] : findDocumentImages(markdown ?? '').filter(image => !isDrawingReference(image.src))
-    const pending = images.filter(image => !isInlineImage(image.src)).length
-    imageCounts.value = { embedded: images.length - pending, pending }
+  if (!id || currentDrawing.value) {
+    imageCounts.value = { embedded: 0, pending: 0 }
+    return
   }
-  if (id !== previous?.[0]) refresh()
-  else {
+  const text = markdown ?? ''
+  const cached = imageCountsCache.get(id)
+  if (cached && cached.markdown === text) {
+    imageCounts.value = cached.counts
+    return
+  }
+  // Never run a synchronous micromark full-document scan on the tab-switch click stack.
+  const refresh = () => {
+    const counts = computeImageCounts(text)
+    imageCountsCache.set(id, { markdown: text, counts })
+    if (store.currentFile?.id === id && (props.markdown ?? '') === text) {
+      imageCounts.value = counts
+    }
+  }
+  if (id !== previous?.[0]) {
+    if (typeof requestIdleCallback === 'function') {
+      const handle = requestIdleCallback(refresh, { timeout: 200 })
+      onCleanup(() => cancelIdleCallback(handle))
+    } else {
+      const timer = setTimeout(refresh, 0)
+      onCleanup(() => clearTimeout(timer))
+    }
+  } else {
     const timer = setTimeout(refresh, 160)
     onCleanup(() => clearTimeout(timer))
   }
@@ -200,7 +232,9 @@ watch([() => store.currentFile, () => props.sourceCode ? sourceEditor.value : re
   }
 }, { flush: 'post' })
 watch(() => store.tabs.map(tab => tab.id), ids => {
-  for (const id of ready.keys()) if (!ids.includes(id)) ready.delete(id)
+  const live = new Set(ids)
+  for (const id of ready.keys()) if (!live.has(id)) ready.delete(id)
+  for (const id of imageCountsCache.keys()) if (!live.has(id)) imageCountsCache.delete(id)
 })
 const progress = computed(() => {
   const totals = { completed: 0, total: 0, failed: 0 }
@@ -276,18 +310,24 @@ watch([() => props.sourceCode, () => store.currentFile?.id, () => store.currentF
 .embedded-image-chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--editorColor10);
+  border: 1px solid;
   border-radius: 4px;
   padding: 0.1em 0.45em;
-  background: var(--floatHoverColor);
-  color: var(--editorColor);
   font: 0.85em var(--codeFontFamily, monospace);
   vertical-align: middle;
   cursor: pointer;
 }
 .mu-embedded-image:not(.mu-embedded-picture) {
+  border-color: var(--editorColor10);
+  background: var(--floatHoverColor);
+  color: var(--editorColor);
   flex-direction: column;
   max-width: 100%;
+}
+.embedded-image-chip {
+  color: inherit;
+  border-color: color-mix(in srgb, currentColor 25%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
 }
 .mu-embedded-video video {
   max-width: 100%;

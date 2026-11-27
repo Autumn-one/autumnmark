@@ -22,8 +22,11 @@
             unsaved: !file.isSaved
           }"
           :data-id="file.id"
-          @click.stop="selectFile(file)"
+          @pointerenter="handleTabPointerEnter(file)"
+          @pointerleave="cancelTabHover"
+          @click.stop="selectFile($event, file)"
           @click.middle.stop.prevent="removeFileInTab(file)"
+          @dblclick.stop="handleTabDblClick($event, file)"
           @contextmenu.prevent="handleContextMenu($event, file)"
         >
           <el-icon
@@ -35,12 +38,16 @@
             <Lock />
           </el-icon>
           <span>{{ file.filename }}</span>
-          <span class="unsaved-dot" />
+          <span
+            class="unsaved-dot"
+            aria-hidden="true"
+          />
           <button
             type="button"
             class="plain-button close-icon"
             :aria-label="t('editor.tabs.close', { name: file.filename })"
             @click.stop="removeFileInTab(file)"
+            @dblclick.stop
           >
             <el-icon :size="12">
               <Close />
@@ -73,6 +80,7 @@ import { Plus, Close, Lock } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import { showContextMenu } from '../../contextMenu/tabs'
+import { cancelTabHover, notifyTabHover } from '@/services/tabPrewarm'
 import type { IFileState } from '@shared/types/files'
 
 const { t } = useI18n()
@@ -80,18 +88,72 @@ const editorStore = useEditorStore()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
 
+// Delay scrolling a pointer-clicked overflow tab until the OS double-click window passes (Windows default 500ms).
+const CLICK_SCROLL_DELAY_MS = 500
+
 const tabContainer = ref<HTMLElement | null>(null)
 const tabDropContainer = ref<HTMLElement | null>(null)
-useTabReorder(tabDropContainer, tabContainer, 'horizontal')
+const tabReorder = useTabReorder(tabDropContainer, tabContainer, 'horizontal')
 
-const selectFile = (file: IFileState) => {
+let lastPrimaryClickTabId: string | null = null
+let pendingClickScrollTabId: string | null = null
+let scrollDelayTimer: ReturnType<typeof setTimeout> | null = null
+
+const cancelDeferredScroll = (): void => {
+  if (scrollDelayTimer !== null) {
+    clearTimeout(scrollDelayTimer)
+    scrollDelayTimer = null
+  }
+}
+
+const scheduleDeferredScroll = (): void => {
+  cancelDeferredScroll()
+  scrollDelayTimer = setTimeout(() => {
+    scrollDelayTimer = null
+    pendingClickScrollTabId = null
+    nextTick(scrollActiveTabIntoView)
+  }, CLICK_SCROLL_DELAY_MS)
+}
+
+const handleTabPointerEnter = (file: IFileState): void => {
+  if (file.id && file.id !== currentFile.value?.id) {
+    notifyTabHover(file.id)
+  }
+}
+
+const selectFile = (event: MouseEvent, file: IFileState): void => {
+  if (event.detail === 1) {
+    lastPrimaryClickTabId = file.id
+    if (file.id === currentFile.value?.id) {
+      pendingClickScrollTabId = file.id
+      scheduleDeferredScroll()
+    }
+  } else if (lastPrimaryClickTabId !== file.id) {
+    lastPrimaryClickTabId = null
+  }
+
   if (file.id !== currentFile.value?.id) {
+    pendingClickScrollTabId = file.id
     editorStore.UPDATE_CURRENT_FILE(file)
   }
 }
 
-const removeFileInTab = (file: IFileState) => {
+const removeFileInTab = (file: IFileState): void => {
   editorStore.CLOSE_TAB(file)
+}
+
+const handleTabDblClick = (event: MouseEvent, file: IFileState): void => {
+  const clickedTabId = lastPrimaryClickTabId
+  lastPrimaryClickTabId = null
+
+  if (event.button !== 0) return
+  if (event.target instanceof Element && event.target.closest('button')) return
+  if (tabReorder.isDblClickSuppressed()) {
+    tabReorder.clearDblClickSuppression()
+    return
+  }
+  if (clickedTabId !== file.id) return
+  removeFileInTab(file)
 }
 
 const newFile = () => {
@@ -118,6 +180,10 @@ const scrollActiveTabIntoView = () => {
 }
 
 const handleTabScroll = (event: WheelEvent) => {
+  cancelDeferredScroll()
+  pendingClickScrollTabId = null
+  lastPrimaryClickTabId = null
+
   // Use mouse wheel value first but prioritize X value more (e.g. touchpad input).
   let delta = event.deltaY
   if (event.deltaX !== 0) {
@@ -138,8 +204,23 @@ const handleContextMenu = (event: MouseEvent, tab: IFileState) => {
 
 watch(
   () => currentFile.value?.id,
-  () => {
+  (activeId) => {
+    const deferScroll = !!activeId && activeId === pendingClickScrollTabId
+    pendingClickScrollTabId = null
+    cancelDeferredScroll()
+    if (deferScroll) {
+      scheduleDeferredScroll()
+      return
+    }
+    lastPrimaryClickTabId = null
     nextTick(scrollActiveTabIntoView)
+  }
+)
+
+watch(
+  () => tabs.value.map((tab) => tab.id).join('\0'),
+  () => {
+    lastPrimaryClickTabId = null
   }
 )
 
@@ -148,6 +229,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelDeferredScroll()
+  cancelTabHover()
   tabContainer.value?.removeEventListener('wheel', handleTabScroll)
 })
 </script>
@@ -259,25 +342,20 @@ onBeforeUnmount(() => {
       border-radius: 50%;
       background: var(--themeColor);
       flex-shrink: 0;
+      pointer-events: none;
     }
   }
   & > li.unsaved {
-    & > .close-icon {
-      opacity: 0;
-    }
     & > .unsaved-dot {
       display: block;
     }
-    &:has(> .close-icon:hover) > .close-icon,
-    & > .close-icon:focus-visible {
-      opacity: 1;
-    }
-    &:has(> .close-icon:hover) > .unsaved-dot,
-    &:focus-within > .unsaved-dot {
+    &:hover > .unsaved-dot,
+    &:has(> .close-icon:focus-visible) > .unsaved-dot {
       visibility: hidden;
     }
   }
   & > li.active {
+    transition: none;
     background: var(--themeColor10);
     color: var(--editorColor80);
   }

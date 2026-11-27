@@ -1,7 +1,7 @@
 import type { ILoadedImage } from './images';
 import { CLASS_NAMES } from '../../config';
 import { insertAfter, operateClassName } from '../../utils/dom';
-import { usesDefaultObjectSize } from '../../utils/image';
+import { isFullImageWidth, usesDefaultObjectSize } from '../../utils/image';
 
 export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: Record<string, string>, className?: string, imageClass?: string): void {
     const { url, width, height } = result;
@@ -11,7 +11,7 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
         imageText.querySelector('img')?.remove();
         return;
     }
-    const img = createImage(url, width, height, attrs, imageClass);
+    const img = createImageElement(url, width, height, attrs, imageClass);
 
     if (imageText.classList.contains(`${CLASS_NAMES.MU_INLINE_IMAGE}`)) {
         const imageContainer = imageText.querySelector(
@@ -19,11 +19,13 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
         );
         const oldImage = imageContainer!.querySelector('img');
         if (oldImage)
-            oldImage.remove();
-
-        imageContainer!.appendChild(img);
+            oldImage.replaceWith(img);
+        else
+            imageContainer!.appendChild(img);
         imageText.classList.remove(CLASS_NAMES.MU_IMAGE_LOADING);
         imageText.classList.add(CLASS_NAMES.MU_IMAGE_SUCCESS);
+        if (isFullImageWidth(attrs.width))
+            imageText.classList.add('mu-image-full-width');
         // Host themes use this hook on the first load as well as cached renders.
         if ((width ?? 0) < 100 || (height ?? 0) < 100)
             imageText.classList.add(CLASS_NAMES.MU_SMALL_IMAGE);
@@ -35,7 +37,7 @@ export function mountImage(imageText: HTMLElement, result: ILoadedImage, attrs: 
     }
 }
 
-function createImage(url: string, width: number | undefined, height: number | undefined, attrs: Record<string, string>, imageClass?: string) {
+export function createImageElement(url: string, width: number | undefined, height: number | undefined, attrs: Record<string, string>, imageClass?: string) {
     const img = document.createElement('img');
     img.src = url;
 
@@ -47,10 +49,13 @@ function createImage(url: string, width: number | undefined, height: number | un
     if (attrs.title)
         img.setAttribute('title', attrs.title);
 
-    if (attrs.width && NUM_REG.test(attrs.width))
+    const fullWidth = isFullImageWidth(attrs.width);
+    if (fullWidth)
+        img.setAttribute('width', '100%');
+    else if (attrs.width && NUM_REG.test(attrs.width))
         img.setAttribute('width', attrs.width);
 
-    if (attrs.height && NUM_REG.test(attrs.height))
+    if (!fullWidth && attrs.height && NUM_REG.test(attrs.height))
         img.setAttribute('height', attrs.height);
 
     // ViewBox-only SVGs otherwise collapse in the shrink-to-fit container (#4991).

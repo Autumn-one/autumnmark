@@ -1,9 +1,10 @@
 import type { Muya } from '../muya';
+import type { TImageWidth } from '../utils/image';
 import type { Labels } from './model/types';
 import { embeddedImageDestination, findDocumentImages } from '../clipboard/pastedImageSources';
 import { findContentDOM, getOffsetOfParagraph } from '../selection/dom';
 import { getBlock } from '../utils/dom';
-import { imageToHtml, imageToMarkdown, isImageToken, replaceImageMarkup } from '../utils/image';
+import { imageToHtml, imageToMarkdown, isFullImageWidth, isImageToken, replaceImageMarkup } from '../utils/image';
 import { parseInline } from './parser/lexer';
 import { normalizeReferenceLabel } from './referenceLabel';
 
@@ -50,8 +51,13 @@ export function linkedImageAt(muya: Muya, target: Element) {
     return {
         src,
         current,
-        resize(width: number, height?: number) {
-            replaceImageMarkup(block, start, raw, imageToHtml({ ...attrs, src, width: String(width), ...(height === undefined ? {} : { height: String(height) }) }));
+        resize(width: TImageWidth, height?: number) {
+            const nextAttrs: Record<string, string | null | undefined> = { ...attrs, src, width: String(width) };
+            if (isFullImageWidth(width))
+                delete nextAttrs.height;
+            else if (height !== undefined)
+                nextAttrs.height = String(height);
+            replaceImageMarkup(block, start, raw, imageToHtml(nextAttrs));
         },
         embed(data: string) {
             replaceImageMarkup(block, start, raw, replace(data));

@@ -1,4 +1,4 @@
-import { pineInkTheme } from 'common/theme'
+import { pineInkTheme, violetDiaryTheme } from 'common/theme'
 import {
   dark,
   graphite,
@@ -35,10 +35,12 @@ import {
 } from './themeColor'
 import lightTheme from '../assets/themes/light.theme.css?inline'
 import pineInkStyles from '../assets/themes/pine-ink.theme.css?inline'
+import violetDiaryStyles from '../assets/themes/violet-diary.theme.css?inline'
 
 const builtinStyles: Record<string, () => string> = {
   light: () => lightTheme,
   [pineInkTheme.id]: () => lightTheme + '\n' + pineInkStyles,
+  [violetDiaryTheme.id]: () => rosePineMoon() + '\n' + violetDiaryStyles,
   'dark': dark,
   'material-dark': materialDark,
   'ulysses': ulysses,

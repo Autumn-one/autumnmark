@@ -1,8 +1,15 @@
 import type { GithubAlertType } from '../utils/githubAlerts';
 import type { ListDelimiter, ListStyle } from '../utils/listMarker';
 
+export type TDrawingWidth = number | '100%';
+
+export interface IParagraphMeta {
+    drawingWidths?: Record<string, TDrawingWidth>;
+}
+
 export interface IParagraphState {
     name: 'paragraph';
+    meta?: IParagraphMeta;
     text: string;
 }
 
@@ -191,6 +198,7 @@ export interface IFrontmatterState {
 export interface IDiagramMeta {
     lang: string; // 'yaml' | 'json';
     type: 'mermaid' | 'plantuml' | 'vega-lite' | 'flowchart' | 'sequence' | 'excalidraw';
+    width?: TDrawingWidth;
 }
 
 export interface IDiagramState {

@@ -616,6 +616,17 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     cursor: pointer;
 }
 
+.mu-embedded-picture.mu-image-full-width {
+    width: 100%;
+}
+
+.mu-image-marked-text ~ img.mu-image-full-width,
+.mu-embedded-picture.mu-image-full-width > .mu-embedded-picture-surface,
+.mu-embedded-picture.mu-image-full-width > .mu-embedded-picture-surface > img {
+    width: 100%;
+    height: auto;
+}
+
 .mu-drawing-gap {
     display: inline-block;
     width: 0.5em;
@@ -684,6 +695,33 @@ blockquote .mu-hide.mu-math > .mu-math-render {
 
 .mu-inline-image.mu-image-success.mu-inline-image-selected .mu-image-container img {
     filter: brightness(80%);
+}
+
+.mu-inline-image.mu-drawing-full-width:not(.mu-image-loading, .mu-image-fail) {
+    display: inline-block;
+    width: 100%;
+}
+
+.mu-inline-image.mu-drawing-full-width:not(.mu-image-loading, .mu-image-fail) > .mu-image-container,
+.mu-inline-image.mu-drawing-full-width:not(.mu-image-loading, .mu-image-fail) > .mu-image-container > img {
+    width: 100%;
+    height: auto;
+}
+
+.mu-inline-image.mu-drawing-sized:not(.mu-image-loading, .mu-image-fail) > .mu-image-container > img {
+    width: var(--mu-drawing-width);
+    max-width: 100%;
+    height: auto;
+}
+
+.mu-inline-image.mu-image-full-width:not(.mu-image-fail) {
+    width: 100%;
+}
+
+.mu-inline-image.mu-image-full-width:not(.mu-image-loading, .mu-image-fail) > .mu-image-container,
+.mu-inline-image.mu-image-full-width:not(.mu-image-loading, .mu-image-fail) > .mu-image-container > img {
+    width: 100%;
+    height: auto;
 }
 
 .mu-inline-image.mu-image-uploading .mu-image-container::before,

@@ -65,16 +65,20 @@ class CodeBlock extends Parent {
             code.domNode!.addEventListener('scroll', () => {
                 lnWrapper.scrollTop = code.domNode!.scrollTop;
             });
-            // Seed gutters after attachment: unknown or absent languages never trigger a language-load render.
-            requestAnimationFrame(() => {
-                codeBlock.lastContentInDescendant()?.update();
-            });
         }
 
+        // CodeBlockContent already highlighted synchronously during construction when the grammar was cached.
+        codeBlock._renderedGrammar = renderedGrammarFor(lang ?? '');
         codeBlock.refreshAnnotations();
-        if (lang) {
-            requestAnimationFrame(() => {
-                codeBlock._renderLanguage();
+        const content = codeBlock.lastContentInDescendant() as { syncCodeDecorations?: () => void } | null;
+        content?.syncCodeDecorations?.();
+
+        const language = codeFenceLanguage(lang ?? '');
+        if (language && !codeBlock._renderedGrammar) {
+            requestAnimationFrame(async () => {
+                const page = codeBlock.previewScope;
+                if (!page || await page.whenVisible(codeBlock.domNode!))
+                    codeBlock._renderLanguage();
             });
         }
 
@@ -130,12 +134,15 @@ class CodeBlock extends Parent {
                 this.replaceWith(CodeBlock.create(this.muya, state));
                 if (selection)
                     this.muya.setSelection(selection);
-                return;
             }
-            const input = this.firstContentInDescendant()!;
-            input.text = info;
-            this.meta.lang = info;
-            input.update();
+            else {
+                const input = this.firstContentInDescendant()!;
+                input.text = info;
+                this.meta.lang = info;
+                input.update();
+            }
+            // The resize commits a document edit while the caret can be offscreen.
+            this.muya.editor.selection.preventScrollOnNextNotification();
         });
     }
 
@@ -175,7 +182,10 @@ class CodeBlock extends Parent {
     private _renderLanguage() {
         // Rerender only when the displayed grammar changes, including to plain text (#5515).
         // Load status cannot detect this; every unknown language prefix should not rebuild the DOM.
-        const rerenderIfGrammarChanged = () => {
+        const rerenderIfGrammarChanged = async () => {
+            const page = this.previewScope;
+            if (page && !await page.whenVisible(this.domNode!))
+                return;
             const grammar = renderedGrammarFor(this.meta.lang ?? '');
             if (grammar === this._renderedGrammar)
                 return;
@@ -187,7 +197,7 @@ class CodeBlock extends Parent {
         // The full info string may include attributes; Prism uses only its first word.
         const language = codeFenceLanguage(this.meta.lang ?? '');
         if (!language) {
-            rerenderIfGrammarChanged();
+            void rerenderIfGrammarChanged();
 
             return;
         }
@@ -196,7 +206,7 @@ class CodeBlock extends Parent {
             .then(rerenderIfGrammarChanged)
             .catch((err) => {
                 debug.warn(err);
-                rerenderIfGrammarChanged();
+                void rerenderIfGrammarChanged();
             });
     }
 

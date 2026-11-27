@@ -299,4 +299,15 @@ describe('loadImageAsync — pins a width for images with no intrinsic size', ()
         );
         expect(img.style.width).toBe('');
     });
+
+    it('applies full-width class and width="100%" without height or default-object pinning', async () => {
+        const img = await runLoad(
+            { url: 'https://example.com/diagram.svg', width: 300, height: 150 },
+            { width: '100%', height: '240' },
+        );
+        expect(img.closest('.mu-inline-image')?.classList.contains('mu-image-full-width')).toBe(true);
+        expect(img.getAttribute('width')).toBe('100%');
+        expect(img.hasAttribute('height')).toBe(false);
+        expect(img.style.width).toBe('');
+    });
 });

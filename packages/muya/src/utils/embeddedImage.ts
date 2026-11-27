@@ -1,3 +1,5 @@
+import type { TImageWidth } from './image';
+
 /** UTF-16 source offsets include the owning image syntax so a single delete removes it. */
 export interface IEmbeddedImage {
     start: number;
@@ -22,7 +24,7 @@ export interface IEmbeddedImageEdit {
 }
 
 export interface IImageDimensions {
-    width?: number;
+    width?: TImageWidth;
     height?: number;
 }
 
@@ -30,7 +32,7 @@ const dataImage = /data:image\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,[a-z\d+/]+={
 // A host may replace the Base64 payload with a private-use attachment reference while editing.
 const videoData = /data:video\/[\w.+-]+(?:;[\w-]+=[\w.+-]+)*;base64,(?:[a-z\d+/]+={0,2}|\uE200[\uE300-\uE3FF]{16}\uE201)/gi;
 
-export const embeddedImageWidths = new WeakMap<HTMLImageElement, (width: number, height?: number) => void>();
+export const embeddedImageWidths = new WeakMap<HTMLImageElement, (width: TImageWidth, height?: number) => void>();
 export const embeddedImageSource = new WeakMap<Node, string>();
 
 /** A native file drag can end in a click on the originating editor widget. */

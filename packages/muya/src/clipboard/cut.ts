@@ -1,8 +1,10 @@
 import type Content from '../block/base/content';
 import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
+import type Paragraph from '../block/commonMark/paragraph';
 import type Table from '../block/gfm/table';
 import type TableBodyCell from '../block/gfm/table/cell';
+import type { TDrawingWidth } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import Format from '../block/base/format';
@@ -14,6 +16,7 @@ import { CLASS_NAMES } from '../config';
 import { SelectionDirection } from '../selection/types';
 import { ChangeSource } from '../types';
 import { getBlock } from '../utils/dom';
+import { extractRangeDrawingWidths, splitDrawingWidths } from '../utils/drawingLayout';
 
 function isSelectAll(
     clipboard: Clipboard,
@@ -347,8 +350,43 @@ function cutTableStructure(clipboard: Clipboard): boolean {
     return removeEmptyTableStructure(clipboard);
 }
 
+function paragraphForContent(block: Content): Paragraph | null {
+    if (block.blockName !== 'paragraph.content' || block.parent?.blockName !== 'paragraph')
+        return null;
+    return block.parent as Paragraph;
+}
+
+function paragraphTailDrawingWidths(
+    endBlock: Content,
+    endOffset: number,
+    tail: string,
+): Record<string, TDrawingWidth> | undefined {
+    if (!tail)
+        return undefined;
+    const endParagraph = paragraphForContent(endBlock);
+    if (!endParagraph?.meta?.drawingWidths)
+        return undefined;
+    return splitDrawingWidths(
+        endParagraph.meta.drawingWidths,
+        endBlock.text,
+        endBlock.text.substring(0, endOffset),
+        tail,
+    ).tail;
+}
+
 function replaceRange(block: Content, start: number, end: number, text: string): void {
-    block.text = block.text.substring(0, start) + text + block.text.substring(end);
+    const paragraph = paragraphForContent(block);
+    const nextText = block.text.substring(0, start) + text + block.text.substring(end);
+    if (paragraph?.meta?.drawingWidths && start < end && text === '') {
+        const { remaining } = extractRangeDrawingWidths(paragraph.meta.drawingWidths, block.text, start, end);
+        paragraph.withExplicitDrawingMeta(() => {
+            paragraph.setExplicitDrawingWidths(remaining);
+            block.text = nextText;
+        });
+    }
+    else {
+        block.text = nextText;
+    }
     setCursorAndConvert(block, start + text.length);
 }
 
@@ -421,7 +459,24 @@ export function cutSelection(clipboard: Clipboard): void {
 
     // Keep the start block's container when merging across list items or quotes.
     const { tail, lastRemoved, endsWholeTable } = resolveCutEnd(startBlock, endBlock, endOffset);
-    startBlock.text = startBlock.text.substring(0, startOffset) + tail;
+    const head = startBlock.text.substring(0, startOffset);
+    const tailWidths = paragraphTailDrawingWidths(endBlock, endOffset, tail);
+    const startParagraph = paragraphForContent(startBlock);
+    if (startParagraph && (startParagraph.meta?.drawingWidths || tailWidths)) {
+        startParagraph.withExplicitDrawingMeta(() => {
+            startParagraph.mergeDrawingMeta({
+                oldText: startBlock.text,
+                head,
+                inserted: tail,
+                tail: '',
+                incomingMeta: tailWidths ? { drawingWidths: tailWidths } : undefined,
+            });
+            startBlock.text = head + tail;
+        });
+    }
+    else {
+        startBlock.text = head + tail;
+    }
 
     if (lastRemoved)
         removeBlocks(startBlock, lastRemoved, endsWholeTable);
@@ -502,6 +557,7 @@ function collapseLanguageInputCut(
 ): void {
     const { tail, lastRemoved, endsWholeTable } = resolveCutEnd(startBlock, endBlock, endOffset);
     const mergedText = startBlock.text.substring(0, startOffset) + tail;
+    const tailWidths = paragraphTailDrawingWidths(endBlock, endOffset, tail);
     // The code block itself, even inside a list item or quote: replacing the
     // outermost block would take the rest of that list or quote with it (#5368).
     const codeBlock = startBlock.getAnchor();
@@ -516,6 +572,7 @@ function collapseLanguageInputCut(
     const paragraph = ScrollPage.loadBlock('paragraph').create(clipboard.muya, {
         name: 'paragraph',
         text: mergedText,
+        ...(tailWidths ? { meta: { drawingWidths: tailWidths } } : {}),
     });
     codeBlock?.replaceWith(paragraph);
 

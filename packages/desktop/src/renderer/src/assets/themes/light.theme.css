@@ -16,6 +16,8 @@
   --proseAccent: #11977d;
 
   /* The original light palette still applies inside tables and media tools. */
+  --editorAreaWidth: 100%;
+  --editor-area-width: var(--editorAreaWidth);
   --link-color: var(--theme-color);
   --blockquote-border-color: var(--theme-color);
 }
@@ -107,7 +109,7 @@
     margin-block: 1.5rem 0.5rem;
   }
 
-  :scope :is(.mu-atx-heading, .mu-setext-heading):not(.mu-active) > .mu-content {
+  :scope :is(.mu-atx-heading, .mu-setext-heading):not(h1, .mu-active) > .mu-content {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

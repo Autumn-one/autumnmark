@@ -243,7 +243,9 @@
       "screenshot": "Capture d'écran",
       "lineEnding": "Fin de ligne",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Linux/Mac)"
+      "lineEndingLf": "LF (Linux/Mac)",
+      "copyAsSingleNewline": "Copier (saut de ligne simple)",
+      "copyAsStandardMarkdown": "Copier (Markdown standard)"
     },
     "paragraph": {
       "title": "Paragraphe",
@@ -410,7 +412,9 @@
       "showInFolder": "Afficher dans le dossier",
       "showInSideBar": "Afficher dans la barre latérale",
       "openContainingFolder": "Ouvrir le dossier parent dans la barre latérale"
-    }
+    },
+    "copyAsSingleNewline": "Copier (saut de ligne simple)",
+    "copyAsStandardMarkdown": "Copier (Markdown standard)"
   },
   "search": {
     "searchPlaceholder": "Rechercher",
@@ -676,7 +680,7 @@
         "tocRight": "À droite",
         "showOpenedFiles": "Afficher les fichiers ouverts",
         "autoReveal": "Afficher le fichier actif dans la barre latérale",
-        "openFilesInPreviewMode": "Ouvrir les fichiers de la barre latérale dans des onglets d’aperçu. La modification ou le double-clic conserve l’onglet.",
+        "openFilesInPreviewMode": "Ouvrir les fichiers de la barre latérale dans des onglets d’aperçu. Modifier l’aperçu ou double-cliquer sur le fichier dans la barre latérale conserve l’onglet.",
         "excludePatterns": "Règles d’exclusion de l’arborescence des fichiers",
         "excludePatternsNotes": "Les chemins correspondant à une règle glob sont exclus de l’arborescence des fichiers. Appuyez sur Entrée pour ajouter une règle et cliquez sur × pour la supprimer ; les virgules au sein d’une règle sont conservées. Rouvrez le dossier pour appliquer toutes les modifications.",
         "removePattern": "Supprimer",
@@ -740,7 +744,13 @@
         "title": "Préférences de rédaction",
         "autoCloseBrackets": "Fermeture automatique des crochets",
         "autoCompleteMarkdown": "Compléter les paires de marqueurs Markdown",
-        "autoCloseQuotes": "Fermeture automatique des guillemets"
+        "autoCloseQuotes": "Fermeture automatique des guillemets",
+        "copyParagraphNewlines": {
+          "title": "Sauts de paragraphe lors de la copie",
+          "note": "Définit l’espacement des paragraphes pour la copie normale sans modifier les fichiers Markdown enregistrés. Le raccourci alternatif (par défaut Ctrl+Maj+C / ⌘⇧C) utilise toujours l’autre mode.",
+          "double": "Markdown standard (double saut de ligne)",
+          "single": "Texte brut visuel (saut de ligne simple)"
+        }
       },
       "fileRepresentation": {
         "title": "Représentation de fichier",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Rechercher précédent",
       "replace": "Remplacer",
       "findInFolder": "Rechercher dans le dossier",
-      "screenshot": "Capture d'écran"
+      "screenshot": "Capture d'écran",
+      "copyAlternateNewlines": "Copier avec le saut de paragraphe alternatif"
     },
     "paragraph": {
       "heading1": "Titre 1",
