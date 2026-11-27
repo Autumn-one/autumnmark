@@ -147,7 +147,7 @@ describe('full-width (100%) image resize across image paths', () => {
         setBox(wrapper, 240);
         setBox(img, 240);
 
-        const paragraph = muya.editor.scrollPage!.children.tail!.firstContentInDescendant()!;
+        const paragraph = muya.editor.scrollPage!.lastContentInDescendant()!;
         muya.editor.selection.setSelection({
             kind: SelectionType.IMAGE,
             path: paragraph.path,
@@ -179,7 +179,7 @@ describe('full-width (100%) image resize across image paths', () => {
         const updatedWrapper = updatedContent.querySelector<HTMLElement>(`.${CLASS_NAMES.MU_INLINE_IMAGE}`)!;
         setBox(updatedWrapper, 600);
         setBox(updatedImg, 600);
-        const updatedParagraph = muya.editor.scrollPage!.children.tail!.firstContentInDescendant()!;
+        const updatedParagraph = muya.editor.scrollPage!.lastContentInDescendant()!;
         muya.editor.selection.setSelection({
             kind: SelectionType.IMAGE,
             path: updatedParagraph.path,

@@ -167,7 +167,9 @@
  */
 @font-face {
     font-family: 'DejaVu Sans Mono';
-    src: local('DejaVu Sans Mono'), url('./fonts/DejaVuSansMono.woff2') format('woff2');
+    src:
+        local('DejaVu Sans Mono'),
+        url('./fonts/DejaVuSansMono.woff2') format('woff2');
 }
 
 @font-face {

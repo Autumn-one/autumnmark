@@ -499,7 +499,7 @@ describe('drawing resize bar and comment persistence', () => {
         const content = samePara.editor.scrollPage!.firstContentInDescendant()!;
         content.setCursor(0, INLINE_DRAWING.length, true);
         const sameSource = getTextDragSource(samePara)!;
-        dropText(samePara, sameSource, { block: content, offset: content.text.length }, false);
+        dropText(samePara, sameSource, { block: content, offset: content.text.length, path: content.path }, false);
         samePara.flush();
 
         expect(samePara.getMarkdown()).toContain(`<!-- drawing-layout: widths="1:100%,2:320" -->\n\n ${INLINE_DRAWING}${INLINE_DRAWING}`);
@@ -512,7 +512,7 @@ describe('drawing resize bar and comment persistence', () => {
         const secondMove = crossMove.editor.scrollPage!.lastContentInDescendant()!;
         firstMove.setCursor(0, INLINE_DRAWING.length, true);
         const moveSource = getTextDragSource(crossMove)!;
-        dropText(crossMove, moveSource, { block: secondMove, offset: 0 }, false);
+        dropText(crossMove, moveSource, { block: secondMove, offset: 0, path: secondMove.path }, false);
         crossMove.flush();
 
         expect(crossMove.getMarkdown()).toContain(`<!-- drawing-layout: widths="1:320,2:100%" -->\n\n${INLINE_DRAWING}${INLINE_DRAWING_ALT}`);
@@ -523,7 +523,7 @@ describe('drawing resize bar and comment persistence', () => {
         const secondCopy = crossCopy.editor.scrollPage!.lastContentInDescendant()!;
         firstCopy.setCursor(0, INLINE_DRAWING.length, true);
         const copySource = getTextDragSource(crossCopy)!;
-        dropText(crossCopy, copySource, { block: secondCopy, offset: secondCopy.text.length }, true);
+        dropText(crossCopy, copySource, { block: secondCopy, offset: secondCopy.text.length, path: secondCopy.path }, true);
         crossCopy.flush();
 
         const copyMd = crossCopy.getMarkdown();

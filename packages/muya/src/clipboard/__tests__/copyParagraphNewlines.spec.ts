@@ -2,6 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../muya';
+import { createTextSelectionState } from '../../selection/state';
+import { SelectionDirection } from '../../selection/types';
 import StateToMarkdown from '../../state/stateToMarkdown';
 import { CopyType } from '../types';
 
@@ -33,24 +35,16 @@ function selectAllBlocks(muya: Muya) {
     const scrollPage = muya.editor.scrollPage!;
     const first = scrollPage.firstContentInDescendant()!;
     const last = scrollPage.lastContentInDescendant()!;
-    const anchor = { block: first, offset: 0 };
-    const focus = { block: last, offset: last.text.length };
-    muya.editor.selection.setSelection({ anchor, focus });
+    const anchor = { block: first, offset: 0, path: first.path };
+    const focus = { block: last, offset: last.text.length, path: last.path };
+    muya.editor.selection.setSelection(createTextSelectionState(anchor, focus));
     // Mirror resolved selection directly so clipboard reads the full range under happy-dom.
     vi.spyOn(muya.editor.selection, 'getTextSelection').mockReturnValue({
         anchor,
         focus,
-        anchorBlock: first,
-        anchorPath: first.path,
-        anchorOffset: 0,
-        focusBlock: last,
-        focusPath: last.path,
-        focusOffset: last.text.length,
         isCollapsed: false,
-        isSameBlockSync: first === last,
         isSelectionInSameBlock: first === last,
-        direction: 'forward' as never,
-        type: 'Range',
+        direction: SelectionDirection.FORWARD,
     });
 }
 
