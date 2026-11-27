@@ -474,9 +474,8 @@ export class MarkdownToState {
         trimUnnecessaryCodeBlockEmptyLines: boolean,
     ): TState {
         const { codeBlockStyle, text, lang: infoString = '', raw = '' } = token;
-        // Marked includes the final line terminator for indented code and for fences ending in a blank row.
-        // The serializer supplies that terminator when it writes the closing fence.
-        const codeText = text.replace(/\n$/, '');
+        // Marked's fenced token preserves the trailing blank rows represented in the editor.
+        const codeText = codeBlockStyle === 'indented' ? text.replace(/\n$/, '') : text;
         // Read the opening fence itself so its character (` or ~) and
         // run length both survive the round trip (CommonMark §4.5).
         const fence = parseFenceLine(raw);
