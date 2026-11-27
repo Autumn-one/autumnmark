@@ -185,6 +185,72 @@ describe('documentSessionPool and tab-switch engine optimizations', () => {
         expect(activated.hotHit).toBe(true);
     });
 
+    it('keeps a partially built idle document out of the pool until completed', () => {
+        const active = 'Active\n\nSecond active paragraph';
+        const muya = bootMuya(active);
+        const livePage = muya.editor.scrollPage;
+        const context = { id: 'active', pathname: '/active/a.md', dirname: '/active' };
+        muya.bindActiveDocument(context.id, active, context);
+        const options = {
+            id: 'target',
+            context: { id: 'target', pathname: '/target/b.md', dirname: '/target' },
+            markdown: '# Target\n\nFirst target paragraph\n\nSecond target paragraph',
+            readOnly: false,
+        };
+        const task = muya.createIdleDocumentPrewarm(options)!;
+        const budget = vi.fn(() => 0).mockReturnValueOnce(5);
+
+        expect(task.advance(budget)).toBe(false);
+        expect(muya.editor.scrollPage).toBe(livePage);
+        expect(muya.editor.documentContext).toBe(context);
+        expect(muya.getMarkdown().trim()).toBe(active);
+        expect(muya.hasRetainedDocument(options.id, options.markdown, options.context.pathname)).toBe(false);
+
+        expect(task.advance(() => 20)).toBe(true);
+        expect(muya.editor.scrollPage).toBe(livePage);
+        expect(muya.activateDocument(options).hotHit).toBe(true);
+        expect(muya.getMarkdown().trim()).toBe(options.markdown);
+    });
+
+    it('releases the detached page and its root listener on cancellation', () => {
+        const muya = bootMuya('Active');
+        muya.bindActiveDocument('active', 'Active', { id: 'active' });
+        const count = muya.eventCenter.events.length;
+        const options = {
+            id: 'target',
+            context: { id: 'target' },
+            markdown: '# Target\n\nValue',
+            readOnly: false,
+        };
+        const task = muya.createIdleDocumentPrewarm(options)!;
+        expect(task.advance(vi.fn(() => 0).mockReturnValueOnce(5))).toBe(false);
+        expect(muya.eventCenter.events.length).toBeGreaterThan(count);
+        task.cancel();
+        expect(muya.eventCenter.events).toHaveLength(count);
+        expect(muya.hasRetainedDocument(options.id, options.markdown)).toBe(false);
+        expect(muya.getMarkdown().trim()).toBe('Active');
+    });
+
+    it('finishes the matching partial page when the user activates its tab', () => {
+        const muya = bootMuya('Active');
+        muya.bindActiveDocument('active', 'Active', { id: 'active' });
+        const options = {
+            id: 'target',
+            context: { id: 'target' },
+            markdown: '# Target\n\nValue',
+            readOnly: false,
+        };
+        const task = muya.createIdleDocumentPrewarm(options)!;
+        expect(task.advance(vi.fn(() => 0).mockReturnValueOnce(5))).toBe(false);
+        const parse = vi.spyOn(muya.editor.jsonState, 'markdownToState');
+        const result = muya.activateDocument(options);
+        expect(result.hotHit).toBe(false);
+        expect(parse).not.toHaveBeenCalled();
+        expect(muya.getMarkdown().trim()).toBe(options.markdown);
+        task.cancel();
+        expect(muya.domNode.querySelector('.mu-container h1')?.textContent).toContain('Target');
+    });
+
     it('keeps an untitled note from borrowing the active directory during prewarm', () => {
         window.DIRNAME = '/active-dir';
         const resolvePreview = vi.fn(() => undefined);

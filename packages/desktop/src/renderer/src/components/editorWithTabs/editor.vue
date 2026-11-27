@@ -2509,7 +2509,7 @@ onMounted(() => {
       engineHistoryByTab.set(evictedId, history)
     }
   })
-  prewarmScheduler.scheduleAfterPaint()
+  prewarmScheduler.scheduleAfterPaint({ startup: true })
   muya.on('selection-change', documentViewChanged)
   muya.on('selection-change', updateHeadingLink)
   bus.on('begin-outline-move', beginOutlineMove)

@@ -70,6 +70,140 @@ describe('TabPrewarmScheduler', () => {
     scheduler.dispose()
   })
 
+  function startupFixture(slices = 1) {
+    const callbacks = new Map<number, IdleRequestCallback>()
+    const options: Array<IdleRequestOptions | undefined> = []
+    let nextHandle = 0
+    vi.stubGlobal('requestIdleCallback', (callback: IdleRequestCallback, requestOptions?: IdleRequestOptions) => {
+      const id = ++nextHandle
+      callbacks.set(id, callback)
+      options.push(requestOptions)
+      return id
+    })
+    vi.stubGlobal('cancelIdleCallback', (id: number) => { callbacks.delete(id) })
+    const retained = new Set(['active'])
+    const prewarmDocument = vi.fn(({ id }: { id: string }) => {
+      retained.add(id)
+      return true
+    })
+    const cancel = vi.fn()
+    const createIdleDocumentPrewarm = (options: { id: string }) => {
+      let remaining = slices
+      return {
+        advance: () => {
+          remaining--
+          if (remaining > 0) return false
+          return prewarmDocument(options)
+        },
+        cancel
+      }
+    }
+    const tabs = [makeTab('left', '# Left'), makeTab('active', '# Active'), makeTab('right', '# Right')]
+    const scheduler = new TabPrewarmScheduler({
+      getMuya: () => ({ hasRetainedDocument: (id: string) => retained.has(id), prewarmDocument, createIdleDocumentPrewarm }) as never,
+      getTabs: () => tabs,
+      getActiveTabId: () => 'active',
+      isSuspended: () => false,
+      isSourceMode: () => false,
+      isPoolEnabled: () => true,
+      contextFor: (tab) => ({ id: tab.id, pathname: tab.pathname }),
+      onEvict: vi.fn()
+    })
+    const runIdle = (timeRemaining: number) => {
+      const first = callbacks.entries().next().value
+      if (!first) throw new Error('Expected a requested idle callback')
+      const [id, callback] = first
+      callbacks.delete(id)
+      callback({ didTimeout: false, timeRemaining: () => timeRemaining })
+    }
+    return { callbacks, options, prewarmDocument, runIdle, scheduler, cancel }
+  }
+
+  it('uses the first suitable startup idle period for one adjacent tab', async() => {
+    const fixture = startupFixture()
+    try {
+      fixture.scheduler.scheduleAfterPaint({ startup: true })
+      await vi.advanceTimersByTimeAsync(31)
+      expect(fixture.callbacks.size).toBe(0)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(fixture.options).toEqual([undefined])
+      fixture.runIdle(45)
+      expect(fixture.prewarmDocument.mock.calls.map(([tab]) => tab.id)).toEqual(['right'])
+      expect(fixture.callbacks.size).toBe(0)
+    } finally {
+      fixture.scheduler.dispose()
+    }
+  })
+
+  it('leaves startup idle time available for input when the build will not fit', async() => {
+    const fixture = startupFixture()
+    try {
+      fixture.scheduler.scheduleAfterPaint({ startup: true })
+      await vi.advanceTimersByTimeAsync(32)
+      fixture.runIdle(1)
+      expect(fixture.prewarmDocument).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(300)
+      expect(fixture.options.at(-1)).toEqual({ timeout: 1000 })
+      fixture.runIdle(45)
+      await Promise.resolve()
+      expect(fixture.prewarmDocument).toHaveBeenCalledOnce()
+    } finally {
+      fixture.scheduler.dispose()
+    }
+  })
+
+  it('cancels the startup idle pass as soon as the user interacts', async() => {
+    const fixture = startupFixture()
+    try {
+      fixture.scheduler.scheduleAfterPaint({ startup: true })
+      await vi.advanceTimersByTimeAsync(32)
+      expect(fixture.callbacks.size).toBe(1)
+      document.dispatchEvent(new Event('pointerdown'))
+      expect(fixture.callbacks.size).toBe(0)
+      expect(fixture.prewarmDocument).not.toHaveBeenCalled()
+    } finally {
+      fixture.scheduler.dispose()
+    }
+  })
+
+  it('drops a partially built startup page when input arrives between slices', async() => {
+    const fixture = startupFixture(2)
+    try {
+      fixture.scheduler.scheduleAfterPaint({ startup: true })
+      await vi.advanceTimersByTimeAsync(32)
+      fixture.runIdle(7)
+      expect(fixture.prewarmDocument).not.toHaveBeenCalled()
+      document.dispatchEvent(new Event('pointerdown'))
+      expect(fixture.cancel).toHaveBeenCalledOnce()
+      await vi.advanceTimersByTimeAsync(32)
+      expect(fixture.callbacks.size).toBe(0)
+    } finally {
+      fixture.scheduler.dispose()
+    }
+  })
+
+  it('holds a partial page for the exact tab receiving the pointer press', async() => {
+    const fixture = startupFixture(2)
+    const tabs = document.createElement('div')
+    tabs.className = 'editor-tabs'
+    const target = document.createElement('li')
+    target.dataset.id = 'right'
+    tabs.append(target)
+    document.body.append(tabs)
+    try {
+      fixture.scheduler.scheduleAfterPaint({ startup: true })
+      await vi.advanceTimersByTimeAsync(32)
+      fixture.runIdle(7)
+      target.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      await vi.advanceTimersByTimeAsync(32)
+      expect(fixture.cancel).not.toHaveBeenCalled()
+      expect(fixture.callbacks.size).toBe(0)
+    } finally {
+      tabs.remove()
+      fixture.scheduler.dispose()
+    }
+  })
+
   it('prioritizes a hovered tab after 50ms debounce and suppresses prewarm while dragging', async() => {
     const retained = new Set<string>(['t1'])
     const prewarmed: string[] = []

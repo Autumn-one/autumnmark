@@ -1,7 +1,7 @@
 import type Content from './block/base/content';
 import type Parent from './block/base/parent';
 import type { IHeadingFoldState } from './block/folding';
-import type { IActivateDocumentOptions, IActivateDocumentResult, IPrewarmDocumentOptions } from './editor/documentSession';
+import type { IActivateDocumentOptions, IActivateDocumentResult, IIdleDocumentPrewarm, IPrewarmDocumentOptions } from './editor/documentSession';
 import type { IUpdateEmbeddedDrawingParams } from './editor/embeddedDrawingUpdate';
 import type { Listener, TEventListener } from './event/types';
 import type { ISerializedHistory } from './history';
@@ -353,6 +353,10 @@ export class Muya {
 
     prewarmDocument(options: IPrewarmDocumentOptions): boolean {
         return this.editor.documentSessions.prewarm(options);
+    }
+
+    createIdleDocumentPrewarm(options: IPrewarmDocumentOptions): IIdleDocumentPrewarm | null {
+        return this.editor.documentSessions.createIdlePrewarm(options);
     }
 
     hasRetainedDocument(id: string, markdown: string, pathname?: string, dirname?: string): boolean {

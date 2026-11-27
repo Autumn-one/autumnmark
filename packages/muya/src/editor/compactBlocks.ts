@@ -260,6 +260,18 @@ export class CompactBlocks {
         return exported;
     }
 
+    withDetachedBodies<T>(state: ICompactBlocksSessionState, build: () => T): T {
+        // Detached blocks register their bodies without interrupting the active page's observations.
+        const active = this._bodies;
+        this._bodies = state.bodies;
+        try {
+            return build();
+        }
+        finally {
+            this._bodies = active;
+        }
+    }
+
     importSessionState(state: ICompactBlocksSessionState): void {
         if (this._frame !== undefined) {
             cancelAnimationFrame(this._frame);
@@ -269,8 +281,10 @@ export class CompactBlocks {
         for (const body of this._bodies.values())
             this._observer?.unobserve(body);
         this._bodies = state.bodies;
-        for (const body of this._bodies.values())
-            this._observer?.observe(body);
+        if (!this._muya.editor.prewarmingDocument) {
+            for (const body of this._bodies.values())
+                this._observer?.observe(body);
+        }
     }
 
     dispose(): void {

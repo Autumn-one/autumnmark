@@ -56,6 +56,25 @@ export interface IPrewarmDocumentOptions {
     onEvict?: (id: string, history: ISerializedHistory) => void;
 }
 
+export interface IIdleDocumentPrewarm {
+    /** Returns true once the task has settled. Retention is reported by the pool. */
+    advance: (timeRemaining: () => number) => boolean;
+    cancel: () => void;
+}
+
+interface IPreparedDocument {
+    state: TState[];
+    page: ScrollPage;
+    compact: ICompactBlocksSessionState;
+}
+
+interface IIdlePreparation {
+    options: IPrewarmDocumentOptions;
+    generation: number;
+    take: () => { prepared: IPreparedDocument; next: number };
+    cancel: () => void;
+}
+
 interface IDocumentSession {
     id: string;
     context: IDocumentContext;
@@ -109,7 +128,7 @@ function pauseDetachedMedia(domNode: Nullable<HTMLElement>): void {
 function disposeScrollPageResources(scrollPage: Nullable<ScrollPage>): void {
     if (!scrollPage)
         return;
-    scrollPage.previewScope?.dispose();
+    scrollPage.disposeDetachedResources();
     pauseDetachedMedia(scrollPage.domNode);
     scrollPage.breadthFirstTraverse((node) => {
         const disconnect = (node as { disconnectLayoutObserver?: () => void }).disconnectLayoutObserver;
@@ -129,6 +148,7 @@ function sameContextPath(a: IDocumentContext, b: IDocumentContext): boolean {
  */
 export class DocumentSessionPool {
     private _sessions = new Map<string, IDocumentSession>();
+    private _idlePreparation: IIdlePreparation | null = null;
     private _activeId: string | null = null;
     private _activeSourceMarkdown = '';
     private _activeContext: IDocumentContext | null = null;
@@ -220,6 +240,8 @@ export class DocumentSessionPool {
     }
 
     evict(id: string, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        if (this._idlePreparation?.options.id === id)
+            this._idlePreparation.cancel();
         const session = this._sessions.get(id);
         if (!session)
             return;
@@ -422,6 +444,7 @@ export class DocumentSessionPool {
         if (cached?.scrollPage)
             disposeScrollPageResources(cached.scrollPage);
 
+        const idle = this._takeIdlePreparation(options);
         const reuseState = cached
             && cached.sourceMarkdown === markdown
             && cached.optionsGeneration === this._optionsGeneration
@@ -447,14 +470,21 @@ export class DocumentSessionPool {
             editor.contentTabs.importSessionState(createEmptyContentTabsSessionState());
             editor.searchModule.reset();
 
-            const nextState = reuseState?.state ?? editor.jsonState.markdownToState(markdown);
+            const nextState = idle?.prepared.state ?? reuseState?.state ?? editor.jsonState.markdownToState(markdown);
             blocks = countStateBlocks(nextState);
             editor.jsonState.importInternalState({
                 state: nextState,
-                revision: reuseState ? reuseState.revision : editor.jsonState.revision + 1,
+                revision: !idle && reuseState ? reuseState.revision : editor.jsonState.revision + 1,
             });
 
-            const nextPage = this._muya.runDocumentUpdate(() => ScrollPage.createDetached(this._muya, nextState));
+            const nextPage = this._muya.runDocumentUpdate(() => {
+                if (!idle)
+                    return ScrollPage.createDetached(this._muya, nextState);
+                const { page, compact } = idle.prepared;
+                editor.compactBlocks.importSessionState(compact);
+                page.appendDetachedBlocks(nextState.slice(idle.next));
+                return page;
+            });
             this._attachScrollPageDom(nextPage, prevScrollPage);
             editor.scrollPage = nextPage;
             if (!outgoingId || this._sessions.get(outgoingId)?.scrollPage !== prevScrollPage)
@@ -472,6 +502,11 @@ export class DocumentSessionPool {
             this._muya.syncReadingPresentation(false);
             if (prevReadOnly !== readOnly)
                 this._muya.eventCenter.emit('read-only-changed', readOnly);
+        }
+        catch (error) {
+            if (idle && editor.scrollPage !== idle.prepared.page)
+                disposeScrollPageResources(idle.prepared.page);
+            throw error;
         }
         finally {
             editor.isUpdating = false;
@@ -495,6 +530,118 @@ export class DocumentSessionPool {
      * the active DOM, Selection, History, Search, or ambient window.DIRNAME.
      */
     prewarm(options: IPrewarmDocumentOptions): boolean {
+        return this._prewarm(options);
+    }
+
+    createIdlePrewarm(options: IPrewarmDocumentOptions): IIdleDocumentPrewarm | null {
+        const { editor } = this._muya;
+        if (options.id === this._activeId || editor.isUpdating || editor.transactions.isActive)
+            return null;
+        const state = editor.jsonState.markdownToState(options.markdown);
+        if (countStateBlocks(state) > this._maxBlocks || options.markdown.length > this._maxChars)
+            return null;
+        this._idlePreparation?.cancel();
+        const prepared: IPreparedDocument = {
+            state,
+            page: new ScrollPage(this._muya),
+            compact: createEmptyCompactBlocksSessionState(),
+        };
+        const generation = this._optionsGeneration;
+        let next = 0;
+        let finished = false;
+        const release = () => {
+            finished = true;
+            this._idlePreparation = null;
+        };
+        const cancel = () => {
+            if (finished)
+                return;
+            release();
+            disposeScrollPageResources(prepared.page);
+        };
+        this._idlePreparation = {
+            options,
+            generation,
+            take: () => {
+                release();
+                return { prepared, next };
+            },
+            cancel,
+        };
+        return {
+            advance: (timeRemaining) => {
+                if (finished)
+                    return true;
+                if (options.id === this._activeId || generation !== this._optionsGeneration) {
+                    cancel();
+                    return true;
+                }
+                if (editor.isUpdating || editor.transactions.isActive)
+                    return false;
+                try {
+                    if (next < state.length)
+                        next = this._buildIdleBlocks(options, prepared, next, timeRemaining);
+                    if (next < state.length || timeRemaining() < 2)
+                        return false;
+                    const retained = this._prewarm(options, prepared);
+                    if (!retained)
+                        cancel();
+                    else
+                        release();
+                    return true;
+                }
+                catch (error) {
+                    cancel();
+                    throw error;
+                }
+            },
+            cancel,
+        };
+    }
+
+    private _takeIdlePreparation(options: IActivateDocumentOptions): ReturnType<IIdlePreparation['take']> | null {
+        const pending = this._idlePreparation;
+        if (!pending)
+            return null;
+        const saved = pending.options;
+        if (saved.id !== options.id || saved.markdown !== options.markdown
+            || saved.readOnly !== options.readOnly || pending.generation !== this._optionsGeneration
+            || !sameContextPath(saved.context, options.context)) {
+            pending.cancel();
+            return null;
+        }
+        return pending.take();
+    }
+
+    private _buildIdleBlocks(options: IPrewarmDocumentOptions, prepared: IPreparedDocument, next: number, timeRemaining: () => number): number {
+        const { editor } = this._muya;
+        const liveState = editor.jsonState.exportInternalState();
+        const liveContext = editor.documentContext;
+        const liveReadOnly = this._muya.options.readOnly;
+        editor.isUpdating = true;
+        editor.prewarmingDocument = true;
+        try {
+            editor.setDocumentContext(options.context);
+            this._muya.options.readOnly = options.readOnly;
+            editor.jsonState.importInternalState({ state: prepared.state, revision: 1 });
+            return editor.compactBlocks.withDetachedBodies(prepared.compact, () => this._muya.runDocumentUpdate(() => {
+                while (next < prepared.state.length && timeRemaining() >= 2) {
+                    prepared.page.appendDetachedBlocks([prepared.state[next]!]);
+                    next++;
+                }
+                return next;
+            }));
+        }
+        finally {
+            editor.prewarmingDocument = false;
+            editor.setDocumentContext(liveContext);
+            this._muya.options.readOnly = liveReadOnly;
+            editor.jsonState.importInternalState(liveState);
+            editor.isUpdating = false;
+        }
+    }
+
+    private _prewarm(options: IPrewarmDocumentOptions, prepared?: IPreparedDocument): boolean {
         const { id, markdown, context, readOnly, onEvict } = options;
         if (id === this._activeId)
             return false;
@@ -513,7 +660,7 @@ export class DocumentSessionPool {
             return false;
 
         const charCount = markdown.length;
-        const parsedState = editor.jsonState.markdownToState(markdown);
+        const parsedState = prepared?.state ?? editor.jsonState.markdownToState(markdown);
         const blockCount = countStateBlocks(parsedState);
 
         // Enforce single-doc and remaining budget caps (M2): oversized docs keep state-only.
@@ -531,6 +678,7 @@ export class DocumentSessionPool {
             && (retainedChars + charCount <= this._maxChars || this._sessions.size > 0);
 
         if (!canRetainDom) {
+            disposeScrollPageResources(prepared?.page);
             if (existing?.scrollPage)
                 disposeScrollPageResources(existing.scrollPage);
             this._sessions.set(id, {
@@ -577,7 +725,9 @@ export class DocumentSessionPool {
             editor.setDocumentContext(context);
             this._muya.options.readOnly = readOnly;
             editor.jsonState.importInternalState({ state: parsedState, revision: 1 });
-            detachedPage = this._muya.runDocumentUpdate(() => ScrollPage.createDetached(this._muya, parsedState));
+            if (prepared)
+                editor.compactBlocks.importSessionState(prepared.compact);
+            detachedPage = prepared?.page ?? this._muya.runDocumentUpdate(() => ScrollPage.createDetached(this._muya, parsedState));
             editor.scrollPage = detachedPage;
             refreshFoldVisibility(detachedPage);
             editor.foldBlocks.refresh();
@@ -638,6 +788,7 @@ export class DocumentSessionPool {
     }
 
     dispose(): void {
+        this._idlePreparation?.cancel();
         disposeScrollPageResources(this._muya.editor.scrollPage);
         for (const session of this._sessions.values())
             disposeScrollPageResources(session.scrollPage);

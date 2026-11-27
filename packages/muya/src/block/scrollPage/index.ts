@@ -21,6 +21,7 @@ interface IBlurFocus {
 
 export class ScrollPage extends Parent {
     private _blurFocus: IBlurFocus = { blur: null, focus: null };
+    private _clickEventId = '';
 
     static override blockName = 'scrollpage';
 
@@ -52,14 +53,24 @@ export class ScrollPage extends Parent {
         const scrollPage = new ScrollPage(muya);
 
         try {
-            scrollPage.append(...scrollPage._buildBlocks(state, scrollPage.previewScope!));
+            scrollPage.appendDetachedBlocks(state);
         }
         catch (error) {
-            scrollPage.previewScope?.dispose();
+            scrollPage.disposeDetachedResources();
             throw error;
         }
 
         return scrollPage;
+    }
+
+    appendDetachedBlocks(state: readonly TState[]): void {
+        this.append(...this._buildBlocks(state, this.previewScope!));
+    }
+
+    disposeDetachedResources(): void {
+        this.previewScope?.dispose();
+        this.muya.eventCenter.detachDOMEvent(this._clickEventId);
+        this._clickEventId = '';
     }
 
     override get path() {
@@ -111,7 +122,7 @@ export class ScrollPage extends Parent {
         const { eventCenter } = this.muya;
         const { domNode } = this;
 
-        eventCenter.attachDOMEvent(domNode!, 'click', this._clickHandler.bind(this));
+        this._clickEventId = eventCenter.attachDOMEvent(domNode!, 'click', this._clickHandler.bind(this));
     }
 
     updateState(state: TState[]) {
