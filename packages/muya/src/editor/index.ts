@@ -4,7 +4,7 @@ import type Format from '../block/base/format';
 import type { Muya } from '../muya';
 import type { TSelectionState } from '../selection/types';
 import type { TState } from '../state/types';
-import type { Nullable } from '../types';
+import type { IDocumentContext, Nullable } from '../types';
 import type { ICompletedTransaction, ITransactionOptions } from './transactions';
 import * as otText from 'ot-text-unicode';
 import { fromEvent, merge } from 'rxjs';
@@ -26,8 +26,10 @@ import { deepClone, hasPick, isHTMLElement } from '../utils';
 import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { isIndentShortcut, isTabKey } from '../utils/tab';
+import { CodeLayoutScheduler } from './codeLayoutScheduler';
 import { CompactBlocks } from './compactBlocks';
 import { ContentTabs } from './contentTabs';
+import { DocumentSessionPool } from './documentSession';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
 import { FoldBlocks } from './foldBlocks';
@@ -302,7 +304,10 @@ export class Editor {
     contentTabs: ContentTabs;
     compactBlocks: CompactBlocks;
     foldBlocks: FoldBlocks;
+    codeLayoutScheduler: CodeLayoutScheduler;
+    documentSessions: DocumentSessionPool;
 
+    private _documentContext: IDocumentContext | null = null;
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
     private _isComposing = false;
@@ -332,6 +337,16 @@ export class Editor {
         this.contentTabs = new ContentTabs(_muya);
         this.compactBlocks = new CompactBlocks(_muya);
         this.foldBlocks = new FoldBlocks(_muya);
+        this.codeLayoutScheduler = new CodeLayoutScheduler();
+        this.documentSessions = new DocumentSessionPool(_muya);
+    }
+
+    get documentContext(): IDocumentContext | null {
+        return this._documentContext;
+    }
+
+    setDocumentContext(context: IDocumentContext | null): void {
+        this._documentContext = context;
     }
 
     get activeContentBlock() {
@@ -767,7 +782,7 @@ export class Editor {
             this._inputSelection = undefined;
             this._isComposing = false;
             this.jsonState.setContent(content);
-            this.scrollPage!.updateState(this.jsonState.getState());
+            this.scrollPage!.updateState(this.jsonState.rawState as TState[]);
             this.history.clear();
             this.searchModule.reset();
             if (autoFocus)

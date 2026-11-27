@@ -225,9 +225,11 @@ const prefillFromSelection = () => {
 
 const refreshSearch = () => {
   debouncedSearchFn.cancel()
+  // Closed search bar does not highlight on tab switches; reopening triggers a fresh search.
+  if (!showSearch.value) return
   nextTick(() => {
-    if (!currentFile.value) return
-    bus.emit('search-visibility', showSearch.value)
+    if (!currentFile.value || !showSearch.value) return
+    bus.emit('search-visibility', true)
     searchFn(false)
   })
 }

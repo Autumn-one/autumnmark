@@ -357,6 +357,8 @@ class Selection {
                 this._text.collapse();
             }
             if (selection?.kind === SelectionType.TEXT) {
+                if (preserveFocus)
+                    this._clearNativeSelectionInsideRoot();
                 const { anchor, focus } = selection;
                 const { anchorBlock, focusBlock } = selection.context;
                 this._muya.editor.activeContentBlock = anchorBlock === focusBlock ? anchorBlock : null;

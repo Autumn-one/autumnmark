@@ -14,7 +14,7 @@ import { projectEmbeddedImages } from '../../../inline/embeddedImages';
 import { getTextContent } from '../../../selection/dom';
 import { ChangeSource } from '../../../types';
 import { adjustOffset, escapeHTML, firstGraphemeLength, lastGraphemeLength, lineBounds } from '../../../utils';
-import { computeLineCount, lineHighlightBackground, measureLineTops, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
+import { computeLineCount, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
 import { codeFenceLanguage } from '../../../utils/codeFenceAnnotations';
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
@@ -220,7 +220,15 @@ class CodeBlockContent extends Content {
 
     private _lastLineCount = -1;
     private _codeResizeObserver: ResizeObserver | null = null;
-    private _codeLayoutFrame: number | null = null;
+
+    syncCodeDecorations(): void {
+        this._updateCodeDecorations(this.text);
+    }
+
+    disconnectLayoutObserver(): void {
+        this._codeResizeObserver?.disconnect();
+        this._codeResizeObserver = null;
+    }
 
     private _updateCodeDecorations(text: string) {
         const parent = this.parent;
@@ -240,7 +248,7 @@ class CodeBlockContent extends Content {
             code.style.backgroundImage = '';
         if ((!wrapper && !owner.annotations.ranges.length) || typeof Range.prototype.getBoundingClientRect !== 'function')
             return;
-        if (!this._codeResizeObserver && typeof ResizeObserver !== 'undefined') {
+        if (code.isConnected && !this._codeResizeObserver && typeof ResizeObserver !== 'undefined') {
             this._codeResizeObserver = new ResizeObserver(() => this._scheduleCodeLayout());
             this._codeResizeObserver.observe(code);
         }
@@ -248,34 +256,7 @@ class CodeBlockContent extends Content {
     }
 
     private _scheduleCodeLayout(): void {
-        if (this._codeLayoutFrame !== null)
-            return;
-        this._codeLayoutFrame = requestAnimationFrame(() => {
-            this._codeLayoutFrame = null;
-            const parent = this.parent;
-            const code = parent?.domNode;
-            const owner = parent?.parent;
-            const content = this.domNode;
-            if (!parent || !code?.isConnected || !content?.isConnected || owner?.blockName !== 'code-block') {
-                this._codeResizeObserver?.disconnect();
-                this._codeResizeObserver = null;
-                return;
-            }
-            const wrapper = parent.lineNumbersWrapper;
-            const ranges = owner.annotations.ranges;
-            if (!wrapper && !ranges.length)
-                return;
-
-            const tops = measureLineTops(content);
-            if (wrapper) {
-                const frame = owner.domNode!;
-                wrapper.style.top = `${code.getBoundingClientRect().top - frame.getBoundingClientRect().top - frame.clientTop}px`;
-                wrapper.style.setProperty('--mu-gutter-height', `${code.clientHeight}px`);
-                repositionLineNumberSpans(wrapper, content, tops);
-                wrapper.scrollTop = code.scrollTop;
-            }
-            code.style.backgroundImage = lineHighlightBackground(tops, code.scrollHeight, ranges);
-        });
+        this.muya.editor.codeLayoutScheduler.schedule(this);
     }
 
     override inputHandler(event: Event): void {

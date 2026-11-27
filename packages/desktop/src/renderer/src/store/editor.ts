@@ -26,6 +26,12 @@ import type { IFileState, FileChangePayload, FileNotification, FileWordCount, Li
 import type { SaveDocumentResult } from '@shared/types/ipc'
 import { isDrawingPath } from '@shared/drawing'
 import { drawingDialog, drawingEditorTabs, preserveDrawingFocus } from '@/services/drawingEditors'
+import {
+  finishTabSwitchSync,
+  forgetTabSwitchVisit,
+  markTabSwitchFlush,
+  startTabSwitchTrace
+} from '@/services/tabSwitchPerf'
 
 export interface SessionActions {
   checkpoint(transactionId?: string): Promise<PersistResult>
@@ -394,6 +400,8 @@ export const useEditorStore = defineStore('editor', {
         else preserveDrawingFocus(() => bus.emit('file-changed', {
           id,
           markdown: tab.markdown,
+          pathname: tab.pathname,
+          readOnly: tab.readOnly,
           muyaIndexCursor,
           cursor,
           renderCursor: true,
@@ -405,6 +413,9 @@ export const useEditorStore = defineStore('editor', {
           isReload: true,
           preserveFocus: !!drawingDialog.value
         }))
+      } else {
+        // Non-active tab changed on disk: invalidate cached document state without rebuilding on the active frame.
+        bus.emit('background-file-reloaded', tab.id)
       }
       scheduleWindowCheckpoint()
     },
@@ -672,17 +683,27 @@ export const useEditorStore = defineStore('editor', {
       const oldCurrentFile = this.currentFile
       let didUpdateCurrentFile = false
       if (oldCurrentFile == null || oldCurrentFile.id !== currentFile.id) {
-        const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
+        const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor, readOnly } =
           currentFile
+        const nextIsDrawing = isDrawingPath(pathname || currentFile.filename)
+        const prevIsDrawing = !!oldCurrentFile && isDrawingPath(oldCurrentFile.pathname || oldCurrentFile.filename)
+        const sourceCodeActive = usePreferencesStore().sourceCode && !readOnly
+        startTabSwitchTrace({
+          toId: id,
+          fromId: oldCurrentFile?.id ?? null,
+          chars: typeof markdown === 'string' ? markdown.length : 0,
+          mode: nextIsDrawing ? 'drawing' : sourceCodeActive ? 'source' : 'wysiwyg',
+          crossedDrawing: nextIsDrawing !== prevIsDrawing
+        })
         // Must run while `currentFile` still points at the outgoing tab, so its
         // flushed edit is attributed to that tab and not lost on switch (#2938).
         if (oldCurrentFile) {
           this.flushActiveEditor()
           getSessionActions()?.captureView()
         }
+        markTabSwitchFlush()
         window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
         this.currentFile = currentFile
-        applyReadOnly(currentFile.readOnly)
         this.selectionWordCount = null
         didUpdateCurrentFile = true
         // Slugs belong to the old document; the next selection-change re-seeds.
@@ -693,22 +714,33 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        if (isDrawingPath(pathname || currentFile.filename)) this.UPDATE_TOC([])
-        else bus.emit('file-changed', {
-          id,
-          markdown,
-          cursor,
-          muyaIndexCursor,
-          renderCursor: true,
-          history,
-          scrollTop,
-          blocks
-        })
+        if (nextIsDrawing) {
+          applyReadOnly(currentFile.readOnly)
+          this.UPDATE_TOC([])
+        } else {
+          // Pass `readOnly` with `file-changed` so the editor applies it to the incoming
+          // document rather than repainting the outgoing tree right before replacement.
+          bus.emit('file-changed', {
+            id,
+            markdown,
+            pathname,
+            readOnly,
+            cursor,
+            muyaIndexCursor,
+            renderCursor: true,
+            history,
+            scrollTop,
+            blocks
+          })
+        }
+        finishTabSwitchSync()
       }
 
-      this.UPDATE_LINE_ENDING_MENU()
       if (didUpdateCurrentFile) {
+        queueMicrotask(() => this.UPDATE_LINE_ENDING_MENU())
         scheduleWindowCheckpoint()
+      } else {
+        this.UPDATE_LINE_ENDING_MENU()
       }
     },
 
@@ -792,6 +824,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     FORCE_CLOSE_TAB(file: IFileState): void {
+      forgetTabSwitchVisit(file.id)
       releaseDocumentVideos(file.id)
       window.electron.ipcRenderer.send('mt::forget-document', file.id)
       const { tabs, currentFile } = this
@@ -815,19 +848,25 @@ export const useEditorStore = defineStore('editor', {
         this.currentFile = fileState
         this.selectionWordCount = null
         if (fileState && typeof fileState.markdown === 'string') {
-          const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
+          const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor, readOnly } =
             fileState
           window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
-          bus.emit('file-changed', {
-            id,
-            markdown,
-            cursor,
-            muyaIndexCursor,
-            renderCursor: true,
-            history,
-            scrollTop,
-            blocks
-          })
+          if (isDrawingPath(pathname || fileState.filename)) {
+            this.UPDATE_TOC([])
+          } else {
+            bus.emit('file-changed', {
+              id,
+              markdown,
+              pathname,
+              readOnly,
+              cursor,
+              muyaIndexCursor,
+              renderCursor: true,
+              history,
+              scrollTop,
+              blocks
+            })
+          }
         } else {
           window.DIRNAME = ''
         }

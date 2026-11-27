@@ -2,6 +2,7 @@ import { watch, type Ref } from 'vue'
 import dragula from 'dragula'
 import autoScroll from 'dom-autoscroller'
 import { useEditorStore } from '@/store/editor'
+import { setTabDragging } from '@/services/tabPrewarm'
 import '@/assets/styles/tabDrag.css'
 
 interface AutoScroller {
@@ -78,12 +79,14 @@ export const useTabReorder = (
         !handle?.closest('button')
     })
       .on('drag', (element) => {
+        setTabDragging(true)
         suppressDblClick = true
         originalNext = element.nextSibling
         rememberPositions()
       })
       .on('shadow', animateReorder)
       .on('cancel', (element, _container, source) => {
+        setTabDragging(false)
         restoreDomOrder(element, source)
       })
       .on('drop', (element, _target, source, sibling) => {
@@ -96,6 +99,7 @@ export const useTabReorder = (
         if (fromId) editorStore.EXCHANGE_TABS_BY_ID({ fromId, toId })
       })
       .on('dragend', () => {
+        setTabDragging(false)
         stopAnimations()
         positions.clear()
       })

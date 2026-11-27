@@ -87,7 +87,7 @@ class HTMLPreview extends Parent {
                     if (index < 0 || !(element instanceof HTMLVideoElement))
                         continue;
                     const [media] = videos.splice(index, 1);
-                    element.src = this.muya.options.videoAttachments?.playback(media.src) ?? resolveVideoSource(media.src);
+                    element.src = this.muya.options.videoAttachments?.playback(media.src, this.muya.editor.documentContext?.id) ?? resolveVideoSource(media.src);
                     const activate = (event: Event) => {
                         const block = this.parent?.firstContentInDescendant();
                         if (block && block.text === html)

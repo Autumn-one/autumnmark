@@ -93,9 +93,33 @@ export function linkedDrawingPaths(markdown: string, documentPath?: string | nul
   return [...resolved]
 }
 
+const MAX_EMBEDDED_DRAWING_CACHE = 32
+const embeddedDrawingCache = new Map<string, string>()
+const pendingEmbedded = new Map<string, Promise<string>>()
+
 export async function renderEmbeddedDrawingPreview(source: string): Promise<string> {
-  const { parseDrawing, renderDrawingScene } = await import('./drawingScene')
-  return renderDrawingScene(await parseDrawing(source))
+  const cached = embeddedDrawingCache.get(source)
+  if (cached !== undefined) {
+    embeddedDrawingCache.delete(source)
+    embeddedDrawingCache.set(source, cached)
+    return cached
+  }
+  const inFlight = pendingEmbedded.get(source)
+  if (inFlight) return inFlight
+  const request = (async() => {
+    const { parseDrawing, renderDrawingScene } = await import('./drawingScene')
+    const dataUrl = await renderDrawingScene(await parseDrawing(source))
+    if (embeddedDrawingCache.size >= MAX_EMBEDDED_DRAWING_CACHE) {
+      const oldest = embeddedDrawingCache.keys().next().value
+      if (oldest !== undefined) embeddedDrawingCache.delete(oldest)
+    }
+    embeddedDrawingCache.set(source, dataUrl)
+    return dataUrl
+  })().finally(() => {
+    if (pendingEmbedded.get(source) === request) pendingEmbedded.delete(source)
+  })
+  pendingEmbedded.set(source, request)
+  return request
 }
 
 export function resolveDrawingPreview(src: string, documentPath?: string | null) {

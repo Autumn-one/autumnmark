@@ -1,15 +1,17 @@
 import type Content from './block/base/content';
 import type Parent from './block/base/parent';
 import type { IHeadingFoldState } from './block/folding';
+import type { IActivateDocumentOptions, IActivateDocumentResult, IPrewarmDocumentOptions } from './editor/documentSession';
 import type { IUpdateEmbeddedDrawingParams } from './editor/embeddedDrawingUpdate';
 import type { Listener, TEventListener } from './event/types';
+import type { ISerializedHistory } from './history';
 import type { ILocale } from './i18n/types';
 import type { IReplaceOption, ISearchOption } from './search/types';
 import type { IIndexCursor } from './selection/offsetCursor';
 import type { TSelectionState } from './selection/types';
 import type { ITocItem } from './state/getTOC';
 import type { IBulletListState, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
-import type { IMuyaOptions, Nullable } from './types';
+import type { IDocumentContext, IMuyaOptions, Nullable } from './types';
 import Format from './block/base/format';
 import { canTurnInto, insertBlockBelowByLabel, insertFrontMatterAtStart, replaceBlockByLabel } from './block/blockTransforms';
 import { getHeadingFoldState, revealBlock, setHeadingFoldState } from './block/folding';
@@ -31,7 +33,7 @@ import {
     injectSentinels,
     injectStateSentinels,
     locateSentinelOffsets,
-    resolveSentinelCursor,
+    resolveSentinelCursorFromState,
 } from './selection/offsetCursor';
 import { createTextSelectionState } from './selection/state';
 import { atxHeadingBody, atxHeadingBodyRange } from './state/headings';
@@ -217,6 +219,14 @@ export class Muya {
         this._cancelReadingLink = attachReadingEvents(this);
     }
 
+    /**
+     * Align root and block reading-mode attributes for DocumentSessionPool.
+     * @internal
+     */
+    syncReadingPresentation(modeChanged = false): void {
+        this._refreshReadingPresentation(modeChanged);
+    }
+
     private _refreshReadingPresentation(modeChanged = false): void {
         const { domNode, isReadOnly } = this;
         const contentEditable = String(!isReadOnly);
@@ -233,7 +243,9 @@ export class Muya {
             if (node.isContent()) {
                 if (node.domNode?.getAttribute('contenteditable') !== contentEditable)
                     node.domNode?.setAttribute('contenteditable', contentEditable);
-                if (isReadOnly || (modeChanged && node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block'))
+                // Fresh trees created by setContent/init already render with current `isReadOnly`;
+                // only re-render content blocks when toggling read-only on an existing live tree.
+                if (modeChanged && (isReadOnly || (node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block')))
                     node.update({});
             }
         });
@@ -268,6 +280,7 @@ export class Muya {
         if (this.editor.scrollPage)
             this._prepareDocumentRebuild();
         this.i18n.locale(object);
+        this.editor.documentSessions.invalidateAll();
         if (this.editor.scrollPage)
             this._forceRender();
     }
@@ -310,6 +323,38 @@ export class Muya {
 
     getTOC(): ITocItem[] {
         return this.editor.jsonState.getTOC();
+    }
+
+    getCachedTOC(): ITocItem[] {
+        return this.editor.documentSessions.getCachedTOC();
+    }
+
+    bindActiveDocument(id: string, markdown: string, context: IDocumentContext): void {
+        this.editor.documentSessions.bindActive(id, markdown, context);
+    }
+
+    markActiveDocumentModified(markdown: string): void {
+        this.editor.documentSessions.markActiveModified(markdown);
+    }
+
+    activateDocument(options: IActivateDocumentOptions): IActivateDocumentResult {
+        return this.editor.documentSessions.activate(options);
+    }
+
+    prewarmDocument(options: IPrewarmDocumentOptions): boolean {
+        return this.editor.documentSessions.prewarm(options);
+    }
+
+    hasRetainedDocument(id: string, markdown: string, pathname?: string): boolean {
+        return this.editor.documentSessions.hasRetained(id, markdown, pathname);
+    }
+
+    evictDocument(id: string, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        this.editor.documentSessions.evict(id, onEvict);
+    }
+
+    invalidateDocuments(): void {
+        this.editor.documentSessions.invalidateAll();
     }
 
     /** Capture transient section folds before switching documents. */
@@ -450,11 +495,14 @@ export class Muya {
         }
 
         applyAppearance(this.domNode, options);
-        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options)
+        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options) {
             this.editor.compactBlocks.refresh();
+            this.editor.documentSessions.invalidateAll();
+        }
         if (!forceRender)
             return;
 
+        this.editor.documentSessions.invalidateAll();
         if (reparse) {
             const { jsonState } = this.editor;
             jsonState.setContent(jsonState.markdownToState(this.getMarkdown()));
@@ -1165,16 +1213,9 @@ export class Muya {
         if (sentinelMarkdown == null)
             return false;
 
-        // The tree has no source-line map; a synchronous sentinel rebuild resolves it
-        // without an intermediate paint. setContent clears history, so preserve it here.
-        const savedHistory = this.getHistory();
-
-        const expanded = this.editor.compactBlocks.expandedPaths();
-        this.editor.setContent(sentinelMarkdown);
-        const cursor = resolveSentinelCursor(this.editor.scrollPage!);
-        this.editor.setContent(cleanMarkdown);
-        this.editor.compactBlocks.restoreExpandedPaths(expanded);
-        this.setHistory(savedHistory);
+        // Resolve sentinels offscreen on parsed state so live DOM, history, and view state stay untouched.
+        const sentinelState = this.editor.jsonState.markdownToState(sentinelMarkdown);
+        const cursor = resolveSentinelCursorFromState(sentinelState);
 
         if (!cursor)
             return false;
@@ -1634,6 +1675,8 @@ export class Muya {
     }
 
     destroy() {
+        this.editor.documentSessions.dispose();
+        this.editor.codeLayoutScheduler.dispose();
         this.editor.compactBlocks.dispose();
         this.editor.contentTabs.dispose();
         this.editor.foldBlocks.dispose();

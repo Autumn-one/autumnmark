@@ -41,6 +41,13 @@ export class ScrollPage extends Parent {
     }
 
     static create(muya: Muya, state: TState[]) {
+        const scrollPage = this.createDetached(muya, state);
+        scrollPage.parent!.domNode!.appendChild(scrollPage.domNode!);
+        return scrollPage;
+    }
+
+    /** Build a complete block tree and DOM subtree without attaching it to `muya.domNode`. */
+    static createDetached(muya: Muya, state: readonly TState[]) {
         const scrollPage = new ScrollPage(muya);
 
         scrollPage.append(
@@ -48,8 +55,6 @@ export class ScrollPage extends Parent {
                 return this.loadBlock(block.name).create(muya, block);
             }),
         );
-
-        scrollPage.parent!.domNode!.appendChild(scrollPage.domNode!);
 
         return scrollPage;
     }

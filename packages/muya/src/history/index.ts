@@ -35,6 +35,43 @@ interface ISerializableOperation {
     rebuild?: boolean;
 }
 
+export interface IHistoryInternalState {
+    stack: IStack;
+    lastRecorded: number;
+    lastInputKind: Nullable<TInputKind>;
+    nextSelection: Nullable<TSelectionState> | undefined;
+    lastSelection: Nullable<TSelectionState>;
+}
+
+export function createEmptyHistoryInternalState(): IHistoryInternalState {
+    return {
+        stack: { undo: [], redo: [] },
+        lastRecorded: 0,
+        lastInputKind: null,
+        nextSelection: undefined,
+        lastSelection: null,
+    };
+}
+
+export function serializeHistoryInternalState(internal: IHistoryInternalState): ISerializedHistory {
+    const copyOp = ({ operation, selection, rebuild }: IOperation): ISerializableOperation => {
+        const copy: ISerializableOperation = {
+            operation: deepClone(operation),
+            selection: copySelectionState(selection ?? null),
+        };
+        if (rebuild)
+            copy.rebuild = true;
+        return copy;
+    };
+    return {
+        stack: {
+            undo: internal.stack.undo.map(copyOp),
+            redo: internal.stack.redo.map(copyOp),
+        },
+        lastRecorded: internal.lastRecorded,
+    };
+}
+
 export interface ISerializedHistory {
     stack: {
         undo: ISerializableOperation[];
@@ -149,6 +186,30 @@ class History {
         this._nextSelection = undefined;
         this._lastSelection = null;
         this._lastRecorded = 0;
+    }
+
+    get length(): number {
+        return this._stack.undo.length + this._stack.redo.length;
+    }
+
+    /** Export live internal stacks by reference without deep cloning for session hot-swapping. */
+    exportInternalState(): IHistoryInternalState {
+        return {
+            stack: this._stack,
+            lastRecorded: this._lastRecorded,
+            lastInputKind: this._lastInputKind,
+            nextSelection: this._nextSelection,
+            lastSelection: this._lastSelection,
+        };
+    }
+
+    /** Swap internal stacks in place, preserving the History instance bound to EventCenter. */
+    importInternalState(state: IHistoryInternalState): void {
+        this._stack = state.stack;
+        this._lastRecorded = state.lastRecorded;
+        this._lastInputKind = state.lastInputKind;
+        this._nextSelection = state.nextSelection;
+        this._lastSelection = state.lastSelection;
     }
 
     getHistory(): ISerializedHistory {

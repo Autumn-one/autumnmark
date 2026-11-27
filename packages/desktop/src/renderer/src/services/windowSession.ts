@@ -24,6 +24,7 @@ import { deepClone } from '@/util'
 import { documentVideos } from '@/util/videoAttachments'
 import {
   captureDocumentView,
+  evictDocumentViewHash,
   restoreDocumentView,
   isDocumentViewReady,
   onDocumentViewChange
@@ -61,6 +62,9 @@ class WindowSession {
   private readonly _serverRevision = new Map<string, number>()
   private readonly _stops: Array<WatchStopHandle | (() => void)> = []
   private _pendingRestore: { id: string; capture: Promise<void> | null } | null = null
+  // Tabs hydrated from a persisted session snapshot still need one initial view restore;
+  // subsequent in-session tab switches restore scroll/caret directly via the editor.
+  private readonly _needsInitialViewRestore = new Set<string>()
   private readonly _pendingOpens: ManagedDocumentPayload[] = []
   private readonly _schedule = debounce(() => {
     void this._flush().catch((error) => this._failure(error))
@@ -105,6 +109,8 @@ class WindowSession {
           const file = this._editor.tabs.find((file) => file.id === id)
           if (file) this._editor.FORCE_CLOSE_TAB(file)
           this._observed.delete(id)
+          this._needsInitialViewRestore.delete(id)
+          evictDocumentViewHash(id)
         }
       })
     )
@@ -280,6 +286,7 @@ class WindowSession {
         contentRevision: body.contentRevision,
         selected: false
       })
+      if (file.viewState) this._needsInitialViewRestore.add(file.id)
       const status = initialized.documentStatuses?.find(
         (status) => status.documentId === document.id
       )
@@ -376,10 +383,13 @@ class WindowSession {
   }
 
   private _prepareViewRestore(id: string | undefined, capture: Promise<void> | null = null): void {
-    this._pendingRestore = id ? { id, capture } : null
-    void nextTick()
-      .then(() => this._restoreActiveView())
-      .catch((error) => this._failure(error))
+    const shouldRestore = !!id && (capture !== null || this._needsInitialViewRestore.has(id))
+    this._pendingRestore = shouldRestore ? { id, capture } : null
+    if (shouldRestore) {
+      void nextTick()
+        .then(() => this._restoreActiveView())
+        .catch((error) => this._failure(error))
+    }
     this._schedule()
   }
 
@@ -427,6 +437,7 @@ class WindowSession {
       this._editor.currentFile.markdown === markdown &&
       this._interactionEpoch === epoch
     this._pendingRestore = null
+    this._needsInitialViewRestore.delete(id)
     const keys = await restoreDocumentView(id, markdown, file.viewState ?? null, isCurrent, pending.capture !== null)
     // Mode handoffs retain live fold edits; only document restoration reapplies saved keys.
     if (isCurrent() && !pending.capture) file.tocCollapsedKeys = keys

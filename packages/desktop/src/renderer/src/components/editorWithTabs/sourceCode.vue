@@ -23,6 +23,7 @@ import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 
 import { registerSourceViewState, documentViewChanged } from '@/services/documentViewState'
+import { markTabSwitchEditor, markTabSwitchScroll, markTabSwitchToc } from '@/services/tabSwitchPerf'
 import { scrollSourceEditorToLine } from '@/util/sourceModeToc'
 import { sectionEdit, type BeginOutlineMove } from '@/util/outlineMove'
 import type { HeadingLinkRequest } from '@/util/headingLinks'
@@ -72,6 +73,8 @@ const sourceCodeContainer = ref<HTMLDivElement | null>(null)
 const editor = shallowRef<CodeMirror.Editor | null>(null)
 const viewDestroyed = ref(false)
 const tabId = ref<string | null>(null)
+const cmDocsByTab = new Map<string, CodeMirror.Doc>()
+const sourceScrollByTab = new Map<string, number>()
 let resizeObserver: ResizeObserver | undefined
 let releaseViewState: (() => void) | undefined
 let releaseEmbeddedImages: (() => void) | undefined
@@ -374,8 +377,31 @@ const markdownMathMode = () => ({
 })
 
 watch([texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash], () => {
-  editor.value?.setOption('mode', markdownMathMode())
+  const mode = markdownMathMode()
+  editor.value?.setOption('mode', mode)
+  for (const id of cmDocsByTab.keys()) {
+    if (id !== tabId.value) cmDocsByTab.delete(id)
+  }
 })
+
+watch(
+  () => editorStore.tabs.map((tab) => tab.id),
+  (ids) => {
+    const live = new Set(ids)
+    for (const id of cmDocsByTab.keys()) {
+      if (!live.has(id)) cmDocsByTab.delete(id)
+    }
+    for (const id of sourceScrollByTab.keys()) {
+      if (!live.has(id)) sourceScrollByTab.delete(id)
+    }
+  }
+)
+
+const evictSourceDoc = (reloadedId: unknown) => {
+  if (typeof reloadedId === 'string' && reloadedId !== tabId.value) {
+    cmDocsByTab.delete(reloadedId)
+  }
+}
 
 const getMarkdownAndCursor = (cm: CodeMirror.Editor) => {
   let focus = cm.getCursor('head')
@@ -413,6 +439,10 @@ const getMarkdownAndCursor = (cm: CodeMirror.Editor) => {
 
 const prepareTabSwitch = () => {
   if (tabId.value && editor.value) {
+    if (sourceCodeContainer.value) {
+      sourceScrollByTab.set(tabId.value, sourceCodeContainer.value.scrollTop)
+    }
+    cmDocsByTab.set(tabId.value, editor.value.getDoc())
     const { cursor, markdown: newMarkdown } = getMarkdownAndCursor(editor.value)
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id: tabId.value,
@@ -476,12 +506,48 @@ const handleFileChange = (payload: unknown) => {
   } else {
     prepareTabSwitch()
     tabId.value = id
+
+    const incomingText = typeof newMarkdown === 'string' ? newMarkdown : ''
+    const cachedDoc = cmDocsByTab.get(id)
+    if (cachedDoc && cachedDoc.getValue() === incomingText) {
+      editor.value.swapDoc(cachedDoc)
+      markTabSwitchEditor({ hotHit: true })
+      updateSelectionWordCount(editor.value)
+      refreshOutline(editor.value)
+      markTabSwitchToc()
+      const savedScrollTop = sourceScrollByTab.get(id)
+      if (sourceCodeContainer.value && typeof savedScrollTop === 'number') {
+        sourceCodeContainer.value.scrollTop = savedScrollTop
+      }
+      markTabSwitchScroll()
+      return
+    }
+
+    const nextDoc = markRaw(new codeMirror.Doc(incomingText, markdownMathMode()))
+    cmDocsByTab.set(id, nextDoc)
+    editor.value.swapDoc(nextDoc)
+    restoreSourceHistory(id, editor.value)
+    markTabSwitchEditor({ hotHit: false })
+    if (isValidMuyaIndexCursor(muyaIndexCursor)) {
+      const { anchor, focus } = muyaIndexCursor
+      editor.value.setSelection(anchor, focus, { scroll: false })
+    } else {
+      setCursorAtFirstLine(editor.value)
+    }
+    updateSelectionWordCount(editor.value)
+    refreshOutline(editor.value)
+    markTabSwitchToc()
+    const savedScrollTop = sourceScrollByTab.get(id)
+    if (sourceCodeContainer.value && typeof savedScrollTop === 'number') {
+      sourceCodeContainer.value.scrollTop = savedScrollTop
+    }
+    markTabSwitchScroll()
+    return
   }
 
   if (typeof newMarkdown === 'string' && editor.value.getValue() !== newMarkdown) {
     editor.value.setValue(newMarkdown)
   }
-  if (!isSameTabReload) restoreSourceHistory(id, editor.value)
 
   if (isValidMuyaIndexCursor(muyaIndexCursor)) {
     const { anchor, focus } = muyaIndexCursor
@@ -767,6 +833,7 @@ onMounted(() => {
 
   bus.on('file-loaded', handleFileChange)
   bus.on('file-changed', handleFileChange)
+  bus.on('background-file-reloaded', evictSourceDoc)
   bus.on('selectAll', handleSelectAll)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
@@ -796,6 +863,7 @@ onMounted(() => {
   }
 
   restoreSourceHistory(id, codeMirrorInstance)
+  cmDocsByTab.set(id, codeMirrorInstance.getDoc())
   editor.value = codeMirrorInstance
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
@@ -846,6 +914,9 @@ onBeforeUnmount(() => {
 
   bus.off('file-loaded', handleFileChange)
   bus.off('file-changed', handleFileChange)
+  bus.off('background-file-reloaded', evictSourceDoc)
+  cmDocsByTab.clear()
+  sourceScrollByTab.clear()
   bus.off('selectAll', handleSelectAll)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)

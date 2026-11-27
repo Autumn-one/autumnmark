@@ -45,6 +45,24 @@ function before(a: Node, b: Node): boolean {
     return a === b || Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 }
 
+export interface IFoldBlocksSessionState {
+    groups: Map<Parent, IFoldView>;
+    hidden: Set<TreeNode>;
+    hiddenBody: Set<TreeNode>;
+    source: Set<TreeNode>;
+    indented: Set<HTMLElement>;
+}
+
+export function createEmptyFoldBlocksSessionState(): IFoldBlocksSessionState {
+    return {
+        groups: new Map(),
+        hidden: new Set(),
+        hiddenBody: new Set(),
+        source: new Set(),
+        indented: new Set(),
+    };
+}
+
 /** A disclosure view over ordinary Markdown blocks. Its initial state comes from the opening comment. */
 export class FoldBlocks {
     private _groups = new Map<Parent, IFoldView>();
@@ -490,6 +508,47 @@ export class FoldBlocks {
         else {
             this._enterBody(group);
         }
+    }
+
+    exportSessionState(): IFoldBlocksSessionState {
+        if (this._layoutFrame !== null) {
+            cancelAnimationFrame(this._layoutFrame);
+            this._layoutFrame = null;
+        }
+        for (const group of this._groups.values())
+            this._resizeObserver?.unobserve(group.header);
+        const exported: IFoldBlocksSessionState = {
+            groups: this._groups,
+            hidden: this._hidden,
+            hiddenBody: this._hiddenBody,
+            source: this._source,
+            indented: this._indented,
+        };
+        this._groups = new Map();
+        this._hidden = new Set();
+        this._hiddenBody = new Set();
+        this._source = new Set();
+        this._indented = new Set();
+        return exported;
+    }
+
+    importSessionState(state: IFoldBlocksSessionState): void {
+        if (this._layoutFrame !== null) {
+            cancelAnimationFrame(this._layoutFrame);
+            this._layoutFrame = null;
+        }
+        for (const group of this._groups.values())
+            this._resizeObserver?.unobserve(group.header);
+        this._groups = state.groups;
+        this._hidden = state.hidden;
+        this._hiddenBody = state.hiddenBody;
+        this._source = state.source;
+        this._indented = state.indented;
+        for (const group of this._groups.values())
+            this._resizeObserver?.observe(group.header);
+        this._muya.editor.scrollPage?.domNode?.classList.toggle('mu-has-fold-blocks', this.hasGroups);
+        if (this.hasGroups)
+            this._scheduleLayout();
     }
 
     dispose(): void {

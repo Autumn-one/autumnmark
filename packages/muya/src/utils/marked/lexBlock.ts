@@ -15,19 +15,30 @@ import { DEFAULT_OPTIONS } from './options';
 import { restoreCodeTabs } from './restoreCodeTabs';
 import walkTokens from './walkTokens';
 
-/** Keep the original root tokens for consumers that need exact source positions. */
-export function lexSourceBlocks(
-    src: string,
-    options: ILexOption = DEFAULT_OPTIONS,
-) {
-    options = Object.assign({}, DEFAULT_OPTIONS, options);
-    const { texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, frontMatter, footnote, multilineBlockquote, fancyLists } = options;
-    const tokens: (Token | IFrontmatterToken)[] = [];
+const markedCache = new Map<string, Marked>();
 
-    // Per-call Marked instances prevent enabled extensions leaking into later calls.
+function markedCacheKey(options: ILexOption): string {
+    return [
+        options.texMathDollars ? 1 : 0,
+        options.texMathGfm ? 1 : 0,
+        options.texMathSingleBackslash ? 1 : 0,
+        options.texMathDoubleBackslash ? 1 : 0,
+        options.footnote ? 1 : 0,
+        options.multilineBlockquote === true ? 1 : 0,
+        options.fancyLists ? 1 : 0,
+        options.githubAlerts === true ? 1 : 0,
+    ].join('');
+}
+
+function getMarkedInstance(options: ILexOption): Marked {
+    const key = markedCacheKey(options);
+    const cached = markedCache.get(key);
+    if (cached)
+        return cached;
+
     const m = new Marked(referenceDefinitionTabs(), tableLayoutExtension(), drawingLayoutExtension());
 
-    if (texMathDollars) {
+    if (options.texMathDollars) {
         m.use(
             mathExtension({
                 throwOnError: false,
@@ -36,7 +47,7 @@ export function lexSourceBlocks(
         );
     }
 
-    if (texMathGfm) {
+    if (options.texMathGfm) {
         m.use(
             gfmMathExtension({
                 throwOnError: false,
@@ -45,7 +56,7 @@ export function lexSourceBlocks(
         );
     }
 
-    if (texMathSingleBackslash) {
+    if (options.texMathSingleBackslash) {
         m.use(
             singleBackslashMathExtension({
                 throwOnError: false,
@@ -54,7 +65,7 @@ export function lexSourceBlocks(
         );
     }
 
-    if (texMathDoubleBackslash) {
+    if (options.texMathDoubleBackslash) {
         m.use(
             doubleBackslashMathExtension({
                 throwOnError: false,
@@ -63,14 +74,31 @@ export function lexSourceBlocks(
         );
     }
 
-    if (footnote) {
+    if (options.footnote) {
         m.use(footnoteExtension());
     }
 
-    m.use(multilineBlockquoteExtension(multilineBlockquote === true));
+    m.use(multilineBlockquoteExtension(options.multilineBlockquote === true));
 
-    if (fancyLists)
+    if (options.fancyLists)
         m.use(fancyListsExtension());
+
+    // Lexer must receive this instance’s defaults to see its registered extensions.
+    m.use(githubAlertsExtension(options.githubAlerts === true));
+    markedCache.set(key, m);
+    return m;
+}
+
+/** Keep the original root tokens for consumers that need exact source positions. */
+export function lexSourceBlocks(
+    src: string,
+    options: ILexOption = DEFAULT_OPTIONS,
+) {
+    options = Object.assign({}, DEFAULT_OPTIONS, options);
+    const { frontMatter, fancyLists } = options;
+    const tokens: (Token | IFrontmatterToken)[] = [];
+
+    const m = getMarkedInstance(options);
 
     if (frontMatter) {
         const { token, src: newSrc } = fm(src);
@@ -80,8 +108,6 @@ export function lexSourceBlocks(
         }
     }
 
-    // Lexer must receive this instance’s defaults to see its registered extensions.
-    m.use(githubAlertsExtension(options.githubAlerts === true));
     const lexer = new m.Lexer(m.defaults);
     if (fancyLists)
         endListItemsAtFancyMarkers(lexer);

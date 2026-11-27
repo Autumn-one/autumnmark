@@ -39,12 +39,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Link, Picture, WarningFilled } from '@element-plus/icons-vue'
 import type { ContextMenuItem } from '@/contextMenu/popupMenu'
 
 const props = defineProps<{
+  documentId?: string
   embedded: number
   pending: number
   progress: { total: number; completed: number; failed: number }
@@ -53,6 +54,9 @@ const props = defineProps<{
 const emit = defineEmits<{ convert: [] }>()
 const { t } = useI18n()
 const open = ref(false)
+watch(() => props.documentId, () => {
+  open.value = false
+})
 const working = computed(() => props.progress.completed < props.progress.total)
 const failed = computed(() => !working.value && props.progress.failed > 0)
 const hint = computed(() => {

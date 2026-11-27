@@ -69,8 +69,10 @@ class Renderer {
     }
 
     imageSource(src: string) {
-        const preview = this.environment.resolveImagePreview?.(src);
-        return preview ? { src: preview.key, isUnknownType: false, load: preview.load } : getImageSrc(src);
+        const preview = this.environment.resolveImagePreview?.(src, this.environment.documentPathname);
+        return preview
+            ? { src: preview.key, isUnknownType: false, load: preview.load }
+            : getImageSrc(src, this.environment.documentDirname);
     }
 
     private _checkConflicted(block: IRenderBlock, token: Pick<Token, 'range'>, cursor: IInlineCursor = {}) {

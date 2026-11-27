@@ -91,25 +91,34 @@ export class MarkdownToState {
         });
 
         const states: TState[] = [];
-        let token: TBlockToken | undefined;
-        const parentList: TState[][] = [states];
+        // Reversed work stack replaces O(N^2) Array.shift()/unshift() on nested documents.
+        const stack: TBlockToken[] = [];
+        for (let i = tokens.length - 1; i >= 0; i--)
+            stack.push(tokens[i]!);
+        const parentStack: TState[][] = [states];
 
-        // eslint-disable-next-line no-cond-assign
-        while ((token = tokens.shift())) {
+        while (stack.length > 0) {
+            const token = stack.pop()!;
             if (CONTAINER_TOKEN_TYPES.has(token.type))
-                this._handleContainerToken(token, parentList, tokens);
+                this._handleContainerToken(token, parentStack, stack);
             else
-                this._handleLeafToken(token, parentList, tokens, trimUnnecessaryCodeBlockEmptyLines);
+                this._handleLeafToken(token, parentStack, stack, trimUnnecessaryCodeBlockEmptyLines);
         }
 
         return states.length ? states : [{ name: 'paragraph', text: '' }];
     }
 
+    private _pushReversed(stack: TBlockToken[], items: readonly TBlockToken[]) {
+        for (let i = items.length - 1; i >= 0; i--)
+            stack.push(items[i]!);
+    }
+
     private _handleContainerToken(
         token: TBlockToken,
-        parentList: TState[][],
-        tokens: TBlockToken[],
+        parentStack: TState[][],
+        stack: TBlockToken[],
     ) {
+        const currentParent = parentStack[parentStack.length - 1]!;
         let state: TState;
         switch (token.type) {
             case 'block-end': {
@@ -117,7 +126,7 @@ export class MarkdownToState {
                 // >
                 // bar
                 if (
-                    parentList[0].length === 0
+                    currentParent.length === 0
                     && (
                         token.tokenType === 'blockquote'
                         || token.tokenType === 'multilineBlockquote'
@@ -128,18 +137,18 @@ export class MarkdownToState {
                         name: 'paragraph' as const,
                         text: '',
                     };
-                    parentList[0].push(state);
+                    currentParent.push(state);
                 }
-                parentList.shift();
+                parentStack.pop();
                 break;
             }
 
             case 'githubAlert': {
                 state = { name: 'github-alert', meta: token.meta, children: [] };
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'githubAlert' });
-                tokens.unshift(...token.tokens as TBlockToken[]);
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'githubAlert' });
+                this._pushReversed(stack, token.tokens as TBlockToken[]);
                 break;
             }
 
@@ -148,10 +157,10 @@ export class MarkdownToState {
                     name: 'block-quote' as const,
                     children: [],
                 };
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'blockquote' });
-                tokens.unshift(...(token.tokens as TBlockToken[]));
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'blockquote' });
+                this._pushReversed(stack, token.tokens as TBlockToken[]);
                 break;
             }
 
@@ -161,19 +170,19 @@ export class MarkdownToState {
                     meta: { style: 'fenced' as const },
                     children: [],
                 };
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'multilineBlockquote' });
-                tokens.unshift(...(token.tokens as TBlockToken[]));
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'multilineBlockquote' });
+                this._pushReversed(stack, token.tokens as TBlockToken[]);
                 break;
             }
 
             case 'list': {
                 state = this._buildListState(token);
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'list' });
-                tokens.unshift(...(token.items as TBlockToken[]));
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'list' });
+                this._pushReversed(stack, token.items as TBlockToken[]);
                 break;
             }
 
@@ -199,10 +208,10 @@ export class MarkdownToState {
                 }
 
                 state = itemState;
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'list-item' });
-                tokens.unshift(...(token.tokens as TBlockToken[]));
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'list-item' });
+                this._pushReversed(stack, token.tokens as TBlockToken[]);
                 break;
             }
 
@@ -214,10 +223,10 @@ export class MarkdownToState {
                     meta: { identifier },
                     children: [],
                 };
-                parentList[0].push(state);
-                parentList.unshift(state.children);
-                tokens.unshift({ type: 'block-end', tokenType: 'footnote' });
-                tokens.unshift(...(token.tokens as TBlockToken[]));
+                currentParent.push(state);
+                parentStack.push(state.children);
+                stack.push({ type: 'block-end', tokenType: 'footnote' });
+                this._pushReversed(stack, token.tokens as TBlockToken[]);
                 break;
             }
         }
@@ -284,10 +293,11 @@ export class MarkdownToState {
 
     private _handleLeafToken(
         token: TBlockToken,
-        parentList: TState[][],
-        tokens: TBlockToken[],
+        parentStack: TState[][],
+        stack: TBlockToken[],
         trimUnnecessaryCodeBlockEmptyLines: boolean,
     ) {
+        const currentParent = parentStack[parentStack.length - 1]!;
         let state: TState;
         let value: string;
         switch (token.type) {
@@ -304,7 +314,7 @@ export class MarkdownToState {
                     text: value,
                 };
 
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 
@@ -314,22 +324,22 @@ export class MarkdownToState {
                     text: token.raw.replace(/\n+$/, ''),
                 };
 
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 
             case 'heading': {
-                parentList[0].push(this._buildHeadingState(token));
+                currentParent.push(this._buildHeadingState(token));
                 break;
             }
 
             case 'code': {
-                parentList[0].push(this._buildCodeState(token, trimUnnecessaryCodeBlockEmptyLines));
+                currentParent.push(this._buildCodeState(token, trimUnnecessaryCodeBlockEmptyLines));
                 break;
             }
 
             case 'table': {
-                parentList[0].push(this._buildTableState(token));
+                currentParent.push(this._buildTableState(token));
                 break;
             }
 
@@ -341,14 +351,14 @@ export class MarkdownToState {
                         name: 'paragraph' as const,
                         text,
                     };
-                    parentList[0].push(state);
+                    currentParent.push(state);
                 }
                 else {
                     state = {
                         name: 'html-block' as const,
                         text,
                     };
-                    parentList[0].push(state);
+                    currentParent.push(state);
                 }
                 break;
             }
@@ -361,21 +371,21 @@ export class MarkdownToState {
                     text,
                     meta: { mathStyle },
                 };
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 
             case 'text': {
                 value = token.text;
-                while (tokens[0]?.type === 'text') {
-                    const next = tokens.shift() as Extract<TBlockToken, { type: 'text' }>;
+                while (stack[stack.length - 1]?.type === 'text') {
+                    const next = stack.pop() as Extract<TBlockToken, { type: 'text' }>;
                     value += `\n${next.text}`;
                 }
                 state = {
                     name: 'paragraph',
                     text: value,
                 };
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 
@@ -387,7 +397,7 @@ export class MarkdownToState {
                     ...(drawingWidths ? { meta: { drawingWidths } } : {}),
                     text: value,
                 };
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 
@@ -401,7 +411,7 @@ export class MarkdownToState {
                     name: 'paragraph' as const,
                     text: token.raw.replace(/\n+$/, ''),
                 };
-                parentList[0].push(state);
+                currentParent.push(state);
                 break;
             }
 

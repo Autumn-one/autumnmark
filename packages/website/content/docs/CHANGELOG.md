@@ -1,3 +1,8 @@
+## AutumnMark 0.24.77
+
+- Added a bounded single-instance `DocumentSessionPool` in Muya (preserving live DOM, undo history, folds, and compact states with LRU memory limits) plus interruptible idle/hover pre-warming for adjacent Markdown tabs so both first-time and repeated tab switches feel instant.
+- Eliminated redundant tab-switch overhead across the desktop renderer and editor engine: synchronous first-frame scroll restoration, per-tab CodeMirror `Doc` pooling in source mode, hidden-outline and closed-search short-circuits, `v-show` editor retention across drawing tabs (with full suspended-mode guards and dirty drawing preview refreshes), cached KaTeX/Mermaid/drawing previews, single-pass code-block highlighting and batched layout scheduling, offscreen cursor offset resolution, and cached `Marked` instances with linear block-state construction.
+
 ## AutumnMark 0.24.76
 
 - Kept the block front button (`¶`) and diagram/preview toolbar strictly inside the editor scrollport so scrolling a tall block's top edge behind the tab bar or title bar no longer paints floating hover controls over the tab bar, clamping within the visible block bounds or hiding when space runs out.

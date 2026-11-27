@@ -65,14 +65,16 @@ class CodeBlock extends Parent {
             code.domNode!.addEventListener('scroll', () => {
                 lnWrapper.scrollTop = code.domNode!.scrollTop;
             });
-            // Seed gutters after attachment: unknown or absent languages never trigger a language-load render.
-            requestAnimationFrame(() => {
-                codeBlock.lastContentInDescendant()?.update();
-            });
         }
 
+        // CodeBlockContent already highlighted synchronously during construction when the grammar was cached.
+        codeBlock._renderedGrammar = renderedGrammarFor(lang ?? '');
         codeBlock.refreshAnnotations();
-        if (lang) {
+        const content = codeBlock.lastContentInDescendant() as { syncCodeDecorations?: () => void } | null;
+        content?.syncCodeDecorations?.();
+
+        const language = codeFenceLanguage(lang ?? '');
+        if (language && !codeBlock._renderedGrammar) {
             requestAnimationFrame(() => {
                 codeBlock._renderLanguage();
             });

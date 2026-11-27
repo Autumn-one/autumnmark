@@ -22,6 +22,8 @@
             unsaved: !file.isSaved
           }"
           :data-id="file.id"
+          @pointerenter="handleTabPointerEnter(file)"
+          @pointerleave="cancelTabHover"
           @click.stop="selectFile($event, file)"
           @click.middle.stop.prevent="removeFileInTab(file)"
           @dblclick.stop="handleTabDblClick($event, file)"
@@ -78,6 +80,7 @@ import { Plus, Close, Lock } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import IconTooltip from '@/components/iconTooltip/index.vue'
 import { showContextMenu } from '../../contextMenu/tabs'
+import { cancelTabHover, notifyTabHover } from '@/services/tabPrewarm'
 import type { IFileState } from '@shared/types/files'
 
 const { t } = useI18n()
@@ -110,6 +113,12 @@ const scheduleDeferredScroll = (): void => {
     pendingClickScrollTabId = null
     nextTick(scrollActiveTabIntoView)
   }, CLICK_SCROLL_DELAY_MS)
+}
+
+const handleTabPointerEnter = (file: IFileState): void => {
+  if (file.id && file.id !== currentFile.value?.id) {
+    notifyTabHover(file.id)
+  }
 }
 
 const selectFile = (event: MouseEvent, file: IFileState): void => {
@@ -221,6 +230,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelDeferredScroll()
+  cancelTabHover()
   tabContainer.value?.removeEventListener('wheel', handleTabScroll)
 })
 </script>
@@ -345,6 +355,7 @@ onBeforeUnmount(() => {
     }
   }
   & > li.active {
+    transition: none;
     background: var(--themeColor10);
     color: var(--editorColor80);
   }

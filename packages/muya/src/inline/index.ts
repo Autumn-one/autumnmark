@@ -78,11 +78,14 @@ class InlineEngine {
     constructor(public muya: Muya) {
         this.renderer = new Renderer(() => {
             const selected = muya.editor.selection?.image;
+            const context = muya.editor.documentContext;
             return {
                 root: muya.domNode,
                 readOnly: muya.isReadOnly,
                 softNewlineAsSpace: muya.options.softNewlineAsSpace,
                 references: this.labels,
+                documentDirname: context?.dirname,
+                documentPathname: context?.pathname,
                 resolveImagePreview: muya.options.resolveImagePreview,
                 selectedImage: selected ? { block: selected.block, range: { ...selected.imageInfo.token.range } } : null,
                 translate: text => muya.i18n.t(text),

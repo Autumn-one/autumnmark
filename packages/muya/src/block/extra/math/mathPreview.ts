@@ -11,6 +11,28 @@ import 'katex/dist/contrib/mhchem.mjs';
 
 const debug = logger('mathPreview:');
 
+const MAX_BLOCK_MATH_CACHE = 256;
+const blockMathHtmlCache = new Map<string, string>();
+
+function renderBlockMathHtml(preview: string): string {
+    const cached = blockMathHtmlCache.get(preview);
+    if (cached !== undefined) {
+        blockMathHtmlCache.delete(preview);
+        blockMathHtmlCache.set(preview, cached);
+        return cached;
+    }
+    const html = katex.renderToString(preview, {
+        displayMode: true,
+    });
+    if (blockMathHtmlCache.size >= MAX_BLOCK_MATH_CACHE) {
+        const oldest = blockMathHtmlCache.keys().next().value;
+        if (oldest !== undefined)
+            blockMathHtmlCache.delete(oldest);
+    }
+    blockMathHtmlCache.set(preview, html);
+    return html;
+}
+
 class MathPreview extends Parent {
     private _math: string;
 
@@ -70,10 +92,7 @@ class MathPreview extends Parent {
         if (math) {
             try {
                 const preview = this.muya.options.editEmbeddedImage ? abbreviateEmbeddedImages(math) : math;
-                const html = katex.renderToString(preview, {
-                    displayMode: true,
-                });
-                this.domNode!.innerHTML = html;
+                this.domNode!.innerHTML = renderBlockMathHtml(preview);
             }
             catch (err) {
                 const message = err instanceof Error ? err.message : i18n.t('Invalid Mathematical Formula');

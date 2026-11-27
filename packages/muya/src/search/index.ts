@@ -124,6 +124,26 @@ export class Search {
         return this;
     }
 
+    /** Capture blocks currently carrying rendered highlight spans, then clear memory match state. */
+    exportHighlightedBlocks(): Set<Content> {
+        const highlighted = new Set<Content>(this._renderedMatches.keys());
+        this.reset();
+        return highlighted;
+    }
+
+    /** Strip stale highlight spans only from previously highlighted blocks (0 DOM work when empty). */
+    clearBlocksHighlights(blocks: Set<Content>): void {
+        if (!blocks.size)
+            return;
+        for (const block of blocks) {
+            if (!block.outMostBlock)
+                continue;
+            const cursor = block.getCursor();
+            block.update(cursor ? { ...cursor, block } : undefined, []);
+        }
+        blocks.clear();
+    }
+
     // Drop match state when the document is replaced (e.g. a tab switch), so
     // stale matches don't reference the previous document's blocks (#1932).
     reset() {
