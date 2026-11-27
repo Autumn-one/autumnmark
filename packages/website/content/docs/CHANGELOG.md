@@ -1,3 +1,7 @@
+## AutumnMark 0.24.75
+
+- Restored compact Windows NSIS installer proportions in Chinese locales by using `Segoe UI` 8pt for the dialog template while applying `Microsoft YaHei UI` / `Microsoft JhengHei UI` 8pt to multi-line status labels for balanced line spacing.
+
 ## AutumnMark 0.24.74
 
 - Removed the extra blank-line overrides in the Windows NSIS installer's Chinese install-mode and finish pages so `Microsoft YaHei UI` / `Microsoft JhengHei UI` renders with balanced line spacing.
