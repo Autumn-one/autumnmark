@@ -51,7 +51,7 @@ export interface LaunchResult {
 }
 
 export interface LaunchOptions {
-  windowLayout?: { showSideBar?: boolean; showTabBar?: boolean }
+  windowLayout?: { showSideBar?: boolean; showTabBar?: boolean; tabBarMode?: 'auto' | 'visible' | 'hidden' }
   userDataDir?: string
   // When true, sets MARKTEXT_ERROR_INTERACTION=1 in the launch env so
   // src/main/exceptionHandler.ts suppresses the modal "Unexpected error"

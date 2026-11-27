@@ -78,7 +78,7 @@ describe('tolerant preference persistence', () => {
       JSON.parse(readFileSync(join(directory, 'preferences.json'), 'utf8')).startUpAction
     ).toBe('restoreLastWindow')
   })
-  it('upgrades the legacy system light theme once and allows switching back', () => {
+  it('upgrades the legacy system light and dark themes once and allows switching back', () => {
     const directory = profile()
     const path = join(directory, 'preferences.json')
     writeFileSync(path, JSON.stringify({
@@ -89,6 +89,19 @@ describe('tolerant preference persistence', () => {
     expect(JSON.parse(readFileSync(path, 'utf8'))).toMatchObject({ lightModeTheme: 'pine-ink', legacy: 4 })
     expect(file.update({ theme: 'light', lightModeTheme: 'light' }).status).toBe('persisted')
     expect(new PreferenceFile(directory).get()).toMatchObject({ theme: 'light', lightModeTheme: 'light', darkModeTheme: 'nord' })
+
+    const darkDir = profile()
+    const darkPath = join(darkDir, 'preferences.json')
+    writeFileSync(darkPath, JSON.stringify({
+      theme: 'dark', followSystemTheme: true, lightModeTheme: 'light', darkModeTheme: 'dark', themeDefaultsVersion: 1
+    }))
+    const darkFile = new PreferenceFile(darkDir)
+    expect(darkFile.get()).toMatchObject({ theme: 'violet-diary', lightModeTheme: 'light', darkModeTheme: 'violet-diary' })
+    expect(JSON.parse(readFileSync(darkPath, 'utf8'))).toMatchObject({ darkModeTheme: 'violet-diary', themeDefaultsVersion: 2 })
+    expect(darkFile.update({ theme: 'dark', darkModeTheme: 'dark' }).status).toBe('persisted')
+    expect(new PreferenceFile(darkDir).get()).toMatchObject({ theme: 'dark', lightModeTheme: 'light', darkModeTheme: 'dark' })
+    expect(preferenceDefaults(false)).toMatchObject({ theme: 'pine-ink', lightModeTheme: 'pine-ink', darkModeTheme: 'violet-diary' })
+    expect(preferenceDefaults(true)).toMatchObject({ theme: 'violet-diary', lightModeTheme: 'pine-ink', darkModeTheme: 'violet-diary' })
   })
   it.each([
     { theme: 'light', followSystemTheme: false, lightModeTheme: 'light', darkModeTheme: 'dark' },

@@ -2,11 +2,14 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
 import log from 'electron-log'
 import { setKeyboardLayout } from 'common/localShortcut'
+import COMMANDS from 'common/commands/constants'
 import { i18n, t } from '@/i18n'
 import notice from '@/services/notification'
 import KeybindingConfigurator, { type UiKeybinding } from '@/prefComponents/keybindings/KeybindingConfigurator'
+import { usePreferencesStore } from './preferences'
 
 export const useKeybindingsStore = defineStore('preference-keybindings', () => {
+  const preferences = usePreferencesStore()
   const configurator = shallowRef<KeybindingConfigurator | null>(null)
   const commands = shallowRef<UiKeybinding[]>([])
   const hasCustomBindings = computed(() => commands.value.some(command => command.accelerator !== command.defaultAccelerator))
@@ -16,10 +19,19 @@ export const useKeybindingsStore = defineStore('preference-keybindings', () => {
   const conflict = shallowRef<{ accelerator: string; commands: UiKeybinding[] } | null>(null)
   let pending: Promise<void> | undefined
 
+  const describeEntry = (entry: UiKeybinding): UiKeybinding => {
+    if (entry.id !== COMMANDS.EDIT_COPY_ALTERNATE_NEWLINES) return { ...entry }
+    const key = preferences.copyParagraphNewlines === 'single'
+      ? 'menu.edit.copyAsStandardMarkdown'
+      : 'menu.edit.copyAsSingleNewline'
+    return { ...entry, description: t(key) }
+  }
+
   const refresh = (): void => {
-    commands.value = configurator.value?.rebuildKeybindingList().map(entry => ({ ...entry })) ?? []
+    commands.value = configurator.value?.rebuildKeybindingList().map(describeEntry) ?? []
   }
   watch(i18n.global.locale, refresh)
+  watch(() => preferences.copyParagraphNewlines, refresh)
 
   const ensureLoaded = async(): Promise<void> => {
     if (configurator.value) return

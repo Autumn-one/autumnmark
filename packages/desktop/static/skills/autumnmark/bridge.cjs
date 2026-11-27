@@ -4,6 +4,22 @@ const { join } = require('node:path')
 
 const root = join(process.env.MARKTEXT_TEST_SKILL_HOME ?? homedir(), '.autumnmark', 'skill', 'instances')
 const registryName = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.json$/i
+const sessionFormat = /^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i
+
+function parseSession (value) {
+  if (typeof value !== 'string') throw Error('invalid-request')
+  const match = sessionFormat.exec(value)
+  if (!match) throw Error('document-target-changed')
+  return { instanceId: match[1], sessionId: match[2], token: value }
+}
+
+function extractSessionArg (args) {
+  const index = args.indexOf('--session')
+  if (index === -1) return { session: undefined, rest: args }
+  const value = args[index + 1]
+  if (!value || value.startsWith('--')) throw Error('invalid-request')
+  return { session: parseSession(value), rest: [...args.slice(0, index), ...args.slice(index + 2)] }
+}
 
 async function request (instance, input) {
   const response = await fetch(`http://127.0.0.1:${instance.port}/skill`, {
@@ -144,10 +160,13 @@ async function readInput (path) {
 }
 
 async function run ([action, ...args]) {
+  const { session: readSession, rest: documentArgs } = action === 'read-document'
+    ? extractSessionArg(args)
+    : { session: undefined, rest: args }
   const scopedMeasurement = action === 'measure-theme' && args[0] === '--target'
   const measureTarget = scopedMeasurement ? args[1] : undefined
   if (scopedMeasurement && !measureTarget) throw Error('invalid-theme-measurement')
-  const [selected, argument, occurrence] = scopedMeasurement ? args.slice(2) : args
+  const [selected, argument, occurrence] = scopedMeasurement ? args.slice(2) : documentArgs
   if (selected === '--input-file' && !argument) throw Error('invalid-request-file')
   const input = action === 'edit-document' || action === 'edit-theme'
     ? await readInput(selected === '--input-file' ? argument : undefined)
@@ -163,7 +182,34 @@ async function run ([action, ...args]) {
       themes: listThemes(instances).map(({ theme, target }) => ({ ...theme, target }))
     }
   }
+  if (action === 'read-document' && readSession) {
+    const entry = instances.find(({ instance }) => instance.instance === readSession.instanceId)
+    if (!entry) throw Error('document-target-changed')
+    let id
+    let windowId
+    if (selected && selected !== '--editor') {
+      const match = listDocuments([entry]).find(item => item.target === selected)
+      if (!match) throw Error('document-target-changed')
+      id = match.document.id
+      windowId = match.document.windowId
+    }
+    const result = await request(entry.instance, {
+      action, id, windowId, confirmed: true, session: readSession.sessionId
+    })
+    const { document: doc, markdown, revision } = result
+    if (!doc) throw Error('skill-app-update-required')
+    const target = entry.instance.instance + '/' + doc.windowId + '/' + doc.id
+    return {
+      status: 'ok',
+      markdown,
+      revision,
+      ...publicDocument({ document: doc, target }),
+      confirmed: target,
+      session: readSession.token
+    }
+  }
   if (action === 'read-document' || action === 'edit-document') {
+    const editSession = action === 'edit-document' && input.session !== undefined ? parseSession(input.session) : undefined
     const requested = action === 'read-document' ? selected : input.confirmed === input.target ? input.confirmed : undefined
     if (!requested) {
       const { theme, target } = listTheme(instances)
@@ -177,11 +223,22 @@ async function run ([action, ...args]) {
     if (selection.status) return selection
     const { instance, document: { id, windowId }, target } = selection
     if (input && input.target !== target) throw Error('document-target-changed')
+    if (editSession && editSession.instanceId !== instance.instance) throw Error('document-target-changed')
     const confirmed = useEditor ? target : requested
     const result = await request(instance, {
-      action, id, windowId, confirmed: !!confirmed, revision: input?.revision, markdown: input?.markdown
+      action,
+      id,
+      windowId,
+      confirmed: !!confirmed,
+      session: editSession?.sessionId,
+      revision: input?.revision,
+      markdown: input?.markdown
     })
-    return { ...result, ...publicDocument(selection), ...(confirmed ? { confirmed } : {}) }
+    const { document: _doc, session: rawSession, ...payload } = result
+    const session = action === 'read-document' && typeof rawSession === 'string'
+      ? instance.instance + '/' + rawSession
+      : undefined
+    return { ...payload, ...publicDocument(selection), ...(confirmed ? { confirmed } : {}), ...(session ? { session } : {}) }
   }
   if (action === 'theme-workspace' || action === 'read-theme' || action === 'edit-theme' || action === 'measure-theme') {
     let requested = selected

@@ -8,6 +8,11 @@ import { escapeHTML } from './index';
 import { encodeLinkTitle, escapeLinkAttribute } from './markdownEscape';
 
 export type TSelectableImageToken = ImageToken | (HTMLTagToken & { tag: 'img'; kind?: 'tag' });
+export type TImageWidth = number | '100%';
+
+export function isFullImageWidth(width: string | number | null | undefined): boolean {
+    return width === '100%';
+}
 
 export interface IImageInfo {
     token: TSelectableImageToken;
@@ -46,15 +51,16 @@ export function getImageInfo(image: HTMLElement): IImageInfo {
     };
 }
 
-export function getImageSrc(src: string) {
+export function getImageSrc(src: string, baseDir?: string) {
     const imageExtension = IMAGE_EXT_REG.test(src);
     const isFileUrl = /^file:\/\//i.test(src);
     const isUrl = URL_REG.test(src) || (imageExtension && isFileUrl);
     if (imageExtension) {
         const isAbsoluteLocal = ABSOLUTE_LOCAL_REG.test(src);
-        // Resolve relative paths against the host document directory; retain relative form when unavailable.
-        const baseUrl
-            = typeof window !== 'undefined' ? window.DIRNAME : undefined;
+        // Resolve relative paths against explicit document context when supplied; fall back to window.DIRNAME for standalone hosts.
+        const baseUrl = baseDir !== undefined
+            ? baseDir
+            : (typeof window !== 'undefined' ? window.DIRNAME : undefined);
         if (isUrl) {
             return {
                 isUnknownType: false,
@@ -108,6 +114,17 @@ export function usesDefaultObjectSize(width?: number, height?: number): boolean 
         return false;
 
     return width === DEFAULT_OBJECT_WIDTH || height === DEFAULT_OBJECT_HEIGHT;
+}
+
+export async function decodeImageElement(img: HTMLImageElement): Promise<void> {
+    if (typeof img.decode !== 'function')
+        return;
+    try {
+        await img.decode();
+    }
+    catch {
+        // Callers already verified load success; ignore unsupported or cancelled decodes.
+    }
 }
 
 export async function loadImage(url: string, detectContentType = false): Promise<{
@@ -195,19 +212,25 @@ export function replaceImageMarkup(block: Content, start: number, expected: stri
     const { muya } = block;
     if (muya.isReadOnly || !muya.isBlockInDocument(block) || !block.text.startsWith(expected, start))
         return;
+    if (replacement === expected)
+        return;
     muya.editor.history.cutoff();
     muya.transact(() => {
         block.text = block.text.slice(0, start) + replacement + block.text.slice(start + expected.length);
         block.update();
+        // Image edits triggered by pointer handles or dialogs commit while the text caret can be offscreen.
+        muya.editor.selection.preventScrollOnNextNotification();
     });
     muya.editor.history.cutoff();
 }
 
-export function imageToHtml(attrs: Record<string, string | null>) {
-    const attributes = Object.entries(attrs).map(([name, attr]) => {
-        const value = name === 'src' && attr ? correctImageSrc(attr) : String(attr);
-        return `${name}="${escapeHTML(value)}"`;
-    });
+export function imageToHtml(attrs: Record<string, string | null | undefined>) {
+    const attributes = Object.entries(attrs)
+        .filter((entry): entry is [string, string] => entry[1] !== undefined && entry[1] !== null)
+        .map(([name, attr]) => {
+            const value = name === 'src' && attr ? correctImageSrc(attr) : String(attr);
+            return `${name}="${escapeHTML(value)}"`;
+        });
     return `<img ${attributes.join(' ')} />`;
 }
 

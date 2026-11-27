@@ -5,6 +5,7 @@ import log from 'electron-log'
 import { isChildOfDirectory } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
+import { resolveThemeBackground } from '../app/nativeTheme'
 import { zoomIn, zoomOut } from './utils'
 import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
@@ -29,6 +30,7 @@ class EditorWindow extends BaseWindow {
   // used to find the best window to open new files in.
   readonly projectRoots: ProjectRoots
   private readonly _openedFiles: string[] = []
+  private _micaTitleBar = false
   public readonly sessionStateId: string
   public sessionReady: Promise<void> = Promise.resolve()
 
@@ -81,22 +83,23 @@ class EditorWindow extends BaseWindow {
       winOptions.titleBarStyle = 'default'
       if (titleBarStyle === 'native') {
         winOptions.frame = true
+        winOptions.autoHideMenuBar = true
       }
     }
 
-    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme, initialPreferences.localThemes)
+    winOptions.backgroundColor = resolveThemeBackground(theme, initialPreferences.localThemes)
     if (env.disableSpellcheck) {
       ;(winOptions.webPreferences as { spellcheck: boolean }).spellcheck = false
     }
 
     const win = (this.browserWindow = new BrowserWindow(winOptions))
     // Electron requires Windows 11 22H2 or later to show a system backdrop.
-    const micaTitleBar =
+    this._micaTitleBar =
       isWindows &&
       titleBarStyle === 'custom' &&
       !winOptions.frame &&
       Number(process.getSystemVersion().split('.')[2]) >= 22621
-    if (micaTitleBar) {
+    if (this._micaTitleBar) {
       win.setBackgroundMaterial('mica')
     }
 
@@ -123,7 +126,12 @@ class EditorWindow extends BaseWindow {
     appMenu.addEditorMenu(win, { sourceCodeModeEnabled })
 
     win.webContents.on('context-menu', (_event, params) => {
-      showEditorContextMenu(win, params, preferences.getItem('spellcheckerEnabled'))
+      showEditorContextMenu(
+        win,
+        params,
+        preferences.getItem('spellcheckerEnabled'),
+        preferences.getItem('copyParagraphNewlines')
+      )
     })
 
     win.webContents.once('did-finish-load', () => {
@@ -225,7 +233,7 @@ class EditorWindow extends BaseWindow {
 
     this.lifecycle = WindowLifecycle.LOADING
     const url = this._buildUrlWithSettings(this.id, env, initialPreferences)
-    if (micaTitleBar) {
+    if (this._micaTitleBar) {
       url.searchParams.set('micaTitleBar', '1')
     }
     win.loadURL(url.toString())
@@ -235,6 +243,11 @@ class EditorWindow extends BaseWindow {
     win.webContents.setIgnoreMenuShortcuts(true)
 
     return win
+  }
+
+  override setThemeBackgroundColor(color: string): void {
+    // A solid WebContents background would cover the system backdrop.
+    if (!this._micaTitleBar) super.setThemeBackgroundColor(color)
   }
 
   override bringToFront(): void {

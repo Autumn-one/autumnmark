@@ -13,7 +13,7 @@ import type { UserPreferences } from './preferences'
  */
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
-import type { TabOptions, SidebarOpenOptions, PageOptions, ExportType, SerializedStat, LineEnding, FileChangeDetail, PandocExportPayload } from './files'
+import type { TabOptions, SidebarOpenOptions, PageOptions, ExportType, SerializedStat, LineEnding, FileChangeDetail, FileChangePayload, PandocExportPayload } from './files'
 import type { MenuTemplate, MenuPopupPosition, ContextMenuPopupOptions, ApplicationMenuCategory } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 
@@ -67,6 +67,7 @@ export interface RecentDocument {
 
 export type SaveDocumentResult =
   | { status: 'saved'; pathname: string; filename: string; savedMarkdown: string }
+  | { status: 'disk-changed'; change?: FileChangePayload }
   | { status: 'canceled' | 'failed' }
 
 import type { StateIpcInvokeChannels, StateIpcMainEvents } from './applicationState'
@@ -333,6 +334,7 @@ export interface IpcMainEventChannels extends StateIpcMainEvents {
   'language-changed': [language: string]
   'mt::update-state': [state: UpdateState, showDialog?: boolean]
   'mt::about-dialog': []
+  'mt::cm-copy-alternate-newlines': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']

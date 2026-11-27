@@ -14,6 +14,7 @@ import type { IFileState } from '@shared/types/files'
 import type { SaveDocumentResult } from '@shared/types/ipc'
 import { setSessionActions, useEditorStore } from '@/store/editor'
 import { drawingDialog, drawingEditorTabs } from './drawingEditors'
+import { isDrawingPath } from '@/util/drawingPaths'
 import { useLayoutStore } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useProjectStore } from '@/store/project'
@@ -23,6 +24,7 @@ import { deepClone } from '@/util'
 import { documentVideos } from '@/util/videoAttachments'
 import {
   captureDocumentView,
+  evictDocumentViewHash,
   restoreDocumentView,
   isDocumentViewReady,
   onDocumentViewChange
@@ -51,6 +53,7 @@ class WindowSession {
   private _workspace: WindowInitialization['snapshot']['workspace'] = null
   private _sequence = 0
   private _initializing = true
+  private _closing = false
   private _interactionEpoch = 0
   private _deferredSelection: string | null = null
   private _queue: Promise<unknown> = Promise.resolve()
@@ -59,6 +62,9 @@ class WindowSession {
   private readonly _serverRevision = new Map<string, number>()
   private readonly _stops: Array<WatchStopHandle | (() => void)> = []
   private _pendingRestore: { id: string; capture: Promise<void> | null } | null = null
+  // Tabs hydrated from a persisted session snapshot still need one initial view restore;
+  // subsequent in-session tab switches restore scroll/caret directly via the editor.
+  private readonly _needsInitialViewRestore = new Set<string>()
   private readonly _pendingOpens: ManagedDocumentPayload[] = []
   private readonly _schedule = debounce(() => {
     void this._flush().catch((error) => this._failure(error))
@@ -103,6 +109,8 @@ class WindowSession {
           const file = this._editor.tabs.find((file) => file.id === id)
           if (file) this._editor.FORCE_CLOSE_TAB(file)
           this._observed.delete(id)
+          this._needsInitialViewRestore.delete(id)
+          evictDocumentViewHash(id)
         }
       })
     )
@@ -143,7 +151,7 @@ class WindowSession {
       captureView: () => {
         void this._captureActiveView().catch((error) => this._failure(error))
       },
-      save: (id, saveAs = false) => this._save(id, saveAs),
+      save: (id, saveAs = false, preserveDiskChanges = false) => this._save(id, saveAs, preserveDiskChanges),
       create: async(markdown, selected, title = '') => {
         if (!this._context) return
         const result = await ipc.invoke('mt::state::register-untitled', {
@@ -211,6 +219,12 @@ class WindowSession {
     await this._flush()
   }
 
+  private _syncAutoTabBar(): void {
+    const active = this._editor.currentFile
+    const isDrawing = !!active && isDrawingPath(active.pathname || active.filename)
+    this._layout.SET_AUTO_TAB_BAR_VISIBLE(this._editor.tabs.length > 1 || isDrawing)
+  }
+
   private _file(payload: ManagedDocumentPayload): IFileState {
     const { document, markdown } = payload
     const file = createDocumentState(
@@ -272,6 +286,7 @@ class WindowSession {
         contentRevision: body.contentRevision,
         selected: false
       })
+      if (file.viewState) this._needsInitialViewRestore.add(file.id)
       const status = initialized.documentStatuses?.find(
         (status) => status.documentId === document.id
       )
@@ -298,6 +313,7 @@ class WindowSession {
     this._editor.updateTabIdToIndex()
     const active = files.find((file) => file.id === activeId) ?? files[0]
     if (active) this._editor.UPDATE_CURRENT_FILE(active)
+    this._syncAutoTabBar()
     this._main.SET_INITIALIZED()
     window.electron.ipcRenderer.send('mt::window-initialized')
     window.electron.ipcRenderer.send('mt::project-renderer-ready')
@@ -332,11 +348,6 @@ class WindowSession {
     const nameInput = document.activeElement instanceof HTMLInputElement &&
       document.activeElement.matches('input.rename') ? document.activeElement : null
     const selection = nameInput ? [nameInput.selectionStart, nameInput.selectionEnd] as const : null
-    for (const id of payload.replacedDocumentIds ?? []) {
-      const replaced = this._editor.tabs.find((file) => file.id === id)
-      if (replaced) this._editor.FORCE_CLOSE_TAB(replaced)
-      this._observed.delete(id)
-    }
     const file = this._file(payload)
     const options = payload.options ?? {}
     const intent = this._editor.PEEK_OPEN_INTENT(file.pathname)
@@ -344,13 +355,20 @@ class WindowSession {
       (intent?.preview ?? options.preview ?? false) && this._preferences.openFilesInPreviewMode
     if (typeof options.requestId === 'number')
       this._editor.SETTLE_SIDEBAR_OPEN(options.requestId, file.pathname)
-    if (payload.selected && !renaming)
-      this._editor.UPDATE_CURRENT_FILE(file)
-    else {
+    const select = payload.selected && !renaming
+    // Closing the active preview first would render a neighboring tab before switching to this one.
+    if (select) this._editor.UPDATE_CURRENT_FILE(file)
+    for (const id of payload.replacedDocumentIds ?? []) {
+      const replaced = this._editor.tabs.find((file) => file.id === id)
+      if (replaced) this._editor.FORCE_CLOSE_TAB(replaced)
+      this._observed.delete(id)
+    }
+    if (!select) {
       if (payload.selected) this._deferredSelection = file.id
       this._editor.tabs.push(file)
       this._editor.updateTabIdToIndex()
     }
+    this._syncAutoTabBar()
     const focus = this._editor.TAKE_OPEN_INTENT(file.pathname)
     if (focus === true && !renaming) bus.emit('editor-focus')
     else if (focus === false && !renaming)
@@ -365,10 +383,13 @@ class WindowSession {
   }
 
   private _prepareViewRestore(id: string | undefined, capture: Promise<void> | null = null): void {
-    this._pendingRestore = id ? { id, capture } : null
-    void nextTick()
-      .then(() => this._restoreActiveView())
-      .catch((error) => this._failure(error))
+    const shouldRestore = !!id && (capture !== null || this._needsInitialViewRestore.has(id))
+    this._pendingRestore = shouldRestore ? { id, capture } : null
+    if (shouldRestore) {
+      void nextTick()
+        .then(() => this._restoreActiveView())
+        .catch((error) => this._failure(error))
+    }
     this._schedule()
   }
 
@@ -416,6 +437,7 @@ class WindowSession {
       this._editor.currentFile.markdown === markdown &&
       this._interactionEpoch === epoch
     this._pendingRestore = null
+    this._needsInitialViewRestore.delete(id)
     const keys = await restoreDocumentView(id, markdown, file.viewState ?? null, isCurrent, pending.capture !== null)
     // Mode handoffs retain live fold edits; only document restoration reapplies saved keys.
     if (isCurrent() && !pending.capture) file.tocCollapsedKeys = keys
@@ -546,6 +568,8 @@ class WindowSession {
     file.isPendingCreation = false
     file.diskConflict = false
     file.diskMissing = false
+    const disk = result.document.content
+    if (disk.kind === 'disk' && disk.baseline.exists) file.acceptedDiskSha256 = disk.baseline.rawSha256
     const baseline = { markdown: result.savedMarkdown, format: JSON.stringify(result.savedFormat) }
     file.isSaved =
       documentVideos(file.id).expand(file.markdown) === baseline.markdown && JSON.stringify(getOptionsFromState(file)) === baseline.format
@@ -553,7 +577,7 @@ class WindowSession {
     this._schedule()
   }
 
-  private async _save(id: string, saveAs = false): Promise<SaveDocumentResult> {
+  private async _save(id: string, saveAs = false, preserveDiskChanges = false): Promise<SaveDocumentResult> {
     const drawing = drawingEditorTabs.get(id)
     if (drawing) {
       const saved = await drawing.save?.()
@@ -571,7 +595,8 @@ class WindowSession {
       'mt::state::save-document',
       this._context.contextToken,
       id,
-      saveAs
+      saveAs,
+      preserveDiskChanges
     )
     if (result.status !== 'saved') return result
     this._saved(result)
@@ -586,27 +611,33 @@ class WindowSession {
 
   private async _close(ids: string[]): Promise<void> {
     if (!ids.length || !this._context) return
-    const managed = ids.filter(id => !drawingEditorTabs.has(id))
-    const drawings = [...drawingEditorTabs].filter(([id, drawing]) => ids.includes(id) || (drawing.noteId && managed.includes(drawing.noteId)))
-    const popup = drawingDialog.value
-    const closesPopup = popup?.noteId && managed.includes(popup.noteId)
-    if (closesPopup) {
-      const close = await popup.beforeClose?.()
-      if (close === false) return
-    }
-    for (const [, drawing] of drawings) {
-      const close = await drawing.beforeClose?.()
-      if (close === false) return
-    }
-    if (managed.length) {
-      const result = await window.electron.ipcRenderer.invoke('mt::state::close-documents', this._context.contextToken, managed)
-      if (result.status !== 'closed') return
-    }
-    if (closesPopup && drawingDialog.value === popup) drawingDialog.value = null
-    for (const [id] of drawings) {
-      const tab = this._editor.tabs.find(file => file.id === id)
-      if (tab) this._editor.FORCE_CLOSE_TAB(tab)
-      drawingEditorTabs.delete(id)
+    if (this._closing) return
+    this._closing = true
+    try {
+      const managed = ids.filter(id => !drawingEditorTabs.has(id))
+      const drawings = [...drawingEditorTabs].filter(([id, drawing]) => ids.includes(id) || (drawing.noteId && managed.includes(drawing.noteId)))
+      const popup = drawingDialog.value
+      const closesPopup = popup?.noteId && managed.includes(popup.noteId)
+      if (closesPopup) {
+        const close = await popup.beforeClose?.()
+        if (close === false) return
+      }
+      for (const [, drawing] of drawings) {
+        const close = await drawing.beforeClose?.()
+        if (close === false) return
+      }
+      if (managed.length) {
+        const result = await window.electron.ipcRenderer.invoke('mt::state::close-documents', this._context.contextToken, managed)
+        if (result.status !== 'closed') return
+      }
+      if (closesPopup && drawingDialog.value === popup) drawingDialog.value = null
+      for (const [id] of drawings) {
+        const tab = this._editor.tabs.find(file => file.id === id)
+        if (tab) this._editor.FORCE_CLOSE_TAB(tab)
+        drawingEditorTabs.delete(id)
+      }
+    } finally {
+      this._closing = false
     }
   }
 

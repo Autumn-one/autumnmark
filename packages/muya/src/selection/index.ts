@@ -7,6 +7,7 @@ import type { IImageCaret } from './imageCaret';
 import type {
     IImageSelection,
     IResolvedTextSelection,
+    ISelectionEndpoints,
     ITableRectSelection,
     ITableRectSelectionState,
     ITextSelection,
@@ -14,6 +15,7 @@ import type {
     TSelectionCoords,
     TSelectionState,
 } from './types';
+import { isHiddenByFold } from '../block/folding';
 import { CLASS_NAMES } from '../config';
 import { getImageInfo } from '../utils/image';
 import { buildAffiliation, buildSelectionAffiliation, endpointBlockInfo } from './affiliation';
@@ -50,6 +52,11 @@ class Selection {
     private _preventScroll = false;
     private _lastPublished = '';
     private _imageCaret: (IImageCaret & { element: HTMLElement }) | null = null;
+    private _hasLiveNativeSelection = false;
+    private _pointerFocusing = false;
+    private _pointerFocusTimer: ReturnType<typeof setTimeout> | null = null;
+    private _suppressFocusScroll = false;
+    private _suppressFocusScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(private _muya: Muya) {
         this._text = new TextSelection(_muya, this);
@@ -58,6 +65,20 @@ class Selection {
         this._table = TableRectSelection.create(_muya);
         _muya.eventCenter.attachDOMEvent(document, 'selectionchange', () => this.syncTextSelection());
         _muya.eventCenter.attachDOMEvent(document, 'mouseup', () => this.flush());
+        const markPointerFocus = () => {
+            this._pointerFocusing = true;
+            this._clearSuppressFocusScroll();
+            if (this._pointerFocusTimer !== null)
+                clearTimeout(this._pointerFocusTimer);
+            // Reset after the same-task pointerdown -> mousedown -> focus sequence.
+            this._pointerFocusTimer = setTimeout(() => {
+                this._pointerFocusTimer = null;
+                this._pointerFocusing = false;
+            }, 0);
+        };
+        _muya.eventCenter.attachDOMEvent(_muya.domNode, 'pointerdown', markPointerFocus, true);
+        _muya.eventCenter.attachDOMEvent(_muya.domNode, 'mousedown', markPointerFocus, true);
+        _muya.eventCenter.attachDOMEvent(_muya.domNode, 'focus', event => this._handleRootFocus(event));
     }
 
     get type(): SelectionType | null {
@@ -100,12 +121,13 @@ class Selection {
         return this._text.isSelectionInSameBlock;
     }
 
-    private _readNative(): IResolvedTextSelection | null {
+    private _isExternalInputFocused(): boolean {
         const focused = this._muya.domNode.ownerDocument.activeElement;
         const inputFocused = focused?.tagName === 'INPUT' || focused?.tagName === 'TEXTAREA';
-        // Switching external inputs can collapse the DOM range without moving the editor selection.
-        if (!this._muya.isReadOnly && inputFocused && !this._muya.domNode.contains(focused))
-            return null;
+        return !this._muya.isReadOnly && inputFocused && !this._muya.domNode.contains(focused);
+    }
+
+    private _readLiveNativeInDocument(): IResolvedTextSelection | null {
         const live = this._text.getSelection();
         if (!live)
             return null;
@@ -113,6 +135,143 @@ class Selection {
         return this._muya.isBlockInDocument(anchor.block) && this._muya.isBlockInDocument(focus.block)
             ? live
             : null;
+    }
+
+    private _readNative(): IResolvedTextSelection | null {
+        // Switching external inputs can collapse the DOM range without moving the editor selection.
+        if (this._isExternalInputFocused())
+            return null;
+        return this._readLiveNativeInDocument();
+    }
+
+    /** Record that the native DOM selection was explicitly cleared before an async selectionchange arrives. */
+    markNativeSelectionCleared(): void {
+        this._hasLiveNativeSelection = false;
+    }
+
+    /** Re-sync whether a live native text range currently exists inside the document. */
+    refreshNativeSelectionPresence(): void {
+        this._hasLiveNativeSelection = this._readLiveNativeInDocument() !== null;
+    }
+
+    private _armSuppressFocusScroll(): void {
+        this._clearSuppressFocusScroll();
+        this._suppressFocusScroll = true;
+        // Expire after Blink's already-queued focus selectionchange task runs.
+        this._suppressFocusScrollTimer = setTimeout(() => {
+            this._suppressFocusScrollTimer = null;
+            this._suppressFocusScroll = false;
+        }, 0);
+    }
+
+    private _clearSuppressFocusScroll(): void {
+        this._suppressFocusScroll = false;
+        if (this._suppressFocusScrollTimer !== null) {
+            clearTimeout(this._suppressFocusScrollTimer);
+            this._suppressFocusScrollTimer = null;
+        }
+    }
+
+    private _resolveRestorableTextOnRootFocus(
+        state: Extract<TSelectionState, { kind: SelectionType.TEXT }>,
+    ): ISelectionEndpoints | null {
+        const endpoints = resolveTextSelectionEndpoints(this._muya, state);
+        if (!endpoints)
+            return null;
+        const { anchor, focus } = endpoints;
+        const { contentTabs, foldBlocks } = this._muya.editor;
+        const visible = Boolean(anchor.block.domNode?.isConnected && focus.block.domNode?.isConnected)
+            && !anchor.block.isInert
+            && !focus.block.isInert
+            && !isHiddenByFold(anchor.block)
+            && !isHiddenByFold(focus.block)
+            && !contentTabs.isHidden(anchor.block)
+            && !contentTabs.isHidden(focus.block)
+            && !foldBlocks.isHidden(anchor.block)
+            && !foldBlocks.isHidden(focus.block);
+        return visible ? endpoints : null;
+    }
+
+    private _restoreCachedTextOnRootFocus(
+        state: Extract<TSelectionState, { kind: SelectionType.TEXT }>,
+        endpoints: ISelectionEndpoints,
+    ): void {
+        const priorState = copySelectionState(this._state);
+        let written = false;
+        this._setting = true;
+        try {
+            const { anchor, focus } = endpoints;
+            this._state = copySelectionState(state);
+            this._image.clear();
+            this._table.clear();
+            this._muya.editor.activeContentBlock = anchor.block === focus.block ? anchor.block : null;
+            this._text.setSelection(anchor, focus, { syncDom: true });
+            const live = this._readLiveNativeInDocument();
+            written = live !== null
+                && live.anchor.block === anchor.block
+                && live.focus.block === focus.block;
+            if (!written)
+                this._state = priorState;
+            this._hasLiveNativeSelection = written;
+        }
+        finally {
+            this._setting = false;
+        }
+
+        if (written && this._canNotify) {
+            this._preventScroll = true;
+            this.notify();
+        }
+        this._armSuppressFocusScroll();
+    }
+
+    private _consumePointerFocus(): boolean {
+        const fromPointer = this._pointerFocusing;
+        this._pointerFocusing = false;
+        if (this._pointerFocusTimer !== null) {
+            clearTimeout(this._pointerFocusTimer);
+            this._pointerFocusTimer = null;
+        }
+        return fromPointer;
+    }
+
+    private _isNonTextSelectionActive(): boolean {
+        return this._table.hasSelection
+            || this._state?.kind === SelectionType.IMAGE
+            || this._state?.kind === SelectionType.TABLE;
+    }
+
+    private _clearNativeSelectionInsideRoot(): void {
+        const sel = document.getSelection();
+        if (sel && sel.rangeCount > 0 && sel.anchorNode && this._muya.domNode.contains(sel.anchorNode))
+            sel.removeAllRanges();
+    }
+
+    private _handleRootFocus(event: Event): void {
+        if (event.target !== this._muya.domNode)
+            return;
+        const fromPointer = this._consumePointerFocus();
+        if (fromPointer || this._hasLiveNativeSelection || this._muya.isReadOnly || this._setting || this._muya.editor.isUpdating)
+            return;
+
+        // Blink synthesizes a collapsed caret at block 0 when a contenteditable root
+        // receives non-pointer focus with an empty native selection; restore our last
+        // valid caret without scrolling instead of letting selectionchange jump to top.
+        if (this._isNonTextSelectionActive()) {
+            this._clearNativeSelectionInsideRoot();
+            this._hasLiveNativeSelection = false;
+            this._armSuppressFocusScroll();
+            return;
+        }
+        if (this._state?.kind === SelectionType.TEXT) {
+            const endpoints = this._resolveRestorableTextOnRootFocus(this._state);
+            if (endpoints) {
+                this._restoreCachedTextOnRootFocus(this._state, endpoints);
+                return;
+            }
+        }
+
+        this._armSuppressFocusScroll();
     }
 
     private _cacheText(live: IResolvedTextSelection) {
@@ -180,12 +339,13 @@ class Selection {
         return this._resolveImage(state);
     }
 
-    setSelection(state: TSelectionState | null, { preventScroll = false } = {}): boolean {
+    setSelection(state: TSelectionState | null, { preventScroll = false, preserveFocus = false } = {}): boolean {
         if (state !== null && !isSelectionState(state))
             return false;
         const selection = state ? this._resolve(state) : null;
         if (state && !selection)
             return false;
+        this._clearSuppressFocusScroll();
         this._preventScroll = preventScroll;
         this._setting = true;
         try {
@@ -197,6 +357,8 @@ class Selection {
                 this._text.collapse();
             }
             if (selection?.kind === SelectionType.TEXT) {
+                if (preserveFocus)
+                    this._clearNativeSelectionInsideRoot();
                 const { anchor, focus } = selection;
                 const { anchorBlock, focusBlock } = selection.context;
                 this._muya.editor.activeContentBlock = anchorBlock === focusBlock ? anchorBlock : null;
@@ -211,20 +373,27 @@ class Selection {
                         path: [...focus.path],
                         block: focusBlock,
                     },
+                    { syncDom: !preserveFocus },
                 );
             }
             else {
                 if (selection?.kind === SelectionType.IMAGE)
                     this._image.setSelection(this._resolveImage(selection) ?? selection);
                 else if (selection?.kind === SelectionType.TABLE)
-                    this._table.setSelection(selection);
+                    this._table.setSelection(selection, { preserveFocus });
             }
+            this._syncLiveNativePresence(selection);
         }
         finally {
             this._setting = false;
         }
         this.notify();
         return true;
+    }
+
+    private _syncLiveNativePresence(selection: TSelection | null): void {
+        this._hasLiveNativeSelection = selection?.kind === SelectionType.TEXT
+            && this._readLiveNativeInDocument() !== null;
     }
 
     clear() {
@@ -251,18 +420,27 @@ class Selection {
 
     syncTextSelection() {
         // Root focus can plant a caret while the table owns the visible selection.
-        if (this._setting || this._table.hasSelection || this.type === SelectionType.IMAGE)
+        if (this._setting)
             return;
-        const live = this._readNative();
-        if (!live)
+        if (this._table.hasSelection || this.type === SelectionType.IMAGE) {
+            this._hasLiveNativeSelection = false;
+            return;
+        }
+        const liveInDoc = this._readLiveNativeInDocument();
+        this._hasLiveNativeSelection = liveInDoc !== null;
+        if (!liveInDoc || this._isExternalInputFocused())
             return;
         this._setting = true;
         try {
-            this._cacheText(live);
+            this._cacheText(liveInDoc);
             this._image.clear();
         }
         finally {
             this._setting = false;
+        }
+        if (this._suppressFocusScroll) {
+            this._clearSuppressFocusScroll();
+            this.preventScrollOnNextNotification();
         }
         this.notify(false, true);
     }
@@ -287,6 +465,10 @@ class Selection {
     private get _canNotify(): boolean {
         const { transactions, isUpdating, isComposing } = this._muya.editor;
         return !this._setting && !transactions.isActive && !isUpdating && !isComposing;
+    }
+
+    preventScrollOnNextNotification(): void {
+        this._preventScroll = true;
     }
 
     notify(docChanged = false, deferred = false) {
@@ -368,6 +550,13 @@ class Selection {
         this._docChanged = false;
         this._preventScroll = false;
         this._lastPublished = '';
+        this._hasLiveNativeSelection = false;
+        this._pointerFocusing = false;
+        if (this._pointerFocusTimer !== null) {
+            clearTimeout(this._pointerFocusTimer);
+            this._pointerFocusTimer = null;
+        }
+        this._clearSuppressFocusScroll();
     }
 
     private _resolve(state: TSelectionState): TSelection | null {

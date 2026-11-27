@@ -2,11 +2,17 @@ import { watch, type Ref } from 'vue'
 import dragula from 'dragula'
 import autoScroll from 'dom-autoscroller'
 import { useEditorStore } from '@/store/editor'
+import { setTabDragging } from '@/services/tabPrewarm'
 import '@/assets/styles/tabDrag.css'
 
 interface AutoScroller {
   readonly down: boolean
   destroy(forceCleanAnimation?: boolean): void
+}
+
+export interface TabReorderControl {
+  isDblClickSuppressed: () => boolean
+  clearDblClickSuppression: () => void
 }
 
 // CSS pixels; tolerate pointer drift so a click is not swallowed as a drag (#4895).
@@ -16,8 +22,9 @@ export const useTabReorder = (
   container: Ref<HTMLElement | null>,
   scrollContainer: Ref<HTMLElement | null>,
   direction: 'horizontal' | 'vertical'
-): void => {
+): TabReorderControl => {
   const editorStore = useEditorStore()
+  let suppressDblClick = false
 
   watch([container, scrollContainer], ([list, scroller], _previous, onCleanup) => {
     if (!list || !scroller) return
@@ -72,11 +79,14 @@ export const useTabReorder = (
         !handle?.closest('button')
     })
       .on('drag', (element) => {
+        setTabDragging(true)
+        suppressDblClick = true
         originalNext = element.nextSibling
         rememberPositions()
       })
       .on('shadow', animateReorder)
       .on('cancel', (element, _container, source) => {
+        setTabDragging(false)
         restoreDomOrder(element, source)
       })
       .on('drop', (element, _target, source, sibling) => {
@@ -89,9 +99,15 @@ export const useTabReorder = (
         if (fromId) editorStore.EXCHANGE_TABS_BY_ID({ fromId, toId })
       })
       .on('dragend', () => {
+        setTabDragging(false)
         stopAnimations()
         positions.clear()
       })
+
+    const handlePointerDown = (): void => {
+      if (!drake.dragging) suppressDblClick = false
+    }
+    document.addEventListener('pointerdown', handlePointerDown, true)
 
     const autoScroller: AutoScroller = autoScroll([scroller], {
       margin: 20,
@@ -101,10 +117,19 @@ export const useTabReorder = (
     })
 
     onCleanup(() => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      suppressDblClick = false
       stopAnimations()
       autoScroller.destroy(true)
       drake.cancel(true)
       drake.destroy()
     })
   }, { flush: 'post' })
+
+  return {
+    isDblClickSuppressed: () => suppressDblClick,
+    clearDblClickSuppression: () => {
+      suppressDblClick = false
+    }
+  }
 }

@@ -2,7 +2,7 @@ import {
   ElAutocomplete, ElButton, ElConfigProvider, ElDialog, ElIcon, ElInput, ElInputTag,
   ElOption, ElPopover, ElScrollbar, ElSelect, ElSlider, ElSwitch, ElTooltip
 } from 'element-plus'
-import 'element-plus/dist/index.css'
+import './assets/styles/elementPlus'
 import '@muyajs/core/assets/styles/index.css'
 import './assets/styles/index.css'
 import bootstrapRenderer from './bootstrap'

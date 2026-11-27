@@ -73,6 +73,8 @@
 
 <script setup lang="ts">
 import { registerRenderedViewState, documentViewChanged } from '@/services/documentViewState'
+import { TabPrewarmScheduler } from '@/services/tabPrewarm'
+import { getActivationTimer, markTabSwitchEditor, markTabSwitchScroll, markTabSwitchToc } from '@/services/tabSwitchPerf'
 
 import {
   computed,
@@ -118,7 +120,8 @@ import {
   type IReplaceOption,
   type ISearchOption,
   type ISerializedHistory,
-  type IHeadingFoldState
+  type IHeadingFoldState,
+  type IDocumentContext
 } from '@muyajs/core'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { createMuyaShortcutResolvers } from '@/util/muyaShortcuts'
@@ -143,7 +146,7 @@ import { reportImageError } from '@/util/embeddedImageActions'
 import { embedDocumentImages, embedLinkedImage } from '@/services/pastedImages'
 import { pickVideo, savedVideoDocument, videoMarkdown } from '@/util/video'
 import { documentVideos } from '@/util/videoAttachments'
-import type { IEmbeddedImageEdit } from '@muyajs/core'
+import type { IEmbeddedImageEdit, IUpdateEmbeddedDrawingParams } from '@muyajs/core'
 import { getCssForOptions, type PdfCssOptions } from '@/util/pdf'
 import {
   getTocHeadingScrollTop,
@@ -163,8 +166,16 @@ import {
 import { applyMarkdownEdits, type EditMarkdown } from '@shared/markdownEdits'
 import { popupContextMenu, type ContextMenuItem } from '../../contextMenu/popupMenu'
 import { getDocumentLocationMenuItems } from '../../contextMenu/fileLocation'
-import { invalidateDrawingPreviews, renderEmbeddedDrawingPreview, resolveDrawingPreview } from '@/services/drawingPreviews'
-import { resolveDrawingPath } from '@/util/drawingPaths'
+import {
+  hasLinkedDrawingChanged,
+  invalidateDrawingPreview,
+  linkedDrawingPaths,
+  renderEmbeddedDrawingPreview,
+  renderLinkedDrawingPreview,
+  resolveDrawingPreview
+} from '@/services/drawingPreviews'
+import type { DrawingPreviewChangedPayload } from '@/services/drawingEditors'
+import { isDrawingPath, resolveDrawingPath } from '@/util/drawingPaths'
 import { drawingInsertionAt } from '@/util/drawingInsertion'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
@@ -188,6 +199,7 @@ const props = defineProps<{
   cursor?: unknown
   textDirection: string
   platform?: string
+  suspended?: boolean
 }>()
 
 const preferencesStore = usePreferencesStore()
@@ -229,6 +241,7 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
+  copyParagraphNewlines,
   editorLineWidth,
   compactMode,
   compactImageMaxHeight,
@@ -262,9 +275,20 @@ const focus = computed(() => focusPreference.value && !currentFile.value?.readOn
 let loadingContent = false
 let releaseViewState: (() => void) | undefined
 let renderedDocumentId: string | null = null
+let lastWysiwygDocumentId: string | null = null
 let renderedMarkdown = ''
+let prewarmScheduler: TabPrewarmScheduler | null = null
+
+const isDocPoolEnabled = (): boolean =>
+  !(globalThis as { __AUTUMNMARK_DISABLE_DOC_POOL__?: boolean }).__AUTUMNMARK_DISABLE_DOC_POOL__
+
+const documentContextFor = (id: string, pathname?: string | null): IDocumentContext => ({
+  id,
+  pathname: pathname || undefined,
+  dirname: pathname ? window.path.dirname(pathname) : ''
+})
 const readingSelectionChanged = () => {
-  if (!currentFile.value?.readOnly || !editor.value) return
+  if (props.suspended || !currentFile.value?.readOnly || !editor.value) return
   const selection = document.getSelection()
   if (selection?.anchorNode && editor.value.domNode.contains(selection.anchorNode)) {
     setSelectionWordCountFromText(selection.toString())
@@ -303,8 +327,12 @@ const showReadingContextMenu = ({ event, href, image }: { event: MouseEvent; hre
   const tab = currentFile.value
   if (!muya || !tab) return
   const hasSelection = document.getSelection()?.isCollapsed === false
+  const alternateCopyLabel = copyParagraphNewlines.value === 'single'
+    ? t('menu.edit.copyAsStandardMarkdown')
+    : t('menu.edit.copyAsSingleNewline')
   const items = [
     { label: t('menu.edit.copy'), enabled: hasSelection, click: () => document.execCommand('copy') },
+    { label: alternateCopyLabel, enabled: hasSelection, click: () => muya.copyWithAlternateNewlines() },
     { label: t('menu.edit.copyAsRich'), enabled: hasSelection, click: () => muya.copyAsRich() },
     { label: t('menu.edit.copyAsHtml'), enabled: hasSelection, click: () => muya.copyAsHtml() },
     { label: t('menu.edit.selectAll'), click: () => muya.selectAll() },
@@ -322,7 +350,7 @@ function readMarkdown(id: string): string | undefined {
   return muya.getMarkdown()
 }
 
-const editMarkdown: EditMarkdown = (id, prepare) => {
+const editMarkdown: EditMarkdown = (id, prepare, options) => {
   const muya = editor.value
   const markdown = readMarkdown(id)
   if (!muya || markdown === undefined) throw new Error(t('batchMedia.changed'))
@@ -330,7 +358,7 @@ const editMarkdown: EditMarkdown = (id, prepare) => {
   if (!edits.length) return
   const folds = muya.getHeadingFoldState()
   const expanded = muya.editor.compactBlocks.expandedPaths()
-  muya.replaceContent(applyMarkdownEdits(markdown, edits))
+  muya.replaceContent(applyMarkdownEdits(markdown, edits), undefined, options)
   muya.setHeadingFoldState(folds)
   muya.editor.compactBlocks.restoreExpandedPaths(expanded)
 }
@@ -349,7 +377,13 @@ function drawingInsertion(id: string) {
   return drawingInsertionAt(markdown, offset)
 }
 
-defineExpose({ drawingInsertion, editMarkdown, readMarkdown })
+function updateEmbeddedDrawing(id: string, params: IUpdateEmbeddedDrawingParams): boolean {
+  const muya = editor.value
+  if (!muya || renderedDocumentId !== id || muya.isReadOnly || sourceCode.value) return false
+  return muya.updateEmbeddedDrawing(params)
+}
+
+defineExpose({ drawingInsertion, editMarkdown, readMarkdown, updateEmbeddedDrawing })
 
 function openInlineDrawing(wrapper: HTMLElement, event: Event) {
   const muya = editor.value
@@ -432,7 +466,11 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
       }
     }], {
       x: event.clientX, y: event.clientY,
-      editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+      editor: {
+        selectionText: document.getSelection()?.toString() ?? '',
+        spellcheckerEnabled: spellcheckerEnabled.value,
+        copyParagraphNewlines: copyParagraphNewlines.value
+      }
     })
     return
   }
@@ -446,7 +484,11 @@ const showDocumentBackgroundMenu = (event: MouseEvent): void => {
     { id: 'newDrawing', label: t('drawing.insert'), click: () => bus.emit('drawing::insert', { id: tab.id, atCaret: false }) }], {
     x: event.clientX,
     y: event.clientY,
-    editor: { selectionText: document.getSelection()?.toString() ?? '', spellcheckerEnabled: spellcheckerEnabled.value }
+    editor: {
+      selectionText: document.getSelection()?.toString() ?? '',
+      spellcheckerEnabled: spellcheckerEnabled.value,
+      copyParagraphNewlines: copyParagraphNewlines.value
+    }
   })
 }
 const rowInput = ref<InputNumberInstance | null>(null)
@@ -464,10 +506,16 @@ const blockViewsByTab = new Map<string, { markdown: string; folds: IHeadingFoldS
 
 const captureBlockViews = (): void => {
   if (!editor.value || !renderedDocumentId || !tabs.value.some(tab => tab.id === renderedDocumentId)) return
+  const folds = editor.value.getHeadingFoldState()
+  const expanded = editor.value.editor.compactBlocks.expandedPaths()
+  if (!folds.length && !expanded.length) {
+    blockViewsByTab.delete(renderedDocumentId)
+    return
+  }
   blockViewsByTab.set(renderedDocumentId, {
     markdown: editor.value.getMarkdown(),
-    folds: editor.value.getHeadingFoldState(),
-    expanded: editor.value.editor.compactBlocks.expandedPaths()
+    folds,
+    expanded
   })
 }
 
@@ -492,9 +540,20 @@ const resetSyntheticHistory = (id: string, baselineContent: string): void => {
 const makeSyntheticHistory = (id: string, content: string): IFileHistoryLike => {
   return getSyntheticHistory(id, content).build(content)
 }
-// Tab IDs are session-unique; prune closed tabs so per-tab maps cannot grow indefinitely.
+// Tab IDs are session-unique; prune closed tabs so per-tab maps and retained sessions cannot grow indefinitely.
+const knownTabIds = new Set<string>()
 const pruneClosedTabState = (liveTabIds: Set<string>): void => {
   pruneSourceHistory(liveTabIds)
+  for (const id of knownTabIds) {
+    if (!liveTabIds.has(id)) {
+      editor.value?.evictDocument(id)
+      knownTabIds.delete(id)
+      linkedPathsByTab.delete(id)
+      linkedDrawingVersionsByTab.delete(id)
+      linkedDrawingRefreshesByTab.delete(id)
+    }
+  }
+  for (const id of liveTabIds) knownTabIds.add(id)
   for (const id of engineHistoryByTab.keys()) {
     if (!liveTabIds.has(id)) engineHistoryByTab.delete(id)
   }
@@ -505,6 +564,25 @@ const pruneClosedTabState = (liveTabIds: Set<string>): void => {
     if (!liveTabIds.has(id)) blockViewsByTab.delete(id)
   }
 }
+
+const handleBackgroundFileReloaded = (tabId: unknown): void => {
+  if (typeof tabId !== 'string' || !tabId) return
+  editor.value?.evictDocument(tabId)
+  engineHistoryByTab.delete(tabId)
+  syntheticHistoryByTab.delete(tabId)
+  blockViewsByTab.delete(tabId)
+}
+
+watch(() => tabs.value.map(tab => [tab.id, tab.pathname ?? ''] as const), (paths, previous) => {
+  const oldPaths = new Map(previous)
+  for (const [id, pathname] of paths) {
+    if (oldPaths.has(id) && oldPaths.get(id) !== pathname) {
+      editor.value?.updateDocumentContext(documentContextFor(id, pathname), (evictedId, history) => {
+        engineHistoryByTab.set(evictedId, history)
+      })
+    }
+  }
+}, { flush: 'post' })
 
 // Adapt engine blockName to the functionType expected by desktop menu state.
 const CONTAINER_FUNCTION_TYPE: Record<string, string> = {
@@ -761,6 +839,12 @@ watch(softNewlineAsSpace, (value, oldValue) => {
   }
 })
 
+watch(copyParagraphNewlines, (value, oldValue) => {
+  if (value !== oldValue && editor.value) {
+    editor.value.setOptions({ copyParagraphNewlines: value }, false)
+  }
+})
+
 watch(hideQuickInsertHint, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ hideQuickInsertHint: value })
@@ -904,13 +988,41 @@ watch(spellcheckerLanguage, (value, oldValue) => {
 
 watch(currentFile, (value, oldValue) => {
   if (value && value !== oldValue) {
-    scrollToCursor(0)
     if (editor.value) {
       editor.value.hideAllFloatTools()
     }
     mediaViewer.value?.close()
   }
 })
+
+const isRenderedViewportHidden = computed(() => props.suspended || sourceCode.value ||
+  isDrawingPath(currentFile.value?.pathname || currentFile.value?.filename || ''))
+
+watch(isRenderedViewportHidden, (hidden) => {
+  if (hidden) editor.value?.setViewportSuspended(true)
+}, { flush: 'sync' })
+
+watch(() => [isRenderedViewportHidden.value, currentFile.value?.id] as const, ([hidden]) => {
+  const file = currentFile.value
+  if (!hidden && file?.id === renderedDocumentId) {
+    editor.value?.setViewportSuspended(false)
+    flushDirtyDrawingPreviews(file)
+  }
+}, { flush: 'post' })
+
+watch(
+  () => props.suspended,
+  (isSuspended) => {
+    const muya = editor.value
+    if (!muya) return
+    if (isSuspended) {
+      muya.hideAllFloatTools()
+      mediaViewer.value?.close()
+      if (muya.hasFocus()) muya.domNode.blur()
+      return
+    }
+  }
+)
 
 watch(
   sourceCode,
@@ -943,9 +1055,14 @@ watch(
 )
 
 watch(
-  () => currentFile.value?.readOnly,
-  (value) => {
-    editor.value?.setReadOnly(!!value)
+  [() => currentFile.value?.id, () => currentFile.value?.readOnly],
+  ([id, value], [previousId]) => {
+    if (props.suspended) return
+    // Same-tab read-only toggles apply immediately; cross-tab switches apply readOnly in handleFileChange
+    // so the outgoing document is never repainted before replacement.
+    if (id && id === previousId) {
+      editor.value?.setReadOnly(!!value)
+    }
   },
   { flush: 'sync' }
 )
@@ -1148,9 +1265,97 @@ const handleInvalidateImageCache = () => {
   }
 }
 
-const refreshDrawingPreviews = () => {
-  invalidateDrawingPreviews()
-  if (/\.excalidraw/i.test(currentFile.value?.markdown ?? '')) handleInvalidateImageCache()
+interface LinkedDrawingChange {
+  load: () => Promise<string>
+}
+
+const linkedDrawingChanges = new Map<string, LinkedDrawingChange>()
+const linkedDrawingVersionsByTab = new Map<string, Map<string, LinkedDrawingChange>>()
+const linkedDrawingRefreshesByTab = new Map<string, Map<string, LinkedDrawingChange>>()
+const recentLinkedPreviews = new Map<LinkedDrawingChange, string>()
+const linkedPathsByTab = new Map<string, { markdown: string; pathname?: string | null; paths: string[] }>()
+
+type DrawingPreviewTab = Pick<NonNullable<typeof currentFile.value>, 'id' | 'markdown' | 'pathname'>
+
+const drawingPathsForTab = (file: DrawingPreviewTab): string[] => {
+  const cached = linkedPathsByTab.get(file.id)
+  if (cached?.markdown === file.markdown && cached.pathname === file.pathname) return cached.paths
+  const paths = linkedDrawingPaths(file.markdown, file.pathname)
+  linkedPathsByTab.set(file.id, { markdown: file.markdown, pathname: file.pathname, paths })
+  return paths
+}
+
+const noteLinkedDrawingChange = (path: string, load = () => renderLinkedDrawingPreview(path)) => {
+  const key = [...linkedDrawingChanges.keys()].find(previous => window.fileUtils.isSamePathSync(previous, path)) ?? path
+  const previous = linkedDrawingChanges.get(key)
+  if (previous) recentLinkedPreviews.delete(previous)
+  invalidateDrawingPreview(path)
+  let pending: Promise<string> | undefined
+  const change: LinkedDrawingChange = {
+    load: () => {
+      const cached = recentLinkedPreviews.get(change)
+      if (cached !== undefined) return Promise.resolve(cached)
+      pending ??= load().then(url => {
+        if (linkedDrawingChanges.get(key) === change) {
+          recentLinkedPreviews.set(change, url)
+          if (recentLinkedPreviews.size > 32) {
+            const oldest = recentLinkedPreviews.keys().next().value
+            if (oldest) recentLinkedPreviews.delete(oldest)
+          }
+        }
+        return url
+      }).finally(() => { pending = undefined })
+      return pending
+    }
+  }
+  linkedDrawingChanges.set(key, change)
+}
+
+const flushDirtyDrawingPreviews = (file: DrawingPreviewTab) => {
+  const muya = editor.value
+  if (!muya || !linkedDrawingChanges.size || renderedDocumentId !== file.id || isRenderedViewportHidden.value) return
+  const seen = linkedDrawingVersionsByTab.get(file.id) ?? new Map<string, LinkedDrawingChange>()
+  const pending = linkedDrawingRefreshesByTab.get(file.id) ?? new Map<string, LinkedDrawingChange>()
+  linkedDrawingVersionsByTab.set(file.id, seen)
+  linkedDrawingRefreshesByTab.set(file.id, pending)
+  for (const path of drawingPathsForTab(file)) {
+    const key = linkedDrawingChanges.has(path) ? path : [...linkedDrawingChanges.keys()].find(candidate =>
+      window.fileUtils.isSamePathSync(path, candidate))
+    const change = key && linkedDrawingChanges.get(key)
+    if (!change || seen.get(path) === change || pending.get(path) === change) continue
+    pending.set(path, change)
+    const pathname = file.pathname
+    void muya.refreshImagePreview(path, change.load, { confirmCurrent: true }).then(committed => {
+      if (committed && file.pathname === pathname && linkedDrawingChanges.get(key) === change)
+        seen.set(path, change)
+    }).finally(() => {
+      if (pending.get(path) === change) pending.delete(path)
+    })
+  }
+}
+
+const refreshDrawingPreviews = (payload?: unknown) => {
+  const detail = payload && typeof payload === 'object' ? payload as DrawingPreviewChangedPayload : undefined
+  if (detail?.path) noteLinkedDrawingChange(detail.path, detail.previewLoader)
+  const file = currentFile.value
+  if (!file || renderedDocumentId !== file.id || isRenderedViewportHidden.value) return
+  if (detail?.path) {
+    flushDirtyDrawingPreviews(file)
+    return
+  }
+  for (const path of drawingPathsForTab(file)) {
+    void (async() => {
+      const changed = await hasLinkedDrawingChanged(path)
+      if (!changed) return
+      noteLinkedDrawingChange(path)
+      if (currentFile.value?.id === file.id) flushDirtyDrawingPreviews(file)
+    })()
+  }
+}
+
+const handleWindowDrawingFocus = () => {
+  if (props.suspended) return
+  refreshDrawingPreviews()
 }
 
 const openSpellcheckerLanguageCommand = () => {
@@ -1160,6 +1365,7 @@ const openSpellcheckerLanguageCommand = () => {
 }
 
 const replaceMisspelling = (payload: unknown) => {
+  if (props.suspended) return
   const { word, replacement } = payload as { word: string; replacement: string }
   if (editor.value) {
     editor.value.replaceCurrentWordInlineUnsafe(word, replacement)
@@ -1167,7 +1373,7 @@ const replaceMisspelling = (payload: unknown) => {
 }
 
 const handleUndo = () => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
 
@@ -1177,7 +1383,7 @@ const handleUndo = () => {
 }
 
 const handleRedo = () => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
 
@@ -1187,7 +1393,7 @@ const handleRedo = () => {
 }
 
 const handleSelectAll = () => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
 
@@ -1200,12 +1406,18 @@ const handleSelectAll = () => {
 }
 
 // Rich copy sets text/html and text/plain; HTML copy puts source only in text/plain.
-const COPY_PASTE_METHOD_MAP: Record<string, 'copyAsRich' | 'copyAsHtml' | 'pasteAsPlainText'> = {
+const COPY_PASTE_METHOD_MAP: Record<
+  string,
+  'copyWithAlternateNewlines' | 'copyAsRich' | 'copyAsHtml' | 'pasteAsPlainText'
+> = {
+  copyAlternateNewlines: 'copyWithAlternateNewlines',
   copyAsRich: 'copyAsRich',
   copyAsHtml: 'copyAsHtml',
   pasteAsPlainText: 'pasteAsPlainText'
 }
 const handleCopyPaste = (type: unknown) => {
+  if (props.suspended) return
+  if (type === 'copyAlternateNewlines' && sourceCode.value) return
   if (editor.value) {
     const method = COPY_PASTE_METHOD_MAP[type as string]
     if (method) editor.value[method]()
@@ -1213,7 +1425,7 @@ const handleCopyPaste = (type: unknown) => {
 }
 
 const insertImage = (src: unknown) => {
-  if (!sourceCode.value) {
+  if (!props.suspended && !sourceCode.value) {
     editor.value && editor.value.insertImage({ src: src as string })
   }
 }
@@ -1247,7 +1459,7 @@ const updateSearchSelection = (operation: () => unknown): void => {
 }
 
 const handleSearch = (payload: unknown) => {
-  if (!editor.value) return
+  if (props.suspended || !editor.value) return
   const muya = editor.value
   const { value, opt } = payload as { value: string; opt?: ISearchOption }
   updateSearchSelection(() => muya.search(value, opt))
@@ -1255,7 +1467,7 @@ const handleSearch = (payload: unknown) => {
 }
 
 const handleSearchVisibility = (visible: unknown) => {
-  if (!editor.value) return
+  if (props.suspended || !editor.value) return
   const muya = editor.value
   updateSearchSelection(() => muya.setSearchVisible(visible === true))
   if (visible === false && document.activeElement?.closest('.search-bar')) {
@@ -1264,6 +1476,7 @@ const handleSearchVisibility = (visible: unknown) => {
 }
 
 const focusSearchEditor = () => {
+  if (props.suspended) return
   const muya = editor.value
   if (!muya) return
   const selection = muya.getSelectionState()
@@ -1272,7 +1485,7 @@ const focusSearchEditor = () => {
 }
 
 const handReplace = (payload: unknown) => {
-  if (!editor.value) return
+  if (props.suspended || !editor.value) return
   const muya = editor.value
   const { value, opt } = payload as { value: string; opt?: IReplaceOption }
   updateSearchSelection(() => muya.replace(value, { ...opt, fromSelection: true }))
@@ -1280,13 +1493,14 @@ const handReplace = (payload: unknown) => {
 }
 
 const handleFindAction = (action: unknown) => {
-  if (!editor.value) return
+  if (props.suspended || !editor.value) return
   const muya = editor.value
   updateSearchSelection(() => muya.find(action as 'previous' | 'next'))
   if (muya.editor.searchModule.matches.length) nextTick(scrollToSearchResult)
 }
 
 const handleUploadedImage = (url: unknown, deletionUrl?: unknown) => {
+  if (props.suspended) return
   insertImage(url)
   editorStore.SHOW_IMAGE_DELETION_URL(deletionUrl as string)
 }
@@ -1381,25 +1595,30 @@ const scrollToCursor = (duration = 300) => {
   })
 }
 
-const scrollToCords = (y: number) => {
+const scrollToCords = (y: number, alreadyAtTop = false) => {
   const container = getScrollContainer()
   if (!container) return
-  // Temporarily pad partially rendered documents so saved scroll offsets are not clamped.
+  container.style.visibility = 'visible'
+  container.style.pointerEvents = 'auto'
+  if (revealingAnchor || (alreadyAtTop && y === 0)) return
 
-  const maxScrollHeight = container.scrollHeight - container.clientHeight
-  if (y > maxScrollHeight) {
-    const editorId = container.firstElementChild as HTMLElement | null
-    if (editorId) {
-      editorId.style.paddingBottom = `${y - maxScrollHeight + 100}px` // 100px is the default editor padding
-      resizeObserverForEditor.observe(editorId)
+  // Apply scrollTop synchronously so the first painted frame lands at the saved offset.
+  container.scrollTop = y
+  if (y > 0 && container.scrollTop < y - 1) {
+    // Temporarily pad partially rendered documents (e.g. un-decoded images) so saved offsets are not clamped.
+    const maxScrollHeight = container.scrollHeight - container.clientHeight
+    if (y > maxScrollHeight) {
+      const editorId = container.firstElementChild as HTMLElement | null
+      if (editorId) {
+        editorId.style.paddingBottom = `${y - maxScrollHeight + 100}px`
+        resizeObserverForEditor.observe(editorId)
+      }
+      container.scrollTop = y
     }
+    requestAnimationFrame(() => {
+      if (!revealingAnchor && container.isConnected) container.scrollTop = y
+    })
   }
-  requestAnimationFrame(() => {
-    if (!container) return
-    container.style.visibility = 'visible'
-    container.style.pointerEvents = 'auto'
-    if (!revealingAnchor) container.scrollTop = y
-  })
 }
 
 const revealAnchor = (container: HTMLElement, top: number) => {
@@ -1432,6 +1651,7 @@ const scrollToSearchResult = () => {
 
 /** Resolve TOC slugs against top-level headings in document order. */
 const scrollToHeader = (slug: unknown) => {
+  if (props.suspended) return
   const container = getScrollContainer()
   if (!container) return
   const heading = resolveTocHeadingElement(container, editorStore.listToc, slug)
@@ -1442,6 +1662,7 @@ const scrollToHeader = (slug: unknown) => {
 
 // Custom anchors are resolved separately from heading slugs.
 const scrollToAnchorElement = (element: unknown) => {
+  if (props.suspended) return
   if (element instanceof Element) {
     editor.value?.revealElement(element)
     const container = getScrollContainer()
@@ -1465,6 +1686,7 @@ interface ExportOptions {
 }
 
 const handleExport = async (options: unknown) => {
+  if (props.suspended) return
   const opts = options as ExportOptions
   const { type, headerFooterStyled, htmlTitle } = opts
 
@@ -1602,7 +1824,7 @@ const pushSelectionMenuState = (changes: ISelectionChangePayload) => {
 }
 
 const handleEditParagraph = (type: unknown) => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
   if (type === 'table') {
@@ -1624,7 +1846,7 @@ const handleEditParagraph = (type: unknown) => {
 }
 
 const handleParagraph = (type: unknown) => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
   if (editor.value) {
@@ -1645,7 +1867,7 @@ const handleParagraph = (type: unknown) => {
 }
 
 const handleInlineFormat = (type: unknown) => {
-  if (sourceCode.value) {
+  if (props.suspended || sourceCode.value) {
     return
   }
   const muya = editor.value
@@ -1660,6 +1882,7 @@ const handleInlineFormat = (type: unknown) => {
 }
 
 function beginOutlineMove(begin: unknown) {
+  if (props.suspended) return
   const muya = editor.value
   const id = currentFile.value?.id
   if (!muya || !id || sourceCode.value || muya.isReadOnly || typeof begin !== 'function') return
@@ -1721,14 +1944,21 @@ interface FileLoadedPayload {
 }
 
 const setMarkdownToEditor = (payload: unknown) => {
+  if (props.suspended) return
   const { id, markdown: newMarkdown, cursor: newCursor } = (payload ?? {}) as FileLoadedPayload
   if (editor.value) {
     captureBlockViews()
+    const targetId = id ?? currentFile.value?.id ?? null
+    const nextMarkdown = newMarkdown ?? ''
+    if (targetId) {
+      editor.value.bindActiveDocument(targetId, nextMarkdown, documentContextFor(targetId, currentFile.value?.pathname))
+    }
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
-    editor.value.setContent(newMarkdown ?? '')
-    renderedDocumentId = id ?? currentFile.value?.id ?? null
-    renderedMarkdown = newMarkdown ?? ''
+    editor.value.setContent(nextMarkdown)
+    renderedDocumentId = targetId
+    lastWysiwygDocumentId = targetId
+    renderedMarkdown = nextMarkdown
     // Seed baseline ID 0 from engine serialization so undoing the first edit marks the tab clean.
     if (id) {
       resetSyntheticHistory(id, editor.value.getMarkdown())
@@ -1748,6 +1978,7 @@ const setMarkdownToEditor = (payload: unknown) => {
     // A freshly created/opened tab should be ready to type into.
     if (editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false) focusFreshEditor()
     documentViewChanged()
+    prewarmScheduler?.scheduleAfterPaint()
   }
 }
 
@@ -1755,6 +1986,8 @@ interface FileChangePayload {
   reason?: string
   id?: string
   markdown?: string
+  pathname?: string
+  readOnly?: boolean
   cursor?: unknown
   renderCursor?: boolean
   history?: unknown
@@ -1762,6 +1995,7 @@ interface FileChangePayload {
   muyaIndexCursor?: unknown
   blocks?: unknown
   isReload?: boolean
+  preserveFocus?: boolean
 }
 
 const handleFileChange = (payload: unknown) => {
@@ -1769,47 +2003,47 @@ const handleFileChange = (payload: unknown) => {
   const {
     id,
     markdown: newMarkdown,
+    pathname: payloadPathname,
+    readOnly: payloadReadOnly,
     cursor: newCursor,
     muyaIndexCursor,
     history: payloadHistory,
     scrollTop,
     isReload,
+    preserveFocus,
     reason
   } = (payload ?? {}) as FileChangePayload
   if (!editor.value) return
+  const isSourceModeHandoff =
+    reason === 'source-handoff' ||
+    (isIndexCursor(muyaIndexCursor) && !newCursor && payloadHistory == null)
+  // In source-code mode the WYSIWYG editor stays hidden; skip rebuilding it until exiting source mode.
+  if (sourceCode.value && !isSourceModeHandoff) {
+    renderedDocumentId = null
+    return
+  }
   const container = getScrollContainer()
   if (!container) return
 
-  if (typeof newMarkdown === 'string') {
-    captureBlockViews()
-    // Returning from source-code mode: the WYSIWYG engine is never unmounted
-    // while source mode is up (index.vue overlays it via `v-if`), so it still
-    // holds the PRE-source-mode document and undo history. Record the bulk
-    // source-mode edit as a SINGLE engine undo boundary via `replaceContent`
-    // (PG14 parity): the first Ctrl+Z after the handoff reverts the entire
-    // source-mode change in one step, matching legacy muyajs' full-state
-    // snapshot history. `replaceContent` builds a fully-invertible whole-document
-    // ot-json1 op and applies undo/redo via a full block-tree rebuild (never the
-    // incremental pick/drop walker), so arbitrary block-type changes round-trip
-    // safely.
-    //
-    // Detection: only sourceCode.vue's onBeforeUnmount emits `file-changed` with
-    // a source-mode index cursor AND no block-key `cursor` AND no `history`
-    // (see sourceCode.vue ~L368). Every tab-switch / file-reload emitter in
-    // editor.ts carries both `cursor` and `history` alongside, so requiring
-    // those absent reliably isolates the WYSIWYG<-source handoff from a tab
-    // activation that merely replays a tab's persisted `muyaIndexCursor`.
-    const isSourceModeHandoff =
-      reason === 'source-handoff' ||
-      (isIndexCursor(muyaIndexCursor) && !newCursor && payloadHistory == null)
+  const targetReadOnly = typeof payloadReadOnly === 'boolean' ? payloadReadOnly : !!currentFile.value?.readOnly
+  const resolvedPathname = payloadPathname ?? (id && currentFile.value?.id === id ? currentFile.value.pathname : undefined)
+  let restoredScrollTop: number | null = null
+  let alreadyAtTop = false
 
-    if (isSourceModeHandoff) {
+  if (typeof newMarkdown === 'string') {
+    const sameTabSourceHandoff = isSourceModeHandoff && !!id && lastWysiwygDocumentId === id
+    const poolEnabled = isDocPoolEnabled()
+    if (!poolEnabled || isReload || sameTabSourceHandoff) {
+      captureBlockViews()
+    }
+    if (sameTabSourceHandoff) {
       // Record source edits as one undo boundary; remap the caret even when content is unchanged.
       loadingContent = true
       try {
         editor.value.replaceContent(newMarkdown, preSourceModeSelection)
         if (id) {
-          engineHistoryByTab.set(id, editor.value.getHistory())
+          editor.value.markActiveDocumentModified(newMarkdown)
+          if (!poolEnabled) engineHistoryByTab.set(id, editor.value.getHistory())
           if (currentFile.value?.id === id)
             currentFile.value.history = makeSyntheticHistory(id, newMarkdown)
         }
@@ -1828,43 +2062,130 @@ const handleFileChange = (payload: unknown) => {
       }
       loadingContent = true
       try {
-        editor.value.replaceContent(newMarkdown)
-        if (id) engineHistoryByTab.set(id, editor.value.getHistory())
+        editor.value.replaceContent(newMarkdown, undefined, preserveFocus ? { preserveFocus: true } : undefined)
+        if (id) {
+          editor.value.markActiveDocumentModified(newMarkdown)
+          if (!poolEnabled) engineHistoryByTab.set(id, editor.value.getHistory())
+        }
       } finally {
         loadingContent = false
       }
       editorStore.UPDATE_TOC(editor.value.getTOC())
       if (newCursor) {
-        applyCursor(editor.value, newCursor)
+        applyCursor(editor.value, newCursor, preserveFocus ? { preserveFocus: true } : undefined)
       }
     } else {
-      // setContent clears history; restore this tab’s engine history after replacing its document.
-      editor.value.setContent(newMarkdown)
-      // Tab switch swaps content without firing `json-change`, so re-seed the
-      // TOC (otherwise returning to an open tab keeps the other tab's TOC).
-      editorStore.UPDATE_TOC(editor.value.getTOC())
-      if (newCursor) {
-        applyCursor(editor.value, newCursor)
-      } else if (isIndexCursor(muyaIndexCursor)) {
-        // Source-mode handoff for a tab the engine has no history for (e.g.
-        // first interaction after load): fall back to a caret-only remap. The
-        // engine runs its own setContent dance internally, so restore the
-        // history after.
-        editor.value.setCursorByOffset(muyaIndexCursor)
+      preSourceModeSelection = null
+      let pooledActivated = false
+      if (typeof id === 'string' && poolEnabled) {
+        try {
+          const timer = getActivationTimer()
+          const result = editor.value.activateDocument({
+            id,
+            markdown: newMarkdown,
+            context: documentContextFor(id, resolvedPathname),
+            readOnly: targetReadOnly,
+            searchOpen: Boolean(document.querySelector('.search-bar')),
+            onPhase: timer,
+            onEvict: (evictedId, history) => {
+              engineHistoryByTab.set(evictedId, history)
+            }
+          })
+          pooledActivated = true
+          markTabSwitchEditor({ hotHit: result.hotHit, blocks: result.blocks, historyLength: result.historyLength })
+          editorStore.UPDATE_TOC(result.toc)
+          markTabSwitchToc()
+
+          if (result.hotHit) {
+            const start = timer ? performance.now() : 0
+            if (isSourceModeHandoff && isIndexCursor(muyaIndexCursor)) {
+              editor.value.setCursorByOffset(muyaIndexCursor)
+            } else {
+              const targetSelection = result.restoredSelection ?? newCursor
+              if (targetSelection) {
+                applyCursor(editor.value, targetSelection, { preventScroll: true })
+              } else {
+                alreadyAtTop = result.outgoingScrollTop === 0
+              }
+            }
+            timer?.('selection', start)
+            if (!syntheticHistoryByTab.has(id)) {
+              getSyntheticHistory(id, newMarkdown)
+            }
+            restoredScrollTop = result.restoredScrollTop
+          } else {
+            if (newCursor) {
+              applyCursor(editor.value, newCursor, { preventScroll: true })
+            } else if (isIndexCursor(muyaIndexCursor)) {
+              editor.value.setCursorByOffset(muyaIndexCursor)
+            }
+            const savedEngineHistory = engineHistoryByTab.get(id)
+            if (savedEngineHistory) {
+              editor.value.setHistory(savedEngineHistory)
+              engineHistoryByTab.delete(id)
+            }
+            if (!syntheticHistoryByTab.has(id)) {
+              getSyntheticHistory(id, newMarkdown)
+            }
+            const savedViews = blockViewsByTab.get(id)
+            if (savedViews) {
+              const markdown = editor.value.getMarkdown()
+              if (savedViews.markdown === markdown) {
+                editor.value.setHeadingFoldState(savedViews.folds)
+                editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
+              }
+              blockViewsByTab.delete(id)
+            }
+          }
+        } catch (err) {
+          log.warn('[tab-switch-pool] fallback to setContent', {
+            tabId: id,
+            reason: err instanceof Error ? err.message : String(err)
+          })
+          editor.value.evictDocument(id)
+        }
       }
-      const savedEngineHistory = id ? engineHistoryByTab.get(id) : undefined
-      if (savedEngineHistory) {
-        editor.value.setHistory(savedEngineHistory)
-      }
-      // Seed new trackers before edits; retain existing content IDs when switching back to a tab.
-      if (id) {
-        getSyntheticHistory(id, editor.value.getMarkdown())
-      }
-      const savedViews = id ? blockViewsByTab.get(id) : undefined
-      // Paths are valid only for the captured document, including after source edits or disk reloads.
-      if (savedViews?.markdown === editor.value.getMarkdown()) {
-        editor.value.setHeadingFoldState(savedViews.folds)
-        editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
+
+      if (!pooledActivated) {
+        if (typeof id === 'string') {
+          editor.value.bindActiveDocument(id, newMarkdown, documentContextFor(id, resolvedPathname))
+        }
+        // Apply readOnly option before rebuilding the incoming tree so the outgoing tree is never repainted.
+        if (editor.value.isReadOnly !== targetReadOnly) {
+          editor.value.options.readOnly = targetReadOnly
+          editor.value.eventCenter.emit('read-only-changed', targetReadOnly)
+        }
+        // setContent clears history; restore this tab’s engine history after replacing its document.
+        editor.value.setContent(newMarkdown)
+        markTabSwitchEditor({ hotHit: false })
+        // Tab switch swaps content without firing `json-change`, so re-seed the
+        // TOC (otherwise returning to an open tab keeps the other tab's TOC).
+        editorStore.UPDATE_TOC(editor.value.getTOC())
+        markTabSwitchToc()
+        if (newCursor) {
+          applyCursor(editor.value, newCursor)
+        } else if (isIndexCursor(muyaIndexCursor)) {
+          // Source-mode handoff for a tab the engine has no history for (e.g.
+          // first interaction after load): fall back to a caret-only remap.
+          editor.value.setCursorByOffset(muyaIndexCursor)
+        }
+        const savedEngineHistory = id ? engineHistoryByTab.get(id) : undefined
+        if (savedEngineHistory) {
+          editor.value.setHistory(savedEngineHistory)
+        }
+        const savedViews = id ? blockViewsByTab.get(id) : undefined
+        if (id && !syntheticHistoryByTab.has(id)) {
+          // Avoid synchronous full-tree getMarkdown() on first visit; seed baseline from incoming markdown.
+          getSyntheticHistory(id, newMarkdown)
+        }
+        if (id && savedViews) {
+          const markdown = editor.value.getMarkdown()
+          // Paths are valid only for the captured document, including after source edits or disk reloads.
+          if (savedViews.markdown === markdown) {
+            editor.value.setHeadingFoldState(savedViews.folds)
+            editor.value.editor.compactBlocks.restoreExpandedPaths(savedViews.expanded)
+          }
+        }
       }
     }
   } else if (newCursor) {
@@ -1873,35 +2194,45 @@ const handleFileChange = (payload: unknown) => {
 
   if (typeof newMarkdown === 'string') {
     renderedDocumentId = id ?? currentFile.value?.id ?? null
+    lastWysiwygDocumentId = renderedDocumentId
     renderedMarkdown = newMarkdown
     documentViewChanged()
+    if (currentFile.value && currentFile.value.id === renderedDocumentId) {
+      flushDirtyDrawingPreviews(currentFile.value)
+    }
+    prewarmScheduler?.scheduleAfterPaint()
   }
 
-  if (typeof scrollTop === 'number') {
-    // The synchronous rebuild and rAF scroll restore finish before paint; hiding here forces a second layout (#5860).
-    scrollToCords(scrollTop)
+  const targetScrollTop = typeof scrollTop === 'number' ? scrollTop : restoredScrollTop
+  if (typeof targetScrollTop === 'number') {
+    scrollToCords(targetScrollTop, alreadyAtTop)
   } else {
     container.style.visibility = 'visible'
     container.style.pointerEvents = 'auto'
     scrollToCursor(0)
   }
+  markTabSwitchScroll()
 }
 
 const handleInsertParagraph = (location: unknown) => {
+  if (props.suspended) return
   editor.value && editor.value.insertParagraph(location as Parameters<Muya['insertParagraph']>[0])
 }
 
 const blurEditor = () => {
+  if (props.suspended) return
   editor.value?.blur(false, true)
 }
 
 const flushActiveEditor = () => {
+  if (props.suspended) return
   editor.value?.flush()
 }
 
 // The engine's `focus()` only sets the selection range; the contenteditable
 // also needs DOM focus or no caret blinks.
 const focusEditor = () => {
+  if (props.suspended) return
   const ed = editor.value
   if (!ed) return
   ed.domNode.focus()
@@ -1939,6 +2270,7 @@ const handleModalOpening = () => {
 
 // Chromium no longer fires programmatic paste; insert the saved screenshot via imageAction.
 const handleScreenShot = (filePath?: unknown) => {
+  if (props.suspended) return
   if (editor.value && typeof filePath === 'string' && filePath) {
     editor.value.pasteImage(filePath)
   }
@@ -2054,6 +2386,7 @@ onMounted(() => {
     githubAlerts: githubAlerts.value,
     disableHtml: !isHtmlEnabled.value,
     softNewlineAsSpace: softNewlineAsSpace.value,
+    copyParagraphNewlines: copyParagraphNewlines.value,
     hideQuickInsertHint: hideQuickInsertHint.value,
     hideLinkPopup: hideLinkPopup.value,
     autoCheck: autoCheck.value,
@@ -2071,26 +2404,44 @@ onMounted(() => {
     fetchLinkHtml: (url) => window.electron.fetchLinkHtml(url),
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
-    resolveImagePreview: src => resolveDrawingPreview(src, currentFile.value?.pathname),
+    resolveImagePreview: resolveDrawingPreview,
+    deferOffscreenPreviews: true,
     embeddedDrawing: {
       preview: renderEmbeddedDrawingPreview,
       open: (source, index) => bus.emit('drawing::open-embedded', { source, index }),
       label: () => t('drawing.embedded'),
       quickInsert: {
         title: () => t('drawing.insert'),
-        open: target => {
+        startTrace: () => {
+          const traceId = crypto.randomUUID()
+          return (stage, details = {}) => log.info('[drawing-quick-insert]', traceId, stage, details)
+        },
+        open: (target, trace) => {
           const tab = currentFile.value
-          if (tab?.id === renderedDocumentId)
-            bus.emit('drawing::insert-at', { id: tab.id, target })
+          if (tab?.id === renderedDocumentId) {
+            trace?.('editor-dispatched')
+            bus.emit('drawing::insert-at', { id: tab.id, target, trace })
+          } else {
+            trace?.('editor-dispatch-rejected', { hasActiveTab: !!tab })
+          }
         }
       }
     },
     beforeImageDrop,
     importVideo: input => videoMarkdown(input, savedVideoDocument(currentFile.value), currentFile.value && documentVideos(currentFile.value.id)),
     videoAttachments: {
-      compact: text => currentFile.value ? documentVideos(currentFile.value.id).compact(text) : text,
-      expand: text => currentFile.value ? documentVideos(currentFile.value.id).externalText(text) : text,
-      playback: src => currentFile.value ? documentVideos(currentFile.value.id).playback(src) : undefined
+      compact: (text, id) => {
+        const targetId = id ?? currentFile.value?.id
+        return targetId ? documentVideos(targetId).compact(text) : text
+      },
+      expand: (text, id) => {
+        const targetId = id ?? currentFile.value?.id
+        return targetId ? documentVideos(targetId).externalText(text) : text
+      },
+      playback: (src, id) => {
+        const targetId = id ?? currentFile.value?.id
+        return targetId ? documentVideos(targetId).playback(src) : undefined
+      }
     },
     editEmbeddedImage: (image, event) => emit('editEmbeddedImage', image, event),
     embedImage: (image) => imageInsertAction.value === 'embed'
@@ -2111,6 +2462,15 @@ onMounted(() => {
 
   // Keep the engine outside Vue proxies: DOM/block identity is required by rendering.
   const muya = markRaw(new Muya(ele, options))
+  const initialFile = currentFile.value
+  if (initialFile?.id) {
+    muya.bindActiveDocument(
+      initialFile.id,
+      initialFile.markdown ?? '',
+      documentContextFor(initialFile.id, initialFile.pathname)
+    )
+  }
+  muya.setViewportSuspended(isRenderedViewportHidden.value)
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
   muya.on('video-import-error', () => {
@@ -2128,13 +2488,28 @@ onMounted(() => {
 
   // Seed the mount-loaded document before its first edit so pristine content maps to ID 0.
   if (currentFile.value?.id) {
+    knownTabIds.add(currentFile.value.id)
     getSyntheticHistory(currentFile.value.id, muya.getMarkdown())
   }
 
   const container = getScrollContainer()!
   renderedDocumentId = currentFile.value?.id ?? null
+  lastWysiwygDocumentId = renderedDocumentId
   renderedMarkdown = currentFile.value?.markdown ?? ''
   releaseViewState = registerRenderedViewState({ documentId: () => renderedDocumentId, markdown: () => renderedMarkdown, view: { engine: muya, container, refreshToc: () => editorStore.UPDATE_TOC(muya.getTOC()) } })
+  prewarmScheduler = new TabPrewarmScheduler({
+    getMuya: () => editor.value,
+    getTabs: () => tabs.value,
+    getActiveTabId: () => currentFile.value?.id ?? null,
+    isSuspended: () => !!props.suspended,
+    isSourceMode: () => sourceCode.value,
+    isPoolEnabled: isDocPoolEnabled,
+    contextFor: (tab) => documentContextFor(tab.id, tab.pathname),
+    onEvict: (evictedId, history) => {
+      engineHistoryByTab.set(evictedId, history)
+    }
+  })
+  prewarmScheduler.scheduleAfterPaint()
   muya.on('selection-change', documentViewChanged)
   muya.on('selection-change', updateHeadingLink)
   bus.on('begin-outline-move', beginOutlineMove)
@@ -2153,7 +2528,7 @@ onMounted(() => {
   bus.on('file-loaded', setMarkdownToEditor)
   bus.on('invalidate-image-cache', handleInvalidateImageCache)
   bus.on('drawing::preview-changed', refreshDrawingPreviews)
-  window.addEventListener('focus', refreshDrawingPreviews)
+  window.addEventListener('focus', handleWindowDrawingFocus)
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
   bus.on('selectAll', handleSelectAll)
@@ -2169,9 +2544,11 @@ onMounted(() => {
   bus.on('insert-image', insertImage)
   bus.on('image-uploaded', handleUploadedImage)
   bus.on('file-changed', handleFileChange)
+  bus.on('background-file-reloaded', handleBackgroundFileReloaded)
   bus.on('flush-active-editor', flushActiveEditor)
   bus.on('editor-blur', blurEditor)
   bus.on('editor-focus', focusEditor)
+  bus.on('copyAlternateNewlines', handleCopyPaste)
   bus.on('copyAsRich', handleCopyPaste)
   bus.on('copyAsHtml', handleCopyPaste)
   bus.on('pasteAsPlainText', handleCopyPaste)
@@ -2198,10 +2575,14 @@ onMounted(() => {
     // Muya adds a line ending to its placeholder paragraph even in an empty draft.
     const markdown = !pathname && rendered === '\n' ? '' : rendered
     renderedDocumentId = id
+    lastWysiwygDocumentId = id
     renderedMarkdown = markdown
-    // Persist engine undo history separately from content-based save tracking.
-    const engineHistory = editor.value.getHistory()
-    engineHistoryByTab.set(id, engineHistory)
+    // Persist engine undo history on every keystroke only when the document pool is disabled;
+    // with the pool enabled, live history stays in Muya and serializes on LRU eviction.
+    if (!isDocPoolEnabled()) {
+      const engineHistory = editor.value.getHistory()
+      engineHistoryByTab.set(id, engineHistory)
+    }
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id,
       markdown,
@@ -2212,6 +2593,8 @@ onMounted(() => {
       history: makeSyntheticHistory(id, markdown),
       toc: editor.value.getTOC()
     })
+    // Sync session sourceMarkdown with the store's trailing-newline-normalized value.
+    editor.value.markActiveDocumentModified(tab.markdown)
   })
 
   // The engine does not emit `scroll`; listen on the scroll container directly
@@ -2334,13 +2717,15 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  prewarmScheduler?.dispose()
+  prewarmScheduler = null
   releaseViewState?.()
   registerDocumentView(null)
   document.removeEventListener('selectionchange', readingSelectionChanged)
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('drawing::preview-changed', refreshDrawingPreviews)
-  window.removeEventListener('focus', refreshDrawingPreviews)
+  window.removeEventListener('focus', handleWindowDrawingFocus)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
   bus.off('selectAll', handleSelectAll)
@@ -2357,9 +2742,11 @@ onBeforeUnmount(() => {
   bus.off('insert-image', insertImage)
   bus.off('image-uploaded', handleUploadedImage)
   bus.off('file-changed', handleFileChange)
+  bus.off('background-file-reloaded', handleBackgroundFileReloaded)
   bus.off('flush-active-editor', flushActiveEditor)
   bus.off('editor-blur', blurEditor)
   bus.off('editor-focus', focusEditor)
+  bus.off('copyAlternateNewlines', handleCopyPaste)
   bus.off('copyAsRich', handleCopyPaste)
   bus.off('copyAsHtml', handleCopyPaste)
   bus.off('pasteAsPlainText', handleCopyPaste)

@@ -66,7 +66,9 @@ This example packages Linux x64. On another host or architecture, choose the mat
 
 ## Updating
 
-Use the application's **Check for Updates** action to look for an update. If one is available, MarkText asks whether to download and install it. Downloading starts after confirmation; once it finishes, the application quits to install the update. Save your work before accepting.
+Use **Check for Updates** to look for a new version. The app downloads available updates in the background. Choose **Restart and Install** when the download is ready and you want to apply the update.
+
+On Windows, the `.zip` and `.7z` portable editions also support **Help → Check for Updates**. Both download the portable ZIP. **Restart and Install** updates the application files in the current directory and preserves the `autumnmark-user-data` folder and other files alongside the app.
 
 You can also download a newer package from the releases page and install or extract it using the instructions above.
 

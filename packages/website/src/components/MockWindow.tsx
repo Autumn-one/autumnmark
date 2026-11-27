@@ -1,11 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
 import { MenuIcon, SearchIcon } from './Icons'
 
 type Props = {
   title: string
   showActions?: boolean
   windowId?: string
-  windowRef?: React.Ref<HTMLDivElement>
+  windowRef?: Ref<HTMLDivElement>
   docStyle?: CSSProperties
   children: ReactNode
 }

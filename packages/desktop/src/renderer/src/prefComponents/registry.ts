@@ -200,6 +200,12 @@ export const preferenceDefinitions: Record<string, PreferenceDefinition> = {
     "label": "preferences.editor.misc.autoCheck",
     "notes": "preferences.explanations.taskCascade"
   },
+  "copyParagraphNewlines": {
+    "aliases": ["复制换行", "单换行", "双换行", "Copy newlines", "Single newline"],
+    "category": "editor",
+    "label": "preferences.editor.writingBehavior.copyParagraphNewlines.title",
+    "notes": "preferences.editor.writingBehavior.copyParagraphNewlines.note"
+  },
   "sourceCodeLineNumbers": {
     "category": "editor",
     "label": "preferences.editor.misc.sourceCodeLineNumbers"

@@ -1,10 +1,16 @@
+import type Paragraph from '../../block/commonMark/paragraph';
+import type DiagramBlock from '../../block/extra/diagram';
 import type { Muya } from '../../index';
+import type { TDrawingWidth } from '../../state/types';
+import type { TImageWidth } from '../../utils/image';
 import { autoUpdate } from '@floating-ui/dom';
 import { linkedImageAt } from '../../inline/linkedImage';
+import { findContentDOM } from '../../selection/dom';
 import { SelectionType } from '../../selection/types';
 import { isHTMLElement, isMouseEvent } from '../../utils';
 
-import { findScrollContainer } from '../../utils/dom';
+import { findScrollContainer, getBlock } from '../../utils/dom';
+import { applyDrawingWidth } from '../../utils/drawingLayout';
 import { embeddedImageWidths } from '../../utils/embeddedImage';
 import { picturesOnRow, snapPictureWidth } from './snapping';
 import './index.css';
@@ -13,22 +19,122 @@ const VERTICAL_BAR = ['left', 'right'];
 
 const CIRCLE_RADIO = 5;
 const BAR_HEIGHT = 50;
+const FULL_WIDTH_SNAP_PX = 2;
+
+interface IDrawingResizeTarget {
+    container: HTMLElement;
+    measureContainer: HTMLElement;
+    initialWidth: TDrawingWidth | undefined;
+    preview: (width: TDrawingWidth) => void;
+    restore: () => void;
+    commit: (width: TDrawingWidth) => void;
+}
+
+function measureAvailableWidth(container: HTMLElement): number {
+    const style = getComputedStyle(container);
+    const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
+    const inner = container.clientWidth > 0
+        ? container.clientWidth - padding
+        : container.getBoundingClientRect().width - padding;
+    return Math.max(0, Math.round(inner));
+}
+
+function measureImageAvailableWidth(image: HTMLImageElement): number {
+    const compactBody = image.closest<HTMLElement>('.mu-compact-image-body');
+    const content = findContentDOM(image);
+    const compactWidth = compactBody ? measureAvailableWidth(compactBody) : 0;
+    const container = compactWidth > 0 ? compactBody : content;
+    if (!container)
+        return 0;
+    const cell = container.closest<HTMLElement>('.mu-table-cell');
+    if (cell) {
+        const table = cell.closest<HTMLElement>('.mu-table-inner');
+        const hasCustomColumns = !!table?.querySelector('.mu-table-cell-fill, .mu-table-cell[style*="--mu-cell-width"]');
+        const cellHasExplicitWidth = cell.classList.contains('mu-table-cell-fill')
+            || cell.style.getPropertyValue('--mu-cell-width').trim().length > 0;
+        // Companion columns in custom-width tables shrink-wrap their image, so dragging right would immediately snap to 100%.
+        if (hasCustomColumns && !cellHasExplicitWidth)
+            return 0;
+    }
+    return compactWidth > 0 ? compactWidth : measureAvailableWidth(container);
+}
+
+function drawingResizeTarget(muya: Muya, image: HTMLImageElement): IDrawingResizeTarget | undefined {
+    const embeddedButton = image.closest<HTMLElement>('.mu-embedded-drawing-button');
+    if (embeddedButton) {
+        const previewDom = embeddedButton.closest<HTMLElement>('.mu-diagram-preview.mu-embedded-drawing');
+        const figure = previewDom?.closest<HTMLElement>('figure.mu-embedded-drawing-block');
+        const block = getBlock(figure);
+        if (!previewDom || !block || block.blockName !== 'diagram' || !muya.isBlockInDocument(block))
+            return;
+        const diagram = block as DiagramBlock;
+        if (diagram.meta.type !== 'excalidraw')
+            return;
+        const initialWidth = diagram.meta.width;
+        return {
+            container: previewDom,
+            measureContainer: previewDom,
+            initialWidth,
+            preview: width => applyDrawingWidth(previewDom, width),
+            restore: () => applyDrawingWidth(previewDom, initialWidth),
+            commit: width => diagram.setDrawingWidth(width),
+        };
+    }
+
+    const wrapper = image.closest<HTMLElement>('.mu-inline-drawing, .mu-linked-drawing');
+    if (!wrapper)
+        return;
+    const contentDom = findContentDOM(wrapper);
+    const contentBlock = getBlock(contentDom);
+    const parent = contentBlock?.parent;
+    if (!contentDom || !parent || parent.blockName !== 'paragraph' || !muya.isBlockInDocument(parent))
+        return;
+    const paragraph = parent as Paragraph;
+    const drawings = [...contentDom.querySelectorAll<HTMLElement>('.mu-inline-drawing, .mu-linked-drawing')];
+    const index = drawings.indexOf(wrapper) + 1;
+    if (index < 1)
+        return;
+    const initialWidth = paragraph.drawingWidthAt(index);
+    return {
+        container: wrapper,
+        measureContainer: contentDom,
+        initialWidth,
+        preview: width => applyDrawingWidth(wrapper, width),
+        restore: () => applyDrawingWidth(wrapper, initialWidth),
+        commit: width => paragraph.setDrawingWidth(index, width),
+    };
+}
 
 export class ImageResizeBar {
     static pluginName = 'transformer';
     private _reference: HTMLElement | null = null;
-    private _commitWidth: ((width: number, height?: number) => void) | null = null;
+    private _commitWidth: ((width: TImageWidth, height?: number) => void) | null = null;
+    private _drawingTarget: IDrawingResizeTarget | null = null;
+    private _drawingWidth: TDrawingWidth | null = null;
     private _height?: number;
     private _readout?: HTMLElement;
     private _snap: ReturnType<typeof snapPictureWidth>;
 
     private _movingAnchor: string | null = null;
     private _status: boolean = false;
-    private _width: number | null = null;
+    private _width: TImageWidth | null = null;
     // Pointer position and image width as of mousedown. Writing a width moves
     // the image's own edges, so live geometry is not a usable reference while
     // dragging — only this snapshot is (#5392).
-    private _dragStart: { clientX: number; width: number; ratio: number; explicitHeight: boolean; lastX?: number; peers: ReturnType<typeof picturesOnRow> } | null = null;
+    private _dragStart: {
+        clientX: number;
+        width: number;
+        maxWidth: number;
+        ratio: number;
+        explicitHeight: boolean;
+        wrapper: HTMLElement | null;
+        initialFullWidth: boolean;
+        initialWidthAttr: string | null;
+        initialHeightAttr: string | null;
+        lastX?: number;
+        peers: ReturnType<typeof picturesOnRow>;
+    } | null = null;
+
     private _eventId: string[] = [];
     private _resizing: boolean = false;
     // Stops the autoUpdate reposition loop set up in `_render`.
@@ -49,10 +155,12 @@ export class ImageResizeBar {
 
         eventCenter.on('selection-change', ({ selection }) => {
             const image = selection?.kind === SelectionType.IMAGE ? selection.context : null;
-            if (!this.muya.isReadOnly && image?.domNode && !image.domNode.closest('.mu-inline-drawing')) {
+            if (!this.muya.isReadOnly && image?.domNode && !image.domNode.closest('.mu-inline-drawing, .mu-linked-drawing')) {
                 const { block, imageInfo, domNode } = image;
                 this._show(domNode, (width, height) => {
-                    if (height === undefined)
+                    if (width === '100%')
+                        block.updateImageAttributes(imageInfo, { width: '100%', height: undefined });
+                    else if (height === undefined)
                         block.updateImage(imageInfo, 'width', String(width));
                     else
                         block.updateImageAttributes(imageInfo, { width: String(width), height: String(height) });
@@ -69,8 +177,13 @@ export class ImageResizeBar {
                 return;
             const picture = target instanceof HTMLImageElement
                 ? target
-                : target.closest('.mu-embedded-picture-surface')?.querySelector('img');
+                : target.closest('.mu-embedded-picture-surface, .mu-inline-drawing, .mu-linked-drawing, .mu-embedded-drawing-button')?.querySelector('img');
             if (picture && domNode.contains(picture) && !this.muya.isReadOnly) {
+                const drawing = drawingResizeTarget(this.muya, picture);
+                if (drawing) {
+                    this._showDrawing(picture, drawing);
+                    return;
+                }
                 const commit = embeddedImageWidths.get(picture) ?? linkedImageAt(this.muya, picture)?.resize;
                 if (commit) {
                     this._show(picture, commit);
@@ -94,11 +207,26 @@ export class ImageResizeBar {
         eventCenter.attachDOMEvent(document.body, 'mousedown', this._mouseDown);
     }
 
-    private _show(reference: HTMLElement, commit: (width: number, height?: number) => void) {
+    private _show(reference: HTMLElement, commit: (width: TImageWidth, height?: number) => void) {
         if (this._reference !== reference)
             this.hide();
         this._reference = reference;
         this._commitWidth = commit;
+        this._drawingTarget = null;
+        this._drawingWidth = null;
+        setTimeout(() => {
+            if (this._reference === reference)
+                this._render();
+        });
+    }
+
+    private _showDrawing(reference: HTMLElement, target: IDrawingResizeTarget) {
+        if (this._reference !== reference)
+            this.hide();
+        this._reference = reference;
+        this._commitWidth = null;
+        this._drawingTarget = target;
+        this._drawingWidth = null;
         setTimeout(() => {
             if (this._reference === reference)
                 this._render();
@@ -218,11 +346,20 @@ export class ImageResizeBar {
         if (!image || !isMouseEvent(event))
             return;
         const rect = image.getBoundingClientRect();
+        const wrapper = this._drawingTarget ? null : image.closest<HTMLElement>('.mu-inline-image, .mu-embedded-picture');
+        const fullWidthTarget = wrapper ?? image;
         this._dragStart = {
             clientX: event.clientX,
             width: rect.width,
+            maxWidth: this._drawingTarget
+                ? measureAvailableWidth(this._drawingTarget.measureContainer)
+                : measureImageAvailableWidth(image),
             ratio: rect.height > 0 ? rect.width / rect.height : 1,
-            explicitHeight: image.hasAttribute('height'),
+            explicitHeight: !this._drawingTarget && image.hasAttribute('height'),
+            wrapper,
+            initialFullWidth: !this._drawingTarget && fullWidthTarget.classList.contains('mu-image-full-width'),
+            initialWidthAttr: image.getAttribute('width'),
+            initialHeightAttr: image.getAttribute('height'),
             peers: picturesOnRow(image, rect.top),
         };
         this._readout = document.createElement('output');
@@ -282,12 +419,16 @@ export class ImageResizeBar {
         const requested = dragStart.width + delta;
         const freeWidth = Math.max(50, Math.trunc(requested));
         let snap = shift ? snapPictureWidth(requested, dragStart.ratio, image.getBoundingClientRect().top, dragStart.peers) : undefined;
-        this._setDisplayWidth(image, snap?.width ?? freeWidth);
-        if (snap && Math.abs(snap.element.getBoundingClientRect().top - image.getBoundingClientRect().top) >= 2) {
-            // Crossing a wrap boundary can move the proposed match onto the next row.
-            snap = undefined;
-            this._setDisplayWidth(image, freeWidth);
-        }
+        snap = this._applyResizedWidth(
+            image,
+            requested,
+            freeWidth,
+            dragStart.maxWidth,
+            snap,
+            this._drawingTarget
+                ? width => this._setDrawingDisplayWidth(width)
+                : width => this._setDisplayWidth(image, width),
+        );
         if (this._snap?.element !== snap?.element) {
             this._snap?.element.classList.remove('mu-image-snap-target');
             snap?.element.classList.add('mu-image-snap-target');
@@ -296,13 +437,67 @@ export class ImageResizeBar {
         this._update();
     }
 
-    private _setDisplayWidth(image: HTMLImageElement, width: number) {
+    private _applyResizedWidth(
+        image: HTMLImageElement,
+        requested: number,
+        freeWidth: number,
+        maxWidth: number,
+        snap: ReturnType<typeof snapPictureWidth>,
+        apply: (width: TImageWidth) => void,
+    ): ReturnType<typeof snapPictureWidth> {
+        const fullWidth = maxWidth > 0 && requested >= maxWidth - FULL_WIDTH_SNAP_PX;
+        let nextSnap = snap && maxWidth > 0 && snap.width >= maxWidth - FULL_WIDTH_SNAP_PX ? undefined : snap;
+        const fallbackWidth: TImageWidth = fullWidth ? '100%' : freeWidth;
+        apply(nextSnap?.width ?? fallbackWidth);
+        if (nextSnap && Math.abs(nextSnap.element.getBoundingClientRect().top - image.getBoundingClientRect().top) >= 2) {
+            // Crossing a wrap boundary can move the proposed match onto the next row.
+            nextSnap = undefined;
+            apply(fallbackWidth);
+        }
+        return nextSnap;
+    }
+
+    private _setDrawingDisplayWidth(width: TDrawingWidth) {
+        this._drawingWidth = width;
+        this._drawingTarget?.preview(width);
+    }
+
+    private _setDisplayWidth(image: HTMLImageElement, width: TImageWidth) {
+        const fullWidthTarget = this._dragStart?.wrapper ?? image;
         this._width = width;
+        if (width === '100%') {
+            fullWidthTarget.classList.add('mu-image-full-width');
+            image.setAttribute('width', '100%');
+            this._height = undefined;
+            image.removeAttribute('height');
+            return;
+        }
+        fullWidthTarget.classList.remove('mu-image-full-width');
         image.setAttribute('width', String(width));
         if (this._dragStart?.explicitHeight && this._dragStart.ratio > 0) {
             this._height = Math.max(1, Math.round(width / this._dragStart.ratio));
             image.setAttribute('height', String(this._height));
         }
+        else {
+            this._height = undefined;
+        }
+    }
+
+    private _restoreDisplayWidth() {
+        const image = this._image;
+        const dragStart = this._dragStart;
+        if (!image || !dragStart)
+            return;
+        const fullWidthTarget = dragStart.wrapper ?? image;
+        fullWidthTarget.classList.toggle('mu-image-full-width', dragStart.initialFullWidth);
+        if (dragStart.initialWidthAttr === null)
+            image.removeAttribute('width');
+        else
+            image.setAttribute('width', dragStart.initialWidthAttr);
+        if (dragStart.initialHeightAttr === null)
+            image.removeAttribute('height');
+        else
+            image.setAttribute('height', dragStart.initialHeightAttr);
     }
 
     private _showSize(rect: DOMRect, axis: 'width' | 'height' | null) {
@@ -311,7 +506,11 @@ export class ImageResizeBar {
         if (!output || !handle)
             return;
         const status = axis ? this.muya.i18n.t(axis === 'width' ? 'Same width' : 'Same height') : '';
-        const label = `${Math.round(rect.width)} × ${Math.round(rect.height)} px${status ? ` · ${status}` : ''}`;
+        const dimensions = `${Math.round(rect.width)} × ${Math.round(rect.height)} px`;
+        const isFullWidth = this._drawingWidth === '100%' || this._width === '100%';
+        const label = isFullWidth
+            ? `100% (${dimensions})`
+            : `${dimensions}${status ? ` · ${status}` : ''}`;
         if (output.textContent !== label)
             output.textContent = label;
         const bar = handle.getBoundingClientRect();
@@ -329,18 +528,33 @@ export class ImageResizeBar {
             return;
         }
         this._detachResizeListeners();
+        this._resizing = false;
 
-        if (typeof this._width === 'number' && this._commitWidth && !this.muya.isReadOnly) {
-            if (this._height === undefined)
+        if (this._drawingTarget) {
+            const target = this._drawingTarget;
+            const drawingWidth = this._drawingWidth;
+            if (drawingWidth !== null && !this.muya.isReadOnly) {
+                target.commit(drawingWidth);
+                this.hide();
+            }
+            else {
+                target.restore();
+            }
+        }
+        else if (this._width !== null && this._commitWidth && !this.muya.isReadOnly) {
+            if (this._width === '100%' || this._height === undefined)
                 this._commitWidth(this._width);
             else
                 this._commitWidth(this._width, this._height);
             this.hide();
         }
+        else if (this._width !== null) {
+            this._restoreDisplayWidth();
+        }
 
         this._width = null;
+        this._drawingWidth = null;
         this._dragStart = null;
-        this._resizing = false;
         this._movingAnchor = null;
     };
 
@@ -358,16 +572,24 @@ export class ImageResizeBar {
 
     hide() {
         const { eventCenter } = this.muya;
+        if (this._resizing) {
+            if (this._drawingTarget)
+                this._drawingTarget.restore();
+            else
+                this._restoreDisplayWidth();
+        }
         this._cleanup?.();
         this._cleanup = null;
         this._detachResizeListeners();
         this._width = null;
+        this._drawingWidth = null;
         this._height = undefined;
         this._dragStart = null;
         this._resizing = false;
         this._movingAnchor = null;
         this._reference = null;
         this._commitWidth = null;
+        this._drawingTarget = null;
         const circles = this._container.querySelectorAll('.bar');
         Array.from(circles).forEach(c => c.remove());
         this._status = false;

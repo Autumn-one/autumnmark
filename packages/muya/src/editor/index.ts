@@ -4,7 +4,7 @@ import type Format from '../block/base/format';
 import type { Muya } from '../muya';
 import type { TSelectionState } from '../selection/types';
 import type { TState } from '../state/types';
-import type { Nullable } from '../types';
+import type { IDocumentContext, Nullable } from '../types';
 import type { ICompletedTransaction, ITransactionOptions } from './transactions';
 import * as otText from 'ot-text-unicode';
 import { fromEvent, merge } from 'rxjs';
@@ -26,8 +26,10 @@ import { deepClone, hasPick, isHTMLElement } from '../utils';
 import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { isIndentShortcut, isTabKey } from '../utils/tab';
+import { CodeLayoutScheduler } from './codeLayoutScheduler';
 import { CompactBlocks } from './compactBlocks';
 import { ContentTabs } from './contentTabs';
+import { DocumentSessionPool } from './documentSession';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { TextDrag } from './dragDropText';
 import { FoldBlocks } from './foldBlocks';
@@ -54,6 +56,7 @@ type BlockNode = {
     setLoose?: (loose: boolean) => void;
     setChecked?: (checked: boolean) => void;
     setSyntax?: (syntax: unknown) => void;
+    syncDrawingLayout?: (state: unknown) => void;
     path?: (string | number)[];
     blockName?: string;
     align?: string;
@@ -149,6 +152,18 @@ function drop(root: BlockNode, descent: JSONOpList, muya: Muya, snapshot: () => 
             throw new Error('Cannot project heading syntax onto this Block');
         block.setSyntax(state.syntax);
         return root;
+    }
+    const metaIndex = descent.indexOf('meta');
+    if (metaIndex >= 0) {
+        const { subDoc: block } = descend(root, descent.slice(0, metaIndex), []);
+        const isParagraphMeta = block?.blockName === 'paragraph';
+        const isDiagramWidthMeta = block?.blockName === 'diagram'
+            && (metaIndex === descent.length - 2 || descent[metaIndex + 1] === 'width');
+        if (block?.syncDrawingLayout && (isParagraphMeta || isDiagramWidthMeta)) {
+            const state = block.path ? stateAtPath(snapshot(), block.path) : undefined;
+            block.syncDrawingLayout(state);
+            return root;
+        }
     }
     let subDoc = root;
     let i = 0; // For reading
@@ -289,7 +304,13 @@ export class Editor {
     contentTabs: ContentTabs;
     compactBlocks: CompactBlocks;
     foldBlocks: FoldBlocks;
+    codeLayoutScheduler: CodeLayoutScheduler;
+    documentSessions: DocumentSessionPool;
 
+    buildingPreviewScope: import('./pagePreviews').PagePreviews | undefined;
+    prewarmingDocument = false;
+    private _viewportSuspended = false;
+    private _documentContext: IDocumentContext | null = null;
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
     private _isComposing = false;
@@ -319,6 +340,25 @@ export class Editor {
         this.contentTabs = new ContentTabs(_muya);
         this.compactBlocks = new CompactBlocks(_muya);
         this.foldBlocks = new FoldBlocks(_muya);
+        this.codeLayoutScheduler = new CodeLayoutScheduler();
+        this.documentSessions = new DocumentSessionPool(_muya);
+    }
+
+    get documentContext(): IDocumentContext | null {
+        return this._documentContext;
+    }
+
+    setDocumentContext(context: IDocumentContext | null): void {
+        this._documentContext = context;
+    }
+
+    setViewportSuspended(suspended: boolean): void {
+        this._viewportSuspended = suspended;
+        this.syncPreviewVisibility();
+    }
+
+    syncPreviewVisibility(): void {
+        this.scrollPage?.previewScope?.setActive(!this._viewportSuspended);
     }
 
     get activeContentBlock() {
@@ -344,6 +384,7 @@ export class Editor {
         const state = this.jsonState.getState();
 
         this.scrollPage = ScrollPage.create(muya, state);
+        this.syncPreviewVisibility();
         this.refreshBlockViews();
 
         this._dispatchEvents();
@@ -612,7 +653,7 @@ export class Editor {
     }
 
     private _commitTransaction(transaction: ICompletedTransaction) {
-        const { operation, blockOperation, view, selection, source, history, recordSelection, replay } = transaction;
+        const { operation, blockOperation, view, selection, source, history, recordSelection, replay, preventScroll, preserveFocus } = transaction;
         const before = this.jsonState.rawState;
         if (history === 'separate' && operation !== null)
             this.history.recordRebuild(operation, before, recordSelection !== undefined ? recordSelection : selection);
@@ -621,7 +662,7 @@ export class Editor {
         try {
             const commit = () => {
                 this.jsonState.apply(operation);
-                this._updateBlocks(blockOperation, view, selection, () => this.jsonState.getState());
+                this._updateBlocks(blockOperation, view, selection, () => this.jsonState.getState(), preserveFocus);
                 if (replay && !selection)
                     this.selection.clear();
                 debug.log(JSON.stringify(operation));
@@ -653,6 +694,8 @@ export class Editor {
         finally {
             this.isUpdating = false;
         }
+        if (preventScroll)
+            this.selection.preventScrollOnNextNotification();
         this.selection.notify(operation !== null);
     }
 
@@ -662,10 +705,16 @@ export class Editor {
         this.contentTabs.refresh();
     }
 
-    private _updateBlocks(operation: JSONOp, view: ICompletedTransaction['view'], selection: Nullable<TSelectionState>, recover: () => TState[]) {
+    private _updateBlocks(
+        operation: JSONOp,
+        view: ICompletedTransaction['view'],
+        selection: Nullable<TSelectionState>,
+        recover: () => TState[],
+        preserveFocus = false,
+    ) {
         if (view === 'rebuild') {
             this.scrollPage!.updateState(recover());
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
             return;
         }
         if (operation === null) {
@@ -677,33 +726,47 @@ export class Editor {
             const snapshot = pick(this.scrollPage as BlockNode, operation);
             drop(snapshot, operation, this._muya, () => completed ??= recover());
             this.refreshBlockViews();
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
         }
         catch (error) {
             // A completed snapshot also recovers a provisional Block update;
             // neither path may publish a half-applied tree.
             debug.error(`updateContents incremental apply failed; rebuilding from state: ${String(error)}`);
             this.scrollPage!.updateState(recover());
-            this._restoreSelection(selection);
+            this._restoreSelection(selection, preserveFocus);
         }
     }
 
-    private _restoreSelection(selection: Nullable<TSelectionState>) {
-        if (!selection)
+    private _restoreSelection(selection: Nullable<TSelectionState>, preserveFocus = false) {
+        if (!selection) {
+            this.selection.refreshNativeSelectionPresence();
             return;
-        const endpoints = resolveTextSelectionEndpoints(this._muya, selection);
-        if (endpoints) {
-            const { anchor, focus } = endpoints;
-            const sameBlock = anchor.block === focus.block;
-            this.activeContentBlock = sameBlock ? anchor.block : null;
-            // Rebuilt blocks hide source syntax; expose the saved endpoints before mapping them to DOM nodes.
-            anchor.block.update({ block: anchor.block, anchor, focus: sameBlock ? focus : anchor });
-            if (!sameBlock)
-                focus.block.update({ block: focus.block, anchor: focus, focus });
         }
-        const restored = this.selection.setSelection(selection);
-        if (!restored)
-            this.scrollPage?.firstContentInDescendant()?.setCursor(0, 0, true);
+        if (!preserveFocus) {
+            const endpoints = resolveTextSelectionEndpoints(this._muya, selection);
+            if (endpoints) {
+                const { anchor, focus } = endpoints;
+                const sameBlock = anchor.block === focus.block;
+                this.activeContentBlock = sameBlock ? anchor.block : null;
+                // Rebuilt blocks hide source syntax; expose the saved endpoints before mapping them to DOM nodes.
+                anchor.block.update({ block: anchor.block, anchor, focus: sameBlock ? focus : anchor });
+                if (!sameBlock)
+                    focus.block.update({ block: focus.block, anchor: focus, focus });
+            }
+        }
+        const restored = this.selection.setSelection(selection, { preserveFocus });
+        if (!restored) {
+            const first = this.scrollPage?.firstContentInDescendant();
+            if (!first)
+                return;
+            if (preserveFocus) {
+                const start = { block: first, path: first.path, offset: 0 };
+                this.selection.setSelection(createTextSelectionState(start, start), { preserveFocus: true });
+            }
+            else {
+                first.setCursor(0, 0, true);
+            }
+        }
     }
 
     /**
@@ -732,7 +795,7 @@ export class Editor {
             this._inputSelection = undefined;
             this._isComposing = false;
             this.jsonState.setContent(content);
-            this.scrollPage!.updateState(this.jsonState.getState());
+            this.scrollPage!.updateState(this.jsonState.rawState as TState[]);
             this.history.clear();
             this.searchModule.reset();
             if (autoFocus)

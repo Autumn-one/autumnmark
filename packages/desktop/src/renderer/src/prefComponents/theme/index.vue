@@ -63,7 +63,7 @@
           :id="slot.key === 'theme' ? undefined : `setting-${slot.key}`"
           :key="slot.key"
           :description="slot.key === 'theme' ? t('preferences.theme.currentTheme') : preferenceLabel(slot.key)"
-          :name="themeLabel(slot.id, library)"
+          :name="selectionLabel(slot.id)"
           :theme-id="slot.id"
           :local="library.find(item => item.id === slot.id)"
           :active="theme === slot.id"
@@ -246,7 +246,7 @@
       :choices="previewChoices"
       :choice="previewChoice"
       :current="currentLocal ?? currentBase"
-      :current-name="themeLabel(currentLocal?.id ?? currentBase, library)"
+      :current-name="selectionLabel(currentLocal?.id ?? currentBase)"
       :release="previewRelease"
       :action-label="actionLabel(previewChoice)"
       :action-disabled="hasSelection(previewChoice) && !canUpdate(previewChoice)"
@@ -308,7 +308,7 @@ import { themeCatalogBase, type ThemeCatalogSnapshot } from '@shared/themeCatalo
 import type { UserPreferencesPatch } from '@shared/types/preferences'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { isDarkThemeId, themeBaseId } from 'common/theme'
+import { isDarkThemeId, localThemeDisplayName, themeBaseId } from 'common/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { preferenceLabel } from '../registry'
 import ThemeChoice from './choice.vue'
@@ -362,11 +362,12 @@ const slots = computed(() => followSystemTheme.value ? [
 
 const localChoices = computed<ThemeChoiceItem[]>(() => [
   ...themes.map(({ name: id }) => ({ key: id, id, base: id, name: themeLabel(id), meta: t('preferences.theme.builtIn') })),
-  ...library.value.map(local => ({
-    key: local.id, id: local.id, base: local.base, name: local.name, local,
-    meta: t(local.catalog ? 'preferences.theme.installed' : 'preferences.theme.custom')
-  }))
+  ...library.value.map(local => {
+    const meta = t(local.catalog ? 'preferences.theme.installed' : 'preferences.theme.custom')
+    return { key: local.id, id: local.id, base: local.base, name: localThemeDisplayName(local.name, meta), local, meta }
+  })
 ])
+const selectionLabel = (id: string): string => localChoices.value.find(choice => choice.id === id)?.name ?? themeLabel(id)
 const onlineChoices = computed<ThemeChoiceItem[]>(() => (catalog.value?.themes ?? []).map(remote => {
   const local = installed.value.get(remote.id)
   return {

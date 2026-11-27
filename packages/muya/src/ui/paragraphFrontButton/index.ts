@@ -2,7 +2,8 @@ import type { VNode } from 'snabbdom';
 import type Parent from '../../block/base/parent';
 import type { Muya } from '../../index';
 import type { IBaseOptions } from '../types';
-import { autoUpdate, computePosition, flip, offset } from '@floating-ui/dom';
+import type { IEditorViewportConstraintData } from '../utils/editorViewport';
+import { autoUpdate, computePosition, offset } from '@floating-ui/dom';
 
 import dragIcon from '../../assets/icons/drag/2.png';
 import BulletList from '../../block/commonMark/bulletList';
@@ -10,6 +11,11 @@ import OrderList from '../../block/commonMark/orderList';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle, verticalPositionInRect } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import {
+    constrainToEditorViewport,
+    EDITOR_VIEWPORT_MIDDLEWARE_NAME,
+    isPointerInEditorViewport,
+} from '../utils/editorViewport';
 import { getIcon } from './config';
 
 import './index.css';
@@ -118,8 +124,16 @@ export class ParagraphFrontButton {
                 return;
             if (!isMouseEvent(event))
                 return;
+            if (!isPointerInEditorViewport(event, this.muya.domNode, this._floatBox)) {
+                this.hide();
+                return;
+            }
 
             const { x, y } = event;
+            const topmost = document.elementFromPoint(x, y);
+            if (this._status && topmost && this._floatBox.contains(topmost))
+                return;
+
             const els = [
                 ...document.elementsFromPoint(x, y),
                 ...document.elementsFromPoint(x + LEFT_OFFSET, y),
@@ -127,17 +141,28 @@ export class ParagraphFrontButton {
             const outMostElement = els.find(
                 ele =>
                     ele[BLOCK_DOM_PROPERTY]
+                    && this.muya.domNode.contains(ele)
                     && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock,
             );
             if (outMostElement) {
                 this.show(outMostElement[BLOCK_DOM_PROPERTY] as Parent);
-                this.render();
             }
             else {
                 this.hide();
             }
         }, 300);
         this._cancelHover = mousemoveHandler.cancel;
+
+        const documentMousemoveHandler = (event: Event) => {
+            if (this._disableListen || !isMouseEvent(event))
+                return;
+            if (!isPointerInEditorViewport(event, this.muya.domNode, this._floatBox)) {
+                mousemoveHandler.cancel();
+                this.hide();
+                return;
+            }
+            mousemoveHandler(event);
+        };
 
         const scrollHandler = (event: Event) => {
             const { target } = event;
@@ -165,7 +190,7 @@ export class ParagraphFrontButton {
         });
         eventCenter.attachDOMEvent(container, 'mousedown', this._dragBarMouseDown);
         eventCenter.attachDOMEvent(container, 'mouseup', this._dragBarMouseUp);
-        eventCenter.attachDOMEvent(document, 'mousemove', mousemoveHandler);
+        eventCenter.attachDOMEvent(document, 'mousemove', documentMousemoveHandler);
         eventCenter.attachDOMEvent(document, 'scroll', scrollHandler, { capture: true, passive: true });
         eventCenter.attachDOMEvent(container, 'click', clickHandler);
     }
@@ -227,6 +252,7 @@ export class ParagraphFrontButton {
         const outMostElement = els.find(
             ele =>
                 ele[BLOCK_DOM_PROPERTY]
+                && this.muya.domNode.contains(ele)
                 && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock,
         );
         this._moveShadow(event);
@@ -395,6 +421,24 @@ export class ParagraphFrontButton {
         container.style.height = lineHeight;
     }
 
+    private _parkOffscreen() {
+        if (this._floatBox) {
+            Object.assign(this._floatBox.style, {
+                left: '-9999px',
+                top: '-9999px',
+                opacity: '0',
+            });
+        }
+    }
+
+    private _syncFloatBoxSize() {
+        const { offsetWidth, offsetHeight } = this._container;
+        if (offsetWidth > 0)
+            this._floatBox.style.width = `${offsetWidth}px`;
+        if (offsetHeight > 0)
+            this._floatBox.style.height = `${offsetHeight}px`;
+    }
+
     hide() {
         if (!this._status)
             return;
@@ -407,13 +451,7 @@ export class ParagraphFrontButton {
             this._cleanup = null;
         }
 
-        if (this._floatBox) {
-            Object.assign(this._floatBox.style, {
-                left: `-9999px`,
-                top: `-9999px`,
-                opacity: '0',
-            });
-        }
+        this._parkOffscreen();
 
         eventCenter.emit('muya-float-button', this, false);
     }
@@ -423,6 +461,11 @@ export class ParagraphFrontButton {
             return;
 
         this._block = block;
+        // Render and sync floatBox dimensions before computePosition so the
+        // first frame measures the real block line-height instead of 0x0.
+        this.render();
+        this._syncFloatBoxSize();
+
         const { domNode } = block;
         const { _floatBox: floatBox } = this;
         const { placement, offsetOptions } = this._options;
@@ -434,7 +477,7 @@ export class ParagraphFrontButton {
         }
 
         const styles = window.getComputedStyle(domNode!);
-        const paddingTop = Number.parseFloat(styles.paddingTop);
+        const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
 
         const isLooseList = isOrderOrBulletList(block) && block.meta.loose;
         const dynamicMainAxis = FRONT_BUTTON_GAP + (isLooseList ? paddingTop * 2 : paddingTop);
@@ -447,7 +490,10 @@ export class ParagraphFrontButton {
             alignmentAxisValue = (offsetOptions as { alignmentAxis?: number | null }).alignmentAxis ?? 0;
         }
 
-        const updatePosition = () => {
+        this._status = true;
+
+        // Scrolling dismisses the handle instead of repositioning it on every frame (#6050).
+        const cleanup = autoUpdate(domNode!, floatBox, () => {
             computePosition(domNode!, floatBox, {
                 placement,
                 middleware: [
@@ -456,25 +502,27 @@ export class ParagraphFrontButton {
                         crossAxis: crossAxisValue,
                         alignmentAxis: alignmentAxisValue,
                     }),
-                    flip(),
+                    constrainToEditorViewport(),
                 ],
-            }).then(({ x, y }) => {
-                // Positioning can finish after a mode switch has hidden the handle.
-                if (!this._status || this._block !== block)
+            }).then(({ x, y, middlewareData }) => {
+                if (!this._status || this._block !== block || this._cleanup !== cleanup)
                     return;
+                const constraint = middlewareData[EDITOR_VIEWPORT_MIDDLEWARE_NAME] as IEditorViewportConstraintData | undefined;
+                if (constraint?.clipped) {
+                    // Keep `_status` and `_block` active so `hide()` still tears down
+                    // `autoUpdate` and future layout changes can reveal the handle again.
+                    this._parkOffscreen();
+                    return;
+                }
                 Object.assign(floatBox.style, {
                     left: `${x}px`,
                     top: `${y}px`,
-                    opacity: 1,
+                    opacity: '1',
                 });
             });
-        };
+        }, { ancestorScroll: false });
+        this._cleanup = cleanup;
 
-        updatePosition();
-        // Scrolling dismisses the handle instead of repositioning it on every frame (#6050).
-        this._cleanup = autoUpdate(domNode!, floatBox, updatePosition, { ancestorScroll: false });
-
-        this._status = true;
         eventCenter.emit('muya-float-button', this, true);
     }
 

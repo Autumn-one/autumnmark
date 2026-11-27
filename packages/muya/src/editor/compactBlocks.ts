@@ -35,6 +35,16 @@ function measureUncappedImages(probes: IImageProbe[], limit: number, heights: Ma
         viewport.classList.add('mu-compact-limited');
 }
 
+export interface ICompactBlocksSessionState {
+    bodies: Map<HTMLElement, HTMLElement>;
+}
+
+export function createEmptyCompactBlocksSessionState(): ICompactBlocksSessionState {
+    return {
+        bodies: new Map(),
+    };
+}
+
 export class CompactBlocks {
     private _codeLimits = new WeakMap<HTMLElement, number>();
     private _bodies = new Map<HTMLElement, HTMLElement>();
@@ -85,7 +95,8 @@ export class CompactBlocks {
             this._observer?.unobserve(previous);
         if (body) {
             this._bodies.set(viewport, body);
-            this._observer?.observe(body);
+            if (!this._muya.editor.prewarmingDocument)
+                this._observer?.observe(body);
         }
         else if (previous) {
             this._bodies.delete(viewport);
@@ -234,6 +245,32 @@ export class CompactBlocks {
             }
         }
         this._measure(restored);
+    }
+
+    exportSessionState(): ICompactBlocksSessionState {
+        if (this._frame !== undefined) {
+            cancelAnimationFrame(this._frame);
+            this._frame = undefined;
+        }
+        this._pending.clear();
+        for (const body of this._bodies.values())
+            this._observer?.unobserve(body);
+        const exported: ICompactBlocksSessionState = { bodies: this._bodies };
+        this._bodies = new Map();
+        return exported;
+    }
+
+    importSessionState(state: ICompactBlocksSessionState): void {
+        if (this._frame !== undefined) {
+            cancelAnimationFrame(this._frame);
+            this._frame = undefined;
+        }
+        this._pending.clear();
+        for (const body of this._bodies.values())
+            this._observer?.unobserve(body);
+        this._bodies = state.bodies;
+        for (const body of this._bodies.values())
+            this._observer?.observe(body);
     }
 
     dispose(): void {

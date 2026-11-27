@@ -3,6 +3,7 @@ import {
   getCUT,
   getCOPY,
   getPASTE,
+  getCopyAlternateNewlines,
   getCopyAsRich,
   getCopyAsHtml,
   getPasteAsPlainText,
@@ -32,7 +33,9 @@ interface ContextMenuParams {
   y: number
 }
 
-const getContextItems = (): MenuItemConstructorOptions[] => [
+const getContextItems = (
+  copyParagraphNewlines: 'double' | 'single' = 'double'
+): MenuItemConstructorOptions[] => [
   getInsertBefore(),
   getInsertAfter(),
   SEPARATOR,
@@ -40,6 +43,7 @@ const getContextItems = (): MenuItemConstructorOptions[] => [
   getCOPY(),
   getPASTE(),
   SEPARATOR,
+  getCopyAlternateNewlines(copyParagraphNewlines),
   getCopyAsRich(),
   getCopyAsHtml(),
   getPasteAsPlainText()
@@ -56,7 +60,8 @@ export const buildEditorContextMenu = (
   spellcheckerEnabled: boolean,
   canCopy = true,
   misspelledWord?: string,
-  dictionarySuggestions?: string[]
+  dictionarySuggestions?: string[],
+  copyParagraphNewlines: 'double' | 'single' = 'double'
 ): Menu => {
   const menu = new Menu()
   const hasText = selectionText.trim().length > 0
@@ -70,18 +75,35 @@ export const buildEditorContextMenu = (
     menu.append(new MenuItem({ label: t('contextMenu.spelling'), submenu: submenu as MenuItemConstructorOptions[] }))
     menu.append(new MenuItem(SEPARATOR))
   }
-  const copyItemIds = new Set(['cutMenuItem', 'copyMenuItem', 'copyAsHtmlMenuItem', 'copyAsRichMenuItem'])
-  for (const item of getContextItems()) {
+  const copyItemIds = new Set([
+    'cutMenuItem',
+    'copyMenuItem',
+    'copyAlternateNewlinesMenuItem',
+    'copyAsHtmlMenuItem',
+    'copyAsRichMenuItem'
+  ])
+  for (const item of getContextItems(copyParagraphNewlines)) {
     if (item.id && copyItemIds.has(item.id)) item.enabled = hasText && canCopy
     menu.append(new MenuItem(item))
   }
   return menu
 }
 
-export const showEditorContextMenu = (win: BrowserWindow, params: ContextMenuParams, spellcheckerEnabled: boolean): void => {
+export const showEditorContextMenu = (
+  win: BrowserWindow,
+  params: ContextMenuParams,
+  spellcheckerEnabled: boolean,
+  copyParagraphNewlines: 'double' | 'single' = 'double'
+): void => {
   if (!isInsideEditor(params) || params.hasImageContents) return
-  const menu = buildEditorContextMenu(params.selectionText, spellcheckerEnabled,
-    params.editFlags.canCut && params.editFlags.canCopy, params.misspelledWord, params.dictionarySuggestions)
+  const menu = buildEditorContextMenu(
+    params.selectionText,
+    spellcheckerEnabled,
+    params.editFlags.canCut && params.editFlags.canCopy,
+    params.misspelledWord,
+    params.dictionarySuggestions,
+    copyParagraphNewlines
+  )
   menu.append(new MenuItem(SEPARATOR))
   menu.append(new MenuItem({ label: t('drawing.insert'), click: () => win.webContents.send('mt::execute-command-by-id', 'drawing.insert') }))
   menu.popup({ window: win, x: params.x, y: params.y })

@@ -1,5 +1,5 @@
 import { themeBases, type LocalTheme } from '@shared/localTheme'
-import { isDarkThemeId, pineInkTheme } from 'common/theme'
+import { builtinThemeName, isDarkThemeId, pineInkTheme, violetDiaryTheme } from 'common/theme'
 import type { ThemeCatalogSnapshot } from '@shared/themeCatalog'
 
 export interface ThemeChoiceItem {
@@ -13,14 +13,13 @@ export interface ThemeChoiceItem {
   remote?: ThemeCatalogSnapshot['themes'][number]
 }
 
-export const themes = [pineInkTheme.id, ...themeBases.filter(id => id !== pineInkTheme.id)]
+const featuredThemes: readonly string[] = [pineInkTheme.id, violetDiaryTheme.id]
+
+export const themes = [...featuredThemes, ...themeBases.filter(id => !featuredThemes.includes(id))]
   .sort((a, b) => Number(isDarkThemeId(a)) - Number(isDarkThemeId(b)))
   .map(name => ({ name }))
 
-export const themeLabel = (name: string, library: LocalTheme[] = []): string => {
-  const local = library.find(item => item.id === name)
-  if (local) return local.name
-  if (name === pineInkTheme.id) return pineInkTheme.name
+export const themeLabel = (name: string): string => {
   if (name === 'light') return 'GitBook Teal'
-  return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  return builtinThemeName(name) ?? name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }

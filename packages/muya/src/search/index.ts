@@ -71,9 +71,13 @@ export class Search {
             && start.offset === match.start && end.offset === match.end;
     }
 
+    private _isExternalFocus(focused: Element | null): focused is HTMLElement {
+        return focused instanceof HTMLElement && focused !== document.body && focused.isConnected
+            && !this._muya.domNode.contains(focused);
+    }
+
     private _restoreExternalFocus(focused: Element | null): void {
-        if (focused instanceof HTMLElement && focused !== document.body && focused.isConnected
-            && !this._muya.domNode.contains(focused)) {
+        if (this._isExternalFocus(focused)) {
             focused.focus({ preventScroll: true });
         }
     }
@@ -101,6 +105,7 @@ export class Search {
     setVisible(visible: boolean): this {
         if (visible === this._visible)
             return this;
+        const preserveFocus = this._isExternalFocus(document.activeElement);
         const selection = this._muya.editor.selection.getSelectionState();
         this._updating = true;
         try {
@@ -111,12 +116,32 @@ export class Search {
             }
             this._updateMatches();
             if (selection)
-                this._muya.editor.selection.setSelection(selection);
+                this._muya.editor.selection.setSelection(selection, { preserveFocus });
         }
         finally {
             this._updating = false;
         }
         return this;
+    }
+
+    /** Capture blocks currently carrying rendered highlight spans, then clear memory match state. */
+    exportHighlightedBlocks(): Set<Content> {
+        const highlighted = new Set<Content>(this._renderedMatches.keys());
+        this.reset();
+        return highlighted;
+    }
+
+    /** Strip stale highlight spans only from previously highlighted blocks (0 DOM work when empty). */
+    clearBlocksHighlights(blocks: Set<Content>): void {
+        if (!blocks.size)
+            return;
+        for (const block of blocks) {
+            if (!block.outMostBlock)
+                continue;
+            const cursor = block.getCursor();
+            block.update(cursor ? { ...cursor, block } : undefined, []);
+        }
+        blocks.clear();
     }
 
     // Drop match state when the document is replaced (e.g. a tab switch), so
@@ -404,7 +429,9 @@ export class Search {
             }
         }
         else if (selection) {
-            this._muya.editor.selection.setSelection(selection);
+            this._muya.editor.selection.setSelection(selection, {
+                preserveFocus: this._isExternalFocus(document.activeElement),
+            });
         }
 
         const activeMatch = matches[index];

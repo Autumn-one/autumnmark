@@ -144,7 +144,7 @@ export class MarkdownToHtml {
                 else if (functionType === 'flowchart' || functionType === 'sequence') {
                     const diagram = render.parse(rawCode);
                     diagramContainer.innerHTML = '';
-                    diagram.drawSVG(diagramContainer, options);
+                    await diagram.drawSVG(diagramContainer, options);
                 }
                 else if (functionType === 'vega-lite') {
                     await render(diagramContainer, JSON.parse(rawCode), options);
@@ -167,6 +167,16 @@ export class MarkdownToHtml {
                 const image = code.ownerDocument.createElement('img');
                 image.alt = drawing.label();
                 image.src = src;
+                const widthStyle = code.parentElement?.style.width;
+                if (widthStyle === '100%') {
+                    image.style.width = '100%';
+                    image.style.height = 'auto';
+                }
+                else if (widthStyle) {
+                    image.style.width = widthStyle;
+                    image.style.maxWidth = '100%';
+                    image.style.height = 'auto';
+                }
                 const figure = code.ownerDocument.createElement('figure');
                 figure.append(image);
                 code.parentElement?.replaceWith(figure);

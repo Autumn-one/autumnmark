@@ -1,4 +1,4 @@
-import type { IDiagramMeta, IDiagramState } from '../../state/types';
+import type { IDiagramMeta, IDiagramState, TDrawingWidth } from '../../state/types';
 
 const DIAGRAM_TYPES = ['mermaid', 'plantuml', 'vega-lite', 'flowchart', 'sequence', 'excalidraw'] as const;
 
@@ -10,10 +10,14 @@ export function diagramTypeOfLang(lang: string): IDiagramMeta['type'] | null {
     return DIAGRAM_TYPES.find(type => type === lang) ?? null;
 }
 
-export function createDiagramState(type: IDiagramMeta['type'], text = ''): IDiagramState {
+export function createDiagramState(type: IDiagramMeta['type'], text = '', width?: TDrawingWidth): IDiagramState {
     return {
         name: 'diagram',
         text,
-        meta: { type, lang: type === 'excalidraw' ? '' : type === 'vega-lite' ? 'json' : 'yaml' },
+        meta: {
+            type,
+            lang: type === 'excalidraw' ? '' : type === 'vega-lite' ? 'json' : 'yaml',
+            ...(type === 'excalidraw' && width !== undefined ? { width } : {}),
+        },
     };
 }

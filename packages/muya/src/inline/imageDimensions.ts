@@ -1,6 +1,6 @@
 import type { IEmbeddedImage, IEmbeddedImageEdit } from '../utils/embeddedImage';
 import { replaceEmbeddedImage } from '../utils/embeddedImage';
-import { imageToHtml, isImageToken } from '../utils/image';
+import { imageToHtml, isFullImageWidth, isImageToken } from '../utils/image';
 import { parseInline } from './parser/lexer';
 
 export function embeddedPictureSize(raw: string, image: IEmbeddedImage, replace: (markup: string, expected: string) => void): IEmbeddedImageEdit['size'] {
@@ -11,18 +11,26 @@ export function embeddedPictureSize(raw: string, image: IEmbeddedImage, replace:
         return;
     const { width, height, ...attrs } = token.attrs;
     const pixels = (value?: string | null) => value && /^\d+$/.test(value) ? Number(value) : undefined;
+    const fullWidth = isFullImageWidth(width);
     return {
-        width: pixels(width),
-        height: pixels(height),
+        width: fullWidth ? '100%' : pixels(width),
+        height: fullWidth ? undefined : pixels(height),
         apply(dimensions, expected) {
             const sized = { ...attrs, src: expected };
-            for (const key of ['width', 'height'] as const) {
-                const value = dimensions[key];
-                if (value === undefined)
-                    continue;
-                if (!Number.isSafeInteger(value) || value < 1)
+            if (dimensions.width !== undefined) {
+                if (dimensions.width === '100%') {
+                    Object.assign(sized, { width: '100%' });
+                    replace(imageToHtml(sized), expected);
                     return;
-                Object.assign(sized, { [key]: String(value) });
+                }
+                if (!Number.isSafeInteger(dimensions.width) || dimensions.width < 1)
+                    return;
+                Object.assign(sized, { width: String(dimensions.width) });
+            }
+            if (dimensions.height !== undefined) {
+                if (!Number.isSafeInteger(dimensions.height) || dimensions.height < 1)
+                    return;
+                Object.assign(sized, { height: String(dimensions.height) });
             }
             replace(imageToHtml(sized), expected);
         },

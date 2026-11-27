@@ -2,9 +2,14 @@ import bootstrapRenderer from './bootstrap'
 import axios from './axios'
 import './assets/symbolIcon'
 
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import en from 'element-plus/es/locale/lang/en'
+import {
+  ElAutocomplete, ElButton, ElCheckbox, ElCol, ElConfigProvider, ElDialog, ElDivider,
+  ElDropdown, ElDropdownItem, ElDropdownMenu, ElForm, ElFormItem, ElIcon, ElInput,
+  ElInputNumber, ElInputTag, ElOption, ElPopover, ElProgress, ElRow, ElScrollbar,
+  ElSelect, ElSelectV2, ElSlider, ElSwitch, ElTabPane, ElTable, ElTableColumn,
+  ElTabs, ElText, ElTooltip, ElTree
+} from 'element-plus'
+import './assets/styles/elementPlus'
 
 import services from './services/index'
 import Editor from './pages/app.vue'
@@ -19,9 +24,15 @@ const app = createRenderer([
   { path: '/editor', component: Editor }
 ])
 
-app.use(ElementPlus, {
-  locale: en
-})
+for (const component of [
+  ElAutocomplete, ElButton, ElCheckbox, ElCol, ElConfigProvider, ElDialog, ElDivider,
+  ElDropdown, ElDropdownItem, ElDropdownMenu, ElForm, ElFormItem, ElIcon, ElInput,
+  ElInputNumber, ElInputTag, ElOption, ElPopover, ElProgress, ElRow, ElScrollbar,
+  ElSelect, ElSelectV2, ElSlider, ElSwitch, ElTabPane, ElTable, ElTableColumn,
+  ElTabs, ElText, ElTooltip, ElTree
+]) {
+  app.use(component)
+}
 
 app.config.globalProperties.$http = axios
 

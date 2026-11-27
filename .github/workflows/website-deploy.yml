@@ -87,7 +87,7 @@ jobs:
       # notice on the PR rather than failing the build.
       - name: Deploy preview
         id: preview
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && env.CLOUDFLARE_API_TOKEN != ''
         working-directory: packages/website
         run: |
           set +e
@@ -138,6 +138,10 @@ jobs:
       - name: Note preview skipped for forks
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         run: echo "::notice::Website preview deploy skipped for fork PRs — Cloudflare deploy secrets are not exposed to pull requests from forks. The build, lint, and type-check steps above still validate this change."
+
+      - name: Note preview skipped without Cloudflare token
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice::Website preview upload requires a Cloudflare token. Website build and smoke checks passed."
 
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request' && steps.preview.outputs.result == 'ok'

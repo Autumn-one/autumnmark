@@ -337,7 +337,9 @@
       "screenshot": "截图",
       "lineEnding": "行结束符",
       "lineEndingCrlf": "CRLF (Windows)",
-      "lineEndingLf": "LF (Unix/macOS)"
+      "lineEndingLf": "LF (Unix/macOS)",
+      "copyAsSingleNewline": "复制（单换行）",
+      "copyAsStandardMarkdown": "复制（标准 Markdown）"
     },
     "paragraph": {
       "title": "段落",
@@ -504,7 +506,9 @@
       "showInFolder": "在文件夹中显示",
       "showInSideBar": "在侧边栏中显示",
       "openContainingFolder": "在侧边栏中打开所在文件夹"
-    }
+    },
+    "copyAsSingleNewline": "复制（单换行）",
+    "copyAsStandardMarkdown": "复制（标准 Markdown）"
   },
   "search": {
     "searchPlaceholder": "搜索",
@@ -770,7 +774,7 @@
         "tocRight": "右侧",
         "showOpenedFiles": "显示已打开文件",
         "autoReveal": "在侧边栏中定位当前文件",
-        "openFilesInPreviewMode": "单击侧栏文件时复用预览标签页；编辑或双击后保留该标签页",
+        "openFilesInPreviewMode": "单击侧栏文件时复用预览标签页。编辑预览中的文档，或在侧栏双击该文件，会保留该标签页。",
         "excludePatterns": "文件树排除规则",
         "excludePatternsNotes": "匹配任意 glob 规则的路径将从文件树中排除。按 Enter 添加规则，点击 × 删除；规则内的逗号会保留。重新打开文件夹以完整应用更改。",
         "removePattern": "删除",
@@ -834,7 +838,13 @@
         "title": "写作偏好",
         "autoCloseBrackets": "自动关闭括号",
         "autoCompleteMarkdown": "自动补全 Markdown 成对标记",
-        "autoCloseQuotes": "自动关闭引号"
+        "autoCloseQuotes": "自动关闭引号",
+        "copyParagraphNewlines": {
+          "title": "复制时的段落换行",
+          "note": "控制普通复制时的段落间距，不影响保存的 .md 文件。切换换行复制快捷键（默认 Ctrl+Shift+C / ⌘⇧C）将自动使用另一种模式。",
+          "double": "标准 Markdown（双换行）",
+          "single": "纯文本视觉（单换行）"
+        }
       },
       "fileRepresentation": {
         "title": "文件表示",
@@ -1026,10 +1036,22 @@
       "installOnly": "仅安装",
       "installAndApply": "安装并应用",
       "update": "更新",
-      "setFor": { "light": "设为浅色主题", "dark": "设为深色主题" },
-      "installFor": { "light": "安装并设为浅色主题", "dark": "安装并设为深色主题" },
-      "assigned": { "light": "已设为浅色主题", "dark": "已设为深色主题" },
-      "deferred": { "light": "系统切换到浅色时使用「{name}」。", "dark": "系统切换到深色时使用「{name}」。" },
+      "setFor": {
+        "light": "设为浅色主题",
+        "dark": "设为深色主题"
+      },
+      "installFor": {
+        "light": "安装并设为浅色主题",
+        "dark": "安装并设为深色主题"
+      },
+      "assigned": {
+        "light": "已设为浅色主题",
+        "dark": "已设为深色主题"
+      },
+      "deferred": {
+        "light": "系统切换到浅色时使用「{name}」。",
+        "dark": "系统切换到深色时使用「{name}」。"
+      },
       "applied": "已应用「{name}」。",
       "installedNotice": "已安装「{name}」，可在本机主题中找到。",
       "updated": "已更新「{name}」。",
@@ -1202,7 +1224,8 @@
       "findPrevious": "查找上一个",
       "replace": "替换",
       "findInFolder": "在文件夹中查找",
-      "screenshot": "截图"
+      "screenshot": "截图",
+      "copyAlternateNewlines": "切换段落换行方式复制"
     },
     "paragraph": {
       "heading1": "标题 1",
@@ -1307,6 +1330,7 @@
     "invalidName": "请输入有效的绘图文件名。",
     "renameFailed": "无法重命名绘图。{reason}",
     "documentUnavailable": "无法访问原文档。",
+    "embeddedChanged": "文档已被外部修改，或无法定位原来的绘图。你的绘图改动仍保留在编辑器中。",
     "addDocument": "添加 Markdown 文档",
     "addDocumentButton": "添加文档",
     "searchDocuments": "搜索 Markdown 文档",

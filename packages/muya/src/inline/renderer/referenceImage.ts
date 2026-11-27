@@ -25,6 +25,7 @@ export default function referenceImage(
 
     const imageSrc = this.imageSource(href);
     const { src } = imageSrc;
+    const data = 'load' in imageSrc ? { attrs: { 'data-preview-src': href } } : {};
     let id;
     let isSuccess;
     let resolvedSrc: string | undefined;
@@ -48,11 +49,11 @@ export default function referenceImage(
 
     return isSuccess
         ? [
-                h(selector, tag),
+                h(selector, data, tag),
                 // Prefer the resolved URL from the loadImageAsync cache; fall
                 // back to the raw src if the cache hasn't been populated for
                 // some reason.
                 h(`img.${CLASS_NAMES.MU_COPY_REMOVE}`, { props: { alt, src: resolvedSrc ?? src, title } }),
             ]
-        : [h(selector, tag)];
+        : [h(selector, data, tag)];
 }

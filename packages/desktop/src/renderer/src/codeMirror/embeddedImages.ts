@@ -15,8 +15,18 @@ export function installEmbeddedImages(
   findDrawings: (markdown: string) => SourceDrawing[]
 ) {
   const widgets = new WeakSet<CodeMirror.TextMarker>()
-  const drawingWidgets = new Set<CodeMirror.TextMarker>()
+  const drawingWidgetsByDoc = new WeakMap<CodeMirror.Doc, Set<CodeMirror.TextMarker>>()
+  const initializedDocs = new WeakSet<CodeMirror.Doc>()
+  const getDrawingWidgets = (doc: CodeMirror.Doc) => {
+    let set = drawingWidgetsByDoc.get(doc)
+    if (!set) {
+      set = new Set<CodeMirror.TextMarker>()
+      drawingWidgetsByDoc.set(doc, set)
+    }
+    return set
+  }
   const refreshDrawings = () => {
+    const drawingWidgets = getDrawingWidgets(cm.getDoc())
     const drawings = findDrawings(cm.getValue()).sort((a, b) => a.start - b.start || b.end - a.end)
     for (const marker of drawingWidgets) marker.clear()
     drawingWidgets.clear()
@@ -44,6 +54,7 @@ export function installEmbeddedImages(
   }
 
   const refresh = (first: number, last: number) => cm.operation(() => {
+    const drawingWidgets = getDrawingWidgets(cm.getDoc())
     refreshDrawings()
     for (let line = first; line <= last; line++) {
       const text = cm.getLine(line)
@@ -109,6 +120,7 @@ export function installEmbeddedImages(
   }
   const expand = (_cm: CodeMirror.Editor, change: CodeMirror.EditorChangeCancellable) => {
     if (!change.update || change.origin === 'setValue' || change.origin === 'undo' || change.origin === 'redo') return
+    const drawingWidgets = getDrawingWidgets(cm.getDoc())
     let { from, to } = change
     for (const marker of cm.findMarks(from, to)) {
       const drawing = drawingWidgets.has(marker)
@@ -125,11 +137,20 @@ export function installEmbeddedImages(
     if (packed !== text) change.update(from, to, packed.split('\n'))
     else if (from !== change.from || to !== change.to) change.update(from, to)
   }
+  const swapped = () => {
+    const doc = cm.getDoc()
+    if (initializedDocs.has(doc)) return
+    initializedDocs.add(doc)
+    refresh(cm.firstLine(), cm.lastLine())
+  }
+  initializedDocs.add(cm.getDoc())
   refresh(cm.firstLine(), cm.lastLine())
   cm.on('changes', changed)
   cm.on('beforeChange', expand)
+  cm.on('swapDoc', swapped)
   return () => {
     cm.off('changes', changed)
     cm.off('beforeChange', expand)
+    cm.off('swapDoc', swapped)
   }
 }

@@ -243,7 +243,9 @@
       "screenshot": "Captura de Pantalla",
       "lineEnding": "Final de Línea",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "Copiar (salto de línea simple)",
+      "copyAsStandardMarkdown": "Copiar (Markdown estándar)"
     },
     "paragraph": {
       "title": "Párrafo",
@@ -410,7 +412,9 @@
       "showInFolder": "Mostrar en carpeta",
       "showInSideBar": "Mostrar en la barra lateral",
       "openContainingFolder": "Abrir carpeta contenedora en la barra lateral"
-    }
+    },
+    "copyAsSingleNewline": "Copiar (salto de línea simple)",
+    "copyAsStandardMarkdown": "Copiar (Markdown estándar)"
   },
   "search": {
     "searchPlaceholder": "Buscar",
@@ -676,7 +680,7 @@
         "tocRight": "Derecha",
         "showOpenedFiles": "Mostrar archivos abiertos",
         "autoReveal": "Mostrar el archivo activo en la barra lateral",
-        "openFilesInPreviewMode": "Abrir archivos de la barra lateral en pestañas de vista previa. Al editar o hacer doble clic se conserva la pestaña.",
+        "openFilesInPreviewMode": "Abrir archivos de la barra lateral en pestañas de vista previa. Editar la vista previa o hacer doble clic en el archivo en la barra lateral conserva la pestaña.",
         "excludePatterns": "Reglas de exclusión del árbol de archivos",
         "excludePatternsNotes": "Las rutas que coincidan con cualquier regla glob se excluyen del árbol de archivos. Pulsa Enter para añadir una regla y haz clic en × para eliminarla; se conservan las comas dentro de una regla. Vuelve a abrir la carpeta para aplicar todos los cambios.",
         "removePattern": "Eliminar",
@@ -740,7 +744,13 @@
         "title": "Preferencias de escritura",
         "autoCloseBrackets": "Cerrar corchetes automáticamente",
         "autoCompleteMarkdown": "Completar pares de marcadores Markdown",
-        "autoCloseQuotes": "Cerrar comillas automáticamente"
+        "autoCloseQuotes": "Cerrar comillas automáticamente",
+        "copyParagraphNewlines": {
+          "title": "Saltos de párrafo al copiar",
+          "note": "Controla el espaciado entre párrafos en la copia normal sin modificar los archivos Markdown guardados. El atajo de copia alternativo (por defecto Ctrl+Mayús+C / ⌘⇧C) usa siempre el otro modo.",
+          "double": "Markdown estándar (doble salto de línea)",
+          "single": "Texto plano visual (salto de línea simple)"
+        }
       },
       "fileRepresentation": {
         "title": "Representación de Archivo",
@@ -1120,7 +1130,8 @@
       "findPrevious": "Buscar Anterior",
       "replace": "Reemplazar",
       "findInFolder": "Buscar en Carpeta",
-      "screenshot": "Captura de Pantalla"
+      "screenshot": "Captura de Pantalla",
+      "copyAlternateNewlines": "Copiar con salto de párrafo alternativo"
     },
     "paragraph": {
       "heading1": "Encabezado 1",
@@ -1287,6 +1298,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "El documento cambió en el disco o no se encontró el dibujo original. Los cambios del dibujo siguen abiertos.",
     "browseDocuments": "Browse Files…",
     "canvas": "Canvas",
     "source": "Source",

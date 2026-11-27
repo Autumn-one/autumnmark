@@ -14,6 +14,7 @@ vi.mock('electron', async() => {
 
     loadURL = vi.fn().mockResolvedValue(undefined)
     show = vi.fn()
+    removeMenu = vi.fn()
     setSheetOffset = vi.fn()
     destroy = (): void => { this.emit('closed') }
   }

@@ -2,6 +2,7 @@ const COMMANDS = Object.freeze({
   DRAWING_INSERT: 'drawing.insert',
   VIEW_READ_ONLY_MODE: 'view.read-only-mode',
   EDIT_COPY: 'edit.copy',
+  EDIT_COPY_ALTERNATE_NEWLINES: 'edit.copy-alternate-newlines',
   EDIT_COPY_AS_HTML: 'edit.copy-as-html',
   EDIT_COPY_AS_RICH: 'edit.copy-as-rich',
   EDIT_CREATE_PARAGRAPH: 'edit.create-paragraph',

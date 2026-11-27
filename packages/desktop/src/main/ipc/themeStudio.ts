@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { dialog, ipcMain, nativeTheme, type IpcMainInvokeEvent } from 'electron'
 import log from 'electron-log'
-import { pineInkTheme } from 'common/theme'
+import { builtinThemeName } from 'common/theme'
 import { isLocalTheme, localThemeList, maxThemeNameLength, themeBases, themeSelectionPatch, type LocalTheme, type ThemeModelEvent, type ThemeModelRequest } from '@shared/localTheme'
 import type { AppliedThemeHistory, ThemeVersionChange } from '@shared/themeVersion'
 import type { DocumentChatThemeEffect } from '@shared/documentChat'
@@ -296,7 +296,7 @@ export const registerThemeStudio = (app: Accessor, savedSettings: (id: string) =
   function activeTheme() {
     const { theme: id, localThemes } = app.preferences.getAll()
     const source = localThemeList(localThemes).find(item => item.id === id)
-    const name = source?.name ?? (id === pineInkTheme.id ? pineInkTheme.name : id)
+    const name = source?.name ?? builtinThemeName(id) ?? id
     const target: SkillTheme = { id, name, base: source?.base ?? id, scope: 'active' }
     const revision = createHash('sha256').update(appliedThemeRevisionInput(id, source)).digest('hex')
     return { target, source, revision }

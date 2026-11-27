@@ -1,6 +1,6 @@
 import { resolve, dirname, relative } from 'path'
 import { createRequire } from 'node:module'
-import { normalizePath, type PluginOption } from 'vite'
+import { normalizePath, type Plugin, type PluginOption } from 'vite'
 import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import svgLoader from 'vite-svg-loader'
@@ -14,13 +14,24 @@ const __dirname = dirname(__filename)
 const excalidrawFonts = normalizePath(resolve(dirname(createRequire(import.meta.url).resolve('@excalidraw/excalidraw')), 'fonts'))
 const excalidrawFontBase = normalizePath(relative(resolve(__dirname, 'src/renderer'), dirname(excalidrawFonts)))
   .split('/').filter(segment => segment && segment !== '..').length
+const katexWoff2: Plugin = {
+  name: 'katex-woff2',
+  enforce: 'pre',
+  transform(css, id) {
+    if (!/\/katex\/dist\/katex(?:\.min)?\.css(?:\?|$)/.test(normalizePath(id))) return
+    // Vite emits CSS URL assets before PostCSS can remove the fallback sources.
+    return css.replace(/\bsrc\s*:([^;}]+)/g, (declaration, sources: string) => {
+      const woff2 = sources.split(',').find(source => /\.woff2["']?\s*\)/.test(source))
+      return woff2 ? `src: ${woff2.trim()}` : declaration
+    })
+  }
+}
 
 export default defineConfig({
   main: {
     build: {
       externalizeDeps: {
-        // Bundle ESM-only dependencies so main can load them from CommonJS at startup.
-        exclude: ['electron-store', '@csstools/css-tokenizer'],
+        // Optional dependencies are outside the production dependency list.
         include: ['native-keymap']
       }
     },
@@ -38,11 +49,9 @@ export default defineConfig({
     }
   },
   preload: {
-    // Sandboxed preload cannot require npm packages; inline its ESM path helpers.
+    // Sandboxed preload can only require Electron and its supported Node builtins.
     build: {
-      externalizeDeps: {
-        exclude: ['pathe', '@jsr/std__path']
-      }
+      externalizeDeps: false
     },
     resolve: {
       alias: {
@@ -72,6 +81,7 @@ export default defineConfig({
       global: 'globalThis'
     },
     resolve: {
+      dedupe: ['cytoscape', 'roughjs'],
       alias: {
         '@': resolve(__dirname, 'src/renderer/src'),
         common: resolve(__dirname, 'src/common'),
@@ -90,8 +100,13 @@ export default defineConfig({
         'codemirror/addon/display/placeholder', 'postcss', 'postcss-selector-parser'
       ]
     },
-    plugins: [vue(), svgLoader(), viteStaticCopy({
-      targets: [{ src: excalidrawFonts, dest: 'excalidraw', rename: { stripBase: excalidrawFontBase } }]
+    plugins: [vue(), svgLoader(), katexWoff2, viteStaticCopy({
+      targets: [{
+        // Excalidraw imports Assistant through its CSS, so Vite emits those faces.
+        src: [`${excalidrawFonts}/**/*`, `!${excalidrawFonts}/Assistant/**/*`],
+        dest: 'excalidraw',
+        rename: { stripBase: excalidrawFontBase }
+      }]
     })] as PluginOption[],
     css: {
       postcss: {

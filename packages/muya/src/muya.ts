@@ -1,14 +1,17 @@
 import type Content from './block/base/content';
 import type Parent from './block/base/parent';
 import type { IHeadingFoldState } from './block/folding';
+import type { IActivateDocumentOptions, IActivateDocumentResult, IPrewarmDocumentOptions } from './editor/documentSession';
+import type { IUpdateEmbeddedDrawingParams } from './editor/embeddedDrawingUpdate';
 import type { Listener, TEventListener } from './event/types';
+import type { ISerializedHistory } from './history';
 import type { ILocale } from './i18n/types';
 import type { IReplaceOption, ISearchOption } from './search/types';
 import type { IIndexCursor } from './selection/offsetCursor';
 import type { TSelectionState } from './selection/types';
 import type { ITocItem } from './state/getTOC';
 import type { IBulletListState, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
-import type { IMuyaOptions, Nullable } from './types';
+import type { IDocumentContext, IMuyaOptions, Nullable } from './types';
 import Format from './block/base/format';
 import { canTurnInto, insertBlockBelowByLabel, insertFrontMatterAtStart, replaceBlockByLabel } from './block/blockTransforms';
 import { getHeadingFoldState, revealBlock, setHeadingFoldState } from './block/folding';
@@ -20,6 +23,7 @@ import {
     MUYA_DEFAULT_OPTIONS,
     URL_REG,
 } from './config/index';
+import { applyEmbeddedDrawingUpdate, resolveEmbeddedDrawingTarget } from './editor/embeddedDrawingUpdate';
 import { Editor } from './editor/index';
 import { attachReadingEvents, prepareReadingLinks } from './editor/readOnly';
 import EventCenter from './event/index';
@@ -29,7 +33,7 @@ import {
     injectSentinels,
     injectStateSentinels,
     locateSentinelOffsets,
-    resolveSentinelCursor,
+    resolveSentinelCursorFromState,
 } from './selection/offsetCursor';
 import { createTextSelectionState } from './selection/state';
 import { atxHeadingBody, atxHeadingBodyRange } from './state/headings';
@@ -215,7 +219,15 @@ export class Muya {
         this._cancelReadingLink = attachReadingEvents(this);
     }
 
-    private _refreshReadingPresentation(modeChanged = false): void {
+    /**
+     * Align root and block reading-mode attributes for DocumentSessionPool.
+     * @internal
+     */
+    syncReadingPresentation(modeChanged = false, refreshBlocks = true): void {
+        this._refreshReadingPresentation(modeChanged, refreshBlocks);
+    }
+
+    private _refreshReadingPresentation(modeChanged = false, refreshBlocks = true): void {
         const { domNode, isReadOnly } = this;
         const contentEditable = String(!isReadOnly);
         // Reassigning editability on a connected tree makes Chromium revisit every descendant (#5860).
@@ -225,13 +237,17 @@ export class Muya {
         domNode.setAttribute('tabindex', '0');
         domNode.setAttribute('role', isReadOnly ? 'document' : 'textbox');
         domNode.setAttribute('aria-label', this.i18n.t(isReadOnly ? 'Read-only document' : 'Document'));
+        if (!refreshBlocks)
+            return;
         this.editor.scrollPage?.breadthFirstTraverse((node) => {
             if (node.isParent() && isReadOnly)
                 node.active = false;
             if (node.isContent()) {
                 if (node.domNode?.getAttribute('contenteditable') !== contentEditable)
                     node.domNode?.setAttribute('contenteditable', contentEditable);
-                if (isReadOnly || (modeChanged && node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block'))
+                // Fresh trees created by setContent/init already render with current `isReadOnly`;
+                // only re-render content blocks when toggling read-only on an existing live tree.
+                if (modeChanged && (isReadOnly || (node.blockName === 'codeblock.content' && node.parent?.parent?.blockName === 'code-block')))
                     node.update({});
             }
         });
@@ -266,6 +282,7 @@ export class Muya {
         if (this.editor.scrollPage)
             this._prepareDocumentRebuild();
         this.i18n.locale(object);
+        this.editor.documentSessions.invalidateAll();
         if (this.editor.scrollPage)
             this._forceRender();
     }
@@ -308,6 +325,46 @@ export class Muya {
 
     getTOC(): ITocItem[] {
         return this.editor.jsonState.getTOC();
+    }
+
+    getCachedTOC(): ITocItem[] {
+        return this.editor.documentSessions.getCachedTOC();
+    }
+
+    bindActiveDocument(id: string, markdown: string, context: IDocumentContext): void {
+        this.editor.documentSessions.bindActive(id, markdown, context);
+    }
+
+    setViewportSuspended(suspended: boolean): void {
+        this.editor.setViewportSuspended(suspended);
+    }
+
+    updateDocumentContext(context: IDocumentContext, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        this.editor.documentSessions.changeContext(context, onEvict);
+    }
+
+    markActiveDocumentModified(markdown: string): void {
+        this.editor.documentSessions.markActiveModified(markdown);
+    }
+
+    activateDocument(options: IActivateDocumentOptions): IActivateDocumentResult {
+        return this.editor.documentSessions.activate(options);
+    }
+
+    prewarmDocument(options: IPrewarmDocumentOptions): boolean {
+        return this.editor.documentSessions.prewarm(options);
+    }
+
+    hasRetainedDocument(id: string, markdown: string, pathname?: string, dirname?: string): boolean {
+        return this.editor.documentSessions.hasRetained(id, markdown, pathname, dirname);
+    }
+
+    evictDocument(id: string, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        this.editor.documentSessions.evict(id, onEvict);
+    }
+
+    invalidateDocuments(): void {
+        this.editor.documentSessions.invalidateAll();
     }
 
     /** Capture transient section folds before switching documents. */
@@ -390,10 +447,15 @@ export class Muya {
      * `recordSelection` is the selection restored by undo. Omit it to use the
      * live selection, or pass the saved WYSIWYG selection when focus has moved
      * to source mode.
+     * Set `preventScroll` for updates that should keep the viewport independent of the caret.
      *
      * @returns Whether an undo boundary was recorded.
      */
-    replaceContent(content: TState[] | string, recordSelection?: Nullable<TSelectionState>): boolean {
+    replaceContent(
+        content: TState[] | string,
+        recordSelection?: Nullable<TSelectionState>,
+        { preventScroll = false, preserveFocus = false } = {},
+    ): boolean {
         this.editor.transactions.assertStandalone();
         this.flush();
         const { jsonState } = this.editor;
@@ -408,6 +470,8 @@ export class Muya {
             this.editor.rebuildContents(op, this.isReadOnly ? null : selection, ChangeSource.Api, {
                 history: 'separate',
                 recordSelection: boundarySelection,
+                preventScroll,
+                preserveFocus,
             });
         });
         this._refreshReadingPresentation();
@@ -441,11 +505,14 @@ export class Muya {
         }
 
         applyAppearance(this.domNode, options);
-        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options)
+        if ('compactMode' in options || 'compactImageMaxHeight' in options || 'compactCodeMaxLines' in options) {
             this.editor.compactBlocks.refresh();
+            this.editor.documentSessions.invalidateAll();
+        }
         if (!forceRender)
             return;
 
+        this.editor.documentSessions.invalidateAll();
         if (reparse) {
             const { jsonState } = this.editor;
             jsonState.setContent(jsonState.markdownToState(this.getMarkdown()));
@@ -672,7 +739,7 @@ export class Muya {
         return this.editor.selection.getSelectionState();
     }
 
-    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean }): boolean {
+    setSelection(state: TSelectionState | null, options?: { preventScroll?: boolean; preserveFocus?: boolean }): boolean {
         return this.editor.selection.setSelection(state, options);
     }
 
@@ -698,8 +765,10 @@ export class Muya {
      * bar do not linger after the editor is blurred.
      */
     blur(isRemoveAllRange = false, unSelect = false) {
-        if (isRemoveAllRange)
+        if (isRemoveAllRange) {
             document.getSelection()?.removeAllRanges();
+            this.editor.selection.markNativeSelectionCleared();
+        }
 
         if (unSelect)
             this.editor.selection.clearImage();
@@ -715,11 +784,38 @@ export class Muya {
 
     /** Reload images whose files changed on disk despite cached bitmaps. */
     invalidateImageCache() {
+        this.editor.documentSessions.invalidateAll();
         this.editor.inlineEngine.invalidateImageCache();
+    }
+
+    /** Revalidate one preview key in place without clearing unrelated cached images. */
+    refreshImagePreview(key: string, loadFn?: () => Promise<string>, options?: { confirmCurrent?: boolean }): Promise<boolean> {
+        return this.editor.inlineEngine.refreshImagePreview(key, loadFn, options?.confirmCurrent);
+    }
+
+    /**
+     * Update a single embedded drawing block in place without rebuilding the document.
+     * Returns false without modifying document state when target verification fails.
+     */
+    updateEmbeddedDrawing(params: IUpdateEmbeddedDrawingParams): boolean {
+        if (this.isReadOnly || !this.canMutate || !this.editor.scrollPage)
+            return false;
+        this.editor.transactions.assertStandalone();
+        this.flush();
+        const target = resolveEmbeddedDrawingTarget(this, params);
+        if (!target)
+            return false;
+        applyEmbeddedDrawingUpdate(this, target, params);
+        return true;
     }
 
     copyAsMarkdown() {
         this.editor.clipboard.copyAsMarkdown();
+    }
+
+    /** Copy using the opposite paragraph newline mode from `copyParagraphNewlines`. */
+    copyWithAlternateNewlines() {
+        this.editor.clipboard.copyWithAlternateNewlines();
     }
 
     /** Copy rendered HTML as literal markup in the plain-text clipboard slot. */
@@ -1118,7 +1214,7 @@ export class Muya {
      * Restore a source-mode line/ch cursor without changing the document or
      * undo history. Returns false when the cursor cannot be resolved.
      */
-    setCursorByOffset(indexCursor: IIndexCursor): boolean {
+    setCursorByOffset(indexCursor: IIndexCursor, options?: { preserveFocus?: boolean }): boolean {
         const { scrollPage } = this.editor;
         if (!scrollPage)
             return false;
@@ -1128,21 +1224,14 @@ export class Muya {
         if (sentinelMarkdown == null)
             return false;
 
-        // The tree has no source-line map; a synchronous sentinel rebuild resolves it
-        // without an intermediate paint. setContent clears history, so preserve it here.
-        const savedHistory = this.getHistory();
-
-        const expanded = this.editor.compactBlocks.expandedPaths();
-        this.editor.setContent(sentinelMarkdown);
-        const cursor = resolveSentinelCursor(this.editor.scrollPage!);
-        this.editor.setContent(cleanMarkdown);
-        this.editor.compactBlocks.restoreExpandedPaths(expanded);
-        this.setHistory(savedHistory);
+        // Resolve sentinels offscreen on parsed state so live DOM, history, and view state stay untouched.
+        const sentinelState = this.editor.jsonState.markdownToState(sentinelMarkdown);
+        const cursor = resolveSentinelCursorFromState(sentinelState);
 
         if (!cursor)
             return false;
 
-        return this.setSelection(cursor);
+        return this.setSelection(cursor, options);
     }
 
     /**
@@ -1597,6 +1686,8 @@ export class Muya {
     }
 
     destroy() {
+        this.editor.documentSessions.dispose();
+        this.editor.codeLayoutScheduler.dispose();
         this.editor.compactBlocks.dispose();
         this.editor.contentTabs.dispose();
         this.editor.foldBlocks.dispose();

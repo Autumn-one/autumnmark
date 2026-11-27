@@ -1,7 +1,7 @@
 import type { ProjectRootsSnapshot } from './project'
 
 import type { PreferenceUpdateResult, UserPreferences, UserPreferencesPatch } from './preferences'
-import type { DocumentViewState, DiskBaseline, SaveFormatState } from './files'
+import type { DocumentViewState, DiskBaseline, FileChangePayload, SaveFormatState } from './files'
 /** UUID of a native editor window; independent of Electron process IDs. */
 export type WindowStateId = string
 /** UUID shared by windows belonging to one application launch. */
@@ -49,6 +49,8 @@ export interface WindowGeometryState {
   displayId: string | null
 }
 
+export type TabBarMode = 'auto' | 'visible' | 'hidden'
+
 /** Preferred window layout, before viewport clamps or temporary mode overrides. */
 export interface WindowLayoutState {
   sidebar: {
@@ -58,7 +60,12 @@ export interface WindowLayoutState {
     preferredWidthPx: number
     openedFiles: { expanded: boolean; preferredHeightPx: number }
   }
-  tabBar: { visible: boolean }
+  tabBar: {
+    // True only when explicitly locked visible; automatic visibility is derived at runtime.
+    visible: boolean
+    // Omit or 'auto' for automatic single/multi-tab visibility; 'visible'/'hidden' lock manual overrides.
+    mode?: TabBarMode
+  }
   // Store intent before focus/read-only modes temporarily suppress UI elements.
   modes: { sourceCode: boolean; focus: boolean; typewriter: boolean }
 }
@@ -298,6 +305,7 @@ export interface ManagedDocumentPayload {
 /** A successful disk save includes its captured text and format, even if newer edits remain. */
 export type ManagedSaveResult =
   | { status: 'saved'; document: DocumentSnapshot; savedMarkdown: string; savedFormat: SaveFormatState; metadataRevision: number }
+  | { status: 'disk-changed'; change?: FileChangePayload }
   | { status: 'canceled' | 'failed' }
 
 /** Registration failure leaves renderer membership unchanged. */
@@ -325,7 +333,7 @@ export interface StateIpcInvokeChannels {
     ret: PreferenceUpdateResult
   }
   'mt::preferences::choose-directory': { args: []; ret: string | null }
-  'mt::state::save-document': { args: [contextToken: string, documentId: string, saveAs: boolean]; ret: ManagedSaveResult }
+  'mt::state::save-document': { args: [contextToken: string, documentId: string, saveAs: boolean, preserveDiskChanges?: boolean]; ret: ManagedSaveResult }
   'mt::state::close-documents': { args: [contextToken: string, documentIds: string[]]; ret: { status: 'closed' | 'canceled' | 'failed' } }
 }
 

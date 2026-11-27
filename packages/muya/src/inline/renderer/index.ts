@@ -69,8 +69,10 @@ class Renderer {
     }
 
     imageSource(src: string) {
-        const preview = this.environment.resolveImagePreview?.(src);
-        return preview ? { src: preview.key, isUnknownType: false, load: preview.load } : getImageSrc(src);
+        const preview = this.environment.resolveImagePreview?.(src, this.environment.documentPathname);
+        return preview
+            ? { src: preview.key, isUnknownType: false, load: preview.load }
+            : getImageSrc(src, this.environment.documentDirname);
     }
 
     private _checkConflicted(block: IRenderBlock, token: Pick<Token, 'range'>, cursor: IInlineCursor = {}) {
@@ -188,7 +190,7 @@ class Renderer {
 
     output(tokens: Token[], block: IRenderBlock, cursor: IInlineCursor) {
         const snapshot = this.environment;
-        const environment = { ...snapshot, root: block.domNode || snapshot.root };
+        const environment = { ...snapshot, root: block.domNode || snapshot.root, previewScope: block.previewScope };
         const session = new Renderer(() => environment, this.mounts, this.images);
         session.loadMathMap = this.loadMathMap;
         const rendered = new Map<Token, (VNode | string)[]>();

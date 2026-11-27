@@ -10,7 +10,7 @@
       :class="{ frameless: titleBarStyle === 'custom' || isMac }"
     >
       <div
-        v-if="!showCustomTitleBar"
+        v-if="isMac"
         class="title-bar"
       />
       <router-view class="pref-setting" />
@@ -31,7 +31,8 @@ import { isMac } from '@/util'
 useSettingLocation()
 const preferencesStore = usePreferencesStore()
 
-const { theme, titleBarStyle } = storeToRefs(preferencesStore)
+const { theme } = storeToRefs(preferencesStore)
+const titleBarStyle = computed(() => window.marktext?.env?.titleBarStyle ?? preferencesStore.titleBarStyle)
 
 const showCustomTitleBar = computed(() => !isMac && titleBarStyle.value === 'custom')
 
@@ -107,9 +108,8 @@ watch(() => [theme.value, preferencesStore.localThemes] as const, ([id, library]
     & .pref-setting {
       container-type: inline-size;
       padding: 50px 40px;
-      padding-top: var(--titleBarHeight);
       flex: 1;
-      height: calc(100vh - var(--titleBarHeight));
+      min-height: 0;
       overflow: auto;
     }
     & span,
@@ -127,6 +127,7 @@ watch(() => [theme.value, preferencesStore.localThemes] as const, ([id, library]
     /* Move the scrollbar below the titlebar */
     margin-top: var(--titleBarHeight);
     padding-top: 0;
+    height: calc(100vh - var(--titleBarHeight));
   }
 }
 </style>

@@ -1,5 +1,6 @@
 import type Content from '../block/base/content';
 import type Format from '../block/base/format';
+import type Paragraph from '../block/commonMark/paragraph';
 import type { Muya } from '../muya';
 import type { IAnchorFocusInfo, ITextSelectionState } from '../selection/types';
 import { isOsx } from '../config';
@@ -7,6 +8,7 @@ import { findContentDOM, resolveEndpoint } from '../selection/dom';
 import { createTextSelectionState } from '../selection/state';
 import { SelectionType } from '../selection/types';
 import { atxHeadingBodyRange } from '../state/headings';
+import { extractRangeDrawingWidths, mergeDrawingWidths } from '../utils/drawingLayout';
 
 const TEXT_BLOCKS = new Set([
     'paragraph.content',
@@ -103,6 +105,12 @@ function bookmarkTarget(muya: Muya, source: Content, target: Content): () => Con
     };
 }
 
+function paragraphOf(block: Content): Paragraph | null {
+    return block.blockName === 'paragraph.content' && block.parent?.blockName === 'paragraph'
+        ? block.parent as Paragraph
+        : null;
+}
+
 export function dropText(muya: Muya, source: ITextDragSource, target: IAnchorFocusInfo, copy: boolean): void {
     if (!canDropText(muya, source, target, copy))
         return;
@@ -113,10 +121,46 @@ export function dropText(muya: Muya, source: ITextDragSource, target: IAnchorFoc
         : raw;
     const offset = target.offset - (!copy && target.block === block && target.offset > end ? end - start : 0);
 
+    const sourceParagraph = paragraphOf(block);
+    const sourceSlice = sourceParagraph?.meta?.drawingWidths
+        ? extractRangeDrawingWidths(sourceParagraph.meta.drawingWidths, original, start, end)
+        : undefined;
+
     muya.editor.transact(() => {
         let destination = target.block;
+        // Same-paragraph move: compute final text and drawing widths once so identical sources keep their own widths.
+        if (!copy && destination === block && sourceParagraph && sourceSlice) {
+            const withoutMoved = original.slice(0, start) + original.slice(end);
+            const head = withoutMoved.slice(0, offset);
+            const tail = withoutMoved.slice(offset);
+            const { merged } = mergeDrawingWidths({
+                existingWidths: sourceSlice.remaining,
+                oldText: withoutMoved,
+                head,
+                inserted: text,
+                tail,
+                incomingWidths: sourceSlice.extracted,
+            });
+            sourceParagraph.withExplicitDrawingMeta(() => {
+                sourceParagraph.setExplicitDrawingWidths(merged);
+                block.text = head + text + tail;
+            });
+            block.setCursor(offset, offset + text.length, true);
+            (block as Format).checkInlineUpdate();
+            return;
+        }
+
         if (!copy) {
-            block.text = original.slice(0, start) + original.slice(end);
+            const nextSourceText = original.slice(0, start) + original.slice(end);
+            if (sourceParagraph && sourceSlice) {
+                sourceParagraph.withExplicitDrawingMeta(() => {
+                    sourceParagraph.setExplicitDrawingWidths(sourceSlice.remaining);
+                    block.text = nextSourceText;
+                });
+            }
+            else {
+                block.text = nextSourceText;
+            }
             block.update();
         }
         // Conversion handlers require a local cursor, even for the leaf losing the text.
@@ -126,7 +170,25 @@ export function dropText(muya: Muya, source: ITextDragSource, target: IAnchorFoc
             (block as Format).checkInlineUpdate();
             destination = resolveTarget();
         }
-        destination.text = destination.text.slice(0, offset) + text + destination.text.slice(offset);
+        const destParagraph = paragraphOf(destination);
+        const destOldText = destination.text;
+        const destHead = destOldText.slice(0, offset);
+        const destTail = destOldText.slice(offset);
+        if (destParagraph && (destParagraph.meta?.drawingWidths || sourceSlice?.extracted)) {
+            destParagraph.withExplicitDrawingMeta(() => {
+                destParagraph.mergeDrawingMeta({
+                    oldText: destOldText,
+                    head: destHead,
+                    inserted: text,
+                    tail: destTail,
+                    incomingMeta: sourceSlice?.extracted ? { drawingWidths: sourceSlice.extracted } : undefined,
+                });
+                destination.text = destHead + text + destTail;
+            });
+        }
+        else {
+            destination.text = destHead + text + destTail;
+        }
         destination.setCursor(offset, offset + text.length, true);
         if (destination.blockName !== 'codeblock.content')
             (destination as Format).checkInlineUpdate();

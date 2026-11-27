@@ -1,0 +1,337 @@
+:root {
+  --violet-diary-ink: #e5dbea;
+  --violet-diary-heading: #fae0ef;
+  --violet-diary-accent: #efabc8;
+  --violet-diary-secondary: #c8b8d2;
+  --violet-diary-side: #1a1723;
+  --violet-diary-selection: #59405d;
+  --violet-diary-active: #352a40;
+  --violet-diary-rule: #50435c;
+  --violet-diary-tint: #322739;
+  --violet-diary-code: #2a2337;
+  --violet-diary-inline: #403048;
+  --violet-diary-comment: #b6a5c2;
+  --violet-diary-literal: #b1d5ca;
+  --violet-diary-number: #f0bb9a;
+  --violet-diary-heading-font: Georgia, 'Songti SC', STSong, SimSun, serif;
+  --violet-diary-body-font: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+  --editorBgColor: #221e2e;
+  --editorColor: var(--violet-diary-ink);
+  --editorColor80: var(--violet-diary-ink);
+  --editorColor50: var(--violet-diary-secondary);
+  --editorColor10: var(--violet-diary-rule);
+  --themeColor: var(--violet-diary-accent);
+  --themeColor20: var(--violet-diary-selection);
+  --themeColor10: var(--violet-diary-tint);
+  --linkColor: var(--violet-diary-accent);
+  --link-color: var(--violet-diary-accent);
+  --proseAccent: var(--violet-diary-accent);
+  --strongColor: var(--violet-diary-heading);
+  --blockquoteTextColor: var(--violet-diary-secondary);
+  --blockquoteBorderColor: var(--violet-diary-accent);
+  --listMarkerColor: var(--violet-diary-accent);
+  --selectionColor: var(--violet-diary-selection);
+  --focusColor: var(--violet-diary-accent);
+  --floatBgColor: var(--violet-diary-code);
+  --hrColor: var(--violet-diary-rule);
+  --codeBgColor: var(--violet-diary-inline);
+  --codeBlockBgColor: var(--violet-diary-code);
+  --codeBlockColor: var(--violet-diary-ink);
+  --tableBorderColor: var(--violet-diary-rule);
+  --sideBarBorderColor: var(--violet-diary-rule);
+  --sideBarBgColor: var(--violet-diary-side);
+  --sideBarTextColor: var(--violet-diary-secondary);
+  --sideBarColor: var(--violet-diary-secondary);
+  --sideBarTitleColor: var(--violet-diary-heading);
+  --sideBarIconColor: var(--violet-diary-secondary);
+  --sideBarItemHoverBgColor: var(--violet-diary-tint);
+  --itemBgColor: var(--violet-diary-active);
+}
+.side-bar {
+  --editorColor: var(--violet-diary-secondary);
+}
+.side-bar .side-bar-file.active {
+  background: var(--violet-diary-active);
+  color: var(--violet-diary-heading);
+}
+.editor-tabs,
+.title-bar-editor-bg.tabs-visible:not(.mica-title-bar) {
+  background: var(--violet-diary-side) !important;
+}
+.use-theme-font .mu-container {
+  --proseFont: var(--violet-diary-body-font);
+  --proseHeadingFont: var(--violet-diary-heading-font);
+}
+.mu-container .mu-paragraph {
+  font: 400 16px/1.9 var(--violet-diary-body-font);
+  color: var(--violet-diary-ink);
+  margin-block: 0.65em 0.8em;
+}
+.mu-container .mu-tight-list > li > .mu-paragraph {
+  margin-block: 0;
+}
+.mu-container :is(.mu-atx-heading, .mu-setext-heading) {
+  color: var(--violet-diary-heading);
+  font-family: var(--violet-diary-heading-font);
+  line-height: 1.35;
+  text-align: start;
+}
+
+.mu-container .mu-block-quote:not(.mu-github-alert) {
+  margin-block: 16px;
+  padding: 11px 17px;
+  border: 1px solid #5e4563;
+  border-radius: 12px;
+  background: var(--violet-diary-tint);
+}
+.mu-container .mu-block-quote:not(.mu-github-alert)::before {
+  inset-inline-start: 0;
+  width: 0;
+  pointer-events: none;
+}
+.mu-container .mu-block-quote:not(.mu-github-alert) .mu-paragraph {
+  margin: 0;
+  color: #f0c9e0;
+}
+
+.mu-container :is(a, .mu-link) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.mu-container code.mu-inline-rule {
+  background: var(--violet-diary-inline);
+  color: var(--violet-diary-heading);
+}
+
+.mu-container figure.mu-table {
+  margin-block: 0 3px;
+  border-radius: 9px;
+}
+.mu-container h2 + figure.mu-table {
+  margin-block-start: -9px;
+}
+.mu-container figure.mu-table + h2:is(.mu-atx-heading, .mu-setext-heading) {
+  margin-block-start: 10px;
+}
+.mu-container figure.mu-table :is(th, td) {
+  border-color: var(--violet-diary-rule);
+  padding: 6px 12px;
+  font: 400 14px/1.6 var(--violet-diary-body-font);
+  color: var(--violet-diary-ink);
+}
+.mu-container figure.mu-table thead th,
+.mu-container figure.mu-table tr:first-child > td {
+  background: var(--violet-diary-tint);
+  color: var(--violet-diary-heading);
+  font-weight: 700;
+}
+.mu-container figure.mu-table tr:nth-child(even) {
+  background: color-mix(in srgb, var(--violet-diary-tint) 32%, transparent);
+}
+
+.mu-container pre.mu-code-block {
+  --mu-code-font-family: 'Cascadia Code', Consolas, monospace;
+  margin-block: 11px 14px;
+  color: var(--violet-diary-ink);
+  background: var(--violet-diary-code);
+  border: 1px solid var(--violet-diary-rule);
+  border-radius: 11px;
+}
+.mu-container pre.mu-code-block > .mu-code-block-title {
+  color: var(--violet-diary-secondary);
+  background-color: transparent;
+  text-align: center;
+  font-family: var(--mu-code-font-family);
+  font-size: 0.88em;
+}
+.mu-container pre.mu-code-block > code.mu-code {
+  color: var(--violet-diary-ink);
+  text-shadow: none;
+}
+.mu-container pre.mu-code-block .token {
+  text-shadow: none;
+}
+.mu-container pre.mu-code-block .token:is(.comment, .prolog, .doctype) {
+  color: var(--violet-diary-comment);
+}
+.mu-container pre.mu-code-block .token:is(.keyword, .operator, .function) {
+  color: var(--violet-diary-accent);
+  background: transparent;
+}
+.mu-container pre.mu-code-block .token:is(.string, .template-string) {
+  color: var(--violet-diary-literal);
+}
+.mu-container pre.mu-code-block .token:is(.number, .boolean) {
+  color: var(--violet-diary-number);
+}
+.mu-container pre.mu-code-block .token.punctuation {
+  color: var(--violet-diary-secondary);
+}
+
+.mu-container > .mu-task-list {
+  margin-block: 13px 0;
+}
+.mu-container .mu-task-list-item > .mu-checkbox-checked ~ .mu-paragraph {
+  color: var(--violet-diary-secondary);
+}
+.mu-container .mu-task-list-item > .mu-task-list-checkbox::before {
+  border-color: var(--violet-diary-accent);
+}
+.mu-container .mu-task-list-item > .mu-task-list-checkbox.mu-checkbox-checked::before {
+  background: var(--violet-diary-accent);
+}
+
+.mu-container h1:is(.mu-atx-heading, .mu-setext-heading) {
+  margin-block: 18px 17px;
+  padding: 26px clamp(15px, 4cqi, 32px);
+  border: 1px solid #695069;
+  border-radius: 18px;
+  text-align: start;
+  font-size: clamp(28px, 7cqi, 48px);
+  letter-spacing: 0.14em;
+  box-shadow: inset 0 1px #ffddd522;
+  background:
+    radial-gradient(
+      circle at 84% 54%,
+      transparent 0 26px,
+      #ecb3c958 27px 28px,
+      transparent 29px 39px,
+      #ecb3c92d 40px 41px,
+      transparent 42px 53px,
+      #ecb3c91a 54px 55px,
+      transparent 56px
+    ),
+    radial-gradient(ellipse at 91% 0%, #aa739063, transparent 54%),
+    linear-gradient(105deg, #392b47 15%, #553951 100%);
+}
+.mu-container h2:is(.mu-atx-heading, .mu-setext-heading) {
+  position: relative;
+  margin-block: 28px 12px;
+  padding: 9px clamp(14px, 3.1cqi, 18px) 10px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--violet-diary-heading);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.39;
+  letter-spacing: 0.075em;
+  background:
+    linear-gradient(90deg, #b98ca266, #b98ca233 72%, transparent) bottom / 100% 1px no-repeat,
+    radial-gradient(
+      circle at calc(100% - 28px) 50%,
+      transparent 0 12px,
+      #efabc83d 13px 14px,
+      transparent 15px 21px,
+      #efabc81f 22px 23px,
+      transparent 24px
+    ),
+    linear-gradient(96deg, #4f354e 0%, #382b43 64%, #2c2539 100%);
+}
+.mu-container h2:is(.mu-atx-heading, .mu-setext-heading)::before {
+  position: absolute;
+  inset-block-start: 15px;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  block-size: 24px;
+  border-radius: 99px;
+  background: var(--violet-diary-accent);
+  content: '';
+  pointer-events: none;
+}
+.mu-container h3:is(.mu-atx-heading, .mu-setext-heading) {
+  position: relative;
+  margin-block: 22px 9px;
+  padding: 0 0 6px 21px;
+  color: #f0d4ec;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.49;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #efabc888 0%, #9b78a440 44%, transparent 76%) bottom / 100% 1px
+    no-repeat;
+}
+.mu-container h3:is(.mu-atx-heading, .mu-setext-heading)::before {
+  box-sizing: border-box;
+  position: absolute;
+  inset-block-start: 11px;
+  inset-inline-start: 2px;
+  inline-size: 8px;
+  block-size: 8px;
+  border: 1px solid #daaed5;
+  border-radius: 1px;
+  background: radial-gradient(circle, #daaed5 0 1px, transparent 1.3px);
+  transform: rotate(45deg);
+  content: '';
+  pointer-events: none;
+}
+.mu-container h4:is(.mu-atx-heading, .mu-setext-heading) {
+  position: relative;
+  margin-block: 18px 7px;
+  padding-inline-start: 20px;
+  color: #e2c5e4;
+  font-size: 17.5px;
+  font-weight: 700;
+  line-height: 1.48;
+  letter-spacing: 0.045em;
+}
+.mu-container h4:is(.mu-atx-heading, .mu-setext-heading)::before {
+  box-sizing: border-box;
+  position: absolute;
+  inset-block-start: 9px;
+  inset-inline-start: 3px;
+  inline-size: 7px;
+  block-size: 7px;
+  border: 1px solid #efabc8;
+  border-radius: 1px;
+  background: #efabc844;
+  box-shadow: 0 0 8px #efabc838;
+  transform: rotate(45deg);
+  content: '';
+  pointer-events: none;
+}
+.mu-container h5:is(.mu-atx-heading, .mu-setext-heading) {
+  position: relative;
+  margin-block: 16px 6px;
+  padding-inline-start: 20px;
+  color: #d4b5dc;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.055em;
+}
+.mu-container h5:is(.mu-atx-heading, .mu-setext-heading)::before {
+  position: absolute;
+  inset-block-start: 11px;
+  inset-inline-start: 2px;
+  inline-size: 11px;
+  block-size: 2.5px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #efabc8, #a684b5);
+  content: '';
+  pointer-events: none;
+}
+.mu-container h6:is(.mu-atx-heading, .mu-setext-heading) {
+  position: relative;
+  margin-block: 14px 5px;
+  padding: 0 0 4px 25px;
+  color: #c2aad0;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.11em;
+  background: repeating-linear-gradient(90deg, #755b8466 0 2px, transparent 2px 6px) bottom left /
+    140px 1px no-repeat;
+}
+.mu-container h6:is(.mu-atx-heading, .mu-setext-heading)::before {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-start: 2px;
+  inline-size: 16px;
+  block-size: 4px;
+  background:
+    radial-gradient(circle at 2px 2px, #efabc8 0 1.6px, transparent 2px),
+    radial-gradient(circle at 8px 2px, #c9a1cb 0 1.4px, transparent 1.8px),
+    radial-gradient(circle at 14px 2px, #8c709c 0 1.2px, transparent 1.6px);
+  content: '';
+  pointer-events: none;
+}

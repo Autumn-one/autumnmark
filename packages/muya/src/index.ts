@@ -2,6 +2,8 @@ export type { IHeadingFoldState } from './block/folding';
 export type { IClipboardImageCopy } from './clipboard/image';
 export { imageDocumentMarkdown } from './clipboard/markdownSource';
 export { embeddedImageDestination, findDocumentImages, findLinkedDocumentMedia, findPastedImageSources } from './clipboard/pastedImageSources';
+export type { IActivateDocumentOptions, IActivateDocumentResult, IDocumentPoolLimits, IPrewarmDocumentOptions } from './editor/documentSession';
+export type { IUpdateEmbeddedDrawingParams } from './editor/embeddedDrawingUpdate';
 export type { ISerializedHistory } from './history';
 export type { ILocale } from './i18n/types';
 
@@ -32,7 +34,7 @@ export { renderToStaticHTML } from './state/renderToStaticHTML';
 export type { IRenderToStaticHTMLOptions } from './state/renderToStaticHTML';
 export type { TState } from './state/types';
 export { ChangeSource } from './types';
-export type { IDrawingInsertion, IMuyaOptions } from './types';
+export type { IDocumentContext, IDrawingInsertion, IMuyaOptions, TDrawingInsertTrace } from './types';
 
 export { CodeBlockLanguageSelector } from './ui/codeBlockLanguageSelector';
 // Export ui tools.
@@ -57,14 +59,18 @@ export { TableRowColumMenu } from './ui/tableRowColumMenu';
 export type { IKeyboardShortcutOptions, IShortcutHintOptions } from './ui/types';
 export { decodeInlineDrawing, encodeInlineDrawing, isInlineDrawingSource } from './utils/diagram/drawingData';
 export { findEmbeddedDrawings, inlineDrawingToMarkdown } from './utils/diagram/drawingSource';
+export { default as loadDiagramRenderer } from './utils/diagram/index';
+export { clearMermaidSvgCache, rewriteMermaidSvgIds } from './utils/diagram/mermaid';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions } from './utils/diagram/render';
+export { drawingPreviewExpansionEdits } from './utils/drawingLayout';
 export { bindEmbeddedImageEvents, findEmbeddedImages, findEmbeddedMedia, replaceEmbeddedImage } from './utils/embeddedImage';
 export type { IEmbeddedImage, IEmbeddedImageEdit, IImageDimensions } from './utils/embeddedImage';
-export type { IImageInfo } from './utils/image';
+export type { IImageInfo, TImageWidth } from './utils/image';
 export { getImageInfo, imageToMarkdown, standaloneRemoteMarkdownImage } from './utils/image';
 export { escapeHTML, sanitize, unescapeHTML, wordCount } from './utils/index';
 export { default as logger } from './utils/logger';
 export type { TLogLevel, TLogSink } from './utils/logger';
 export { getClipboardImageFile, standaloneImageSource, videoFromTransfer } from './utils/paste';
+export { loadedLanguages as loadedPrismLanguages, loadLanguage as loadPrismLanguage } from './utils/prism';
 export { generateGithubSlug } from './utils/slug';

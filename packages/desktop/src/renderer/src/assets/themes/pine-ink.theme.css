@@ -68,7 +68,7 @@
     --strong-color: var(--pine-ink);
   }
 
-  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h1, h2) {
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h1, h2, h3) {
     font-family: var(--proseHeadingFont, var(--proseFont, var(--mu-font-family)));
   }
 
@@ -125,39 +125,151 @@
   }
 
   :scope :is(.mu-atx-heading, .mu-setext-heading):where(h2) {
-    margin-block: 1.15em 0.45em;
-    padding: 0.23em 0.59em;
-    background: linear-gradient(95deg, var(--paper-tint) 5%, #edf0e4 49%, transparent 100%);
-    border-inline-start: 3px solid var(--brass);
-    border-radius: 3px;
-    box-shadow: none;
-    font-size: 1.6em;
+    margin-block: 1.55em 0.62em;
+    padding: 0.36em 2.2em 0.4em 0.92em;
+    color: var(--pine-ink);
+    font-size: 1.56em;
+    font-weight: 700;
+    line-height: 1.38;
+    letter-spacing: 0.04em;
+    background:
+      linear-gradient(90deg, rgb(171 121 65 / 58%) 0%, rgb(134 166 144 / 42%) 56%, transparent 95%)
+        bottom / 100% 1px no-repeat,
+      radial-gradient(
+        circle at calc(100% - 28px) 50%,
+        rgb(171 121 65 / 16%) 0 4.5px,
+        transparent 5px 11px,
+        rgb(57 105 83 / 15%) 11.5px 12.5px,
+        transparent 13px 19px,
+        rgb(171 121 65 / 10%) 19.5px 20.5px,
+        transparent 21px
+      ),
+      linear-gradient(96deg, #e2ece0 0%, #eef1e5 56%, rgb(250 247 239 / 20%) 100%);
+    border-radius: 7px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%);
     text-shadow: none;
+    --strong-color: var(--pine-ink);
+    --link-color: var(--proseAccent);
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h2)::before {
+    position: absolute;
+    inset-block: 0.34em;
+    inset-inline-start: 0;
+    inline-size: 3.5px;
+    border-radius: 99px;
+    background: linear-gradient(180deg, #1f3e32 0%, var(--themeColor) 52%, var(--brass) 100%);
+    content: "";
+    pointer-events: none;
   }
 
   :scope :is(.mu-atx-heading, .mu-setext-heading):where(h3) {
     width: auto;
-    padding-inline-start: 0.86em;
-    color: var(--proseAccent);
+    margin-block: 1.45em 0.52em;
+    padding: 0 0 0.34em 1.22em;
+    color: #214537;
+    font-size: 1.28em;
+    font-weight: 700;
+    line-height: 1.42;
+    letter-spacing: 0.03em;
+    background: linear-gradient(
+        90deg,
+        rgb(171 121 65 / 62%) 0%,
+        rgb(57 105 83 / 28%) 38%,
+        transparent 78%
+      )
+      bottom / 100% 1px no-repeat;
     border-radius: 0;
     box-shadow: none;
-    font-size: 1.19em;
   }
 
   :scope :is(.mu-atx-heading, .mu-setext-heading):where(h3)::before {
+    box-sizing: border-box;
     position: absolute;
-    inset-block-start: 0.55em;
-    inset-inline-start: 0.09em;
-    width: 0.29em;
-    height: 0.29em;
-    background: var(--brass);
+    inset-block-start: 0.49em;
+    inset-inline-start: 0.14em;
+    inline-size: 0.44em;
+    block-size: 0.44em;
+    border: 1.5px solid var(--brass);
+    border-radius: 1.5px;
+    background: radial-gradient(circle, var(--pine-ink) 0 1.4px, transparent 1.7px);
     transform: rotate(45deg);
     content: "";
     pointer-events: none;
   }
 
-  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h4, h5, h6) {
-    color: var(--paper-ink);
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h4) {
+    margin-block: 1.25em 0.42em;
+    padding-inline-start: 1.2em;
+    color: #264c3d;
+    font-size: 1.15em;
+    font-weight: 680;
+    line-height: 1.46;
+    letter-spacing: 0.02em;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h4)::before {
+    box-sizing: border-box;
+    position: absolute;
+    inset-block-start: 0.54em;
+    inset-inline-start: 0.18em;
+    inline-size: 0.4em;
+    block-size: 0.4em;
+    border: 1.3px solid var(--themeColor);
+    border-radius: 1.5px;
+    background: #dce8d9;
+    box-shadow: 0 0 0 2px rgb(171 121 65 / 16%);
+    transform: rotate(45deg);
+    content: "";
+    pointer-events: none;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h5) {
+    margin-block: 1.12em 0.36em;
+    padding-inline-start: 1.38em;
+    color: #39574a;
+    font-size: 1.05em;
+    font-weight: 650;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h5)::before {
+    position: absolute;
+    inset-block-start: 0.7em;
+    inset-inline-start: 0.1em;
+    inline-size: 0.8em;
+    block-size: 2.5px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--brass) 0%, rgb(57 105 83 / 72%) 100%);
+    content: "";
+    pointer-events: none;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h6) {
+    margin-block: 1.02em 0.32em;
+    padding: 0 0 0.28em 1.75em;
+    color: #6b5841;
+    font-size: 0.96em;
+    font-weight: 600;
+    line-height: 1.54;
+    letter-spacing: 0.095em;
+    background: repeating-linear-gradient(90deg, rgb(171 121 65 / 42%) 0 2px, transparent 2px 6px)
+      bottom left / 138px 1px no-repeat;
+  }
+
+  :scope :is(.mu-atx-heading, .mu-setext-heading):where(h6)::before {
+    position: absolute;
+    inset-block-start: 0.64em;
+    inset-inline-start: 0.12em;
+    inline-size: 17px;
+    block-size: 5px;
+    background:
+      radial-gradient(circle at 2.2px 2.5px, var(--brass) 0 1.8px, transparent 2.1px),
+      radial-gradient(circle at 8.5px 2.5px, #5b7e6d 0 1.5px, transparent 1.8px),
+      radial-gradient(circle at 14.5px 2.5px, #aebfae 0 1.3px, transparent 1.6px);
+    content: "";
+    pointer-events: none;
   }
 
   :scope :is(.mu-atx-heading, .mu-setext-heading):not(.mu-active) > .mu-content {
@@ -231,6 +343,7 @@
   --float-hover-color: #29493e;
   --mu-code-line-highlight: #d4b27426;
   --selection-color: #e8c27e55;
+  caret-color: var(--code-block-color);
   border-color: #315347;
   border-radius: 9px;
 }

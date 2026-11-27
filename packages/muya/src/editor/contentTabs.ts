@@ -57,6 +57,22 @@ const CONTAINERS = new Set(['scrollpage', 'block-quote', 'github-alert', 'list-i
 const HIDDEN_CLASS = 'mu-content-tabs-hidden';
 const VIEW_CLASSES = [HIDDEN_CLASS, 'mu-content-tab-title', 'mu-content-tabs-boundary', 'mu-content-tabs-expanded'];
 
+export interface IContentTabsSessionState {
+    groups: Map<Parent, IGroupView>;
+    memberships: Map<TreeNode, IMembership[]>;
+    decorated: Set<TreeNode>;
+    hidden: Set<TreeNode>;
+}
+
+export function createEmptyContentTabsSessionState(): IContentTabsSessionState {
+    return {
+        groups: new Map(),
+        memberships: new Map(),
+        decorated: new Set(),
+        hidden: new Set(),
+    };
+}
+
 /** Tabs are a projection of ordinary Markdown blocks; switching them never creates an edit or undo entry. */
 export class ContentTabs {
     private _groups = new Map<Parent, IGroupView>();
@@ -702,6 +718,31 @@ export class ContentTabs {
         return (this._groups.size > 0 || this._muya.editor.foldBlocks.hasGroups) && !event.defaultPrevented
             && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
             && event.key.toLowerCase() === 'a' && !this._muya.isReadOnly;
+    }
+
+    exportSessionState(): IContentTabsSessionState {
+        this._bodyCaret = undefined;
+        this._closeTitleInput();
+        const exported: IContentTabsSessionState = {
+            groups: this._groups,
+            memberships: this._memberships,
+            decorated: this._decorated,
+            hidden: this._hidden,
+        };
+        this._groups = new Map();
+        this._memberships = new Map();
+        this._decorated = new Set();
+        this._hidden = new Set();
+        return exported;
+    }
+
+    importSessionState(state: IContentTabsSessionState): void {
+        this._bodyCaret = undefined;
+        this._closeTitleInput();
+        this._groups = state.groups;
+        this._memberships = state.memberships;
+        this._decorated = state.decorated;
+        this._hidden = state.hidden;
     }
 
     dispose(): void {

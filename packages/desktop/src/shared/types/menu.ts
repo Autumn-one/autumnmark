@@ -28,6 +28,7 @@ export interface ContextMenuPopupOptions extends MenuPopupPosition {
   editor?: {
     selectionText: string
     spellcheckerEnabled: boolean
+    copyParagraphNewlines?: 'double' | 'single'
   }
 }
 

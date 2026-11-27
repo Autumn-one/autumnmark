@@ -227,6 +227,12 @@ class Clipboard {
         this.copyType = CopyType.NORMAL;
     }
 
+    copyWithAlternateNewlines() {
+        this.copyType = CopyType.COPY_ALTERNATE_NEWLINES;
+        document.execCommand('copy');
+        this.copyType = CopyType.NORMAL;
+    }
+
     copyAsHtml() {
         this.copyType = CopyType.COPY_AS_HTML;
         document.execCommand('copy');

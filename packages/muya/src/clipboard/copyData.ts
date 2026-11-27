@@ -41,9 +41,21 @@ function expandAttachments(clipboard: Clipboard, text: string) {
     return clipboard.muya.options?.videoAttachments?.expand(text) ?? text;
 }
 
+function shouldUseCompactNewlines(clipboard: Clipboard): boolean {
+    const compactByDefault = clipboard.muya.options?.copyParagraphNewlines === 'single';
+    if (clipboard.copyType === CopyType.NORMAL)
+        return compactByDefault;
+    if (clipboard.copyType === CopyType.COPY_ALTERNATE_NEWLINES)
+        return !compactByDefault;
+    return false;
+}
+
 // Same list separators as a save, so a paste reads back the same lists.
-function clipboardMarkdown(clipboard: Clipboard, states: TState[]) {
-    const text = new StateToMarkdown({ fancyLists: clipboard.muya.options.fancyLists }).generate(states);
+function clipboardMarkdown(clipboard: Clipboard, states: TState[], compactBlockNewlines = false) {
+    const text = new StateToMarkdown({
+        fancyLists: clipboard.muya.options?.fancyLists,
+        compactBlockNewlines,
+    }).generate(states);
     return expandAttachments(clipboard, text);
 }
 
@@ -366,8 +378,9 @@ export function getClipboardData(clipboard: Clipboard): IClipboardPayload {
         const forward = anchorBlock === first && anchor.offset === 0 && focusBlock === last && focus.offset === last.text.length;
         const backward = focusBlock === first && focus.offset === 0 && anchorBlock === last && anchor.offset === last.text.length;
         if (forward || backward) {
-            const text = clipboardMarkdown(clipboard, [container.getState()]);
-            return { text, html: getClipBoardHtml(text, options) };
+            const compact = shouldUseCompactNewlines(clipboard);
+            const text = clipboardMarkdown(clipboard, [container.getState()], compact);
+            return { text, html: compact ? '' : getClipBoardHtml(text, options) };
         }
     }
 
@@ -385,8 +398,9 @@ export function getClipboardData(clipboard: Clipboard): IClipboardPayload {
 
     const copyState = collectCopyState(order);
 
-    const text = clipboardMarkdown(clipboard, copyState);
-    const html = getClipBoardHtml(text, options);
+    const compact = shouldUseCompactNewlines(clipboard);
+    const text = clipboardMarkdown(clipboard, copyState, compact);
+    const html = compact ? '' : getClipBoardHtml(text, options);
 
     return { html, text };
 }

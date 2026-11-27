@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { lstat, mkdir, open, writeFile } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, open, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { ipcMain } from 'electron'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -169,7 +169,13 @@ function createWorkspace(directory: string, initial: ThemeCollaborationFiles,
 
   async function start(reference: string): Promise<ThemeCollaborationConnection> {
     await ensureDirectory(directory)
-    await Promise.all([ensureDirectory(requests), ensureDirectory(previews), seed(cssPath, initial.css), seed(samplePath, initial.sampleMarkdown)])
+    await Promise.all([
+      ensureDirectory(requests),
+      ensureDirectory(previews),
+      seed(cssPath, initial.css),
+      seed(samplePath, initial.sampleMarkdown),
+      copyFile(join(__static, 'theme-preview', 'ridge-map.png'), join(directory, 'ridge-map.png'), constants.COPYFILE_EXCL)
+    ])
     await writeAtomic(basePath, reference)
     baseCss = reference
     signal.throwIfAborted()

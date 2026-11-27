@@ -104,6 +104,7 @@ export interface UserPreferences extends RecoveryPreferences {
   hideQuickInsertHint: boolean
   hideLinkPopup: boolean
   autoCheck: boolean
+  copyParagraphNewlines: 'double' | 'single'
   autoNormalizeLineEndings: boolean
   preferLooseListItem: boolean
   bulletListMarker: '-' | '*' | '+'

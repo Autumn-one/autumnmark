@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import DocsHeader from './DocsHeader'
 import DocsTabs from './DocsTabs'
@@ -10,7 +10,7 @@ import { SidebarContext } from './sidebar-context'
 import { findPageBySlug, type DocTabId } from '@/lib/docs-nav'
 
 type Props = {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export default function DocsChrome({ children }: Props) {

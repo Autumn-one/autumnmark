@@ -97,7 +97,9 @@ test('opens a compact portrait image from either side of the picture', async() =
 test('embedded images survive save and mode changes and delete in one keystroke', async() => {
   test.setTimeout(60000)
   const markdown = `before ![dot](${src}) after`
-  const { app, page, filePath } = await launchWithMarkdown(markdown, { preferences: { imageInsertAction: 'embed', language: 'en' } })
+  const { app, page, filePath } = await launchWithMarkdown(markdown, {
+    preferences: { imageInsertAction: 'embed', language: 'en', theme: 'pine-ink', followSystemTheme: false }
+  })
   try {
     const atom = page.locator('.mu-editor .mu-embedded-image')
     await expect(atom).toHaveCount(1)
@@ -129,6 +131,7 @@ test('embedded images survive save and mode changes and delete in one keystroke'
     await enterSourceMode(page, app)
     const chip = page.locator('.CodeMirror .embedded-image-chip')
     await expect(chip).toHaveCount(1)
+    await expect(chip).toHaveCSS('color', 'rgb(255, 255, 255)')
     await expect(page.locator('.CodeMirror-code')).not.toContainText(png)
     expect((await getMarkdownContent(page, app)).trim()).toBe(markdown)
     await page.locator('.CodeMirror').evaluate(node => {
@@ -256,6 +259,38 @@ test('resizes an embedded picture from either edge without opening its preview',
     expect(readFileSync(filePath, 'utf8')).toContain(src)
     await picture.click()
     await expect(page.locator('.embedded-image-preview')).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('resizing an embedded picture while scrolled down keeps the scroll position', async() => {
+  const markdown = `# Top\n\n${'Paragraph line.\n\n'.repeat(45)}![leaf](${src})\n\n${'Tail line.\n\n'.repeat(15)}`
+  const { app, page, filePath } = await launchWithMarkdown(markdown)
+  try {
+    const editor = page.locator('.editor-component')
+    const picture = page.locator('.mu-embedded-image img')
+    await picture.scrollIntoViewIfNeeded()
+    const scrollTop = () => editor.evaluate(el => el.scrollTop)
+    const before = await scrollTop()
+    expect(before).toBeGreaterThan(200)
+
+    await picture.hover()
+    const handle = page.locator('.mu-transformer .right')
+    await expect(handle).toBeVisible()
+    const box = (await handle.boundingBox())!
+    const width = (await picture.boundingBox())!.width
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 80, y, { steps: 5 })
+    await page.mouse.up()
+
+    await expect(picture).toHaveAttribute('width', String(Math.floor(width + 80)))
+    expect(Math.abs(await scrollTop() - before)).toBeLessThan(100)
+    await clickMenuById(app, 'fileSaveMenuItem')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain(`width="${Math.floor(width + 80)}"`)
   } finally {
     await app.close()
   }

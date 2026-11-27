@@ -212,12 +212,14 @@ class TextSelection {
         return '';
     }
 
-    setSelection(anchor: IAnchorFocusInfo, focus: IAnchorFocusInfo) {
-        this._muya.editor.contentTabs.revealSelection(anchor.block, focus.block);
-        this._muya.editor.foldBlocks.revealSelection(anchor.block, focus.block);
+    setSelection(anchor: IAnchorFocusInfo, focus: IAnchorFocusInfo, { syncDom = true } = {}) {
+        if (syncDom) {
+            this._muya.editor.contentTabs.revealSelection(anchor.block, focus.block);
+            this._muya.editor.foldBlocks.revealSelection(anchor.block, focus.block);
+        }
         if (anchor.block !== focus.block)
             this._muya.editor.activeContentBlock = null;
-        if (!this._muya.isReadOnly) {
+        if (syncDom && !this._muya.isReadOnly) {
             revealBlock(anchor.block);
             revealBlock(focus.block);
         }
@@ -231,7 +233,8 @@ class TextSelection {
         };
         this.focusBlock = focus.block;
         this.focusPath = focus.path;
-        this._updateSelection();
+        if (syncDom)
+            this._updateSelection();
         this._emitSelectionChange();
     }
 

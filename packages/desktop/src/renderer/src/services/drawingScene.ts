@@ -196,10 +196,15 @@ export async function refreshDocumentCards(scene: DrawingScene, drawingPath: str
   return { ...scene, files }
 }
 
-export async function renderDrawingPreview(path: string): Promise<string> {
+export async function renderDrawingPreviewWithScene(path: string): Promise<{ dataUrl: string; scene: DrawingScene }> {
   const { scene } = await readDrawing(path)
   const refreshed = await refreshDocumentCards(scene, path)
-  return renderDrawingScene(refreshed)
+  return { dataUrl: await renderDrawingScene(refreshed), scene: refreshed }
+}
+
+export async function renderDrawingPreview(path: string): Promise<string> {
+  const { dataUrl } = await renderDrawingPreviewWithScene(path)
+  return dataUrl
 }
 
 export async function renderDrawingScene({ elements, appState, files }: DrawingScene): Promise<string> {

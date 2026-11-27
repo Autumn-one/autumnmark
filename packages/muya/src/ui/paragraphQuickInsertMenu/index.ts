@@ -1,5 +1,6 @@
 import type { VNode } from 'snabbdom';
 import type { Muya } from '../../index';
+import type { TDrawingInsertTrace } from '../../types';
 import type { IBaseOptions, IKeyboardShortcutOptions } from '../types';
 import type {
     IQuickInsertMenuItem,
@@ -26,6 +27,7 @@ import './index.css';
 
 const checkQuickInsert = (text: string) => /^[/、]\S*$/.test(text);
 const checkShowPlaceholder = (text: string) => /^[/、]$/.test(text);
+const isKnownDrawingQuery = (text: string) => /^\s*[/、](?:excel|excalidraw)\s*$/i.test(text);
 function checkCanInsertFrontMatter(muya: Muya, block: ParagraphContent) {
     const { frontMatter } = muya.options;
 
@@ -42,6 +44,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
 
     public oldVNode: VNode | null = null;
     private _block: ParagraphContent | null = null;
+    private _drawingTrace?: TDrawingInsertTrace;
     public override activeItem: IQuickInsertMenuItem['children'][number] | null = null;
     public override renderArray: IQuickInsertMenuItem['children'] = [];
     private _renderData: IQuickInsertMenuItem[] = [];
@@ -84,6 +87,11 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
             const { text, domNode } = block;
             const needToShowQuickInsert = checkQuickInsert(text);
             const needToShowPlaceholder = checkShowPlaceholder(text);
+            const drawingQuery = isKnownDrawingQuery(text);
+            if (!drawingQuery || this._block !== block)
+                this._drawingTrace = undefined;
+            if (drawingQuery)
+                this._drawingTrace ??= this._startDrawingTrace();
             if (needToShowPlaceholder)
                 domNode!.setAttribute('placeholder', i18n.t('Search keyword...'));
             else
@@ -93,8 +101,15 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
                 this._block = block;
                 this.show(domNode);
                 this._search(text.substring(1)); // remove `/` char
+                const { activeItem, renderArray } = this;
+                this._drawingTrace?.('menu-searched', {
+                    menuOpen: this.status,
+                    matched: renderArray.some(item => item.label === DRAWING_INSERT_LABEL),
+                    active: activeItem?.label === DRAWING_INSERT_LABEL && renderArray.includes(activeItem),
+                });
             }
             else {
+                this._drawingTrace?.('query-rejected');
                 this.hide();
             }
         });
@@ -148,6 +163,9 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
     }
 
     override hide() {
+        if (this.status)
+            this._drawingTrace?.('menu-hidden');
+        this._drawingTrace = undefined;
         this.container!.classList.remove('mu-keyboard-navigation');
         super.hide();
     }
@@ -276,23 +294,38 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
 
     override selectItem({ label }: IQuickInsertMenuItem['children'][number]) {
         const { _block: block, muya } = this;
-        if (block?.outMostBlock) {
-            if (label === DRAWING_INSERT_LABEL)
-                this._insertDrawing(block);
+        if (label === DRAWING_INSERT_LABEL) {
+            this._drawingTrace ??= this._startDrawingTrace();
+            this._drawingTrace?.('command-selected');
+            if (block?.outMostBlock)
+                this._insertDrawing(block, this._drawingTrace);
             else
+                this._drawingTrace?.('target-detached');
+        }
+        else {
+            this._drawingTrace?.('different-command-selected');
+            if (block?.outMostBlock)
                 replaceBlockByLabel({ label, block: block.parent!, muya });
         }
         // delay hide to avoid dispatch enter handler
         setTimeout(this.hide.bind(this));
     }
 
-    private _insertDrawing(block: ParagraphContent) {
+    private _startDrawingTrace() {
+        return this.muya.options.embeddedDrawing?.quickInsert?.startTrace?.();
+    }
+
+    private _insertDrawing(block: ParagraphContent, trace?: TDrawingInsertTrace) {
         const { muya } = this;
         const insert = muya.options.embeddedDrawing?.quickInsert?.open;
         muya.flush();
         const paragraph = block.parent;
-        if (!insert || muya.isReadOnly || !paragraph || !muya.isBlockInDocument(block) || !checkQuickInsert(block.text))
+        const attached = !!paragraph && muya.isBlockInDocument(block);
+        const validQuery = checkQuickInsert(block.text);
+        if (!insert || muya.isReadOnly || !paragraph || !attached || !validQuery) {
+            trace?.('target-rejected', { hasHandler: !!insert, readOnly: muya.isReadOnly, attached, validQuery });
             return;
+        }
         const { jsonState } = muya.editor;
         const snapshot = jsonState.rawState;
         const path = paragraph.path;
@@ -308,7 +341,18 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
                 const op = replaceOp(path, asDoc(previous), asDoc(replacement));
                 return jsonState.getMarkdownFromState(asState(type.apply(asDoc(snapshot), op)));
             },
-        });
+            insert: (markup) => {
+                muya.flush();
+                const [replacement] = jsonState.markdownToState(markup);
+                if (jsonState.rawState !== snapshot || !muya.isBlockInDocument(block) || muya.isReadOnly || replacement?.name !== 'paragraph')
+                    throw new Error('The drawing insertion target changed');
+                muya.transact(() => {
+                    block.replaceTextRange(0, block.text.length, replacement.text);
+                    block.setCursor(replacement.text.length, replacement.text.length, true);
+                    muya.editor.selection.preventScrollOnNextNotification();
+                });
+            },
+        }, trace);
     }
 
     getItemElement(item: IQuickInsertMenuItem['children'][number]) {

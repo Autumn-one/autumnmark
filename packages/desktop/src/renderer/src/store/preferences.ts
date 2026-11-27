@@ -1,7 +1,7 @@
 import type { UserPreferences } from '@shared/types/preferences'
 import type { LocalTheme } from '@shared/localTheme'
 import { defineStore } from 'pinia'
-import { pineInkTheme } from 'common/theme'
+import { pineInkTheme, violetDiaryTheme } from 'common/theme'
 import { getCurrentLanguage, setLanguage } from '../i18n'
 
 export type EndOfLine = 'default' | 'lf' | 'crlf'
@@ -72,6 +72,7 @@ export interface PreferencesState {
   imageRelativeDirectoryName: string
   hideLinkPopup: boolean
   autoCheck: boolean
+  copyParagraphNewlines: UserPreferences['copyParagraphNewlines']
 
   preferLooseListItem: boolean
   bulletListMarker: BulletListMarker | string
@@ -188,7 +189,7 @@ export const usePreferencesStore = defineStore('preferences', {
     compactVideoMaxHeight: 0,
     compactCodeMaxLines: 12,
     wrapCodeBlocks: true,
-    editorLineWidth: '',
+    editorLineWidth: '100%',
 
     autoPairBracket: true,
     autoPairMarkdownSyntax: true,
@@ -208,6 +209,7 @@ export const usePreferencesStore = defineStore('preferences', {
     imageRelativeDirectoryName: 'assets',
     hideLinkPopup: false,
     autoCheck: false,
+    copyParagraphNewlines: 'double',
 
     preferLooseListItem: true,
     bulletListMarker: '-',
@@ -241,7 +243,7 @@ export const usePreferencesStore = defineStore('preferences', {
     theme: pineInkTheme.id,
     followSystemTheme: true,
     lightModeTheme: pineInkTheme.id,
-    darkModeTheme: 'dark',
+    darkModeTheme: violetDiaryTheme.id,
     customCss: '',
 
     spellcheckerEnabled: false,

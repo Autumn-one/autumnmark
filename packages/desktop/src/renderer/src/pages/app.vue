@@ -120,22 +120,24 @@ import { serveSkillDocuments } from '@/services/skillDocuments'
 import { appliedThemeRevisionInput } from '@shared/autumnmarkSkill'
 import { videoMime } from '@shared/embeddedImage'
 import type { LocalTheme } from '@shared/localTheme'
-import { encodeInlineDrawing, findEmbeddedDrawings, imageToMarkdown, inlineDrawingToMarkdown, type IDrawingInsertion } from '@muyajs/core'
+import { encodeInlineDrawing, findEmbeddedDrawings, imageToMarkdown, inlineDrawingToMarkdown, type IDrawingInsertion, type IUpdateEmbeddedDrawingParams, type TDrawingInsertTrace } from '@muyajs/core'
 import { drawingDestination, isDrawingPath } from '@/util/drawingPaths'
 import notice from '@/services/notification'
 import { blankDrawing } from '@shared/drawing'
 import type { IFileState } from '@shared/types/files'
-import { createDocumentState } from '@/store/help'
-import { drawingDialog, drawingEditorTabs, type DrawingEditor } from '@/services/drawingEditors'
+import { createDocumentState, getOptionsFromState } from '@/store/help'
+import { drawingDialog, drawingEditorTabs, preserveDrawingFocus, type DrawingEditor } from '@/services/drawingEditors'
+import { linkedDrawingPaths, recordLinkedDrawingFingerprint, renderSavedDrawingScene } from '@/services/drawingPreviews'
+import type { DrawingScene } from '@/services/drawingScene'
 
 const DrawingCanvas = defineAsyncComponent(() => import('@/components/drawingCanvas.vue'))
 
 const mainStore = useMainStore()
 const editorView = ref<InstanceType<typeof EditorWithTabs>>()
 const readMarkdown = (id: string): string | undefined => editorView.value?.readMarkdown(id)
-const editMarkdown: EditMarkdown = (id, prepare) => {
+const editMarkdown: EditMarkdown = (id, prepare, options) => {
   if (!editorView.value) throw new Error(t('batchMedia.changed'))
-  editorView.value.editMarkdown(id, prepare)
+  editorView.value.editMarkdown(id, prepare, options)
 }
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
@@ -161,9 +163,11 @@ function noteForDrawing(id: string) {
   return editorStore.tabs.find(tab => tab.id === noteId && !tab.readOnly && !tab.modeChanging && !tab.diskConflict)
 }
 watch(() => currentFile.value?.id, id => {
-  if (id && currentDrawing.value) layoutStore.SET_LAYOUT({ showTabBar: true })
-  else if (id) lastNote.value = id
+  if (id && !currentDrawing.value) lastNote.value = id
 }, { immediate: true, flush: 'sync' })
+watch(() => editorStore.tabs.length > 1 || currentDrawing.value, autoVisible => {
+  layoutStore.SET_AUTO_TAB_BAR_VISIBLE(autoVisible)
+}, { immediate: true })
 let choosingDrawing = false
 let creatingDrawing = false
 
@@ -171,8 +175,10 @@ function editDrawingNote(note: IFileState, prepare: Parameters<EditMarkdown>[1])
   if (!editorStore.tabs.some(tab => tab.id === note.id) || note.readOnly || note.modeChanging || note.diskConflict)
     throw new Error(t('drawing.documentUnavailable'))
   if (currentFile.value?.id === note.id) {
-    editMarkdown(note.id, prepare)
-    editorStore.flushActiveEditor()
+    preserveDrawingFocus(() => {
+      editMarkdown(note.id, prepare, { preventScroll: true, preserveFocus: true })
+      editorStore.flushActiveEditor()
+    })
     return
   }
   const markdown = applyMarkdownEdits(note.markdown, prepare(note.markdown))
@@ -190,58 +196,192 @@ function appendDrawing(note: IFileState, block: string) {
   }])
 }
 
-function insertNoteDrawing(note: IFileState, markup: string, target?: IDrawingInsertion) {
+function insertNoteDrawing(note: IFileState, markup: string, target?: IDrawingInsertion, trace?: TDrawingInsertTrace) {
   if (!target) {
     appendDrawing(note, markup)
     return
   }
+  if (target.insert && currentFile.value?.id === note.id) {
+    target.insert(markup)
+    return
+  }
   editDrawingNote(note, markdown => {
-    if (markdown.trimEnd() !== target.markdown.trimEnd())
+    if (markdown.trimEnd() !== target.markdown.trimEnd()) {
+      trace?.('target-markdown-changed')
       throw new Error(t('drawing.insertionChanged'))
+    }
     return [{ start: 0, end: markdown.length, text: target.replace(markup) }]
   })
 }
 
 const embeddedMarkup = (content: string) => inlineDrawingToMarkdown(content, t('drawing.embedded'))
 const comparableScene = (source: string) => source.split('\n').filter(line => line.trim()).join('\n').trim()
-const noteMarkdown = (note: IFileState) => readMarkdown(note.id) ?? note.markdown
+const noteMarkdown = (note: IFileState) =>
+  currentFile.value?.id === note.id ? readMarkdown(note.id) ?? note.markdown : note.markdown
 
-async function saveDrawingNote(note: IFileState) {
+interface EmbeddedDrawingLocation {
+  markdown: string
+  source: string
+  index?: number
+}
+
+function drawingMarkupLines(markdown: string, { start, end }: { start: number; end: number }) {
+  const nextLine = markdown.indexOf('\n', end)
+  return markdown.slice(markdown.lastIndexOf('\n', start - 1) + 1, nextLine < 0 ? markdown.length : nextLine)
+}
+
+function findDrawingTarget(markdown: string, drawings: ReturnType<typeof findEmbeddedDrawings>, location: EmbeddedDrawingLocation) {
+  const expected = comparableScene(location.source)
+  const matchesSource = ({ source }: (typeof drawings)[number]) => source !== undefined && comparableScene(source) === expected
+  if (markdown.trimEnd() === location.markdown.trimEnd() && location.index !== undefined) {
+    const target = drawings[location.index]
+    if (target && matchesSource(target)) return target
+  }
+  const matches = drawings.filter(matchesSource)
+  if (!matches.length) return
+  const previous = findEmbeddedDrawings(location.markdown)
+  const original = location.index === undefined ? undefined : previous[location.index]
+  const previousMatches = previous.filter(matchesSource)
+  if (matches.length !== previousMatches.length) return
+  if (matches.length === 1) return matches[0]
+  if (!original || !matchesSource(original)) return
+
+  // An unchanged prefix or suffix can locate a repeated scene without relying on its ordinal.
+  const anchored = matches.filter(({ markup }) =>
+    markdown.slice(0, markup.end) === location.markdown.slice(0, original.markup.end) ||
+    markdown.slice(markup.start) === location.markdown.slice(original.markup.start))
+  if (anchored.length === 1) return anchored[0]
+  if (anchored.length > 1) return
+
+  const lines = drawingMarkupLines(location.markdown, original.markup)
+  if (previousMatches.some(drawing => drawing !== original && drawingMarkupLines(location.markdown, drawing.markup) === lines)) return
+  const inContext = matches.filter(drawing => drawingMarkupLines(markdown, drawing.markup) === lines)
+  if (inContext.length === 1) return inContext[0]
+}
+
+async function saveDrawingNote(note: IFileState, trace?: TDrawingInsertTrace) {
   if (!note.pathname) {
     const checkpoint = await getSessionActions()?.checkpoint()
+    trace?.('draft-checkpoint-result', {
+      status: checkpoint?.status ?? 'unavailable',
+      ...(checkpoint?.status === 'failed' && { reason: checkpoint.reason })
+    })
     if (checkpoint?.status !== 'persisted') throw new Error(t('drawing.documentUnavailable'))
     return
   }
   const result = await getSessionActions()?.save(note.id)
+  trace?.('note-save-result', { status: result?.status ?? 'unavailable' })
   if (result?.status !== 'saved') throw new Error(t('drawing.documentUnavailable'))
 }
 
-function embeddedDrawingCommit(note: IFileState, source: string, drawing: DrawingEditor) {
-  let previousMarkdown = noteMarkdown(note)
-  return async(content: string) => {
-    if (source !== content || noteMarkdown(note) !== previousMarkdown) {
-      editDrawingNote(note, markdown => {
-        const drawings = findEmbeddedDrawings(markdown)
-        const expected = comparableScene(source)
-        const matches = drawings.filter(({ source }) => source !== undefined && comparableScene(source) === expected)
-        const atIndex = drawing.embeddedIndex === undefined ? undefined : drawings[drawing.embeddedIndex]
-        const target = markdown.trimEnd() === previousMarkdown.trimEnd() && atIndex && matches.includes(atIndex)
-          ? atIndex
-          : matches.length === 1 ? matches[0] : undefined
-        if (!target) throw new Error(t('drawing.documentUnavailable'))
-        drawing.embeddedIndex = drawings.indexOf(target)
-        return [{
-          start: target.start,
-          end: target.end,
-          text: target.kind === 'inline' ? encodeInlineDrawing(content)
-            : content.split('\n').map(line => target.prefix + line).join('\n') + '\n'
-        }]
-      })
-      source = content
-      previousMarkdown = noteMarkdown(note)
+function isRenderedEmbeddedDrawing(markdown: string, drawing: ReturnType<typeof findEmbeddedDrawings>[number]): boolean {
+  return drawing.kind === 'fence' || markdown.slice(drawing.markup.start, drawing.markup.end).startsWith('![')
+}
+
+function renderedEmbeddedIndex(
+  markdown: string,
+  drawings: ReturnType<typeof findEmbeddedDrawings>,
+  target: ReturnType<typeof findEmbeddedDrawings>[number]
+): number {
+  if (!isRenderedEmbeddedDrawing(markdown, target)) return -1
+  let count = 0
+  for (const drawing of drawings) {
+    if (drawing === target) return count
+    if (isRenderedEmbeddedDrawing(markdown, drawing)) count += 1
+  }
+  return -1
+}
+
+function embeddedDrawingCommit(note: IFileState, source: string, drawing: DrawingEditor, trace?: TDrawingInsertTrace) {
+  let location: EmbeddedDrawingLocation = { markdown: noteMarkdown(note), source, index: drawing.embeddedIndex }
+  let staged: EmbeddedDrawingLocation | undefined
+  return async(content: string, _filename?: string, scene?: DrawingScene) => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const before = noteMarkdown(note)
+      const pathname = note.pathname
+      const wasSaved = note.isSaved
+      const format = JSON.stringify(getOptionsFromState(note))
+      const expected = staged?.markdown === before ? staged : location
+      let index = expected.index
+      if (expected.source !== content || before !== expected.markdown) {
+        const isActiveWysiwyg = currentFile.value?.id === note.id && !sourceCode.value &&
+          editorStore.tabs.some(tab => tab.id === note.id) &&
+          !note.readOnly && !note.modeChanging && !note.diskConflict
+        let updatedInPlace = false
+        if (isActiveWysiwyg && editorView.value) {
+          const drawings = findEmbeddedDrawings(before)
+          const target = findDrawingTarget(before, drawings, expected) ??
+            (staged && staged !== expected ? findDrawingTarget(before, drawings, staged) : undefined)
+          if (!target) throw new Error(t('drawing.embeddedChanged'))
+          const renderedIndex = renderedEmbeddedIndex(before, drawings, target)
+          if (renderedIndex >= 0) {
+            const params: IUpdateEmbeddedDrawingParams = {
+              renderedIndex,
+              expectedKind: target.kind,
+              expectedSource: target.source ?? expected.source,
+              expectedEncodedSrc: target.kind === 'inline' ? before.slice(target.start, target.end) : undefined,
+              expectedMarkup: before.slice(target.markup.start, target.markup.end),
+              nextSource: content,
+              previewLoader: scene && attempt === 0
+                ? () => renderSavedDrawingScene(scene)
+                : undefined,
+              preventScroll: true,
+              preserveFocus: true
+            }
+            preserveDrawingFocus(() => {
+              const applied = editorView.value?.updateEmbeddedDrawing(note.id, params) ?? false
+              if (applied) {
+                updatedInPlace = true
+                editorStore.flushActiveEditor()
+              }
+            })
+            if (updatedInPlace) index = drawings.indexOf(target)
+          }
+        }
+        if (!updatedInPlace) {
+          editDrawingNote(note, markdown => {
+            const drawings = findEmbeddedDrawings(markdown)
+            const target = findDrawingTarget(markdown, drawings, expected) ??
+              (staged && staged !== expected ? findDrawingTarget(markdown, drawings, staged) : undefined)
+            if (!target) throw new Error(t('drawing.embeddedChanged'))
+            index = drawings.indexOf(target)
+            return [{
+              start: target.start,
+              end: target.end,
+              text: target.kind === 'inline' ? encodeInlineDrawing(content)
+                : content.split('\n').map(line => target.prefix + line).join('\n') + '\n'
+            }]
+          })
+        }
+      }
+      const next = { markdown: noteMarkdown(note), source: content, index }
+      staged = next
+      if (!pathname || drawing.draft) {
+        await saveDrawingNote(note, drawing.draft ? trace : undefined)
+      } else {
+        const result = await getSessionActions()?.save(note.id, false, true)
+        if (result?.status === 'disk-changed') {
+          // Only the drawing's provisional edit may be replaced by a silent reload.
+          if (result.change && result.change.pathname === note.pathname && editorStore.tabs.includes(note)) {
+            if (wasSaved && !note.readOnly && !note.modeChanging && noteMarkdown(note) === next.markdown &&
+                JSON.stringify(getOptionsFromState(note)) === format) {
+              editorStore.loadChange(result.change)
+              staged = undefined
+              if (attempt === 0) continue
+            } else if (result.change.data.rawBaseline?.rawSha256 !== note.acceptedDiskSha256) {
+              editorStore.notifyDiskConflict(note, result.change)
+            }
+          }
+          throw new Error(t('drawing.embeddedChanged'))
+        }
+        if (result?.status !== 'saved') throw new Error(t('drawing.documentUnavailable'))
+      }
+      location = next
+      staged = undefined
+      drawing.embeddedIndex = index
+      return true
     }
-    await saveDrawingNote(note)
-    return true
+    return false
   }
 }
 
@@ -249,7 +389,7 @@ const drawingTabForPath = (path: string) => editorStore.tabs.find(tab =>
   !drawingEditorTabs.has(tab.id) && tab.pathname && window.fileUtils.isSamePathSync(tab.pathname, path))
 
 function linkedDrawingCommit(path: string, expected: string) {
-  return async(content: string) => {
+  return async(content: string, _filename?: string, scene?: DrawingScene) => {
     const tab = drawingTabForPath(path)
     if (tab) {
       editorStore.flushActiveEditor()
@@ -263,7 +403,14 @@ function linkedDrawingCommit(path: string, expected: string) {
       await result
     }
     expected = content
-    bus.emit('drawing::preview-changed')
+    const previewLoader = scene
+      ? async() => {
+          const dataUrl = await renderSavedDrawingScene(scene)
+          await recordLinkedDrawingFingerprint(path, scene)
+          return dataUrl
+        }
+      : undefined
+    bus.emit('drawing::preview-changed', { path, previewLoader })
     return true
   }
 }
@@ -337,10 +484,10 @@ async function openEmbeddedDrawing(request: unknown) {
       source: savedSource,
       noteId: note.id,
       embedded: true,
-      embeddedIndex: index,
+      embeddedIndex: closed?.embeddedIndex ?? index,
       draft: false,
       get readOnly() { return note.readOnly },
-      commit: content => commit(content)
+      commit: (content, filename, scene) => commit(content, filename, scene)
     })
     const commit = embeddedDrawingCommit(note, savedSource, drawing)
     drawingDialog.value = drawing
@@ -399,9 +546,9 @@ async function showDrawing(requestedPath?: unknown) {
   }
 }
 
-function newNoteDrawing(note: IFileState, embed: boolean, target?: IDrawingInsertion): DrawingEditor {
-  let saveAttached: ((content: string) => Promise<boolean>) | undefined
-  let linkedFile: { path: string; source: string; save: (content: string) => Promise<boolean> } | undefined
+function newNoteDrawing(note: IFileState, embed: boolean, target?: IDrawingInsertion, trace?: TDrawingInsertTrace): DrawingEditor {
+  let saveAttached: ((content: string, filename?: string, scene?: DrawingScene) => Promise<boolean>) | undefined
+  let linkedFile: { path: string; source: string; save: (content: string, filename?: string, scene?: DrawingScene) => Promise<boolean> } | undefined
   const drawing: DrawingEditor = shallowReactive({
     title: embed ? t('drawing.embedded') : drawingTitle(),
     pathname: note.pathname,
@@ -411,25 +558,37 @@ function newNoteDrawing(note: IFileState, embed: boolean, target?: IDrawingInser
     draft: true,
     nameOnInsert: !embed,
     filename: '',
+    insertionTrace: trace,
     get readOnly() { return note.readOnly },
-    async commit(content, filename) {
-      if (!editorStore.tabs.some(tab => tab.id === note.id) || note.readOnly || note.modeChanging || note.diskConflict)
+    async commit(content, filename, scene) {
+      const attached = editorStore.tabs.some(tab => tab.id === note.id)
+      if (!attached || note.readOnly || note.modeChanging || note.diskConflict) {
+        trace?.('commit-document-unavailable', {
+          attached, readOnly: !!note.readOnly, modeChanging: !!note.modeChanging, diskConflict: !!note.diskConflict
+        })
         throw new Error(t('drawing.documentUnavailable'))
+      }
       if (!embed && (!note.pathname || note.isPendingCreation)) {
         const saved = await getSessionActions()?.save(note.id)
+        trace?.('initial-note-save-result', { status: saved?.status ?? 'unavailable' })
         if (saved?.status !== 'saved') return false
       }
       if (!saveAttached) {
-        if (target && noteMarkdown(note).trimEnd() !== target.markdown.trimEnd())
+        if (target && noteMarkdown(note).trimEnd() !== target.markdown.trimEnd()) {
+          trace?.('target-markdown-changed')
           throw new Error(t('drawing.insertionChanged'))
+        }
         if (embed) {
-          insertNoteDrawing(note, embeddedMarkup(content), target)
+          insertNoteDrawing(note, embeddedMarkup(content), target, trace)
+          trace?.('markdown-updated')
           drawing.embeddedIndex = target?.embeddedIndex ?? findEmbeddedDrawings(noteMarkdown(note)).length - 1
-          saveAttached = embeddedDrawingCommit(note, content, drawing)
+          saveAttached = embeddedDrawingCommit(note, content, drawing, trace)
           drawing.pathname = note.pathname
         } else {
           if (!linkedFile) {
+            trace?.('linked-file-create-started')
             const path = await window.electron.ipcRenderer.invoke('mt::drawing::create', note.id, content, filename?.trim() || undefined)
+            trace?.('linked-file-created')
             linkedFile = { path, source: content, save: linkedDrawingCommit(path, content) }
           }
           const file = linkedFile
@@ -438,18 +597,19 @@ function newNoteDrawing(note: IFileState, embed: boolean, target?: IDrawingInser
           drawing.title = window.path.basename(path)
           const alt = window.path.basename(path, window.path.extname(path)).replace(/[[\]]/g, '\\$&')
           const src = drawingDestination(note.pathname, path)
-          insertNoteDrawing(note, imageToMarkdown({ src, alt }), target)
-          saveAttached = async(next) => {
+          insertNoteDrawing(note, imageToMarkdown({ src, alt }), target, trace)
+          trace?.('markdown-updated')
+          saveAttached = async(next, _name, nextScene) => {
             if (next !== file.source) {
-              await file.save(next)
+              await file.save(next, undefined, nextScene)
               file.source = next
             }
-            if (drawing.draft) await saveDrawingNote(note)
+            if (drawing.draft) await saveDrawingNote(note, trace)
             return true
           }
         }
       }
-      const saved = await saveAttached(content)
+      const saved = await saveAttached(content, filename, scene)
       if (saved) {
         drawing.draft = false
         drawing.dirtyDraft = false
@@ -486,34 +646,54 @@ function newStandaloneDrawing(title: string): DrawingEditor {
   return drawing
 }
 
-async function newDrawing(documentId?: unknown, { insert = false, target, atCaret = true }: {
+async function newDrawing(documentId?: unknown, { insert = false, target, atCaret = true, trace }: {
   insert?: boolean
   target?: IDrawingInsertion
   atCaret?: boolean
+  trace?: TDrawingInsertTrace
 } = {}) {
-  if (creatingDrawing || drawingDialog.value || choosingDrawing) return
+  if (creatingDrawing || drawingDialog.value || choosingDrawing) {
+    trace?.('drawing-busy', { creatingDrawing, dialogOpen: !!drawingDialog.value, choosingDrawing })
+    return
+  }
   const note = currentFile.value
-  if (typeof documentId === 'string' && note?.id !== documentId) return
+  if (typeof documentId === 'string' && note?.id !== documentId) {
+    trace?.('active-document-changed', { hasActiveTab: !!note })
+    return
+  }
   creatingDrawing = true
   try {
     const asTab = preferencesStore.newDrawingView === 'tab'
     const editableNote = note && !note.readOnly && !note.modeChanging && !note.diskConflict && !currentDrawing.value
     if (editableNote && (insert || note.pathname || note.markdown.trim())) {
       const insertion = target ?? (atCaret ? editorView.value?.drawingInsertion(note.id) : undefined)
-      const drawing = newNoteDrawing(note, preferencesStore.embedDrawings, insertion)
+      const drawing = newNoteDrawing(note, preferencesStore.embedDrawings, insertion, trace)
       if (insert) {
         try {
+          trace?.('commit-started', { embedded: preferencesStore.embedDrawings, hasFile: !!note.pathname })
           const inserted = await drawing.commit(drawing.source)
+          trace?.('commit-result', { inserted })
           if (!inserted) return
         } catch (reason) {
+          trace?.('commit-failed')
           void notice.notify({ title: t('drawing.saveFailed', { reason: String(reason) }), type: 'error' })
         }
       }
       if (asTab) openDrawingTab(drawing)
       else drawingDialog.value = drawing
+      trace?.('editor-requested', { asTab, draft: drawing.draft })
       return
     }
-    if (insert) return
+    if (insert) {
+      trace?.('document-not-editable', {
+        hasActiveTab: !!note,
+        readOnly: !!note?.readOnly,
+        modeChanging: !!note?.modeChanging,
+        diskConflict: !!note?.diskConflict,
+        isDrawing: currentDrawing.value
+      })
+      return
+    }
     const stem = t('drawing.untitled')
     let title = drawingTitle()
     let number = 2
@@ -521,6 +701,7 @@ async function newDrawing(documentId?: unknown, { insert = false, target, atCare
     if (asTab) await getSessionActions()?.create(blankDrawing, true, title)
     else drawingDialog.value = newStandaloneDrawing(title)
   } catch (reason) {
+    trace?.('editor-request-failed')
     void notice.notify({ title: t('drawing.saveFailed', { reason: String(reason) }), type: 'error' })
   } finally {
     creatingDrawing = false
@@ -531,8 +712,9 @@ const insertNewDrawing = (request: unknown) => {
   void newDrawing(id, { insert: true, atCaret })
 }
 const insertSlashDrawing = (request: unknown) => {
-  const { id, target } = request as { id: string; target: IDrawingInsertion }
-  void newDrawing(id, { insert: true, target })
+  const { id, target, trace } = request as { id: string; target: IDrawingInsertion; trace?: TDrawingInsertTrace }
+  trace?.('request-received')
+  void newDrawing(id, { insert: true, target, trace })
 }
 const openDrawing = (pathname: unknown) => { void showDrawing(pathname) }
 
@@ -566,7 +748,14 @@ async function insertDrawing(id: string, path: string, content?: string): Promis
 }
 
 watch(() => [currentFile.value?.id, currentFile.value?.isSaved] as const, ([id, saved], [previousId, wasSaved]) => {
-  if (id && id === previousId && saved && !wasSaved) bus.emit('drawing::preview-changed')
+  if (!id || id !== previousId || !saved || wasSaved) return
+  const file = currentFile.value
+  if (!file) return
+  if (currentDrawing.value && file.pathname) {
+    bus.emit('drawing::preview-changed', { path: file.pathname })
+  } else if (linkedDrawingPaths(file.markdown, file.pathname).length > 0) {
+    bus.emit('drawing::preview-changed')
+  }
 })
 
 watch(

@@ -337,7 +337,9 @@
       "screenshot": "Screenshot",
       "lineEnding": "Line Ending",
       "lineEndingCrlf": "CRLF(Windows)",
-      "lineEndingLf": "LF(Linux/Mac)"
+      "lineEndingLf": "LF(Linux/Mac)",
+      "copyAsSingleNewline": "Copy (Single Newline)",
+      "copyAsStandardMarkdown": "Copy (Standard Markdown)"
     },
     "paragraph": {
       "title": "Paragraph",
@@ -504,7 +506,9 @@
       "showInFolder": "Show in folder",
       "showInSideBar": "Show in Side Bar",
       "openContainingFolder": "Open Containing Folder in Side Bar"
-    }
+    },
+    "copyAsSingleNewline": "Copy (Single Newline)",
+    "copyAsStandardMarkdown": "Copy (Standard Markdown)"
   },
   "search": {
     "searchPlaceholder": "Search",
@@ -770,7 +774,7 @@
         "tocRight": "Right",
         "showOpenedFiles": "Show opened files",
         "autoReveal": "Reveal the active file in the sidebar",
-        "openFilesInPreviewMode": "Open sidebar files in preview tabs. Editing or double-clicking keeps the tab open.",
+        "openFilesInPreviewMode": "Open sidebar files in preview tabs. Editing the preview, or double-clicking the file in the sidebar, keeps the tab open.",
         "excludePatterns": "File tree exclusion rules",
         "excludePatternsNotes": "Paths matching any glob rule are excluded from the file tree. Press Enter to add a rule and click × to remove one; commas within a rule are preserved. Reopen the folder to fully apply changes.",
         "removePattern": "Remove",
@@ -834,7 +838,13 @@
         "title": "Writing preferences",
         "autoCloseBrackets": "Auto close brackets",
         "autoCompleteMarkdown": "Auto-pair Markdown markers",
-        "autoCloseQuotes": "Auto close quotes"
+        "autoCloseQuotes": "Auto close quotes",
+        "copyParagraphNewlines": {
+          "title": "Paragraph newlines when copying",
+          "note": "Controls paragraph spacing for normal copy without changing saved Markdown files. The alternate copy shortcut (default Ctrl+Shift+C / ⌘⇧C) always uses the other mode.",
+          "double": "Standard Markdown (double newline)",
+          "single": "Plain-text visual (single newline)"
+        }
       },
       "fileRepresentation": {
         "title": "File Representation",
@@ -1026,10 +1036,22 @@
       "installOnly": "Install only",
       "installAndApply": "Install and apply",
       "update": "Update",
-      "setFor": { "light": "Set as light theme", "dark": "Set as dark theme" },
-      "installFor": { "light": "Install and set as light theme", "dark": "Install and set as dark theme" },
-      "assigned": { "light": "Set for light mode", "dark": "Set for dark mode" },
-      "deferred": { "light": "{name} will apply when the system switches to light mode.", "dark": "{name} will apply when the system switches to dark mode." },
+      "setFor": {
+        "light": "Set as light theme",
+        "dark": "Set as dark theme"
+      },
+      "installFor": {
+        "light": "Install and set as light theme",
+        "dark": "Install and set as dark theme"
+      },
+      "assigned": {
+        "light": "Set for light mode",
+        "dark": "Set for dark mode"
+      },
+      "deferred": {
+        "light": "{name} will apply when the system switches to light mode.",
+        "dark": "{name} will apply when the system switches to dark mode."
+      },
       "applied": "Applied {name}.",
       "installedNotice": "Installed {name}. Find it in Local themes.",
       "updated": "Updated {name}.",
@@ -1202,7 +1224,8 @@
       "findPrevious": "Find Previous",
       "replace": "Replace",
       "findInFolder": "Find in Folder",
-      "screenshot": "Screenshot"
+      "screenshot": "Screenshot",
+      "copyAlternateNewlines": "Copy with Alternate Paragraph Newlines"
     },
     "paragraph": {
       "heading1": "Heading 1",
@@ -1307,6 +1330,7 @@
     "invalidName": "Enter a valid drawing filename.",
     "renameFailed": "Could not rename the drawing. {reason}",
     "documentUnavailable": "The source document is unavailable.",
+    "embeddedChanged": "The document changed on disk or the original drawing could not be found. Your drawing edits are still open.",
     "addDocument": "Add Markdown Document",
     "addDocumentButton": "Add Document",
     "searchDocuments": "Search Markdown documents",

@@ -1865,8 +1865,15 @@ Diagram.prototype.drawSVG = function (container, options) {
   }
 
   var Theme = Diagram.themes[options.theme]
-  new Theme(this, options, function (drawing) {
-    drawing.draw(div)
+  return new Promise((resolve, reject) => {
+    new Theme(this, options, function (drawing) {
+      try {
+        drawing.draw(div)
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
+    })
   })
 } // end of drawSVG
 

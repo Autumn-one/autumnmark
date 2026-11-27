@@ -136,7 +136,7 @@
     "description": "Editor--Defines the maximum editor area width. An empty string or suffixes of ch (characters), px (pixels) or % (percentage) are allowed.",
     "type": "string",
     "pattern": "^(?:$|[0-9]+(?:ch|px|%)$)",
-    "default": ""
+    "default": "100%"
   },
   "codeFontSize": {
     "description": "Editor--Font size in code Block, the range is 12 ~ 18",
@@ -257,6 +257,11 @@
     "description": "Editor--Whether to automatically check related task.",
     "type": "boolean",
     "default": false
+  },
+  "copyParagraphNewlines": {
+    "description": "Editor--Paragraph newline separation when copying text.",
+    "enum": ["double", "single"],
+    "default": "double"
   },
   "autoNormalizeLineEndings": {
     "description": "Editor--Automatically normalize line endings when opening files. When disabled, files are opened as-is.",
@@ -473,7 +478,7 @@
   "darkModeTheme": {
     "description": "Theme--Theme to use when system is in dark mode.",
     "type": "string",
-    "default": "dark"
+    "default": "violet-diary"
   },
   "customCss": {
     "description": "Custom CSS--Custom CSS to apply to the current theme.--internal",
@@ -537,7 +542,7 @@
     "default": true
   },
   "openFilesInPreviewMode": {
-    "description": "General--Open sidebar files in a reusable preview tab. Editing or double-clicking keeps the tab open.",
+    "description": "General--Open sidebar files in preview tabs. Editing the preview, or double-clicking the file in the sidebar, keeps the tab open.",
     "type": "boolean",
     "default": true
   },

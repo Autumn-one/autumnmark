@@ -6,6 +6,7 @@ import * as json1 from 'ot-json1';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import InlineEngine from '..';
 import { EditTransactions } from '../../editor/transactions';
+import EventCenter from '../../event';
 import JSONState from '../../state';
 import { MarkdownToState } from '../../state/markdownToState';
 import ExportMarkdown from '../../state/stateToMarkdown';
@@ -15,6 +16,7 @@ import { tokenizer } from '../lexer';
 
 function makeRenderer(blocks: TState[]) {
     const muya = {
+        domNode: document.createElement('div'),
         options: {
             footnote: false,
             trimUnnecessaryCodeBlockEmptyLines: false,
@@ -22,7 +24,7 @@ function makeRenderer(blocks: TState[]) {
             texMathDollars: false,
             listIndentation: 1,
         },
-        eventCenter: { emit: () => {} },
+        eventCenter: new EventCenter(),
     } as unknown as Muya;
     const jsonState = new JSONState(muya, blocks);
     const transactions = new EditTransactions(jsonState, () => muya.options, () => {}, () => {}, () => {});
