@@ -5,7 +5,10 @@
 ; when localized labels (e.g. Simplified Chinese "下一步(N) >") carry BCM_SETSHIELD.
 !define AUTUMNMARK_NEXT_BTN_EXTRA_DLU 18
 !define MUI_CUSTOMFUNCTION_GUIINIT autumnmarkOnGuiInit
-!ifdef BUILD_UNINSTALLER
+!ifndef BUILD_UNINSTALLER
+  Var autumnmarkLabelFont
+  !define MUI_PAGE_CUSTOMFUNCTION_SHOW autumnmarkOnInstallModeShow
+!else
   !define MUI_CUSTOMFUNCTION_UNGUIINIT un.autumnmarkOnGuiInit
 !endif
 
@@ -62,21 +65,71 @@
   Pop $0
 !macroend
 
+!ifndef BUILD_UNINSTALLER
+  ; Hook MUI_PAGE_FINISH's SHOW callback while keeping electron-builder's default StartApp behavior.
+  !macro customFinishPage
+    !ifndef HIDE_RUN_AFTER_FINISH
+      Function StartApp
+        ${if} ${isUpdated}
+          StrCpy $1 "--updated"
+        ${else}
+          StrCpy $1 ""
+        ${endif}
+        ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
+      FunctionEnd
+
+      !define MUI_FINISHPAGE_RUN
+      !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
+    !endif
+    !define MUI_PAGE_CUSTOMFUNCTION_SHOW autumnmarkOnFinishShow
+    !insertmacro MUI_PAGE_FINISH
+  !macroend
+!endif
+
 !macro customHeader
-  ; NSIS's bundled Chinese .nlf files use SimSun/PMingLiU 9pt, whose tmInternalLeading
-  ; is 0 so Win32 STATIC controls pack adjacent lines tightly.
+  ; Keep Segoe UI 8pt as the dialog template font so Win32 preserves NSIS's compact
+  ; window height (Microsoft YaHei UI 9pt has a 17px tmHeight that inflates every DLU
+  ; vertical gap by ~42%). Multi-line Chinese labels then receive YaHei/JhengHei UI 8pt
+  ; at runtime for natural internal line leading.
   !ifdef LANG_SIMPCHINESE
-    SetFont /LANG=${LANG_SIMPCHINESE} "Microsoft YaHei UI" 9
+    SetFont /LANG=${LANG_SIMPCHINESE} "Segoe UI" 8
   !endif
   !ifdef LANG_TRADCHINESE
-    SetFont /LANG=${LANG_TRADCHINESE} "Microsoft JhengHei UI" 9
+    SetFont /LANG=${LANG_TRADCHINESE} "Segoe UI" 8
   !endif
 
   Function autumnmarkOnGuiInit
     !insertmacro autumnmarkWidenNextButton
+    !ifndef BUILD_UNINSTALLER
+      StrCpy $autumnmarkLabelFont 0
+      !ifdef LANG_SIMPCHINESE
+        ${If} $LANGUAGE == ${LANG_SIMPCHINESE}
+          CreateFont $autumnmarkLabelFont "Microsoft YaHei UI" 8 400
+        ${EndIf}
+      !endif
+      !ifdef LANG_TRADCHINESE
+        ${If} $LANGUAGE == ${LANG_TRADCHINESE}
+          CreateFont $autumnmarkLabelFont "Microsoft JhengHei UI" 8 400
+        ${EndIf}
+      !endif
+    !endif
   FunctionEnd
 
-  !ifdef BUILD_UNINSTALLER
+  !ifndef BUILD_UNINSTALLER
+    Function autumnmarkOnInstallModeShow
+      ${If} $autumnmarkLabelFont != 0
+      ${AndIf} $RadioButtonLabel1 != 0
+        SendMessage $RadioButtonLabel1 ${WM_SETFONT} $autumnmarkLabelFont 1
+      ${EndIf}
+    FunctionEnd
+
+    Function autumnmarkOnFinishShow
+      ${If} $autumnmarkLabelFont != 0
+      ${AndIf} $mui.FinishPage.Text != 0
+        SendMessage $mui.FinishPage.Text ${WM_SETFONT} $autumnmarkLabelFont 1
+      ${EndIf}
+    FunctionEnd
+  !else
     Function un.autumnmarkOnGuiInit
       !insertmacro autumnmarkWidenNextButton
     FunctionEnd
