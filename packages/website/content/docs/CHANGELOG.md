@@ -1,3 +1,7 @@
+## AutumnMark 0.24.80
+
+- Made the first switch to a nearby Markdown tab faster after startup. AutumnMark prepares the tab in short idle slices and reuses completed work when you click it, preserving the saved scroll position.
+
 ## AutumnMark 0.24.79
 
 - Removed the divider below the Announcement title to keep it clear of the content panel borders.
