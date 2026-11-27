@@ -184,7 +184,6 @@ const open = (): void => {
 
 :global(.announcement-dialog .el-dialog__header) {
   margin: 0;
-  border-bottom: 1px solid var(--floatBorderColor);
   padding: 12px 46px 12px 16px;
 }
 
