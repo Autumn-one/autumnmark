@@ -389,9 +389,9 @@ test('undoes and redoes canvas edits with the keyboard and the edit menu', async
     await drawRectangle(drawing)
     await expect(drawing.getByTestId('button-undo')).toBeEnabled()
     await expect.poll(elementCount).toBe(2)
-    await clickMenuById(app, 'undoMenuItem')
+    await clickMenuById(app, 'undoMenuItem', page)
     await expect.poll(elementCount).toBe(1)
-    await clickMenuById(app, 'redoMenuItem')
+    await clickMenuById(app, 'redoMenuItem', page)
     await expect.poll(elementCount).toBe(2)
   } finally {
     await app.close()

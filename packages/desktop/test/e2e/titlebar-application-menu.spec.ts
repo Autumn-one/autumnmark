@@ -51,14 +51,23 @@ test.describe('Persistent title bar menus', () => {
   test('opens and closes the existing native submenu', async() => {
     const file = page.getByRole('menuitem', { name: '文件', exact: true })
     await app.evaluate(({ Menu }) => {
-      const submenu = Menu.getApplicationMenu()?.items[0].submenu
-      if (!submenu) throw new Error('Missing File menu')
-      submenu.once('menu-will-show', () => {
-        setTimeout(() => submenu.closePopup(), 500)
-      })
+      const popup = Menu.prototype.popup
+      Menu.prototype.popup = function(options) {
+        Menu.prototype.popup = popup
+        const state = globalThis as typeof globalThis & { filePopup?: typeof Menu.prototype }
+        this.once('menu-will-show', () => { state.filePopup = this })
+        popup.call(this, options)
+      }
     })
-    await file.click()
+    await file.focus()
+    await file.press('ArrowDown')
+    await expect.poll(() => app.evaluate(() => 'filePopup' in globalThis)).toBe(true)
     await expect(file).toHaveAttribute('aria-expanded', 'true')
+    await app.evaluate(({ Menu }) => {
+      const state = globalThis as typeof globalThis & { filePopup?: typeof Menu.prototype }
+      state.filePopup?.closePopup()
+      delete state.filePopup
+    })
     await expect(file).toHaveAttribute('aria-expanded', 'false')
     await expectNoRendererErrors(app)
   })

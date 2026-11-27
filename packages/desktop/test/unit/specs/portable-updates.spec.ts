@@ -24,7 +24,9 @@ beforeEach(async() => {
   temp = await mkdtemp(path.join(os.tmpdir(), 'autumnmark-portable-test-'))
 })
 
-afterEach(async() => { await rm(temp, { recursive: true, force: true }) })
+afterEach(async() => {
+  await rm(temp, { recursive: true, force: true, maxRetries: 6, retryDelay: 250 })
+})
 
 describe('Windows portable releases', () => {
   it('finds only the ZIP for the Windows portable edition and checks its version', async() => {
