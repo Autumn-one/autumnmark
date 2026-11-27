@@ -4,6 +4,7 @@ import type { BrowserWindowConstructorOptions } from 'electron'
 import { electronLocalshortcut } from 'common/localShortcut'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
+import { resolveThemeBackground } from '../app/nativeTheme'
 import { centerWindowOptions } from './utils'
 import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx } from '../config'
 import log from 'electron-log'
@@ -44,11 +45,14 @@ class SettingWindow extends BaseWindow {
       winOptions.titleBarStyle = 'default'
       if (titleBarStyle === 'native') {
         winOptions.frame = true
+        // Electron can otherwise grow the minimum size when replaying the menu.
+        winOptions.autoHideMenuBar = true
       }
     }
 
-    winOptions.backgroundColor = this._getPreferredBackgroundColor(theme, initialPreferences.localThemes)
+    winOptions.backgroundColor = resolveThemeBackground(theme, initialPreferences.localThemes)
     const win = (this.browserWindow = new BrowserWindow(winOptions))
+    if (!isOsx) win.removeMenu()
 
     win.webContents.on('did-fail-load', (_event, code, desc, url) => {
       log.error(`did-fail-load ${code} ${desc} @ ${url}`)

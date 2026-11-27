@@ -305,6 +305,7 @@ export function applyEmbeddedDrawingUpdate(
         block: target.block,
         localIndex: target.localIndex,
         wrapper,
+        src: target.nextEncodedSrc,
         expectedRaw: target.nextRaw,
         attrs,
         loadPromise,

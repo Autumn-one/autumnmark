@@ -1,3 +1,4 @@
+import type { PagePreviews } from '../../editor/pagePreviews';
 import type { Muya } from '../../muya';
 import type { Nullable } from '../../types';
 import type { IAttributes, IDatasets } from '../../utils/types';
@@ -78,7 +79,11 @@ class TreeNode implements ILinkedNode {
         return null;
     }
 
-    constructor(public muya: Muya) {}
+    previewScope: PagePreviews | undefined;
+
+    constructor(public muya: Muya) {
+        this.previewScope = muya.editor?.buildingPreviewScope ?? muya.editor?.scrollPage?.previewScope;
+    }
 
     isContent(this: TreeNode): this is Content {
         return 'text' in this;

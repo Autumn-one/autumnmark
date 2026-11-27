@@ -152,7 +152,9 @@ export function projectEmbeddedImages(block: Content) {
             node.textContent = name || image.label;
             if (preview && image.preview) {
                 const player = document.createElement('video');
-                player.src = block.muya.options.videoAttachments?.playback(image.src, block.muya.editor.documentContext?.id) ?? resolveVideoSource(image.src);
+                const context = block.muya.editor.documentContext;
+                player.src = block.muya.options.videoAttachments?.playback(image.src, context?.id)
+                    ?? resolveVideoSource(image.src, context ? context.dirname ?? '' : undefined);
                 const token = parseInline(replaceEmbeddedImage(raw, image, 'video.webm'))[0];
                 if (token?.type === 'html_tag' && token.tag === 'video') {
                     for (const dimension of ['width', 'height'] as const) {

@@ -26,6 +26,7 @@ export class ImageResources {
     private _previews = new Map<string, string>();
     private _inlineDrawingOrder = new Set<string>();
     private _revalidateGeneration = new Map<string, number>();
+    private _resultVersions = new WeakMap<ILoadedImage, { epoch: number; version: number }>();
     private _epoch = 0;
     private _disposed = false;
 
@@ -55,6 +56,11 @@ export class ImageResources {
             this._previews.set(src, preview);
     }
 
+    isCurrent(src: string, result: ILoadedImage): boolean {
+        const version = this._resultVersions.get(result);
+        return version?.epoch === this._epoch && version.version === (this._revalidateGeneration.get(src) ?? 0);
+    }
+
     request(src: string, detectContentType: boolean, resolve?: () => Promise<string>): Promise<ILoadedImage | null> {
         if (this._disposed)
             return Promise.resolve(null);
@@ -64,6 +70,8 @@ export class ImageResources {
         if (state?.status === 'pending')
             return state.request;
         const id = getUniqueId();
+        const epoch = this._epoch;
+        const version = this._revalidateGeneration.get(src) ?? 0;
         // Only the load URL is busted; repeated renders share the original key.
         const loadSrc = /^file:\/\//i.test(src)
             ? `${src}${src.includes('?') ? '&' : '?'}mucache=${id}`
@@ -78,8 +86,9 @@ export class ImageResources {
             const current = this._states.get(src);
             // Invalidated requests cannot repopulate caches or update DOM.
             if (current?.status !== 'pending' || current.request !== request)
-                return null;
+                return epoch === this._epoch ? this.get(src) ?? null : null;
             this._previews.delete(src);
+            this._resultVersions.set(result, { epoch, version });
             this._states.set(src, { status: result.isSuccess ? 'ready' : 'failed', result });
             if (result.isSuccess && isInlineDrawingSource(src))
                 this._trackInlineDrawing(src);
@@ -97,12 +106,17 @@ export class ImageResources {
         const generation = (this._revalidateGeneration.get(src) ?? 0) + 1;
         this._revalidateGeneration.set(src, generation);
         try {
-            const loaded = await Promise.resolve().then(resolve).then(url => loadImage(url));
+            const url = await Promise.resolve().then(resolve);
+            const previous = this._states.get(src);
+            const loaded = previous?.status === 'ready' && previous.result.url === url
+                ? previous.result
+                : await loadImage(url);
             if (this._disposed || epoch !== this._epoch || this._revalidateGeneration.get(src) !== generation)
                 return null;
             const current = this._states.get(src);
             const previousUrl = current?.status === 'ready' ? current.result.url : undefined;
-            const result: ILoadedImage = { id: getUniqueId(), isSuccess: true, ...loaded };
+            const result: ILoadedImage = { ...loaded, id: getUniqueId(), isSuccess: true };
+            this._resultVersions.set(result, { epoch, version: generation });
             this._previews.delete(src);
             this._states.set(src, { status: 'ready', result });
             if (isInlineDrawingSource(src))

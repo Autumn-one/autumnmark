@@ -29,6 +29,7 @@ import { drawingDialog, drawingEditorTabs, preserveDrawingFocus } from '@/servic
 import {
   finishTabSwitchSync,
   forgetTabSwitchVisit,
+  getActivationTimer,
   markTabSwitchFlush,
   startTabSwitchTrace
 } from '@/services/tabSwitchPerf'
@@ -699,7 +700,10 @@ export const useEditorStore = defineStore('editor', {
         // flushed edit is attributed to that tab and not lost on switch (#2938).
         if (oldCurrentFile) {
           this.flushActiveEditor()
+          const timer = getActivationTimer()
+          const start = timer ? performance.now() : 0
           getSessionActions()?.captureView()
+          timer?.('viewCapture', start)
         }
         markTabSwitchFlush()
         window.DIRNAME = pathname ? window.path.dirname(pathname) : ''

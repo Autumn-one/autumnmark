@@ -21,7 +21,7 @@ class DiagramPreview extends Parent {
     private _width?: TDrawingWidth;
     private _rendered = false;
     private _cancelFinalize: (() => void) | null = null;
-    private _drawingRender = 0;
+    private _renderAttempt: AbortController | null = null;
     static override blockName = 'diagram-preview';
 
     static create(muya: Muya, state: IDiagramState) {
@@ -161,14 +161,14 @@ class DiagramPreview extends Parent {
         muya.options.embeddedDrawing?.open(code.text, previews.indexOf(this.domNode!));
     }
 
-    private async _showDrawing(code: string, previewLoader?: () => Promise<string>) {
+    private async _showDrawing(code: string, signal: AbortSignal, previewLoader?: () => Promise<string>) {
         const drawing = this.muya.options.embeddedDrawing;
         const target = this.domNode!;
         if (!drawing) {
             target.textContent = code;
             return;
         }
-        const render = ++this._drawingRender;
+        const page = this.previewScope;
         const label = drawing.label();
         target.classList.add('mu-embedded-drawing');
 
@@ -189,37 +189,52 @@ class DiagramPreview extends Parent {
                 button.textContent = this.muya.i18n.t('Loading...');
         }
 
+        const isCurrent = () => !signal.aborted && target.contains(button);
+        const wait = async (viewport = false) => {
+            if (page && !await page.whenVisible(button, viewport, signal))
+                return false;
+            return isCurrent() && (page ? page.canCommit(button) : button.isConnected);
+        };
+        await Promise.resolve();
         try {
-            const source = await (previewLoader ? previewLoader() : drawing.preview(code));
-            if (render !== this._drawingRender)
+            if (page && !await wait(!existingImg && !previewLoader))
+                return;
+            const source = await (previewLoader ? previewLoader() : drawing.preview(code, page?.visibilitySignal));
+            if (!await wait())
                 return;
             const image = target.ownerDocument.createElement('img');
             image.alt = label;
             image.src = source;
             image.draggable = false;
             await decodeImageElement(image);
-            if (render !== this._drawingRender || !button.isConnected)
+            if (!await wait())
                 return;
-            const liveImg = button.querySelector<HTMLImageElement>(':scope > img');
-            if (liveImg)
-                liveImg.replaceWith(image);
-            else
+            const swap = () => {
                 button.replaceChildren(image);
+            };
+            if (page)
+                page.commit(button, swap);
+            else
+                swap();
         }
         catch {
-            if (render === this._drawingRender && button.isConnected && !button.querySelector(':scope > img'))
+            if (await wait() && !button.querySelector(':scope > img'))
                 button.textContent = this.muya.i18n.t('Invalid Diagram Code');
         }
     }
 
     async update(code = this._code, previewLoader?: () => Promise<string>) {
         const { i18n } = this.muya;
+        this._renderAttempt?.abort();
+        const attempt = new AbortController();
+        this._renderAttempt = attempt;
+        const { signal } = attempt;
         this._rendered = false;
         if (this._code !== code)
             this._code = code;
 
         if (this._type === 'excalidraw') {
-            await this._showDrawing(code, previewLoader);
+            await this._showDrawing(code, signal, previewLoader);
             return;
         }
 
@@ -236,21 +251,29 @@ class DiagramPreview extends Parent {
             const { _type: type } = this;
 
             try {
-                await renderDiagram({
-                    target: this.domNode!,
+                const rendered = await this._renderDiagram({
                     code,
                     type,
                     mermaidTheme,
                     vegaTheme,
                     plantumlServer,
                     sequenceTheme,
-                });
+                }, signal);
+                if (!rendered)
+                    return;
                 this._rendered = true;
                 if (this.muya.options.editEmbeddedImage)
                     abbreviatePreviewText(this.domNode!);
-                this._cancelFinalize = finalizeRenderedDiagram(this.domNode!, i18n.t('Diagram'));
+                const cancel = finalizeRenderedDiagram(this.domNode!, i18n.t('Diagram'));
+                const unregister = this.previewScope?.onDispose(cancel, this.domNode!);
+                this._cancelFinalize = () => {
+                    unregister?.();
+                    cancel();
+                };
             }
             catch (error) {
+                if (signal.aborted)
+                    return;
                 const detail
                     = error instanceof Error ? error.message : String(error);
                 debug.error(`render ${type} diagram failed: ${detail}`);
@@ -268,6 +291,51 @@ class DiagramPreview extends Parent {
                 'Empty Diagram',
             )} &gt;</div>`;
         }
+    }
+
+    private async _renderDiagram(options: Omit<Parameters<typeof renderDiagram>[0], 'target'>, signal: AbortSignal): Promise<boolean> {
+        const host = this.domNode!;
+        const page = this.previewScope;
+        if (!page) {
+            await renderDiagram({ ...options, target: host });
+            return !signal.aborted;
+        }
+
+        await Promise.resolve();
+        while (await page.whenVisible(host, true, signal)) {
+            if (signal.aborted || !page.owns(host))
+                return false;
+            if (!page.canCommit(host))
+                continue;
+            const target = host.ownerDocument.createElement('div');
+            target.style.display = 'contents';
+            host.appendChild(target);
+            const detach = () => {
+                target.remove();
+            };
+            const unregister = page.onPause(detach);
+            signal.addEventListener('abort', detach, { once: true });
+            const isCurrent = () => !signal.aborted && page.canCommit(host) && target.parentNode === host;
+            try {
+                await renderDiagram({ ...options, target, isCurrent });
+                if (isCurrent()) {
+                    page.commit(host, () => {
+                        host.replaceChildren(...target.childNodes);
+                    });
+                    return true;
+                }
+            }
+            catch (error) {
+                if (isCurrent())
+                    throw error;
+            }
+            finally {
+                unregister();
+                signal.removeEventListener('abort', detach);
+                target.remove();
+            }
+        }
+        return false;
     }
 }
 

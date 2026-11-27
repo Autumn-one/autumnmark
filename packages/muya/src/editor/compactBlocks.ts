@@ -95,7 +95,8 @@ export class CompactBlocks {
             this._observer?.unobserve(previous);
         if (body) {
             this._bodies.set(viewport, body);
-            this._observer?.observe(body);
+            if (!this._muya.editor.prewarmingDocument)
+                this._observer?.observe(body);
         }
         else if (previous) {
             this._bodies.delete(viewport);

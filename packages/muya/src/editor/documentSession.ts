@@ -35,6 +35,7 @@ export interface IActivateDocumentOptions {
     searchOpen?: boolean;
     scrollTop?: number;
     onEvict?: (id: string, history: ISerializedHistory) => void;
+    onPhase?: (stage: 'attach' | 'reading' | 'layout', start: number) => void;
 }
 
 export interface IActivateDocumentResult {
@@ -44,6 +45,7 @@ export interface IActivateDocumentResult {
     toc: ITocItem[];
     restoredSelection: TSelectionState | null;
     restoredScrollTop: number | null;
+    outgoingScrollTop?: number;
 }
 
 export interface IPrewarmDocumentOptions {
@@ -104,9 +106,10 @@ function pauseDetachedMedia(domNode: Nullable<HTMLElement>): void {
     }
 }
 
-function disposeScrollPageResources(scrollPage: ScrollPage | null): void {
+function disposeScrollPageResources(scrollPage: Nullable<ScrollPage>): void {
     if (!scrollPage)
         return;
+    scrollPage.previewScope?.dispose();
     pauseDetachedMedia(scrollPage.domNode);
     scrollPage.breadthFirstTraverse((node) => {
         const disconnect = (node as { disconnectLayoutObserver?: () => void }).disconnectLayoutObserver;
@@ -166,6 +169,22 @@ export class DocumentSessionPool {
         this._muya.editor.setDocumentContext(context);
     }
 
+    changeContext(context: IDocumentContext, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        if (context.id !== this._activeId) {
+            this.evict(context.id, onEvict);
+            return;
+        }
+        const previous = this._activeContext;
+        this._activeContext = context;
+        this._muya.editor.setDocumentContext(context);
+        if ((previous?.dirname ?? '') !== (context.dirname ?? '')) {
+            const selection = this._muya.getSelectionState();
+            this._muya.editor.inlineEngine.refreshDocumentImageSources();
+            if (selection)
+                this._muya.setSelection(selection, { preventScroll: true, preserveFocus: true });
+        }
+    }
+
     markActiveModified(markdown: string): void {
         this._activeSourceMarkdown = markdown;
         this._activeTocCache = null;
@@ -176,15 +195,19 @@ export class DocumentSessionPool {
         this._activeTocCache = null;
     }
 
-    hasRetained(id: string, markdown: string, pathname?: string): boolean {
-        if (id === this._activeId)
-            return this._activeSourceMarkdown === markdown && (this._activeContext?.pathname ?? '') === (pathname ?? '');
+    hasRetained(id: string, markdown: string, pathname?: string, dirname?: string): boolean {
+        if (id === this._activeId) {
+            return this._activeSourceMarkdown === markdown
+                && (this._activeContext?.pathname ?? '') === (pathname ?? '')
+                && (dirname === undefined || (this._activeContext?.dirname ?? '') === dirname);
+        }
         const session = this._sessions.get(id);
         return !!session
             && session.scrollPage !== null
             && session.sourceMarkdown === markdown
             && session.optionsGeneration === this._optionsGeneration
-            && (session.context.pathname ?? '') === (pathname ?? '');
+            && (session.context.pathname ?? '') === (pathname ?? '')
+            && (dirname === undefined || (session.context.dirname ?? '') === dirname);
     }
 
     getCachedTOC(): ITocItem[] {
@@ -207,7 +230,7 @@ export class DocumentSessionPool {
         session.scrollPage = null;
     }
 
-    private _captureOutgoingActive(): void {
+    private _captureOutgoingActive(): number | undefined {
         const id = this._activeId;
         const { editor, domNode } = this._muya;
         if (!id || !editor.scrollPage || !this._activeContext)
@@ -258,6 +281,7 @@ export class DocumentSessionPool {
         };
         this._sessions.delete(id);
         this._sessions.set(id, session);
+        return scrollTop;
     }
 
     private _enforceBudget(excludeId: string, onEvict?: (id: string, history: ISerializedHistory) => void): void {
@@ -290,13 +314,15 @@ export class DocumentSessionPool {
             domNode.replaceChild(nextPage.domNode!, prevPage.domNode);
         else
             domNode.replaceChildren(nextPage.domNode!);
+        prevPage?.previewScope?.setActive(false);
     }
 
     activate(options: IActivateDocumentOptions): IActivateDocumentResult {
-        const { id, markdown, context, readOnly, onEvict } = options;
+        const { id, markdown, context, readOnly, onEvict, onPhase } = options;
         const { editor } = this._muya;
 
         if (this._activeId === id && editor.scrollPage && this._activeSourceMarkdown === markdown && sameContextPath(this._activeContext ?? context, context)) {
+            editor.syncPreviewVisibility();
             if (this._muya.isReadOnly !== readOnly)
                 this._muya.setReadOnly(readOnly);
             const toc = this.getCachedTOC();
@@ -311,8 +337,10 @@ export class DocumentSessionPool {
         }
 
         const prevScrollPage = editor.scrollPage;
-        if (this._activeId && this._activeId !== id)
-            this._captureOutgoingActive();
+        const outgoingId = this._activeId;
+        const outgoingScrollTop = this._activeId && this._activeId !== id
+            ? this._captureOutgoingActive()
+            : undefined;
 
         const cached = this._sessions.get(id);
         this._sessions.delete(id);
@@ -330,7 +358,9 @@ export class DocumentSessionPool {
                 editor.selection.clear();
                 editor.activeContentBlock = null;
                 editor.setDocumentContext(context);
+                let start = onPhase ? performance.now() : 0;
                 this._attachScrollPageDom(cached.scrollPage!, prevScrollPage);
+                onPhase?.('attach', start);
                 editor.scrollPage = cached.scrollPage;
                 editor.jsonState.importInternalState(cached.stateSnapshot);
                 editor.history.importInternalState(cached.historyState);
@@ -344,15 +374,20 @@ export class DocumentSessionPool {
                 this._activeTocCache = cached.tocCache;
 
                 const readOnlyChanged = cached.readOnly !== readOnly;
+                const rootModeChanged = this._muya.isReadOnly !== readOnly;
                 this._muya.options.readOnly = readOnly;
-                this._muya.syncReadingPresentation(readOnlyChanged);
-                if (readOnlyChanged)
+                start = onPhase ? performance.now() : 0;
+                if (rootModeChanged || readOnlyChanged)
+                    this._muya.syncReadingPresentation(readOnlyChanged, readOnlyChanged);
+                onPhase?.('reading', start);
+                if (rootModeChanged || readOnlyChanged)
                     this._muya.eventCenter.emit('read-only-changed', readOnly);
 
                 if (cached.highlightedBlocks.size > 0)
                     editor.searchModule.clearBlocksHighlights(cached.highlightedBlocks);
 
                 if (cached.needsLayoutRefresh) {
+                    start = onPhase ? performance.now() : 0;
                     cached.needsLayoutRefresh = false;
                     editor.compactBlocks.refresh();
                     cached.scrollPage!.breadthFirstTraverse((node) => {
@@ -362,6 +397,7 @@ export class DocumentSessionPool {
                                 sync.call(node);
                         }
                     });
+                    onPhase?.('layout', start);
                 }
             }
             finally {
@@ -369,6 +405,7 @@ export class DocumentSessionPool {
             }
 
             const toc = this.getCachedTOC();
+            editor.syncPreviewVisibility();
             this._enforceBudget(id, onEvict);
             return {
                 hotHit: true,
@@ -377,6 +414,7 @@ export class DocumentSessionPool {
                 toc,
                 restoredSelection: cached.selection,
                 restoredScrollTop: cached.scrollTop,
+                outgoingScrollTop,
             };
         }
 
@@ -419,6 +457,8 @@ export class DocumentSessionPool {
             const nextPage = this._muya.runDocumentUpdate(() => ScrollPage.createDetached(this._muya, nextState));
             this._attachScrollPageDom(nextPage, prevScrollPage);
             editor.scrollPage = nextPage;
+            if (!outgoingId || this._sessions.get(outgoingId)?.scrollPage !== prevScrollPage)
+                disposeScrollPageResources(prevScrollPage);
             refreshFoldVisibility(nextPage);
             editor.refreshBlockViews();
 
@@ -438,6 +478,7 @@ export class DocumentSessionPool {
         }
 
         const toc = this.getCachedTOC();
+        editor.syncPreviewVisibility();
         this._enforceBudget(id, onEvict);
         return {
             hotHit: false,
@@ -531,6 +572,7 @@ export class DocumentSessionPool {
         let tocItems: ITocItem[] = [];
 
         editor.isUpdating = true;
+        editor.prewarmingDocument = true;
         try {
             editor.setDocumentContext(context);
             this._muya.options.readOnly = readOnly;
@@ -552,7 +594,12 @@ export class DocumentSessionPool {
             detachedFold = editor.foldBlocks.exportSessionState();
             detachedTabs = editor.contentTabs.exportSessionState();
         }
+        catch (error) {
+            disposeScrollPageResources(detachedPage);
+            throw error;
+        }
         finally {
+            editor.prewarmingDocument = false;
             editor.setDocumentContext(liveContext);
             this._muya.options.readOnly = liveReadOnly;
             editor.jsonState.importInternalState(liveState);
@@ -591,6 +638,7 @@ export class DocumentSessionPool {
     }
 
     dispose(): void {
+        disposeScrollPageResources(this._muya.editor.scrollPage);
         for (const session of this._sessions.values())
             disposeScrollPageResources(session.scrollPage);
         this._sessions.clear();

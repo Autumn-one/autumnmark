@@ -13,10 +13,11 @@
         { 'tabs-visible': showTabBar && !!filename },
         { frameless: titleBarStyle === 'custom' },
         { 'has-menubar': showCustomTitleBar },
+        { 'native-menubar': showNativeMenuBar },
         { isOsx: isOsx }
       ]"
     >
-      <application-menu v-if="showCustomTitleBar" />
+      <application-menu v-if="showInAppMenuBar" />
       <div
         v-if="titleBarStyle !== 'native' || isOsx"
         class="title"
@@ -32,7 +33,7 @@
         </template>
       </div>
       <div class="title-actions">
-        <div :class="showCustomTitleBar ? 'statistics-toolbar title-no-drag' : 'right-toolbar'">
+        <div :class="showInAppMenuBar ? 'statistics-toolbar title-no-drag' : 'right-toolbar'">
           <button
             v-if="updates.showProgressButton"
             type="button"
@@ -177,12 +178,12 @@ onMounted(async () => {
   }
 })
 
-const { titleBarStyle } = storeToRefs(preferencesStore)
+const titleBarStyle = computed(() => window.marktext?.env?.titleBarStyle ?? preferencesStore.titleBarStyle)
 const { showTabBar } = storeToRefs(layoutStore)
 
-const showCustomTitleBar = computed(() => {
-  return titleBarStyle.value === 'custom' && !isOsx
-})
+const showCustomTitleBar = computed(() => titleBarStyle.value === 'custom' && !isOsx)
+const showNativeMenuBar = computed(() => titleBarStyle.value === 'native' && !isOsx)
+const showInAppMenuBar = computed(() => showCustomTitleBar.value || showNativeMenuBar.value)
 
 const maximizeLabel = computed(() =>
   isMaximized.value ? t('titleBar.restore') : t('titleBar.maximize')
@@ -324,6 +325,15 @@ onBeforeUnmount(() => {
 .has-menubar {
   display: grid;
   grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
+}
+.title-bar.native-menubar {
+  -webkit-app-region: no-drag;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--sideBarBorderColor);
+}
+.has-menubar,
+.native-menubar {
   align-items: center;
   background: color-mix(
     in srgb,
@@ -338,6 +348,12 @@ onBeforeUnmount(() => {
 .has-menubar :deep(.application-menubar) {
   width: max-content;
   max-width: min(55vw, calc(100vw - 200px));
+}
+.native-menubar :deep(.application-menubar) {
+  flex: 1 1 auto;
+}
+.native-menubar .title-actions {
+  flex: none;
 }
 .update-trigger {
   display: inline-flex;

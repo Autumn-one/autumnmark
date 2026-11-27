@@ -307,6 +307,9 @@ export class Editor {
     codeLayoutScheduler: CodeLayoutScheduler;
     documentSessions: DocumentSessionPool;
 
+    buildingPreviewScope: import('./pagePreviews').PagePreviews | undefined;
+    prewarmingDocument = false;
+    private _viewportSuspended = false;
     private _documentContext: IDocumentContext | null = null;
     private _activeContentBlock: Nullable<Content> = null;
     private _inputSelection: Nullable<TSelectionState> | undefined;
@@ -349,6 +352,15 @@ export class Editor {
         this._documentContext = context;
     }
 
+    setViewportSuspended(suspended: boolean): void {
+        this._viewportSuspended = suspended;
+        this.syncPreviewVisibility();
+    }
+
+    syncPreviewVisibility(): void {
+        this.scrollPage?.previewScope?.setActive(!this._viewportSuspended);
+    }
+
     get activeContentBlock() {
         return this._activeContentBlock;
     }
@@ -372,6 +384,7 @@ export class Editor {
         const state = this.jsonState.getState();
 
         this.scrollPage = ScrollPage.create(muya, state);
+        this.syncPreviewVisibility();
         this.refreshBlockViews();
 
         this._dispatchEvents();

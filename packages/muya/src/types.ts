@@ -123,9 +123,10 @@ export interface IMuyaOptions {
      */
     imageAction?: (state: IImageActionState) => Promise<string>;
     /** Resolve preview bytes without changing the image destination in Markdown. */
-    resolveImagePreview?: (src: string, documentPathname?: string) => { key: string; load: () => Promise<string> } | undefined;
+    resolveImagePreview?: (src: string, documentPathname?: string) => { key: string; load: (signal?: AbortSignal) => Promise<string> } | undefined;
+    deferOffscreenPreviews?: boolean;
     embeddedDrawing?: {
-        preview: (source: string) => Promise<string>;
+        preview: (source: string, signal?: AbortSignal) => Promise<string>;
         open: (source: string, index: number) => void;
         label: () => string;
         quickInsert?: {

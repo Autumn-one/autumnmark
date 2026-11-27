@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { registerRenderedViewState, documentViewChanged } from '@/services/documentViewState'
 import { TabPrewarmScheduler } from '@/services/tabPrewarm'
-import { markTabSwitchEditor, markTabSwitchScroll, markTabSwitchToc } from '@/services/tabSwitchPerf'
+import { getActivationTimer, markTabSwitchEditor, markTabSwitchScroll, markTabSwitchToc } from '@/services/tabSwitchPerf'
 
 import {
   computed,
@@ -175,7 +175,7 @@ import {
   resolveDrawingPreview
 } from '@/services/drawingPreviews'
 import type { DrawingPreviewChangedPayload } from '@/services/drawingEditors'
-import { resolveDrawingPath } from '@/util/drawingPaths'
+import { isDrawingPath, resolveDrawingPath } from '@/util/drawingPaths'
 import { drawingInsertionAt } from '@/util/drawingInsertion'
 import { isDocumentBackground } from '../../contextMenu/documentBackground'
 import { useEditorStore } from '@/store/editor'
@@ -285,7 +285,7 @@ const isDocPoolEnabled = (): boolean =>
 const documentContextFor = (id: string, pathname?: string | null): IDocumentContext => ({
   id,
   pathname: pathname || undefined,
-  dirname: pathname ? window.path.dirname(pathname) : (window.DIRNAME || undefined)
+  dirname: pathname ? window.path.dirname(pathname) : ''
 })
 const readingSelectionChanged = () => {
   if (props.suspended || !currentFile.value?.readOnly || !editor.value) return
@@ -548,6 +548,9 @@ const pruneClosedTabState = (liveTabIds: Set<string>): void => {
     if (!liveTabIds.has(id)) {
       editor.value?.evictDocument(id)
       knownTabIds.delete(id)
+      linkedPathsByTab.delete(id)
+      linkedDrawingVersionsByTab.delete(id)
+      linkedDrawingRefreshesByTab.delete(id)
     }
   }
   for (const id of liveTabIds) knownTabIds.add(id)
@@ -569,6 +572,17 @@ const handleBackgroundFileReloaded = (tabId: unknown): void => {
   syntheticHistoryByTab.delete(tabId)
   blockViewsByTab.delete(tabId)
 }
+
+watch(() => tabs.value.map(tab => [tab.id, tab.pathname ?? ''] as const), (paths, previous) => {
+  const oldPaths = new Map(previous)
+  for (const [id, pathname] of paths) {
+    if (oldPaths.has(id) && oldPaths.get(id) !== pathname) {
+      editor.value?.updateDocumentContext(documentContextFor(id, pathname), (evictedId, history) => {
+        engineHistoryByTab.set(evictedId, history)
+      })
+    }
+  }
+}, { flush: 'post' })
 
 // Adapt engine blockName to the functionType expected by desktop menu state.
 const CONTAINER_FUNCTION_TYPE: Record<string, string> = {
@@ -981,6 +995,21 @@ watch(currentFile, (value, oldValue) => {
   }
 })
 
+const isRenderedViewportHidden = computed(() => props.suspended || sourceCode.value ||
+  isDrawingPath(currentFile.value?.pathname || currentFile.value?.filename || ''))
+
+watch(isRenderedViewportHidden, (hidden) => {
+  if (hidden) editor.value?.setViewportSuspended(true)
+}, { flush: 'sync' })
+
+watch(() => [isRenderedViewportHidden.value, currentFile.value?.id] as const, ([hidden]) => {
+  const file = currentFile.value
+  if (!hidden && file?.id === renderedDocumentId) {
+    editor.value?.setViewportSuspended(false)
+    flushDirtyDrawingPreviews(file)
+  }
+}, { flush: 'post' })
+
 watch(
   () => props.suspended,
   (isSuspended) => {
@@ -991,9 +1020,6 @@ watch(
       mediaViewer.value?.close()
       if (muya.hasFocus()) muya.domNode.blur()
       return
-    }
-    if (currentFile.value && renderedDocumentId === currentFile.value.id && !sourceCode.value) {
-      flushDirtyDrawingPreviews(currentFile.value)
     }
   }
 )
@@ -1239,64 +1265,90 @@ const handleInvalidateImageCache = () => {
   }
 }
 
-// Paths whose linked `.excalidraw` preview changed while the Markdown editor was suspended or inactive.
-const dirtyDrawingPaths = new Set<string>()
+interface LinkedDrawingChange {
+  load: () => Promise<string>
+}
 
-const flushDirtyDrawingPreviews = (file: { id: string; markdown: string; pathname?: string | null }) => {
-  const muya = editor.value
-  if (!muya || !dirtyDrawingPaths.size || renderedDocumentId !== file.id || sourceCode.value || props.suspended) return
+const linkedDrawingChanges = new Map<string, LinkedDrawingChange>()
+const linkedDrawingVersionsByTab = new Map<string, Map<string, LinkedDrawingChange>>()
+const linkedDrawingRefreshesByTab = new Map<string, Map<string, LinkedDrawingChange>>()
+const recentLinkedPreviews = new Map<LinkedDrawingChange, string>()
+const linkedPathsByTab = new Map<string, { markdown: string; pathname?: string | null; paths: string[] }>()
+
+type DrawingPreviewTab = Pick<NonNullable<typeof currentFile.value>, 'id' | 'markdown' | 'pathname'>
+
+const drawingPathsForTab = (file: DrawingPreviewTab): string[] => {
+  const cached = linkedPathsByTab.get(file.id)
+  if (cached?.markdown === file.markdown && cached.pathname === file.pathname) return cached.paths
   const paths = linkedDrawingPaths(file.markdown, file.pathname)
-  if (!paths.length) return
-  for (const key of paths) {
-    let matchedDirty: string | null = null
-    for (const dirty of dirtyDrawingPaths) {
-      if (window.fileUtils.isSamePathSync(key, dirty)) {
-        matchedDirty = dirty
-        break
-      }
+  linkedPathsByTab.set(file.id, { markdown: file.markdown, pathname: file.pathname, paths })
+  return paths
+}
+
+const noteLinkedDrawingChange = (path: string, load = () => renderLinkedDrawingPreview(path)) => {
+  const key = [...linkedDrawingChanges.keys()].find(previous => window.fileUtils.isSamePathSync(previous, path)) ?? path
+  const previous = linkedDrawingChanges.get(key)
+  if (previous) recentLinkedPreviews.delete(previous)
+  invalidateDrawingPreview(path)
+  let pending: Promise<string> | undefined
+  const change: LinkedDrawingChange = {
+    load: () => {
+      const cached = recentLinkedPreviews.get(change)
+      if (cached !== undefined) return Promise.resolve(cached)
+      pending ??= load().then(url => {
+        if (linkedDrawingChanges.get(key) === change) {
+          recentLinkedPreviews.set(change, url)
+          if (recentLinkedPreviews.size > 32) {
+            const oldest = recentLinkedPreviews.keys().next().value
+            if (oldest) recentLinkedPreviews.delete(oldest)
+          }
+        }
+        return url
+      }).finally(() => { pending = undefined })
+      return pending
     }
-    if (!matchedDirty) continue
-    dirtyDrawingPaths.delete(matchedDirty)
-    invalidateDrawingPreview(key)
-    void muya.refreshImagePreview(key, () => renderLinkedDrawingPreview(key))
+  }
+  linkedDrawingChanges.set(key, change)
+}
+
+const flushDirtyDrawingPreviews = (file: DrawingPreviewTab) => {
+  const muya = editor.value
+  if (!muya || !linkedDrawingChanges.size || renderedDocumentId !== file.id || isRenderedViewportHidden.value) return
+  const seen = linkedDrawingVersionsByTab.get(file.id) ?? new Map<string, LinkedDrawingChange>()
+  const pending = linkedDrawingRefreshesByTab.get(file.id) ?? new Map<string, LinkedDrawingChange>()
+  linkedDrawingVersionsByTab.set(file.id, seen)
+  linkedDrawingRefreshesByTab.set(file.id, pending)
+  for (const path of drawingPathsForTab(file)) {
+    const key = linkedDrawingChanges.has(path) ? path : [...linkedDrawingChanges.keys()].find(candidate =>
+      window.fileUtils.isSamePathSync(path, candidate))
+    const change = key && linkedDrawingChanges.get(key)
+    if (!change || seen.get(path) === change || pending.get(path) === change) continue
+    pending.set(path, change)
+    const pathname = file.pathname
+    void muya.refreshImagePreview(path, change.load, { confirmCurrent: true }).then(committed => {
+      if (committed && file.pathname === pathname && linkedDrawingChanges.get(key) === change)
+        seen.set(path, change)
+    }).finally(() => {
+      if (pending.get(path) === change) pending.delete(path)
+    })
   }
 }
 
 const refreshDrawingPreviews = (payload?: unknown) => {
   const detail = payload && typeof payload === 'object' ? payload as DrawingPreviewChangedPayload : undefined
-  if (detail?.path) {
-    invalidateDrawingPreview(detail.path)
-  }
-  const muya = editor.value
+  if (detail?.path) noteLinkedDrawingChange(detail.path, detail.previewLoader)
   const file = currentFile.value
-  if (props.suspended || !muya || !file || renderedDocumentId !== file.id || sourceCode.value) {
-    if (detail?.path) dirtyDrawingPaths.add(detail.path)
-    return
-  }
-  const paths = linkedDrawingPaths(file.markdown, file.pathname)
-  if (!paths.length) {
-    if (detail?.path) dirtyDrawingPaths.add(detail.path)
-    return
-  }
+  if (!file || renderedDocumentId !== file.id || isRenderedViewportHidden.value) return
   if (detail?.path) {
-    const targetPath = detail.path
-    const matched = paths.filter(path => window.fileUtils.isSamePathSync(path, targetPath))
-    if (!matched.length) {
-      dirtyDrawingPaths.add(targetPath)
-      return
-    }
-    for (const key of matched) {
-      invalidateDrawingPreview(key)
-      void muya.refreshImagePreview(key, detail.previewLoader ?? (() => renderLinkedDrawingPreview(key)))
-    }
+    flushDirtyDrawingPreviews(file)
     return
   }
-  for (const key of paths) {
+  for (const path of drawingPathsForTab(file)) {
     void (async() => {
-      const changed = await hasLinkedDrawingChanged(key)
-      if (!changed || editor.value !== muya || currentFile.value?.id !== file.id || props.suspended) return
-      invalidateDrawingPreview(key)
-      await muya.refreshImagePreview(key, () => renderLinkedDrawingPreview(key))
+      const changed = await hasLinkedDrawingChanged(path)
+      if (!changed) return
+      noteLinkedDrawingChange(path)
+      if (currentFile.value?.id === file.id) flushDirtyDrawingPreviews(file)
     })()
   }
 }
@@ -1543,12 +1595,12 @@ const scrollToCursor = (duration = 300) => {
   })
 }
 
-const scrollToCords = (y: number) => {
+const scrollToCords = (y: number, alreadyAtTop = false) => {
   const container = getScrollContainer()
   if (!container) return
   container.style.visibility = 'visible'
   container.style.pointerEvents = 'auto'
-  if (revealingAnchor) return
+  if (revealingAnchor || (alreadyAtTop && y === 0)) return
 
   // Apply scrollTop synchronously so the first painted frame lands at the saved offset.
   container.scrollTop = y
@@ -1976,6 +2028,7 @@ const handleFileChange = (payload: unknown) => {
   const targetReadOnly = typeof payloadReadOnly === 'boolean' ? payloadReadOnly : !!currentFile.value?.readOnly
   const resolvedPathname = payloadPathname ?? (id && currentFile.value?.id === id ? currentFile.value.pathname : undefined)
   let restoredScrollTop: number | null = null
+  let alreadyAtTop = false
 
   if (typeof newMarkdown === 'string') {
     const sameTabSourceHandoff = isSourceModeHandoff && !!id && lastWysiwygDocumentId === id
@@ -2026,39 +2079,43 @@ const handleFileChange = (payload: unknown) => {
       let pooledActivated = false
       if (typeof id === 'string' && poolEnabled) {
         try {
+          const timer = getActivationTimer()
           const result = editor.value.activateDocument({
             id,
             markdown: newMarkdown,
             context: documentContextFor(id, resolvedPathname),
             readOnly: targetReadOnly,
             searchOpen: Boolean(document.querySelector('.search-bar')),
+            onPhase: timer,
             onEvict: (evictedId, history) => {
               engineHistoryByTab.set(evictedId, history)
             }
           })
           pooledActivated = true
-          markTabSwitchEditor({ hotHit: result.hotHit })
+          markTabSwitchEditor({ hotHit: result.hotHit, blocks: result.blocks, historyLength: result.historyLength })
           editorStore.UPDATE_TOC(result.toc)
           markTabSwitchToc()
 
           if (result.hotHit) {
+            const start = timer ? performance.now() : 0
             if (isSourceModeHandoff && isIndexCursor(muyaIndexCursor)) {
               editor.value.setCursorByOffset(muyaIndexCursor)
             } else {
               const targetSelection = result.restoredSelection ?? newCursor
               if (targetSelection) {
-                editor.value.editor.selection.preventScrollOnNextNotification()
-                applyCursor(editor.value, targetSelection)
+                applyCursor(editor.value, targetSelection, { preventScroll: true })
+              } else {
+                alreadyAtTop = result.outgoingScrollTop === 0
               }
             }
+            timer?.('selection', start)
             if (!syntheticHistoryByTab.has(id)) {
               getSyntheticHistory(id, newMarkdown)
             }
             restoredScrollTop = result.restoredScrollTop
           } else {
             if (newCursor) {
-              editor.value.editor.selection.preventScrollOnNextNotification()
-              applyCursor(editor.value, newCursor)
+              applyCursor(editor.value, newCursor, { preventScroll: true })
             } else if (isIndexCursor(muyaIndexCursor)) {
               editor.value.setCursorByOffset(muyaIndexCursor)
             }
@@ -2148,7 +2205,7 @@ const handleFileChange = (payload: unknown) => {
 
   const targetScrollTop = typeof scrollTop === 'number' ? scrollTop : restoredScrollTop
   if (typeof targetScrollTop === 'number') {
-    scrollToCords(targetScrollTop)
+    scrollToCords(targetScrollTop, alreadyAtTop)
   } else {
     container.style.visibility = 'visible'
     container.style.pointerEvents = 'auto'
@@ -2347,7 +2404,8 @@ onMounted(() => {
     fetchLinkHtml: (url) => window.electron.fetchLinkHtml(url),
     // Clipboard and drag-drop handlers read these callbacks from engine options, separately from ImageEditTool.
     imageAction: muyaImageAction,
-    resolveImagePreview: (src, documentPathname) => resolveDrawingPreview(src, documentPathname ?? currentFile.value?.pathname),
+    resolveImagePreview: resolveDrawingPreview,
+    deferOffscreenPreviews: true,
     embeddedDrawing: {
       preview: renderEmbeddedDrawingPreview,
       open: (source, index) => bus.emit('drawing::open-embedded', { source, index }),
@@ -2404,6 +2462,15 @@ onMounted(() => {
 
   // Keep the engine outside Vue proxies: DOM/block identity is required by rendering.
   const muya = markRaw(new Muya(ele, options))
+  const initialFile = currentFile.value
+  if (initialFile?.id) {
+    muya.bindActiveDocument(
+      initialFile.id,
+      initialFile.markdown ?? '',
+      documentContextFor(initialFile.id, initialFile.pathname)
+    )
+  }
+  muya.setViewportSuspended(isRenderedViewportHidden.value)
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
   muya.on('video-import-error', () => {
@@ -2422,11 +2489,6 @@ onMounted(() => {
   // Seed the mount-loaded document before its first edit so pristine content maps to ID 0.
   if (currentFile.value?.id) {
     knownTabIds.add(currentFile.value.id)
-    muya.bindActiveDocument(
-      currentFile.value.id,
-      currentFile.value.markdown ?? '',
-      documentContextFor(currentFile.value.id, currentFile.value.pathname)
-    )
     getSyntheticHistory(currentFile.value.id, muya.getMarkdown())
   }
 

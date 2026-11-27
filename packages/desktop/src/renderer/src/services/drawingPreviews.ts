@@ -1,6 +1,7 @@
 import { decodeInlineDrawing, drawingPreviewExpansionEdits, findDocumentImages, isInlineDrawingSource } from '@muyajs/core'
 import { applyMarkdownEdits } from '@shared/markdownEdits'
 import { resolveDrawingPath } from '@/util/drawingPaths'
+import { DrawingPreviewQueue, type DrawingPreviewPriority } from './drawingPreviewQueue'
 import type { DrawingScene } from './drawingScene'
 
 interface LinkedDrawingFingerprint {
@@ -9,7 +10,8 @@ interface LinkedDrawingFingerprint {
   cardStats: Map<string, string>
 }
 
-const pending = new Map<string, Promise<string>>()
+const queue = new DrawingPreviewQueue()
+const linkedKeys = new Map<string, object>()
 const fingerprints = new Map<string, LinkedDrawingFingerprint>()
 
 async function statToken(path: string): Promise<string> {
@@ -61,26 +63,32 @@ export async function hasLinkedDrawingChanged(path: string): Promise<boolean> {
 
 export const clearLinkedDrawingFingerprints = () => fingerprints.clear()
 
-export async function renderLinkedDrawingPreview(path: string): Promise<string> {
-  const { renderDrawingPreviewWithScene } = await import('./drawingScene')
-  const { dataUrl, scene } = await renderDrawingPreviewWithScene(path)
-  await recordLinkedDrawingFingerprint(path, scene)
-  return dataUrl
+export function renderLinkedDrawingPreview(
+  path: string,
+  priority: DrawingPreviewPriority = 'viewport',
+  signal?: AbortSignal
+): Promise<string> {
+  const key = linkedKeys.get(path) ?? {}
+  linkedKeys.set(path, key)
+  return queue.schedule(key, priority, async() => {
+    const { renderDrawingPreviewWithScene } = await import('./drawingScene')
+    const { dataUrl, scene } = await renderDrawingPreviewWithScene(path)
+    if (linkedKeys.get(path) === key)
+      await recordLinkedDrawingFingerprint(path, scene)
+    return dataUrl
+  }, signal)
 }
 
-function preview(path: string): Promise<string> {
-  const loading = pending.get(path)
-  if (loading) return loading
-  const request = renderLinkedDrawingPreview(path).finally(() => {
-    if (pending.get(path) === request) pending.delete(path)
+export function renderSavedDrawingScene(scene: DrawingScene): Promise<string> {
+  return queue.schedule(scene, 'viewport', async() => {
+    const { renderDrawingScene } = await import('./drawingScene')
+    return renderDrawingScene(scene)
   })
-  pending.set(path, request)
-  return request
 }
 
-export const invalidateDrawingPreviews = () => pending.clear()
+export const invalidateDrawingPreviews = () => linkedKeys.clear()
 export const invalidateDrawingPreview = (path: string) => {
-  pending.delete(path)
+  linkedKeys.delete(path)
 }
 
 export function linkedDrawingPaths(markdown: string, documentPath?: string | null): string[] {
@@ -95,18 +103,18 @@ export function linkedDrawingPaths(markdown: string, documentPath?: string | nul
 
 const MAX_EMBEDDED_DRAWING_CACHE = 32
 const embeddedDrawingCache = new Map<string, string>()
-const pendingEmbedded = new Map<string, Promise<string>>()
-
-export async function renderEmbeddedDrawingPreview(source: string): Promise<string> {
+export async function renderEmbeddedDrawingPreview(
+  source: string,
+  signal?: AbortSignal,
+  priority: DrawingPreviewPriority = 'viewport'
+): Promise<string> {
   const cached = embeddedDrawingCache.get(source)
   if (cached !== undefined) {
     embeddedDrawingCache.delete(source)
     embeddedDrawingCache.set(source, cached)
     return cached
   }
-  const inFlight = pendingEmbedded.get(source)
-  if (inFlight) return inFlight
-  const request = (async() => {
+  return queue.schedule(source, priority, async() => {
     const { parseDrawing, renderDrawingScene } = await import('./drawingScene')
     const dataUrl = await renderDrawingScene(await parseDrawing(source))
     if (embeddedDrawingCache.size >= MAX_EMBEDDED_DRAWING_CACHE) {
@@ -115,26 +123,22 @@ export async function renderEmbeddedDrawingPreview(source: string): Promise<stri
     }
     embeddedDrawingCache.set(source, dataUrl)
     return dataUrl
-  })().finally(() => {
-    if (pendingEmbedded.get(source) === request) pendingEmbedded.delete(source)
-  })
-  pendingEmbedded.set(source, request)
-  return request
+  }, signal)
 }
 
-export function resolveDrawingPreview(src: string, documentPath?: string | null) {
+export function resolveDrawingPreview(src: string, documentPath?: string | null, priority: DrawingPreviewPriority = 'viewport') {
   if (isInlineDrawingSource(src)) {
     return {
       key: src,
-      load: async() => {
+      load: async(signal?: AbortSignal) => {
         const source = decodeInlineDrawing(src)
         if (source === undefined) throw new Error('Invalid inline drawing')
-        return renderEmbeddedDrawingPreview(source)
+        return renderEmbeddedDrawingPreview(source, signal, priority)
       }
     }
   }
   const path = resolveDrawingPath(src, documentPath)
-  if (path) return { key: path, load: () => preview(path) }
+  if (path) return { key: path, load: (signal?: AbortSignal) => renderLinkedDrawingPreview(path, priority, signal) }
 }
 
 export async function expandDrawingPreviews(markdown: string, documentPath?: string | null): Promise<string> {
@@ -142,7 +146,7 @@ export async function expandDrawingPreviews(markdown: string, documentPath?: str
   const converted = new Map<string, string>()
   const sources = new Set(findDocumentImages(markdown).map(image => image.src))
   await Promise.all([...sources].map(async src => {
-    const drawing = resolveDrawingPreview(src, documentPath)
+    const drawing = resolveDrawingPreview(src, documentPath, 'export')
     if (!drawing) return
     try {
       converted.set(src, await drawing.load())

@@ -1,97 +1,114 @@
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
-import { launchWithMarkdown } from './helpers'
+import type { ElectronApplication } from 'playwright'
+import { launchWithMarkdown, waitForMenuReady } from './helpers'
 
-// #2245: with native window decorations each window draws its own menu bar on
-// Linux and Windows, and `Menu.setApplicationMenu` writes into all of them at
-// once. Swapping it on focus therefore stripped the menu bar off the editor
-// window while Preferences was focused, and pushed the editor's menu bar onto
-// Preferences as soon as the editor was focused again.
-
-// Height of everything around the web contents. Gaining or losing a menu bar
-// moves it either way: with `useContentSize` Electron keeps the content and
-// resizes the window, otherwise the content shrinks under a fixed window.
-const chromeHeight = (app: ElectronApplication, windowId: number): Promise<number> =>
+const windowGeometry = (app: ElectronApplication, windowId: number) =>
   app.evaluate(({ BrowserWindow }, id) => {
-    const win = BrowserWindow.fromId(id)!
-    return win.getSize()[1] - win.getContentSize()[1]
+    const win = BrowserWindow.fromId(id)
+    if (!win) throw new Error('Missing window')
+    return {
+      chromeHeight: win.getSize()[1] - win.getContentSize()[1],
+      menuBarVisible: win.isMenuBarVisible(),
+      minimumSize: win.getMinimumSize()
+    }
   }, windowId)
 
-const focusedWindowId = (app: ElectronApplication): Promise<number> =>
-  app.evaluate(({ BrowserWindow }) => BrowserWindow.getFocusedWindow()?.id ?? -1)
-
-// The assertions below are about a menu bar that must *not* appear or
-// disappear, so give the focus handler time to do the wrong thing.
-const focusWindow = async(
-  app: ElectronApplication,
-  windowId: number,
-  page: Page
-): Promise<void> => {
+const focusWindow = async(app: ElectronApplication, windowId: number): Promise<void> => {
   await app.evaluate(({ BrowserWindow }, id) => {
     BrowserWindow.fromId(id)?.focus()
   }, windowId)
-  await expect.poll(() => focusedWindowId(app), { timeout: 15000 }).toBe(windowId)
-  await page.waitForTimeout(500)
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getFocusedWindow()?.id)).toBe(windowId)
 }
 
-test.describe('Editor and Preferences keep their own menu bar (#2245)', () => {
+const hasGlobalMenu = (xid: number): boolean => {
+  try {
+    const reply = execFileSync('gdbus', [
+      'call', '--session', '--timeout', '2',
+      '--dest', 'com.canonical.AppMenu.Registrar',
+      '--object-path', '/com/canonical/AppMenu/Registrar',
+      '--method', 'com.canonical.AppMenu.Registrar.GetMenuForWindow', String(xid)
+    ], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
+    return /'\/[^']+'/.test(reply)
+  } catch {
+    return false
+  }
+}
+
+test('replays application menus without changing editor or Preferences geometry (#2245)', async() => {
   test.skip(process.platform === 'darwin', 'macOS draws one menu bar for the whole application')
 
-  let app: ElectronApplication
-  let editor: Page
-
-  test.beforeAll(async() => {
-    const launched = await launchWithMarkdown('# Menu bars\n', {
-      preferences: { titleBarStyle: 'native' }
-    })
-    app = launched.app
-    editor = launched.page
-    await editor.waitForSelector('.mu-container', { timeout: 15000 })
+  const { app, page } = await launchWithMarkdown('# Menu bars\n', {
+    preferences: { titleBarStyle: 'native', language: 'en' }
   })
+  try {
+    await waitForMenuReady(app)
+    await expect(page.getByRole('menubar').getByRole('menuitem')).toHaveCount(8)
+    const editorWindow = await app.browserWindow(page)
+    const editorId = await editorWindow.evaluate(win => win.id)
+    const editorBaseline = await windowGeometry(app, editorId)
+    expect(editorBaseline.menuBarVisible).toBe(false)
 
-  test.afterAll(async() => {
-    if (app) await app.close()
-  })
+    // The positive control can appear in Views or in the X11 desktop panel.
+    const showsInWindow = await app.evaluate(({ BrowserWindow, Menu }, id) => {
+      const win = BrowserWindow.fromId(id)
+      const menu = Menu.getApplicationMenu()
+      if (!win || !menu) throw new Error('Missing editor or menu')
+      win.setMenu(menu)
+      win.setMenuBarVisibility(true)
+      return win.isMenuBarVisible()
+    }, editorId)
+    let globalMenuId: number | undefined
+    if (showsInWindow || process.platform !== 'linux') {
+      expect(showsInWindow).toBe(true)
+      await expect.poll(async() => (await windowGeometry(app, editorId)).chromeHeight)
+        .toBeGreaterThan(editorBaseline.chromeHeight)
+    } else {
+      const xid: number = await editorWindow.evaluate(win => win.getNativeWindowHandle().readUInt32LE())
+      globalMenuId = xid
+      await expect.poll(() => hasGlobalMenu(xid)).toBe(true)
+    }
 
-  test('opening Preferences leaves the editor menu bar alone', async() => {
-    const editorWindowId = await app.evaluate(
-      ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].id
-    )
-    const editorChrome = await chromeHeight(app, editorWindowId)
+    const rebuildMenu = async(language: string): Promise<void> => {
+      await page.evaluate(language => window.electron.ipcRenderer.invoke('mt::preferences::update', {
+        language
+      }), language)
+      // A fresh active menu forces the global attach-and-detach path.
+      await expect.poll(() => app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.items[0].label.replaceAll('&', '')))
+        .toContain(language === 'en' ? 'File' : '文件')
+    }
 
-    // Take the menu bar away and put it back, so the rest of the test knows a
-    // menu bar is drawn here and that removing one is visible in these numbers.
-    await app.evaluate(({ BrowserWindow }, id) => {
-      BrowserWindow.fromId(id)!.removeMenu()
-    }, editorWindowId)
-    await expect
-      .poll(() => chromeHeight(app, editorWindowId), { timeout: 10000 })
-      .toBeLessThan(editorChrome)
-    await app.evaluate(({ BrowserWindow, Menu }, id) => {
-      BrowserWindow.fromId(id)!.setMenu(Menu.getApplicationMenu()!)
-    }, editorWindowId)
-    await expect
-      .poll(() => chromeHeight(app, editorWindowId), { timeout: 10000 })
-      .toBe(editorChrome)
+    await rebuildMenu('zh-CN')
+    await expect.poll(() => windowGeometry(app, editorId)).toEqual(editorBaseline)
+    if (globalMenuId !== undefined) {
+      const xid = globalMenuId
+      await expect.poll(() => hasGlobalMenu(xid)).toBe(false)
+    }
 
-    const settingsWindow = app.waitForEvent('window')
-    await app.evaluate(({ ipcMain }) => {
-      ipcMain.emit('app-create-settings-window')
-    })
-    const settings = await settingsWindow
-    await settings.waitForSelector('.pref-container', { timeout: 15000 })
-    const settingsWindowId = await app.evaluate(({ BrowserWindow }, editorId) => {
-      const win = BrowserWindow.getAllWindows().find((w) => w.id !== editorId)
-      return win!.id
-    }, editorWindowId)
-    await focusWindow(app, settingsWindowId, editor)
+    const settingsOpened = app.waitForEvent('window')
+    await page.evaluate(() => window.electron.ipcRenderer.send('mt::open-setting-window'))
+    const settings = await settingsOpened
+    await settings.locator('.pref-container').waitFor()
+    const settingsWindow = await app.browserWindow(settings)
+    const settingsId = await settingsWindow.evaluate(win => win.id)
+    const settingsBaseline = await windowGeometry(app, settingsId)
+    expect(settingsBaseline.menuBarVisible).toBe(false)
 
-    expect(await chromeHeight(app, editorWindowId)).toBe(editorChrome)
+    for (const language of ['en', 'zh-CN', 'en']) {
+      await focusWindow(app, settingsId)
+      await focusWindow(app, editorId)
+      await rebuildMenu(language)
+      await expect.poll(() => windowGeometry(app, editorId)).toEqual(editorBaseline)
+      await expect.poll(() => windowGeometry(app, settingsId)).toEqual(settingsBaseline)
+    }
 
-    const settingsChrome = await chromeHeight(app, settingsWindowId)
-    await focusWindow(app, editorWindowId, settings)
-
-    expect(await chromeHeight(app, settingsWindowId)).toBe(settingsChrome)
-    expect(await chromeHeight(app, editorWindowId)).toBe(editorChrome)
-  })
+    await expect(page.getByRole('menuitem', { name: 'File', exact: true })).toBeEnabled()
+    if (globalMenuId !== undefined) {
+      const xid = await settingsWindow.evaluate(win => win.getNativeWindowHandle().readUInt32LE())
+      await expect.poll(() => hasGlobalMenu(xid)).toBe(false)
+    }
+  } finally {
+    await app.close()
+  }
 })

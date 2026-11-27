@@ -160,6 +160,7 @@ export class SessionHost {
         .catch((error) => this.report(error))
         .finally(() => {
           this._quitting = false
+          if (!this._quitAllowed) ipcMain.emit('app-quit-canceled')
         })
     })
   }

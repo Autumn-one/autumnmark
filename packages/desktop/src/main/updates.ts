@@ -2,7 +2,14 @@ import { app, ipcMain, BrowserWindow, type WebContents } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import type { UpdateState } from '@shared/types/ipc'
-import { isUpdatable } from './utils/isUpdatable'
+import { isPortableUpdatable, isUpdatable } from './utils/isUpdatable'
+import {
+  checkPortableUpdate,
+  discardPortableFiles,
+  downloadPortableUpdate,
+  preparePortableInstall,
+  type PortableDownload
+} from './portableUpdates'
 
 const CHECK_INTERVAL_MS = 20 * 60 * 1000
 const listeners = new Set<WebContents>()
@@ -11,6 +18,8 @@ let busy = false
 let announceDownload = false
 let pendingDialog: WebContents | 'any' | undefined
 let timer: ReturnType<typeof setInterval> | undefined
+let portableDownload: PortableDownload | undefined
+let pendingPortableInstall: Awaited<ReturnType<typeof preparePortableInstall>> | undefined
 
 autoUpdater.allowPrerelease = false
 autoUpdater.autoDownload = false
@@ -59,10 +68,33 @@ const reportInstallError = (error: unknown): void => {
 // Platform installers can report launch errors after quitAndInstall returns.
 autoUpdater.on('error', reportInstallError)
 
+const installPortableUpdate = async(): Promise<void> => {
+  try {
+    if (!portableDownload) throw new Error('No portable update has been downloaded')
+    pendingPortableInstall = await preparePortableInstall(portableDownload)
+    app.quit()
+  } catch (error) {
+    pendingPortableInstall?.cancel()
+    pendingPortableInstall = undefined
+    reportInstallError(error)
+  }
+}
+
+ipcMain.on('app-quit-canceled', () => {
+  if (!pendingPortableInstall || state.phase !== 'installing') return
+  pendingPortableInstall.cancel()
+  pendingPortableInstall = undefined
+  publish({ phase: 'ready', version: state.version })
+})
+
 ipcMain.on('mt::update-install', (_event, version: string) => {
   if (state.phase !== 'ready' && !(state.phase === 'error' && state.stage === 'install')) return
   if (!version || state.version !== version) return
   publish({ phase: 'installing', version })
+  if (isPortableUpdatable()) {
+    void installPortableUpdate()
+    return
+  }
   try {
     autoUpdater.quitAndInstall()
   } catch (error) {
@@ -90,21 +122,33 @@ const runCheck = async(automatic: boolean, getWindow: () => BrowserWindow | null
   announceDownload = automatic
   let version: string | undefined
   try {
-    const result = await autoUpdater.checkForUpdates()
+    const portable = isPortableUpdatable()
+    const release = portable
+      ? await checkPortableUpdate(candidate => autoUpdater.currentVersion.compare(candidate) < 0)
+      : undefined
+    const result = portable ? undefined : await autoUpdater.checkForUpdates()
     // A cached installer may have been launched during a scheduled release check.
     if (cached && state !== previous) return
-    if (!result) {
+    if (!portable && !result) {
       if (!cached) publish({ phase: 'error', stage: 'check' })
       return
     }
-    if (!result.isUpdateAvailable) {
+    version = release?.version ?? (result?.isUpdateAvailable ? result.updateInfo.version : undefined)
+    if (!version) {
       publish({ phase: 'current' })
       return
     }
-    version = result.updateInfo.version
     if (cached && previous.version === version) return
     publish({ phase: 'downloading', version, progress: null })
-    await autoUpdater.downloadUpdate()
+    if (release) {
+      const download = await downloadPortableUpdate(release, progress => {
+        if (state.phase === 'downloading') publish({ ...state, progress })
+      })
+      if (portableDownload) discardPortableFiles(portableDownload.directory)
+      portableDownload = download
+    } else {
+      await autoUpdater.downloadUpdate()
+    }
     publish({ phase: 'ready', version })
     if (announceDownload) showDialog(getWindow())
   } catch (error) {
@@ -132,5 +176,11 @@ export const startAutomaticUpdateChecks = (getWindow: () => BrowserWindow | null
     clearInterval(timer)
     timer = undefined
   })
+  if (isPortableUpdatable()) {
+    app.once('quit', () => {
+      pendingPortableInstall?.apply()
+      if (portableDownload) discardPortableFiles(portableDownload.directory)
+    })
+  }
   check()
 }

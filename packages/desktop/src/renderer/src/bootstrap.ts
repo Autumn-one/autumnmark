@@ -1,6 +1,7 @@
 import log from 'electron-log/renderer'
 import muyaLogger from '@muyajs/core/utils/logger'
 import RendererPaths from './node/paths'
+import type { UserPreferences } from '@shared/types/preferences'
 
 let exceptionLogger: (s: unknown) => void = (s) => console.error(s)
 
@@ -21,12 +22,12 @@ interface UrlArgs {
   userDataPath: string | null
   windowId: number
   micaTitleBar: boolean
+  titleBarStyle: UserPreferences['titleBarStyle']
   initialState: {
     codeFontFamily: string | null
     codeFontSize: string | null
     hideScrollbar: boolean
     theme: string | null
-    titleBarStyle: string | null
   }
 }
 
@@ -37,7 +38,7 @@ const parseUrlArgs = (): UrlArgs => {
   const debug = params.get('debug') === '1'
   const hideScrollbar = params.get('hsb') === '1'
   const theme = params.get('theme')
-  const titleBarStyle = params.get('tbs')
+  const titleBarStyle = params.get('tbs') === 'native' ? 'native' : 'custom'
   const userDataPath = params.get('udp')
   const windowId = Number(params.get('wid'))
   const type = params.get('type')
@@ -52,12 +53,12 @@ const parseUrlArgs = (): UrlArgs => {
     userDataPath,
     windowId,
     micaTitleBar: params.get('micaTitleBar') === '1',
+    titleBarStyle,
     initialState: {
       codeFontFamily,
       codeFontSize,
       hideScrollbar,
-      theme,
-      titleBarStyle
+      theme
     }
   }
 }
@@ -102,7 +103,7 @@ const bootstrapRenderer = (): void => {
   window.addEventListener('error', handleRendererError)
   window.addEventListener('unhandledrejection', handleRendererError)
 
-  const { debug, initialState, userDataPath, windowId, type, micaTitleBar } = parseUrlArgs()
+  const { debug, initialState, userDataPath, windowId, type, micaTitleBar, titleBarStyle } = parseUrlArgs()
   // RendererPaths throws when userDataPath is missing; preserve that runtime check.
   const paths = new RendererPaths(userDataPath as string)
   const marktext = {
@@ -112,7 +113,8 @@ const bootstrapRenderer = (): void => {
       paths,
       windowId,
       type,
-      micaTitleBar
+      micaTitleBar,
+      titleBarStyle
     },
     paths
   }

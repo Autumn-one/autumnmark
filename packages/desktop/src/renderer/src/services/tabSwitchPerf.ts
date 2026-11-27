@@ -21,7 +21,10 @@ export interface TabSwitchSample {
   syncTotalMs: number
   raf1Ms: number
   paintMs: number
+  activationMs: Partial<Record<TabActivationStage, number>>
 }
+
+export type TabActivationStage = 'attach' | 'reading' | 'layout' | 'selection' | 'viewCapture'
 
 interface ActiveTrace {
   seq: number
@@ -40,6 +43,7 @@ interface ActiveTrace {
   tToc: number
   tScroll: number
   tSyncEnd: number
+  activationMs: Partial<Record<TabActivationStage, number>>
 }
 
 const MAX_SAMPLES = 100
@@ -100,9 +104,22 @@ export const startTabSwitchTrace = (meta: {
     tEditor: now,
     tToc: now,
     tScroll: now,
-    tSyncEnd: now
+    tSyncEnd: now,
+    activationMs: {}
   }
   safeMark(`mt:tab-switch:${seq}:start`)
+}
+
+export const getActivationTimer = () => {
+  const trace = active
+  if (!trace) return undefined
+  return (stage: TabActivationStage, start: number) => {
+    trace.activationMs[stage] = (trace.activationMs[stage] ?? 0) + performance.now() - start
+  }
+}
+
+export const markTabPrewarmed = (id: string): void => {
+  if (isPerfEnabled()) safeMark(`mt:tab-prewarm:${id}`)
 }
 
 export const markTabSwitchFlush = (): void => {
@@ -177,7 +194,8 @@ export const finishTabSwitchSync = (): void => {
         scrollMs: Math.max(0, trace.tScroll - trace.tToc),
         syncTotalMs: Math.max(0, trace.tSyncEnd - trace.t0),
         raf1Ms: Math.max(0, tRaf1 - trace.t0),
-        paintMs: Math.max(0, tPaint - trace.t0)
+        paintMs: Math.max(0, tPaint - trace.t0),
+        activationMs: trace.activationMs
       }
       samples.push(sample)
       if (samples.length > MAX_SAMPLES) samples.shift()

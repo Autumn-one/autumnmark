@@ -58,6 +58,70 @@ beforeEach(() => {
     vi.mocked(loadImage).mockReset();
 });
 
+describe('preview ownership across retained pages', () => {
+    it.each(['hidden', 'parked'])('commits results after returning to a %s page', async (mode) => {
+        const nextImage = deferred<string>();
+        const invalid = deferred<string>();
+        const load = vi.fn(() => nextImage.promise);
+        vi.mocked(loadImage).mockImplementation(async url => ({ url, width: 20, height: 20 }));
+        const muya = bootEditor('Anchor', {
+            resolveImagePreview: src => ({ key: src, load }),
+            embeddedDrawing: { preview: () => invalid.promise, label: () => 'drawing', open: () => {} },
+        });
+        const anchor = { id: 'a', context: { id: 'a' }, markdown: 'Anchor', readOnly: false };
+        muya.bindActiveDocument(anchor.id, anchor.markdown, anchor.context);
+        const markdown = `${inlineMarkup(sceneJson('held'))}\n\n\`\`\`excalidraw\ninvalid\n\`\`\``;
+        const opts = { id: 'b', context: { id: 'b' }, markdown, readOnly: false };
+        expect(muya.prewarmDocument(opts)).toBe(true);
+        await Promise.resolve();
+        expect(load).not.toHaveBeenCalled();
+        expect(muya.activateDocument(opts).hotHit).toBe(true);
+        const page = muya.editor.scrollPage!;
+        await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+        if (mode === 'hidden')
+            muya.setViewportSuspended(true);
+        else
+            muya.activateDocument(anchor);
+        nextImage.resolve('https://example.com/new.png');
+        invalid.reject(new Error('invalid'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(page.domNode!.querySelector('.mu-inline-drawing img')).toBeNull();
+        expect(page.domNode!.querySelector('.mu-embedded-drawing-button')?.textContent).toContain('Loading');
+        if (mode === 'hidden')
+            muya.setViewportSuspended(false);
+        else
+            expect(muya.activateDocument(opts).hotHit).toBe(true);
+        await vi.waitFor(() => {
+            expect(page.domNode!.querySelector('.mu-inline-drawing img')?.getAttribute('src')).toBe('https://example.com/new.png');
+            expect(page.domNode!.querySelector('.mu-embedded-drawing-button')?.textContent).toContain('Invalid');
+        });
+        expect(muya.editor.scrollPage).toBe(page);
+    });
+
+    it('updates both retained occurrences of the same linked drawing', async () => {
+        const key = '/abs/shared.excalidraw';
+        const oldUrl = 'https://example.com/old.png';
+        const newUrl = 'https://example.com/new.png';
+        vi.mocked(loadImage).mockImplementation(async url => ({ url, width: 20, height: 20 }));
+        const markdown = '![drawing](shared.excalidraw)\n\n![reference][shared]\n\n[shared]: shared.excalidraw';
+        const muya = bootEditor(markdown, { resolveImagePreview: () => ({ key, load: async () => oldUrl }) });
+        const a = { id: 'a', context: { id: 'a' }, markdown, readOnly: false };
+        const b = { ...a, id: 'b', context: { id: 'b' } };
+        muya.bindActiveDocument(a.id, markdown, a.context);
+        const images = () => [...muya.domNode.querySelectorAll('.mu-image-container img, [data-preview-src] + img')]
+            .map(img => img.getAttribute('src'));
+        await vi.waitFor(() => expect(images()).toEqual([oldUrl, oldUrl]));
+        muya.activateDocument(b);
+        await vi.waitFor(() => expect(images()).toEqual([oldUrl, oldUrl]));
+        expect(muya.activateDocument(a).hotHit).toBe(true);
+        expect(await muya.refreshImagePreview(key, async () => newUrl)).toBe(true);
+        expect(images()).toEqual([newUrl, newUrl]);
+        expect(muya.activateDocument(b).hotHit).toBe(true);
+        expect(await muya.refreshImagePreview(key, async () => newUrl)).toBe(true);
+        expect(images()).toEqual([newUrl, newUrl]);
+    });
+});
+
 afterEach(() => {
     while (booted.length)
         booted.pop()!.destroy();

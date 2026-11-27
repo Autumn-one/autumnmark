@@ -190,7 +190,7 @@ class Renderer {
 
     output(tokens: Token[], block: IRenderBlock, cursor: IInlineCursor) {
         const snapshot = this.environment;
-        const environment = { ...snapshot, root: block.domNode || snapshot.root };
+        const environment = { ...snapshot, root: block.domNode || snapshot.root, previewScope: block.previewScope };
         const session = new Renderer(() => environment, this.mounts, this.images);
         session.loadMathMap = this.loadMathMap;
         const rendered = new Map<Token, (VNode | string)[]>();

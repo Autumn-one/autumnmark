@@ -130,7 +130,7 @@ class AppMenu {
     const { windowMenus } = this
     const menu = this._buildSettingMenu()
     windowMenus.set(window.id, menu)
-    this._applyWindowMenu(window.id, menu.menu)
+    if (!isOsx) window.removeMenu()
   }
 
   addEditorMenu(window: BrowserWindow, options: AddEditorMenuOptions = {}): void {
@@ -152,7 +152,7 @@ class AppMenu {
       if (focusModeMenuItem) focusModeMenuItem.enabled = false
     }
 
-    this._applyWindowMenu(window.id, menu)
+    if (!isOsx) window.removeMenu()
 
     const { _keybindings } = this
     _keybindings.registerEditorKeyHandlers(window)
@@ -195,14 +195,12 @@ class AppMenu {
   setActiveWindow(windowId: number): void {
     this._applyDocumentMode(windowId)
     if (this.activeWindowId !== windowId) {
-      // Off macOS the application menu is every window's menu bar, so a window
-      // without a menu of its own must not be pushed there — it would strip the
-      // menu bar off the editor windows behind it (#2245).
+      // Off macOS, keep the last editor's application menu while Preferences is focused.
       const menu = this.getWindowMenuById(windowId)
       if (menu) {
         this._setApplicationMenu(menu)
       } else {
-        this._applyWindowMenus()
+        this._removeNativeWindowMenus()
       }
       this.activeWindowId = windowId
     }
@@ -350,7 +348,7 @@ class AppMenu {
 
   _setApplicationMenu(menu: Menu): void {
     Menu.setApplicationMenu(menu)
-    this._applyWindowMenus()
+    this._removeNativeWindowMenus()
   }
 
   _reapplyMenus(): void {
@@ -359,36 +357,16 @@ class AppMenu {
     if (active?.menu && active.menu !== Menu.getApplicationMenu()) {
       this._setApplicationMenu(active.menu)
     } else {
-      this._applyWindowMenus()
+      this._removeNativeWindowMenus()
     }
   }
 
-  /**
-   * Off macOS `Menu.setApplicationMenu` is `getAllWindows().map(w =>
-   * w.setMenu(menu))`, and a window created afterwards inherits the application
-   * menu as well, so windows that must differ have to be set back by hand.
-   */
-  _applyWindowMenus(): void {
+  _removeNativeWindowMenus(): void {
     if (isOsx) return
 
-    const applicationMenu = Menu.getApplicationMenu()
-    this.windowMenus.forEach(({ menu }, windowId) => {
-      if (menu === applicationMenu) return
-      this._applyWindowMenu(windowId, menu)
-    })
-  }
-
-  _applyWindowMenu(windowId: number, menu: Menu | null): void {
-    if (isOsx) return
-
-    const window = BrowserWindow.fromId(windowId)
-    if (!window || window.isDestroyed()) return
-
-    if (menu) {
-      window.setMenu(menu)
-    } else {
-      window.removeMenu()
-    }
+    // Electron attaches the application menu to every window, including preloaded Preferences.
+    // Unbinding also unregisters Linux global menus, which hiding the window menu cannot do.
+    for (const window of BrowserWindow.getAllWindows()) window.removeMenu()
   }
 
   async _initializeLanguage(): Promise<void> {

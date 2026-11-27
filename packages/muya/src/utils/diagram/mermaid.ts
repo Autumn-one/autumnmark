@@ -61,13 +61,18 @@ interface IMermaidRenderOptions {
     target: HTMLElement;
     theme: string;
     code?: string;
+    isCurrent?: () => boolean;
 }
 
 // Each diagram owns the shared configuration until rendering and binding finish.
 // Omit code to preserve Mermaid.run's HTML/entity handling for export nodes.
-export function renderMermaid({ target, theme, code }: IMermaidRenderOptions): Promise<void> {
+export function renderMermaid({ target, theme, code, isCurrent }: IMermaidRenderOptions): Promise<void> {
     const result = renderQueue.then(async () => {
+        if (isCurrent && !isCurrent())
+            return;
         const mermaid: Mermaid = await loadRenderer('mermaid');
+        if (isCurrent && !isCurrent())
+            return;
         const cache = getInstanceCache(mermaid);
 
         if (code !== undefined) {
@@ -99,6 +104,8 @@ export function renderMermaid({ target, theme, code }: IMermaidRenderOptions): P
         const key = cacheKey(theme, fontSize, code);
 
         await mermaid.parse(code);
+        if (isCurrent && !isCurrent())
+            return;
         // Same-millisecond previews must not share Mermaid's document-wide SVG IDs (#5023).
         const renderId = `mu-mermaid-${++renderCount}`;
         const { svg, bindFunctions } = await mermaid.render(
@@ -106,6 +113,8 @@ export function renderMermaid({ target, theme, code }: IMermaidRenderOptions): P
             code,
             target,
         );
+        if (isCurrent && !isCurrent())
+            return;
         target.innerHTML = svg;
         bindFunctions?.(target);
 

@@ -236,7 +236,7 @@ const open = (): void => {
   display: grid;
   flex: none;
   width: 36px;
-  height: var(--titleBarHeight);
+  height: 100%;
   place-items: center;
 }
 

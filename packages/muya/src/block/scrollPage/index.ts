@@ -5,6 +5,7 @@ import type Content from '../base/content';
 import type TreeNode from '../base/treeNode';
 import type { IConstructor, TBlockPath } from '../types';
 import { BLOCK_DOM_PROPERTY, CLASS_NAMES } from '../../config';
+import { PagePreviews } from '../../editor/pagePreviews';
 import { ChangeSource } from '../../types';
 import { isHTMLElement, isMouseEvent } from '../../utils';
 import logger from '../../utils/logger';
@@ -50,11 +51,13 @@ export class ScrollPage extends Parent {
     static createDetached(muya: Muya, state: readonly TState[]) {
         const scrollPage = new ScrollPage(muya);
 
-        scrollPage.append(
-            ...state.map((block) => {
-                return this.loadBlock(block.name).create(muya, block);
-            }),
-        );
+        try {
+            scrollPage.append(...scrollPage._buildBlocks(state, scrollPage.previewScope!));
+        }
+        catch (error) {
+            scrollPage.previewScope?.dispose();
+            throw error;
+        }
 
         return scrollPage;
     }
@@ -74,7 +77,28 @@ export class ScrollPage extends Parent {
         this.classList = ['mu-container'];
 
         this.createDomNode();
+        this.previewScope = this._newPreviewScope();
         this._listenDomEvent();
+    }
+
+    private _newPreviewScope(): PagePreviews {
+        return new PagePreviews(this.domNode!, this.muya.options.deferOffscreenPreviews ? this.muya.domNode : undefined);
+    }
+
+    private _buildBlocks(state: readonly TState[], scope: PagePreviews): Parent[] {
+        const { muya } = this;
+        const previous = muya.editor.buildingPreviewScope;
+        muya.editor.buildingPreviewScope = scope;
+        try {
+            return state.map(block => ScrollPage.loadBlock(block.name).create(muya, block));
+        }
+        catch (error) {
+            scope.dispose();
+            throw error;
+        }
+        finally {
+            muya.editor.buildingPreviewScope = previous;
+        }
     }
 
     override getState() {
@@ -92,7 +116,18 @@ export class ScrollPage extends Parent {
 
     updateState(state: TState[]) {
         const { muya } = this;
-        const blocks = state.map(block => ScrollPage.loadBlock(block.name).create(muya, block));
+        const candidate = this._newPreviewScope();
+        const blocks = this._buildBlocks(state, candidate);
+        // Swap the DOM before changing block ownership so a failed replacement leaves the old page valid.
+        try {
+            this.domNode!.replaceChildren(...blocks.map(block => block.domNode!));
+        }
+        catch (error) {
+            candidate.dispose();
+            throw error;
+        }
+        this.previewScope?.dispose();
+        this.previewScope = candidate;
         muya.editor.contentTabs.dispose();
         muya.editor.foldBlocks.dispose();
         muya.ui.hideAllFloatTools();
@@ -104,10 +139,9 @@ export class ScrollPage extends Parent {
         for (const block of blocks)
             block.parent = this;
         this.children.append(...blocks);
-        // Atomic swap avoids a zero-child layout clamp while still removing stray native DOM nodes.
-        this.domNode!.replaceChildren(...blocks.map(block => block.domNode!));
         refreshFoldVisibility(this);
         muya.editor.refreshBlockViews();
+        muya.editor.syncPreviewVisibility();
     }
 
     /** One undo step, preserving adjacent block instances; the caller restores the replacement's selection. */

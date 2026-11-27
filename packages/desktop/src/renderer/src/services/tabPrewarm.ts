@@ -1,5 +1,4 @@
 import {
-  loadDiagramRenderer,
   loadedPrismLanguages,
   loadPrismLanguage,
   type IDocumentContext,
@@ -8,6 +7,7 @@ import {
 } from '@muyajs/core'
 import type { IFileState } from '@shared/types/files'
 import { isDrawingPath } from '@/util/drawingPaths'
+import { markTabPrewarmed } from './tabSwitchPerf'
 
 const IDLE_QUIET_WINDOW_MS = 300
 const HOVER_DEBOUNCE_MS = 50
@@ -45,21 +45,18 @@ export const cancelTabHover = (): void => {
   }
 }
 
-function scanNextTargetResources(markdown: string): { prismLangs: string[]; diagrams: string[] } {
+function scanNextTargetLanguages(markdown: string): Set<string> {
   const prismLangs = new Set<string>()
-  const diagrams = new Set<string>()
   FENCE_RE.lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = FENCE_RE.exec(markdown)) !== null) {
     const lang = match[1]?.trim().toLowerCase() ?? ''
     if (!lang) continue
-    if (DIAGRAM_FENCE_TYPES.has(lang)) {
-      diagrams.add(lang)
-    } else if (lang !== 'excalidraw' && !loadedPrismLanguages.has(lang)) {
+    if (!DIAGRAM_FENCE_TYPES.has(lang) && lang !== 'excalidraw' && !loadedPrismLanguages.has(lang)) {
       prismLangs.add(lang)
     }
   }
-  return { prismLangs: [...prismLangs], diagrams: [...diagrams] }
+  return prismLangs
 }
 
 export interface TabPrewarmHost {
@@ -75,8 +72,7 @@ export interface TabPrewarmHost {
 
 /**
  * Interruptible single-flight idle & hover pre-warmer for inactive Markdown tabs.
- * Prewarms at most adjacent tabs (active +/- 1) plus one hovered tab, loading Prism/diagram
- * chunks only for the next DOM-prewarm target and yielding immediately on user input.
+ * Prewarms adjacent or hovered tabs. Diagram chunks need a visible preview consumer.
  */
 export class TabPrewarmScheduler {
   private _interactionEpoch = 0
@@ -193,7 +189,8 @@ export class TabPrewarmScheduler {
       if (tab.id === activeId) continue
       if (isDrawingPath(tab.pathname || tab.filename)) continue
       if (typeof tab.markdown !== 'string') continue
-      if (muya.hasRetainedDocument(tab.id, tab.markdown, tab.pathname)) continue
+      const context = this._host.contextFor(tab)
+      if (muya.hasRetainedDocument(tab.id, tab.markdown, context.pathname, context.dirname)) continue
       if (this._attemptedContent.get(tab.id) === tab.markdown) continue
       return tab
     }
@@ -211,17 +208,10 @@ export class TabPrewarmScheduler {
     this._inFlightId = targetId
 
     try {
-      // Load Prism/diagram chunks only for this specific next DOM-prewarm target.
-      const { prismLangs, diagrams } = scanNextTargetResources(markdown)
-      for (const lang of prismLangs) {
+      for (const lang of scanNextTargetLanguages(markdown)) {
         if (this._disposed || this._interactionEpoch !== epoch || isTabDragging) return
         if (this._host.getActiveTabId() === targetId) return
         await loadPrismLanguage(lang).catch(() => {})
-      }
-      for (const diagramType of diagrams) {
-        if (this._disposed || this._interactionEpoch !== epoch || isTabDragging) return
-        if (this._host.getActiveTabId() === targetId) return
-        await loadDiagramRenderer(diagramType).catch(() => {})
       }
 
       if (this._disposed || this._interactionEpoch !== epoch || isTabDragging) return
@@ -231,18 +221,24 @@ export class TabPrewarmScheduler {
       const liveTab = this._host.getTabs().find(tab => tab.id === targetId)
       const muya = this._host.getMuya()
       if (!liveTab || !muya || liveTab.markdown !== markdown) return
-      if (muya.hasRetainedDocument(targetId, markdown, liveTab.pathname)) return
+      const context = this._host.contextFor(liveTab)
+      const retained = () => muya.hasRetainedDocument(targetId, markdown, context.pathname, context.dirname)
+      if (retained()) return
 
       const didPrewarm = muya.prewarmDocument({
         id: targetId,
         markdown,
-        context: this._host.contextFor(liveTab),
+        context,
         readOnly: !!liveTab.readOnly,
         onEvict: this._host.onEvict
       })
-      if (didPrewarm && !muya.hasRetainedDocument(targetId, markdown, liveTab.pathname)) {
-        // Oversized docs stay state-only in the pool; do not retry the same content repeatedly.
-        this._attemptedContent.set(targetId, markdown)
+      if (didPrewarm) {
+        if (retained()) {
+          markTabPrewarmed(targetId)
+        } else {
+          // Oversized docs stay state-only in the pool.
+          this._attemptedContent.set(targetId, markdown)
+        }
       }
     } finally {
       if (this._inFlightId === targetId) this._inFlightId = null

@@ -33,22 +33,28 @@ class DiagramBlock extends Parent {
         if (state.meta.type === 'excalidraw' && muya.options.embeddedDrawing)
             diagramBlock._addDrawingGap();
 
-        !!lang
-        && loadLanguage(lang)
-            .then((infoList) => {
-                if (!Array.isArray(infoList))
-                    return;
-                const needRender = infoList.some(
-                    ({ status }) => status === 'loaded' || status === 'cached',
-                );
-                if (needRender)
-                    diagramBlock.lastContentInDescendant()?.update();
-            })
-            .catch((err) => {
-                debug.warn(err);
-            });
+        if (lang)
+            void diagramBlock._loadSyntax(lang);
 
         return diagramBlock;
+    }
+
+    private async _loadSyntax(lang: string): Promise<void> {
+        const page = this.previewScope;
+        const target = this.domNode!;
+        await Promise.resolve();
+        if (page && !await page.whenVisible(target))
+            return;
+        try {
+            const results = await loadLanguage(lang);
+            if (page && !await page.whenVisible(target))
+                return;
+            if (Array.isArray(results) && results.some(({ status }) => status === 'loaded' || status === 'cached'))
+                this.lastContentInDescendant()?.update();
+        }
+        catch (error) {
+            debug.warn(error);
+        }
     }
 
     override get path() {

@@ -223,11 +223,11 @@ export class Muya {
      * Align root and block reading-mode attributes for DocumentSessionPool.
      * @internal
      */
-    syncReadingPresentation(modeChanged = false): void {
-        this._refreshReadingPresentation(modeChanged);
+    syncReadingPresentation(modeChanged = false, refreshBlocks = true): void {
+        this._refreshReadingPresentation(modeChanged, refreshBlocks);
     }
 
-    private _refreshReadingPresentation(modeChanged = false): void {
+    private _refreshReadingPresentation(modeChanged = false, refreshBlocks = true): void {
         const { domNode, isReadOnly } = this;
         const contentEditable = String(!isReadOnly);
         // Reassigning editability on a connected tree makes Chromium revisit every descendant (#5860).
@@ -237,6 +237,8 @@ export class Muya {
         domNode.setAttribute('tabindex', '0');
         domNode.setAttribute('role', isReadOnly ? 'document' : 'textbox');
         domNode.setAttribute('aria-label', this.i18n.t(isReadOnly ? 'Read-only document' : 'Document'));
+        if (!refreshBlocks)
+            return;
         this.editor.scrollPage?.breadthFirstTraverse((node) => {
             if (node.isParent() && isReadOnly)
                 node.active = false;
@@ -333,6 +335,14 @@ export class Muya {
         this.editor.documentSessions.bindActive(id, markdown, context);
     }
 
+    setViewportSuspended(suspended: boolean): void {
+        this.editor.setViewportSuspended(suspended);
+    }
+
+    updateDocumentContext(context: IDocumentContext, onEvict?: (id: string, history: ISerializedHistory) => void): void {
+        this.editor.documentSessions.changeContext(context, onEvict);
+    }
+
     markActiveDocumentModified(markdown: string): void {
         this.editor.documentSessions.markActiveModified(markdown);
     }
@@ -345,8 +355,8 @@ export class Muya {
         return this.editor.documentSessions.prewarm(options);
     }
 
-    hasRetainedDocument(id: string, markdown: string, pathname?: string): boolean {
-        return this.editor.documentSessions.hasRetained(id, markdown, pathname);
+    hasRetainedDocument(id: string, markdown: string, pathname?: string, dirname?: string): boolean {
+        return this.editor.documentSessions.hasRetained(id, markdown, pathname, dirname);
     }
 
     evictDocument(id: string, onEvict?: (id: string, history: ISerializedHistory) => void): void {
@@ -774,12 +784,13 @@ export class Muya {
 
     /** Reload images whose files changed on disk despite cached bitmaps. */
     invalidateImageCache() {
+        this.editor.documentSessions.invalidateAll();
         this.editor.inlineEngine.invalidateImageCache();
     }
 
     /** Revalidate one preview key in place without clearing unrelated cached images. */
-    refreshImagePreview(key: string, loadFn?: () => Promise<string>): Promise<boolean> {
-        return this.editor.inlineEngine.refreshImagePreview(key, loadFn);
+    refreshImagePreview(key: string, loadFn?: () => Promise<string>, options?: { confirmCurrent?: boolean }): Promise<boolean> {
+        return this.editor.inlineEngine.refreshImagePreview(key, loadFn, options?.confirmCurrent);
     }
 
     /**

@@ -36,6 +36,26 @@ function contentBlocks(muya: Muya): Content[] {
 }
 
 describe('scrollPage.updateState rebuild', () => {
+    it('only releases the old preview scope after a candidate tree is committed', () => {
+        const muya = boot('alpha');
+        const page = muya.editor.scrollPage!;
+        const original = page.previewScope!;
+        const paragraph = page.firstChild!.domNode!;
+        const state = muya.getState();
+        vi.spyOn(ScrollPage.loadBlock('paragraph'), 'create').mockImplementationOnce(() => {
+            throw new Error('construction failed');
+        });
+
+        expect(() => page.updateState(state)).toThrow('construction failed');
+        expect(page.previewScope).toBe(original);
+        expect(original.canCommit(paragraph)).toBe(true);
+
+        page.updateState(state);
+        expect(page.previewScope).not.toBe(original);
+        expect(original.canCommit(paragraph)).toBe(false);
+        expect(page.previewScope?.canCommit(page.firstChild!.domNode!)).toBe(true);
+    });
+
     it('creates the next tree before swapping, and drops stray container nodes', () => {
         const muya = boot('alpha\n\nbeta\n');
         const page = muya.editor.scrollPage!;

@@ -28,7 +28,7 @@ type CursorEditor = Pick<Muya, 'setSelection' | 'setCursorByOffset'>
 export const applyCursor = (
   editor: CursorEditor,
   cursor: unknown,
-  options?: { preserveFocus?: boolean }
+  options?: { preserveFocus?: boolean; preventScroll?: boolean }
 ): void => {
   if (isIndexCursor(cursor)) {
     if (options) editor.setCursorByOffset(cursor, options)

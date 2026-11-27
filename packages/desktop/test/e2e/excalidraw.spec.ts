@@ -10,6 +10,42 @@ import { clickMenuById, enterSourceMode, getMarkdownContent, launchElectron, lau
 const blankDrawingFence = `\`\`\`excalidraw\n${blankDrawing}\n\`\`\``
 const blankInlineDrawing = `![Embedded drawing](data:application/x-excalidraw;base64,${Buffer.from(blankDrawing).toString('base64')})`
 
+test('settles valid and invalid drawing previews on the first prewarmed tab visit', async() => {
+  const testInfo = test.info()
+  const anchor = testInfo.outputPath('anchor.md')
+  const drawings = testInfo.outputPath('drawings.md')
+  await mkdir(dirname(anchor), { recursive: true })
+  await Promise.all([
+    writeFile(anchor, '# Anchor\n'),
+    writeFile(drawings, `${blankInlineDrawing}\n\n${blankDrawingFence}\n\n~~~excalidraw\ninvalid JSON\n~~~\n`)
+  ])
+  const { app, page } = await launchElectron([anchor, drawings], {
+    env: { MARKTEXT_DEBUG: '1' },
+    preferences: { language: 'en', autoSave: false, openFilesInNewWindow: false, tabBarMode: 'visible' }
+  })
+  try {
+    await expect(page.locator('.editor-tabs li.active')).toHaveText('anchor.md')
+    const tab = page.locator('.editor-tabs li', { hasText: 'drawings.md' })
+    await tab.hover()
+    const id = await tab.getAttribute('data-id')
+    await page.waitForFunction(tabId => performance.getEntriesByName(`mt:tab-prewarm:${tabId}`).length > 0, id)
+    await tab.click()
+    const editor = page.locator('.mu-editor')
+    await expect(editor.locator('.mu-inline-drawing img')).toHaveCount(1)
+    await expect(editor.locator('.mu-embedded-drawing-button img')).toHaveCount(1)
+    await expect(editor.locator('.mu-embedded-drawing-button').last()).toHaveText('Invalid Diagram Code')
+    await expect(editor.locator('.mu-image-loading')).toHaveCount(0)
+    await expect.poll(() => editor.locator('.mu-inline-drawing img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+    await expect.poll(() => editor.locator('.mu-embedded-drawing-button img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+    await page.waitForFunction(tabId => {
+      const samples = (window as Window & { __tabSwitchPerfSamples?: Array<{ toId: string; hotHit: boolean }> }).__tabSwitchPerfSamples
+      return samples?.some(sample => sample.toId === tabId && sample.hotHit)
+    }, id)
+  } finally {
+    await app.close()
+  }
+})
+
 function inlineScenes(markdown: string) {
   return [...markdown.matchAll(/!\[[^\]]*\]\(data:application\/x-excalidraw;base64,([\w+/=]+)\)/g)]
     .map(([, source]) => JSON.parse(Buffer.from(source, 'base64').toString('utf8')))
@@ -468,7 +504,8 @@ test('keeps the document scroll position after editing an existing drawing', asy
     const editor = page.locator('.mu-editor')
     await editor.getByText('Paragraph 1', { exact: true }).click()
     const preview = editor.getByRole('img', { name: 'Embedded drawing' })
-    await preview.scrollIntoViewIfNeeded()
+    await editor.locator('.mu-inline-drawing').scrollIntoViewIfNeeded()
+    await expect(preview).toBeVisible()
     const scrollTop = await editor.evaluate(element => element.scrollTop)
     expect(scrollTop).toBeGreaterThan(500)
 
@@ -1175,7 +1212,8 @@ for (const autoSave of [false, true]) {
     try {
       const scroller = page.locator('.editor-component')
       const preview = page.locator('.mu-editor').getByRole('img', { name: 'Embedded drawing' })
-      await preview.scrollIntoViewIfNeeded()
+      await scroller.locator('.mu-inline-drawing').scrollIntoViewIfNeeded()
+      await expect(preview).toBeVisible()
       const beforeScrollTop = await scroller.evaluate(element => element.scrollTop)
       expect(beforeScrollTop).toBeGreaterThan(1000)
 
@@ -1242,7 +1280,8 @@ test('keeps scroll and a folded heading when a mixed document drawing autosaves'
     const scroller = page.locator('.editor-component')
     const drawings = page.locator('.mu-editor').getByRole('img', { name: 'Embedded drawing' })
     const preview = drawings.first()
-    await preview.scrollIntoViewIfNeeded()
+    await scroller.locator('.mu-inline-drawing').scrollIntoViewIfNeeded()
+    await expect(preview).toBeVisible()
     const beforeScrollTop = await scroller.evaluate(element => element.scrollTop)
     expect(beforeScrollTop).toBeGreaterThan(1000)
 
@@ -1574,7 +1613,7 @@ test('keeps scroll across middle drawings, consecutive bottom drawings, and inte
     }
 
     // 1. Insert at bottom when a drawing already exists in the middle.
-    await expect(page.locator('.mu-editor .mu-inline-drawing img')).toHaveCount(1)
+    await expect(page.locator('.mu-editor .mu-inline-drawing')).toHaveCount(1)
     const lastParagraph = page.locator('.mu-container > p .mu-paragraph-content').last()
     await lastParagraph.scrollIntoViewIfNeeded()
     await lastParagraph.click()

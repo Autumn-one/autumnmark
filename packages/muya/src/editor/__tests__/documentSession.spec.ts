@@ -185,6 +185,25 @@ describe('documentSessionPool and tab-switch engine optimizations', () => {
         expect(activated.hotHit).toBe(true);
     });
 
+    it('keeps an untitled note from borrowing the active directory during prewarm', () => {
+        window.DIRNAME = '/active-dir';
+        const resolvePreview = vi.fn(() => undefined);
+        const muya = bootMuya('Active', { resolveImagePreview: resolvePreview });
+        muya.bindActiveDocument('saved', 'Active', { id: 'saved', pathname: '/active-dir/a.md', dirname: '/active-dir' });
+        const untitled = {
+            id: 'untitled',
+            context: { id: 'untitled', dirname: '' },
+            markdown: '![drawing](./diagram.excalidraw)\n\n<div><img src="./sibling.png"></div>\n',
+            readOnly: false,
+        };
+        expect(muya.prewarmDocument(untitled)).toBe(true);
+        expect(muya.hasRetainedDocument(untitled.id, untitled.markdown, undefined, '/active-dir')).toBe(false);
+        expect(muya.hasRetainedDocument(untitled.id, untitled.markdown, undefined, '')).toBe(true);
+        expect(muya.activateDocument(untitled).hotHit).toBe(true);
+        expect(resolvePreview).toHaveBeenCalledWith('./diagram.excalidraw', undefined);
+        expect(muya.domNode.querySelector('.mu-html-preview img')?.getAttribute('src')).toBe('file://./sibling.png');
+    });
+
     it('clears stale search highlights on hot-swapped tabs when returning after closing search', () => {
         const docA = 'needle in alpha paragraph';
         const docB = 'other tab content';

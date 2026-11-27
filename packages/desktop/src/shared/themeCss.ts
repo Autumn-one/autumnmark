@@ -29,8 +29,9 @@ export function themeWindowBackground(css: string): string | undefined {
   for (const node of parse(css).nodes) {
     if (node.type !== 'rule' || node.selector !== ':root') continue
     for (const item of node.nodes) {
-      if (item.type === 'decl' && item.prop === '--editorBgColor')
-        color = /^#[\da-f]{6}$/i.test(item.value) ? item.value : undefined
+      if (item.type !== 'decl' || item.prop !== '--editorBgColor') continue
+      const value = item.value.trim()
+      color = /^#[\da-f]{6}$/i.test(value) ? value : undefined
     }
   }
   return color

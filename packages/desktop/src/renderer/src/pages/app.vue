@@ -127,7 +127,7 @@ import { blankDrawing } from '@shared/drawing'
 import type { IFileState } from '@shared/types/files'
 import { createDocumentState, getOptionsFromState } from '@/store/help'
 import { drawingDialog, drawingEditorTabs, preserveDrawingFocus, type DrawingEditor } from '@/services/drawingEditors'
-import { linkedDrawingPaths, recordLinkedDrawingFingerprint } from '@/services/drawingPreviews'
+import { linkedDrawingPaths, recordLinkedDrawingFingerprint, renderSavedDrawingScene } from '@/services/drawingPreviews'
 import type { DrawingScene } from '@/services/drawingScene'
 
 const DrawingCanvas = defineAsyncComponent(() => import('@/components/drawingCanvas.vue'))
@@ -318,7 +318,7 @@ function embeddedDrawingCommit(note: IFileState, source: string, drawing: Drawin
               expectedMarkup: before.slice(target.markup.start, target.markup.end),
               nextSource: content,
               previewLoader: scene && attempt === 0
-                ? () => import('@/services/drawingScene').then(module => module.renderDrawingScene(scene))
+                ? () => renderSavedDrawingScene(scene)
                 : undefined,
               preventScroll: true,
               preserveFocus: true
@@ -400,8 +400,7 @@ function linkedDrawingCommit(path: string, expected: string) {
     expected = content
     const previewLoader = scene
       ? async() => {
-          const { renderDrawingScene } = await import('@/services/drawingScene')
-          const dataUrl = await renderDrawingScene(scene)
+          const dataUrl = await renderSavedDrawingScene(scene)
           await recordLinkedDrawingFingerprint(path, scene)
           return dataUrl
         }

@@ -75,8 +75,10 @@ class CodeBlock extends Parent {
 
         const language = codeFenceLanguage(lang ?? '');
         if (language && !codeBlock._renderedGrammar) {
-            requestAnimationFrame(() => {
-                codeBlock._renderLanguage();
+            requestAnimationFrame(async () => {
+                const page = codeBlock.previewScope;
+                if (!page || await page.whenVisible(codeBlock.domNode!))
+                    codeBlock._renderLanguage();
             });
         }
 
@@ -180,7 +182,10 @@ class CodeBlock extends Parent {
     private _renderLanguage() {
         // Rerender only when the displayed grammar changes, including to plain text (#5515).
         // Load status cannot detect this; every unknown language prefix should not rebuild the DOM.
-        const rerenderIfGrammarChanged = () => {
+        const rerenderIfGrammarChanged = async () => {
+            const page = this.previewScope;
+            if (page && !await page.whenVisible(this.domNode!))
+                return;
             const grammar = renderedGrammarFor(this.meta.lang ?? '');
             if (grammar === this._renderedGrammar)
                 return;
@@ -192,7 +197,7 @@ class CodeBlock extends Parent {
         // The full info string may include attributes; Prism uses only its first word.
         const language = codeFenceLanguage(this.meta.lang ?? '');
         if (!language) {
-            rerenderIfGrammarChanged();
+            void rerenderIfGrammarChanged();
 
             return;
         }
@@ -201,7 +206,7 @@ class CodeBlock extends Parent {
             .then(rerenderIfGrammarChanged)
             .catch((err) => {
                 debug.warn(err);
-                rerenderIfGrammarChanged();
+                void rerenderIfGrammarChanged();
             });
     }
 

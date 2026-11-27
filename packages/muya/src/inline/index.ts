@@ -8,7 +8,7 @@ import type { ILoadedImage } from './resources/images';
 import { CLASS_NAMES } from '../config';
 import { prepareReadingLinks } from '../editor/readOnly';
 import { findContentDOM, getOffsetOfParagraph } from '../selection/dom';
-import { INLINE_DRAWING_DATA_PREFIX, isInlineDrawingImage } from '../utils/diagram/drawingData';
+import { isInlineDrawingImage } from '../utils/diagram/drawingData';
 import { getBlock } from '../utils/dom';
 import { decodeImageElement, getImageInfo, isImageToken } from '../utils/image';
 import logger from '../utils/logger';
@@ -74,6 +74,7 @@ class InlineEngine {
 
     public renderer: Renderer;
     private _references = new ReferenceDefinitionIndex();
+    private _drawingSwaps = new WeakMap<Format, Map<number, AbortController>>();
 
     constructor(public muya: Muya) {
         this.renderer = new Renderer(() => {
@@ -84,13 +85,13 @@ class InlineEngine {
                 readOnly: muya.isReadOnly,
                 softNewlineAsSpace: muya.options.softNewlineAsSpace,
                 references: this.labels,
-                documentDirname: context?.dirname,
+                documentDirname: context ? context.dirname ?? '' : undefined,
                 documentPathname: context?.pathname,
                 resolveImagePreview: muya.options.resolveImagePreview,
                 selectedImage: selected ? { block: selected.block, range: { ...selected.imageInfo.token.range } } : null,
                 translate: text => muya.i18n.t(text),
             };
-        }, new ImageMounts(muya.domNode), new ImageResources(src => this._isInlineDrawingInDocument(src)));
+        }, new ImageMounts(muya.domNode), new ImageResources());
 
         muya.eventCenter.attachDOMEvent(muya.domNode, 'mousedown', (event) => {
             if (muya.isReadOnly || !(event instanceof MouseEvent) || event.button !== 0 || event.shiftKey || !(event.target instanceof Element))
@@ -150,7 +151,8 @@ class InlineEngine {
         if (oldUrl)
             this.renderer.images.setPreview(newSrc, oldUrl);
 
-        const resolve = loadFn ?? this.renderer.environment.resolveImagePreview?.(newSrc)?.load;
+        const { resolveImagePreview, documentPathname } = this.renderer.environment;
+        const resolve = loadFn ?? resolveImagePreview?.(newSrc, documentPathname)?.load;
         return this.renderer.images.request(newSrc, false, resolve);
     }
 
@@ -159,30 +161,61 @@ class InlineEngine {
         block: Format;
         localIndex: number;
         wrapper: HTMLElement | null;
+        src: string;
         expectedRaw: string;
         attrs: Record<string, string>;
         loadPromise: Promise<ILoadedImage | null>;
     }): Promise<void> {
-        const { block, localIndex, wrapper, expectedRaw, attrs, loadPromise } = params;
+        const { block, localIndex } = params;
+        const dom = block.domNode;
+        if (!dom)
+            return;
+        const swaps = this._drawingSwaps.get(block) ?? new Map<number, AbortController>();
+        swaps.get(localIndex)?.abort();
+        const attempt = new AbortController();
+        swaps.set(localIndex, attempt);
+        this._drawingSwaps.set(block, swaps);
+        try {
+            await this._commitInlineDrawingSwap(params, dom, attempt.signal);
+        }
+        finally {
+            if (swaps.get(localIndex) === attempt)
+                swaps.delete(localIndex);
+        }
+    }
+
+    private async _commitInlineDrawingSwap(
+        params: Parameters<InlineEngine['applyInlineDrawingSwap']>[0],
+        dom: HTMLElement,
+        signal: AbortSignal,
+    ): Promise<void> {
+        const { block, localIndex, wrapper, src, expectedRaw, attrs, loadPromise } = params;
+        const page = block.previewScope;
         const result = await loadPromise;
         if (!result?.isSuccess || !result.url)
             return;
 
         const resolveLiveWrapper = (): HTMLElement | null => {
-            if (wrapper?.isConnected && wrapper.getAttribute('data-raw') === expectedRaw)
-                return wrapper;
-            if (!block.outMostBlock || !block.domNode?.isConnected)
+            if (signal.aborted || !this.renderer.images.isCurrent(src, result)
+                || !(page ? page.canCommit(dom) : dom.isConnected)) {
                 return null;
-            const candidate = block.domNode.querySelectorAll<HTMLElement>('.mu-inline-drawing')[localIndex];
+            }
+            if (wrapper && dom.contains(wrapper) && wrapper.getAttribute('data-raw') === expectedRaw)
+                return wrapper;
+            const candidate = dom.querySelectorAll<HTMLElement>('.mu-inline-drawing')[localIndex];
             return candidate?.getAttribute('data-raw') === expectedRaw ? candidate : null;
         };
 
+        if (page && !await page.whenVisible(dom, false, signal))
+            return;
         if (!resolveLiveWrapper())
             return;
 
         const nextImg = createImageElement(result.url, result.width, result.height, attrs);
         await decodeImageElement(nextImg);
 
+        if (page && !await page.whenVisible(dom, false, signal))
+            return;
         const live = resolveLiveWrapper();
         if (!live)
             return;
@@ -205,18 +238,29 @@ class InlineEngine {
     }
 
     /** Revalidate one preview key without clearing other cached images or collapsing live DOM. */
-    async refreshImagePreview(key: string, loadFn?: () => Promise<string>): Promise<boolean> {
-        const resolvePreview = this.muya.options.resolveImagePreview;
+    async refreshImagePreview(key: string, loadFn?: () => Promise<string>, confirmCurrent = false): Promise<boolean> {
+        const { resolveImagePreview: resolvePreview, documentPathname } = this.renderer.environment;
+        const page = this.muya.editor.scrollPage?.previewScope;
+        const root = this.muya.editor.scrollPage?.domNode ?? this.muya.domNode;
+        const canCommit = (target: HTMLElement) => page ? page.canCommit(target) : target.isConnected;
+        const previewSource = (wrapper: HTMLElement) => wrapper.getAttribute('data-preview-src') ?? getImageInfo(wrapper).token.attrs.src ?? '';
+        const mountedImage = (wrapper: HTMLElement): HTMLImageElement | null => {
+            if (wrapper.hasAttribute('data-preview-src')) {
+                const sibling = wrapper.nextElementSibling;
+                return sibling instanceof HTMLImageElement ? sibling : null;
+            }
+            return wrapper.querySelector<HTMLImageElement>(`.${CLASS_NAMES.MU_IMAGE_CONTAINER} > img`);
+        };
         const matchingWrappers = (): HTMLElement[] => {
-            if (!resolvePreview)
+            if (!resolvePreview || !canCommit(root))
                 return [];
             const matched: HTMLElement[] = [];
-            for (const wrapper of this.muya.domNode.querySelectorAll<HTMLElement>(`.${CLASS_NAMES.MU_INLINE_IMAGE}`)) {
-                if (!wrapper.getAttribute('data-raw'))
+            const selector = `.${CLASS_NAMES.MU_INLINE_IMAGE}, .${CLASS_NAMES.MU_IMAGE_MARKED_TEXT}[data-preview-src]`;
+            for (const wrapper of root.querySelectorAll<HTMLElement>(selector)) {
+                if (!wrapper.getAttribute('data-raw') && !wrapper.hasAttribute('data-preview-src'))
                     continue;
                 try {
-                    const { token } = getImageInfo(wrapper);
-                    const preview = resolvePreview(token.attrs.src ?? '');
+                    const preview = resolvePreview(previewSource(wrapper), documentPathname);
                     if (preview?.key === key)
                         matched.push(wrapper);
                 }
@@ -231,8 +275,7 @@ class InlineEngine {
         if (!resolve && resolvePreview) {
             for (const wrapper of matchingWrappers()) {
                 try {
-                    const { token } = getImageInfo(wrapper);
-                    const preview = resolvePreview(token.attrs.src ?? '');
+                    const preview = resolvePreview(previewSource(wrapper), documentPathname);
                     if (preview?.key === key) {
                         resolve = preview.load;
                         break;
@@ -247,77 +290,72 @@ class InlineEngine {
             return false;
 
         const outcome = await this.renderer.images.revalidate(key, resolve);
-        if (!outcome || !outcome.changed || !outcome.result.url)
+        if (!outcome?.result.url || !canCommit(root))
             return false;
 
         const { result } = outcome;
         const fallbackBlocks = new Set<Format>();
         const wrappers = matchingWrappers();
+        let changed = false;
 
         await Promise.all(wrappers.map(async (wrapper) => {
-            const container = wrapper.querySelector<HTMLElement>(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`);
-            const hasLiveImage = wrapper.classList.contains(CLASS_NAMES.MU_IMAGE_SUCCESS)
-                && !!container?.querySelector('img');
-            if (!hasLiveImage) {
+            const image = mountedImage(wrapper);
+            if (!image) {
                 const contentDom = findContentDOM(wrapper);
                 const block = getBlock(contentDom);
                 if (block?.isContent())
                     fallbackBlocks.add(block as Format);
                 return;
             }
-            let attrs: Record<string, string> = {};
-            try {
-                const { token } = getImageInfo(wrapper);
-                attrs = Object.fromEntries(
-                    Object.entries(token.attrs).filter((entry): entry is [string, string] => entry[1] !== null),
-                );
-            }
-            catch {
+            if (image.getAttribute('src') === result.url)
                 return;
-            }
-            const nextImg = createImageElement(result.url!, result.width, result.height, attrs);
+            const nextImg = image.cloneNode(false) as HTMLImageElement;
+            nextImg.src = result.url!;
             await decodeImageElement(nextImg);
-            if (!wrapper.isConnected || this.renderer.images.get(key) !== result)
+            if (!canCommit(wrapper) || !this.renderer.images.isCurrent(key, result))
                 return;
             try {
-                const { token } = getImageInfo(wrapper);
-                if (resolvePreview?.(token.attrs.src ?? '')?.key !== key)
+                if (resolvePreview?.(previewSource(wrapper), documentPathname)?.key !== key)
                     return;
             }
             catch {
                 return;
             }
-            const liveContainer = wrapper.querySelector<HTMLElement>(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`);
-            const currentImg = liveContainer?.querySelector<HTMLImageElement>('img');
+            const currentImg = mountedImage(wrapper);
             if (!currentImg)
                 return;
             currentImg.replaceWith(nextImg);
             wrapper.classList.toggle(CLASS_NAMES.MU_SMALL_IMAGE, (result.width ?? 0) < 100 || (result.height ?? 0) < 100);
+            changed = true;
         }));
 
-        for (const block of fallbackBlocks) {
-            if (block.outMostBlock)
-                block.update();
-        }
-        return true;
-    }
-
-    private _isInlineDrawingInDocument(src: string): boolean {
-        const scrollPage = this.muya.editor.scrollPage;
-        if (!scrollPage)
+        if (!canCommit(root) || !this.renderer.images.isCurrent(key, result))
             return false;
-        let found = false;
-        scrollPage.depthFirstTraverse((node) => {
-            if (found || !node.isContent())
-                return;
-            if (node.text.includes(INLINE_DRAWING_DATA_PREFIX) && node.text.includes(src))
-                found = true;
-        });
-        return found;
+        for (const block of fallbackBlocks) {
+            if (block.domNode && canCommit(block.domNode)) {
+                block.update();
+                changed = true;
+            }
+        }
+        if ((!confirmCurrent && !changed) || !wrappers.length)
+            return false;
+        const current = matchingWrappers();
+        return current.length > 0 && current.every(wrapper => mountedImage(wrapper)?.getAttribute('src') === result.url);
     }
 
     dispose(): void {
         this.renderer.dispose();
+    }
+
+    refreshDocumentImageSources(): void {
+        this.muya.editor.scrollPage?.breadthFirstTraverse((node) => {
+            if (node.isContent() && /[[!]|<(?:img|video)\b/i.test(node.text))
+                node.update();
+            if (node.blockName === 'html-block' && node.isParent()) {
+                const preview = node.attachments.head as { update?: (html: string) => void } | null;
+                preview?.update?.(node.firstContentInDescendant()?.text ?? '');
+            }
+        });
     }
 
     patch(block: Format, cursor?: IRenderCursor, highlights: IHighlight[] = []) {
@@ -327,7 +365,9 @@ class InlineEngine {
             debug.error('Patch can only handle content block');
 
         const projection = projectEmbeddedImages(block);
-        const view = projection ? { text: projection.text, blockName: block.blockName, domNode } : block;
+        if (domNode)
+            this.renderer.mounts.replaceBlockMounts(domNode);
+        const view = projection ? { text: projection.text, blockName: block.blockName, domNode, previewScope: block.previewScope } : block;
         const ranges = projection ? highlights.map(h => ({ ...h, start: projection.offset(h.start), end: projection.offset(h.end) })) : highlights;
         const tokens = this._tokenizer(view, ranges);
         const renderCursor = !this.muya.isReadOnly && cursor?.block === block ? cursor : {};

@@ -100,6 +100,7 @@ export interface IRenderOptions {
     mermaidTheme: string;
     plantumlServer: string;
     sequenceTheme: 'hand' | 'simple';
+    isCurrent?: () => boolean;
 }
 
 export interface IExportRenderOptions extends IRenderOptions {
@@ -126,13 +127,16 @@ export async function renderDiagram({
     mermaidTheme,
     plantumlServer,
     sequenceTheme,
+    isCurrent,
 }: IRenderOptions) {
     if (type === 'mermaid') {
-        await renderMermaid({ code, target, theme: mermaidTheme });
+        await renderMermaid({ code, target, theme: mermaidTheme, isCurrent });
         return;
     }
 
     const render = await loadRenderer(type);
+    if (isCurrent && !isCurrent())
+        return;
     const options = {};
     if (type === 'vega-lite') {
         Object.assign(options, {
