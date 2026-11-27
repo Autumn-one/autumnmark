@@ -798,15 +798,7 @@ function isTextField(target: EventTarget | null) {
 function editCanvasHistory(action: 'undo' | 'redo') {
   if (!ready.value || readOnly.value || activeView.value !== 'canvas') return
   // The Excalidraw imperative API exposes history clearing only. Use its own toolbar action.
-  const button = canvas.value?.querySelector<HTMLButtonElement>(`button[data-testid="button-${action}"]`)
-  if (!button || button.disabled) return
-  console.log('[draw-history]', action, 'before', currentScene()?.elements.length, !!session, isEditingInteraction(api.value?.getAppState()))
-  flushSync(() => button.click())
-  console.log('[draw-history]', action, 'after', currentScene()?.elements.length, !!session)
-  if (props.file) syncDrawing()
-  else if (session?.noteId && !session.draft) void saveSession('flush').then(result => {
-    console.log('[draw-history]', action, 'save', result, error.value)
-  })
+  canvas.value?.querySelector<HTMLButtonElement>(`button[data-testid="button-${action}"]`)?.click()
 }
 
 function handleHistoryCommand(event: Event) {

@@ -216,7 +216,8 @@ function insertNoteDrawing(note: IFileState, markup: string, target?: IDrawingIn
 
 const embeddedMarkup = (content: string) => inlineDrawingToMarkdown(content, t('drawing.embedded'))
 const comparableScene = (source: string) => source.split('\n').filter(line => line.trim()).join('\n').trim()
-const noteMarkdown = (note: IFileState) => readMarkdown(note.id) ?? note.markdown
+const noteMarkdown = (note: IFileState) =>
+  currentFile.value?.id === note.id ? readMarkdown(note.id) ?? note.markdown : note.markdown
 
 interface EmbeddedDrawingLocation {
   markdown: string

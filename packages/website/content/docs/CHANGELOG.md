@@ -2,6 +2,7 @@
 
 - Windows portable editions can download verified updates and install them on restart. Updates keep the portable user data folder and files stored alongside the app.
 - Markdown tabs defer offscreen drawing and diagram previews until they are visible. Preview results stay with the correct document when switching tabs or editor modes, and linked drawings shared across tabs refresh in each document after an edit.
+- Inserting a drawing from the slash menu keeps the caret in its paragraph. Undo and redo in a drawing tab save back to the Markdown document that contains the drawing.
 - Retained tabs restore selection and scroll position with less layout work. Saving or renaming a document updates the base path used to resolve its linked media.
 - Windows title bars follow the active theme in editor, preferences, and Theme Studio windows. The themed app menu and tab bar stay usable with either native or custom window decorations.
 - Fenced code blocks preserve trailing blank lines when trimming is off or line annotations reference those rows.
