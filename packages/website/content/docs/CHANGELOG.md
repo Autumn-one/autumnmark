@@ -1,3 +1,10 @@
+## AutumnMark 0.24.78
+
+- Windows portable editions can download verified updates and install them on restart. Updates keep the portable user data folder and files stored alongside the app.
+- Markdown tabs defer offscreen drawing and diagram previews until they are visible. Preview results stay with the correct document when switching tabs or editor modes, and linked drawings shared across tabs refresh in each document after an edit.
+- Retained tabs restore selection and scroll position with less layout work. Saving or renaming a document updates the base path used to resolve its linked media.
+- Windows title bars follow the active theme in editor, preferences, and Theme Studio windows. The themed app menu and tab bar stay usable with either native or custom window decorations.
+
 ## AutumnMark 0.24.77
 
 - Added a bounded single-instance `DocumentSessionPool` in Muya (preserving live DOM, undo history, folds, and compact states with LRU memory limits) plus interruptible idle/hover pre-warming for adjacent Markdown tabs so both first-time and repeated tab switches feel instant.
